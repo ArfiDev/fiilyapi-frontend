@@ -14,15 +14,26 @@ import { login, openViaSidebar, tabByName } from "./workspace-tabs-helpers";
  * depoda "yalnız şerit" diye ayrı bir emsal de YOK. Baseline'lar YALNIZ CI'dan
  * (Linux) alınır — bu dosya yerelde YALNIZ "yüklendi" iddialarını sınamak
  * için koşulur (bkz. RAPOR).
+ *
+ * 📅 SAAT DONDURULUR (`page.clock`): `login()` (`workspace-tabs-helpers.ts`,
+ * `workspace-tabs.spec.ts` ile PAYLAŞILIR) kendi içinde `page.goto("/login")`
+ * çağırır — bu dosya o fonksiyonu DEĞİŞTİRMEZ. Sıra `leaves-visual.spec.ts`
+ * kanonuyla AYNI: dondurma GİRİŞTEN SONRA, sekme açan ilk `openViaSidebar`
+ * gezinmesinden ÖNCE kurulur ("saat girişten önce kurulmak giriş akışını
+ * kırar" ÖLÇÜMÜ o dosyada yapıldı, burada tekrarlanmadı).
  */
 
 const VIEWPORT_1440 = { width: 1440, height: 900 } as const;
 const VIEWPORT_390 = { width: 390, height: 844 } as const;
 
+/** Fikstür "şimdi"si — bu dosyanın kadrajlarında görünen içerik BUNA BAĞLI DEĞİL, dondurma yalnız kadraj DETERMİNİZMİ içindir. */
+const FIXED_NOW = "2026-08-27T09:00:00";
+
 test.describe("çalışma sekmeleri — 1440", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(VIEWPORT_1440);
     await login(page);
+    await page.clock.setFixedTime(new Date(FIXED_NOW));
   });
 
   test("4 sekme (biri aktif)", async ({ page }) => {
@@ -84,6 +95,7 @@ test.describe("çalışma sekmeleri — 390 (dar ekran amblemi)", () => {
   test("4 sekme, logo amblemi", async ({ page }) => {
     await page.setViewportSize(VIEWPORT_390);
     await login(page);
+    await page.clock.setFixedTime(new Date(FIXED_NOW));
     await openViaSidebar(page, "Onay Kutusu");
     await openViaSidebar(page, "Raporlar");
     await openViaSidebar(page, "Puantaj");
