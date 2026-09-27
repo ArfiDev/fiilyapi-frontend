@@ -26,6 +26,7 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 // `isLandShareMissing` ve sayfa boyutu GERÇEK kalır: 404 dallanmasını
 // taklit etmek, tam da ölçmek istediğimiz davranışı sahteleştirirdi.
@@ -826,5 +827,27 @@ describe("🔴 Başarılı kayıt YALNIZ GÖNDERİLEN satırların bekleyenini t
     fireEvent.click(screen.getByTestId("paylasim-form-onceki"));
     const bizA9 = await screen.findByTestId("paylasim-form-biz-A-9");
     expect(bizA9).toHaveAttribute("aria-pressed", "true");
+  });
+
+  // SEKME-F1.3-FIX O5 · `useUnsavedChanges(hasAllocationChanges(rows, state), …)`
+  // yalnız o an EKRANDA GÖRÜNEN sayfanın satırlarına bakıyordu (`build-body.ts`
+  // kural 4 ile AYNI kaynak) — kaydet düğmesinin kapsamıyla doğru olsa da, üst
+  // çubuğun sekme onayı için YANLIŞTIR: `state.pending` sayfalar arası TÜM
+  // bekleyen atamaları taşır. 1. sayfada atama yapılıp 2. sayfaya geçilince
+  // kayıt YANLIŞLIKLA temiz görünmemeli (sessiz veri kaybı riski).
+  it("sayfa 1'de atama yapılıp sayfa 2'ye geçilince üst çubuk kaydı 'kirli' KALIR", async () => {
+    stubPagedUnits();
+    const { unmount } = render(<LandShareAllocationView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    fireEvent.click(screen.getByTestId("paylasim-form-biz-A-9"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    fireEvent.click(screen.getByTestId("paylasim-form-sonraki"));
+    await screen.findByTestId("paylasim-form-biz-B-1");
+    // A-9 artık GÖRÜNMÜYOR ama ataması hâlâ `state.pending`dedir.
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
   });
 });

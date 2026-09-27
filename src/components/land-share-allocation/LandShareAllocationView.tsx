@@ -21,6 +21,7 @@ import { useProjectBlocks, type BlockResponse } from "@/lib/api/hooks/useProject
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import {
   assignSelected,
@@ -144,6 +145,17 @@ export function LandShareAllocationView() {
     () => applySavedAllocation(unitsQuery.data?.items ?? [], saved),
     [unitsQuery.data, saved],
   );
+
+  // SEKME-F1.3-FIX O5 · `hasAllocationChanges(rows, state)` bilinçli olarak
+  // yalnız GÖRÜNEN sayfanın satırlarına bakar (kaydet düğmesi ve `build-body.ts`
+  // kural 4 için DOĞRU kapsam — PATCH atomik olduğundan listede olmayan bir
+  // `unit_id` tüm isteği 404'e düşürür). Ama üst çubuğun sekme onayı bunu
+  // GÖRÜNEN sayfayla sınırlı sanırsa, başka sayfada bırakılmış bekleyen
+  // atamaları görmeden "temiz" der (sessiz veri kaybı). `state.pending`
+  // sayfalar/süzgeçler arası TÜM bekleyen atamaları taşıdığı için kayda giden
+  // ifade doğrudan onun boş olup olmadığına bakar — kaydet düğmesinin kapsamı
+  // DEĞİŞMEZ (`hasChanges` aşağıda hâlâ `hasAllocationChanges(rows, state)`).
+  useUnsavedChanges(state.pending.size > 0, "Hisse dağıtımı");
 
   if (!permission.canWrite) return <AccessDenied />;
 

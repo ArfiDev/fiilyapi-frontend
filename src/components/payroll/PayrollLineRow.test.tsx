@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PayrollLineResponse } from "@/lib/api/hooks/usePayroll";
 import { useUpdatePayrollLineSplit } from "@/lib/api/hooks/usePayrollMutations";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { PayrollLineRow } from "./PayrollLineRow";
 
@@ -90,5 +92,97 @@ describe("PayrollLineRow · sunucu değeri senkronu", () => {
 
     expect(screen.getByTestId("bordro-line-line-1-bank")).toHaveValue("20000.00");
     expect(screen.getByTestId("bordro-line-line-1-cash")).toHaveValue("6538.00");
+  });
+});
+
+/**
+ * SEKME-F1.3-FIX O6 · sunucu "26538.00" gönderir, kullanıcı biçimi DEĞİL
+ * DEĞERİ aynı olan "26538" yazar — eski `isDirty` (ham metin karşılaştırması)
+ * bunu KALICI kirli sayıyordu: satır asla temizlenmiyor ve odak çıkışında
+ * GEREKSİZ bir PATCH atılıyordu (sunucu zaten aynı değeri döner, sonsuz
+ * döngü riski). Karşılaştırma artık ondalık NORMALİZASYONLA yapılır
+ * (`compareDecimalStrings` — `Number()` YASAK, K18/ROUND_HALF_UP kanonu).
+ */
+describe("PayrollLineRow · ondalık normalizasyonlu kirli karşılaştırması (O6)", () => {
+  it("aynı tutarı farklı biçimde yazınca (26538.00 → 26538) satır KİRLİ sayılmaz, gereksiz PATCH atılmaz", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn(async () => undefined);
+    vi.mocked(useUpdatePayrollLineSplit).mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdatePayrollLineSplit>);
+    renderRow(line({ bank_amount: "26538.00" }));
+
+    const bank = screen.getByTestId("bordro-line-line-1-bank");
+    await user.clear(bank);
+    await user.type(bank, "26538");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.tab();
+    await user.tab(); // odak satırdan çıkar
+
+    // Değer sunucudakiyle SAYISAL olarak aynı — gereksiz PATCH atılmamalı.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("GERÇEKTEN farklı bir tutar yazınca satır kirli sayılır ve PATCH atılır", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn(async () => undefined);
+    vi.mocked(useUpdatePayrollLineSplit).mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdatePayrollLineSplit>);
+    renderRow(line({ bank_amount: "26538.00" }));
+
+    const bank = screen.getByTestId("bordro-line-line-1-bank");
+    await user.clear(bank);
+    await user.type(bank, "20000");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.tab();
+    await user.tab();
+
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        lineId: "line-1",
+        bankAmount: "20000",
+        cashAmount: "0.00",
+      }),
+    );
+  });
+});
+
+/**
+ * SEKME-F1.3-FIX O7 · `PayrollLineRow`in `useUnsavedChanges` bağlanması için
+ * davranış bekçisi (merkezi kayıt, düğme/PATCH DEĞİL).
+ */
+describe("PayrollLineRow — unsavedRegistry davranış bekçisi (O7)", () => {
+  it("yükle, dokunma → temiz; tutar değiştir → kirli; sunucu yeni değerle GÜNCELLENİNCE (kayıt sonrası) → tekrar temiz", async () => {
+    const user = userEvent.setup();
+    mockMutation();
+    const { rerender } = render(
+      <table>
+        <tbody>
+          <PayrollLineRow line={line({ bank_amount: "26538.00" })} canWrite={true} />
+        </tbody>
+      </table>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    const bank = screen.getByTestId("bordro-line-line-1-bank");
+    await user.clear(bank);
+    await user.type(bank, "20000");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // Kaydetme sonrası invalidation: satır YENİ sunucu değeriyle geri gelir.
+    rerender(
+      <table>
+        <tbody>
+          <PayrollLineRow line={line({ bank_amount: "20000.00" })} canWrite={true} />
+        </tbody>
+      </table>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

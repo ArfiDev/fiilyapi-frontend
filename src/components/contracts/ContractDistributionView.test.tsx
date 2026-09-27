@@ -11,6 +11,7 @@ import {
 import { useSaveContractDistribution } from "@/lib/api/hooks/useContractMutations";
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useContract", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useContract")>()),
@@ -265,6 +266,25 @@ describe("POZ dağılımı — BİRLEŞTİRME (merge) semantiği", () => {
       expect(screen.getByText("Poz dağılımı kaydedildi.")).toBeInTheDocument(),
     );
     expect(screen.getByTestId("cdist-save")).toBeDisabled();
+  });
+
+  // SEKME-F1.3 · üst çubuk sekme onayı `unsavedRegistry`den okur — kirli
+  // hücre sayacıyla (yukarıdaki test) AYNI `edits` kaynağına bağlı olduğu
+  // için burada kirli sayaçla BİREBİR aynı geçişleri izler.
+  it("hücre düzenlemesi unsavedRegistry'yi 'kirli' işaretler, kayıttan sonra düşer", async () => {
+    const { unmount } = render(<ContractDistributionView projectId="p-1" />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    typeInCell("03.001", "A-Blok", "2000");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await save();
+    await waitFor(() =>
+      expect(screen.getByText("Poz dağılımı kaydedildi.")).toBeInTheDocument(),
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    unmount();
   });
 });
 

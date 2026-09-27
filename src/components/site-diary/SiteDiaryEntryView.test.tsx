@@ -31,6 +31,7 @@ import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import { routes } from "@/lib/routes";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 // F-SD T6 · "Kayıt Gir" ekranının DAL testleri: 409 akışı, izin dalları,
 // `submitted` salt-okunurluğu ve "Yeniden Aç". Saf türevler kendi
@@ -411,6 +412,50 @@ describe("SiteDiaryEntryView · türev kuralları", () => {
     expect(
       await screen.findByText(/Kaydedilmemiş değişiklik var\./),
     ).toBeInTheDocument();
+  });
+
+  // SEKME-F1.3 · üst çubuk sekme onayı `unsavedRegistry`den okur — bu form
+  // MERKEZİ kayda BAĞLI olmalı, aksi hâlde sekme geçişi bu ekrandan çıkarken
+  // kaydedilmemiş satır değişikliğini görmez (sessiz veri kaybı).
+  it("satır miktarı değişince unsavedRegistry 'kirli' olur, sunucu değerine geri alınınca düşer", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const { unmount } = render(<SiteDiaryEntryView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.clear(screen.getByLabelText("03.001 bugün yapılan miktar"));
+    await user.type(screen.getByLabelText("03.001 bugün yapılan miktar"), "130");
+    await screen.findByText(/Kaydedilmemiş değişiklik var\./);
+
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // Miktarı sunucu değerine geri yazmak formu yeniden TEMİZ yapar.
+    await user.clear(screen.getByLabelText("03.001 bugün yapılan miktar"));
+    await user.type(screen.getByLabelText("03.001 bugün yapılan miktar"), "120");
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+
+    unmount();
+  });
+
+  // SEKME-F1.3-FIX D1 · form efektte DOLDURULUYOR (ilk render boş, entry
+  // yüklendikten sonra `setForm(diaryFormFromEntry(entry))`); dirty ifadesi
+  // form seed'lenmeden ÖNCE de hesaplanırsa ilk commit'te sahte-kirli görülür
+  // (boş form ≠ entry) — üst çubuk boşuna onay modalı açar. Kayıt hiç
+  // dokunulmadan asla "kirli" olmamalı.
+  it("yükle, dokunma → kayıt HİÇBİR ZAMAN kirli olmaz (sahte-dirty regresyonu)", () => {
+    mockScreen({ entry: entryDetail() });
+    const setSpy = vi.spyOn(unsavedRegistry, "set");
+
+    const { unmount } = render(<SiteDiaryEntryView />);
+
+    const dirtyFlags = setSpy.mock.calls
+      .filter(([, entry]) => entry?.label === "Şantiye günlüğü")
+      .map(([, entry]) => entry !== null);
+    expect(dirtyFlags).not.toContain(true);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    unmount();
+    setSpy.mockRestore();
   });
 
   it("kayıt açılmadan satır UYDURULMAZ; 'Kaydet & Gönder' gerekçesiyle devre dışıdır", () => {

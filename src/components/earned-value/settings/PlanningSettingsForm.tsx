@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/hooks/useEvSettings";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { EvSettingsRead } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { CalendarCard } from "./CalendarCard";
 import { HolidaysCard } from "./HolidaysCard";
@@ -81,6 +82,7 @@ export function PlanningSettingsForm({
   );
 
   const sections = changedSections(baseline, draft);
+  useUnsavedChanges(sections.length > 0, "Planlama ayarları");
   if (settings !== syncedSettings) {
     setSyncedSettings(settings);
     if (sections.length === 0) {

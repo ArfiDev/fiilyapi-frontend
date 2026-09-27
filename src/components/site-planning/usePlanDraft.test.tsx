@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 
 import type { SitePlanWeek } from "@/lib/api/hooks/useSitePlan";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { usePlanDraft } from "./usePlanDraft";
 
@@ -130,5 +131,26 @@ describe("usePlanDraft", () => {
     expect(result.current.draft.weekStart).toBe(nextWeek);
     expect(result.current.draft.rows).toHaveLength(0);
     expect(result.current.isDirty).toBe(false);
+  });
+});
+
+// SEKME-F1.3-FIX O7 · `usePlanDraft`in `useUnsavedChanges` bağlanması için
+// davranış bekçisi — `result.current.isDirty`nin KENDİSİ değil, üst çubuğun
+// GERÇEKTEN okuduğu merkezi kayıt (`unsavedRegistry`) doğrulanır. Bağlantı
+// sessizce kopsa (satır silinir/yorumlanır) bile hook'un kendi `isDirty`
+// alanı doğru kalabilir — kayıt bunu YAKALAMAZ, bu yüzden ayrı bir bekçi şart.
+describe("usePlanDraft — unsavedRegistry davranış bekçisi (O7)", () => {
+  it("yükle, dokunma → temiz; hücre değiştir → kirli; kaydetme (sectionSaved) → tekrar temiz", () => {
+    const { result } = renderHook(
+      ({ plan }: { plan: SitePlanWeek }) => usePlanDraft(plan, WEEK_START),
+      { initialProps: { plan: planWeek() } },
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    act(() => result.current.dispatch({ type: "setSprintName", name: "Kullanıcının yazdığı" }));
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    act(() => result.current.dispatch({ type: "sectionSaved", section: "sprint" }));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

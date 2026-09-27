@@ -24,6 +24,7 @@ import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERIOD_MONTHS, formatPercent, formatQuantity } from "@/lib/format";
 import { toDecimalString } from "@/lib/decimal";
 import { asPercent } from "@/lib/api/scale";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { DiaryFillFeedback } from "./DiaryFillFeedback";
 import { PaymentCalculationCard } from "./PaymentCalculationCard";
@@ -94,6 +95,26 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   // bantla kullanıcıya "başlık kaydedildi, satırlar kaydedilmedi" der.
   const [headerSavedLinesFailed, setHeaderSavedLinesFailed] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // SEKME-F1.3-FIX O4 · `dirty` yalnız satır/hücre değişikliklerini (ve
+  // "Günlükten Doldur"u) yönetiyordu — açıklama/dönem/katsayı gibi başlık
+  // alanları `setDirty(true)` ÇAĞIRMIYORDU, üst çubuk onayı bu değişiklikleri
+  // GÖREMEZDİ. Kayda giden ifade artık başlık alanlarının tohumlanan
+  // (`initialHeaderRef`, veri geldikten SONRA alınan) başlangıç değerinden
+  // SAPTIĞINI da kapsar; sapma kaydetme başarıyla bitince ref güncellenerek
+  // kapanır (bkz. `handleSave` içindeki `resetHeaderBaseline`).
+  const [headerBaseline, setHeaderBaseline] = useState<{
+    description: string;
+    coefficient: string;
+    year: number;
+    month: number;
+  } | null>(null);
+  const headerDirty =
+    headerBaseline !== null &&
+    (description !== headerBaseline.description ||
+      defaultCoefficient !== headerBaseline.coefficient ||
+      periodYear !== headerBaseline.year ||
+      periodMonth !== headerBaseline.month);
+  useUnsavedChanges(dirty || headerDirty, "Hakediş");
   const [refreshConfirmOpen, setRefreshConfirmOpen] = useState(false);
   // Kullanıcının GERÇEKTEN dokunduğu dönem alanları. Mockup'ta ay seçicisinin
   // boş seçeneği yoktur, ekranda hep dolu görünür ve "görünen değer"
@@ -112,11 +133,21 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
     if (!distributionQuery.data) return;
     if (isEdit && !detail) return;
     seededRef.current = true;
+    const seedYear = detail?.period_year ?? new Date().getFullYear();
+    const seedMonth = detail?.period_month ?? new Date().getMonth() + 1;
+    const seedDescription = detail?.description ?? "";
+    const seedCoefficient = detail?.default_coefficient ?? "1";
     setRows(buildPivotRows(distributionQuery.data, detail?.lines ?? []));
-    setPeriodYear(detail?.period_year ?? new Date().getFullYear());
-    setPeriodMonth(detail?.period_month ?? new Date().getMonth() + 1);
-    setDescription(detail?.description ?? "");
-    setDefaultCoefficient(detail?.default_coefficient ?? "1");
+    setPeriodYear(seedYear);
+    setPeriodMonth(seedMonth);
+    setDescription(seedDescription);
+    setDefaultCoefficient(seedCoefficient);
+    setHeaderBaseline({
+      description: seedDescription,
+      coefficient: seedCoefficient,
+      year: seedYear,
+      month: seedMonth,
+    });
   }, [distributionQuery.data, detail, isEdit]);
 
   // "Günlükten Doldur" (spec §4). Öneri ekran açılışında ÇEKİLMEZ
@@ -277,6 +308,22 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
       return;
     }
 
+    // Kaydetme ANINDAKİ başlık değerleri — başarı geldiğinde kayıt (registry)
+    // bu değerleri yeni "temiz" başlangıç kabul eder (bkz. `headerDirty`).
+    const savedYear = periodYear;
+    const savedMonth = periodMonth;
+    const savedDescription = description;
+    const savedCoefficient = defaultCoefficient;
+    function resetHeaderBaseline() {
+      if (savedYear === null || savedMonth === null) return;
+      setHeaderBaseline({
+        description: savedDescription,
+        coefficient: savedCoefficient,
+        year: savedYear,
+        month: savedMonth,
+      });
+    }
+
     const paymentId = props.paymentId;
     updatePayment.mutate(
       { paymentId, body: headerBody },
@@ -285,7 +332,10 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
           replaceLines.mutate(
             { paymentId, body: { lines: linesBody } },
             {
-              onSuccess: () => setDirty(false),
+              onSuccess: () => {
+                setDirty(false);
+                resetHeaderBaseline();
+              },
               onError: (err) => {
                 // no 179 · başlık ZATEN sunucuda kaydedildi (PATCH başarılıydı);
                 // geri alma yok — kullanıcı kısmi kayıt durumunu görmeli.

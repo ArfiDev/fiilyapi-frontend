@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/hooks/useProgressPaymentMutations";
 import { useEmployerDiarySuggestion } from "@/lib/api/hooks/useDiarySuggestion";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
@@ -865,5 +866,73 @@ describe("ProgressPaymentForm — Günlükten Doldur", () => {
       site_id: SITE_A.id,
       quantity: "320.000",
     });
+  });
+});
+
+/**
+ * SEKME-F1.3-FIX O4 · `dirty` yalnız hücre miktarı ve "Günlükten Doldur"
+ * ile açılıyordu; açıklama/dönem/katsayı gibi başlık alanları değişince
+ * üst çubuk sekme onayı bu ekranı "temiz" sanıyordu (sessiz veri kaybı
+ * riski). Kayda giden ifade artık başlangıç değeriyle (seed) karşılaştırır.
+ */
+describe("ProgressPaymentForm — üst çubuk kaydı (unsavedRegistry) başlık alanları", () => {
+  afterEach(() => {
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("yalnız açıklama değişince kayıt 'kirli' olur", async () => {
+    vi.mocked(useProgressPayment).mockReturnValue(queryResult({ data: detailFixture() }));
+    const { unmount } = renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByText("İşveren Hakediş #5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await userEvent.type(screen.getByLabelText("Açıklama"), " ek not");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+  });
+
+  it("yalnız katsayı değişince kayıt 'kirli' olur", async () => {
+    vi.mocked(useProgressPayment).mockReturnValue(queryResult({ data: detailFixture() }));
+    const { unmount } = renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByText("İşveren Hakediş #5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await userEvent.clear(screen.getByLabelText("Katsayı (Dn/D0)"));
+    await userEvent.type(screen.getByLabelText("Katsayı (Dn/D0)"), "1.05");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+  });
+
+  it("yalnız dönem (ay) değişince kayıt 'kirli' olur", async () => {
+    vi.mocked(useProgressPayment).mockReturnValue(queryResult({ data: detailFixture() }));
+    const { unmount } = renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByText("İşveren Hakediş #5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await userEvent.selectOptions(screen.getByLabelText("Hakediş Dönemi"), "8");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+  });
+
+  it("başlık değişikliğiyle kaydetme başarılı olunca kayıt tekrar temiz olur", async () => {
+    const updateMutate = vi.fn((_vars, opts) => opts?.onSuccess?.());
+    const replaceMutate = vi.fn((_vars, opts) => opts?.onSuccess?.());
+    vi.mocked(useProgressPayment).mockReturnValue(queryResult({ data: detailFixture() }));
+    vi.mocked(useUpdateProgressPayment).mockReturnValue(mutationResult({ mutate: updateMutate }));
+    vi.mocked(useReplaceProgressPaymentLines).mockReturnValue(mutationResult({ mutate: replaceMutate }));
+
+    const { unmount } = renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByText("İşveren Hakediş #5");
+
+    await userEvent.type(screen.getByLabelText("Açıklama"), " ek not");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Taslak Kaydet" })[0]);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    unmount();
   });
 });

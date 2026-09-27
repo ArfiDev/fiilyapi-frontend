@@ -9,9 +9,11 @@ import { useUpdatePayrollLineSplit } from "@/lib/api/hooks/usePayrollMutations";
 import { formatAmount, formatDays } from "@/lib/format";
 import { useSyncedFieldState } from "@/lib/hooks/useSyncedFieldState";
 import { initials } from "@/lib/shell/initials";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import {
   amountFieldValue,
+  isAmountFieldDirty,
   isAmountInputValid,
   isLineSplitEditable,
   lineSplitDisabledReason,
@@ -69,8 +71,15 @@ export function PayrollLineRow({ line, canWrite }: PayrollLineRowProps) {
 
   const editable = isLineSplitEditable(line) && canWrite;
   const disabledReason = lineSplitDisabledReason(line);
+  // SEKME-F1.3-FIX O6 · ham metin eşitliği DEĞİL, ondalık NORMALİZASYONLU
+  // karşılaştırma (`isAmountFieldDirty`) — sunucu "26538.00" gönderdiğinde
+  // kullanıcı biçimi farklı ama SAYISAL OLARAK AYNI "26538" yazınca satır
+  // artık KALICI kirli kalmıyor (bkz. `payroll-derive.ts`daki fonksiyon
+  // yorumu). Görünür davranış değişikliği: aynı değerde blur artık PATCH
+  // ATMAZ (öncesinde gereksiz tekrar `PATCH` atıyordu) — KABUL edilen sapma.
   const isDirty =
-    bank !== amountFieldValue(line.bank_amount) || cash !== amountFieldValue(line.cash_amount);
+    isAmountFieldDirty(bank, line.bank_amount) || isAmountFieldDirty(cash, line.cash_amount);
+  useUnsavedChanges(isDirty, "Bordro satırı");
   const isValid = isAmountInputValid(bank) && isAmountInputValid(cash);
 
   /**

@@ -8,12 +8,16 @@ import type { DiaryCoreActions } from "@/components/site-diary/diary-extension";
 import type { EvCodeNode, EvDayView } from "@/lib/api/models";
 import { DEFAULT_PF_BANDS } from "@/lib/earned-value";
 
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+
 import { stripValues } from "./allocation-model";
 import { HourAllocationBlock } from "./HourAllocationBlock";
 import { buildSubmitState, resolveAllocationAccess, type AccessInput } from "./submit-checks";
 import { useAllocationDraft } from "./useAllocationDraft";
 import {
   DAY,
+  LEAF_KALIP,
+  P_RECEP,
   SITE_ID,
   codeTree,
   dayView,
@@ -326,5 +330,33 @@ describe("F2.6 · tablet düzeni (İ:527-558) — yapı; görünürlük medya so
     render(<Harness view={dayView({ lock: { locked: true, report_date: "2026-09-25", approved_at: null, approved_by: null, unlock: null } })} access={{ ...ENGINEER, isLocked: true }} actions={{ ...READY, canSubmit: false }} />);
     const bar = tabletBar();
     for (const button of within(bar).getAllByRole("button")) expect(button).toBeDisabled();
+  });
+});
+
+/**
+ * SEKME-F1.3-FIX O7 · `useAllocationDraft`in `useUnsavedChanges` bağlanması
+ * için davranış bekçisi — yükle+dokunma yok → false, kullanıcı değiştirir →
+ * true, kaydetme başarıyla döner (sunucu yeni `view` ile TASLAKLA AYNI
+ * hücreleri getirir) → tekrar false.
+ */
+describe("useAllocationDraft — unsavedRegistry davranış bekçisi (O7)", () => {
+  it("yükle, dokunma → temiz; hücre değiştir → kirli; kaydetme sonrası (yeni view) → tekrar temiz", async () => {
+    const user = userEvent.setup();
+    const initialView = dayView();
+    const { rerender } = render(<Harness view={initialView} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(cell("Recep Uçar", "Kalıp · Kat 6–10"), "8");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // Kaydetme başarılı → sunucu Recep'in hücresini de içeren YENİ bir `view` döner.
+    const savedView = dayView({
+      cells: [
+        ...initialView.cells,
+        { kind: "personnel", ref_id: P_RECEP, node_id: LEAF_KALIP, hours: "8.00" },
+      ],
+    });
+    rerender(<Harness view={savedView} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

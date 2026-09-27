@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Modal } from "./Modal";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 describe("Modal", () => {
   it("baslik + icerik render eder", () => {
@@ -222,5 +223,49 @@ describe("Modal · overlay tıklaması onay kapısı (kayıt 50, isDirty opt-in)
     );
     await userEvent.click(screen.getByRole("presentation"));
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+// SEKME-F1.3 · üst çubuk sekme onayı `unsavedRegistry`den okur — diyaloğun
+// `isDirty` prop'u burada da BAĞLI olmalı ki formu açık bir diyalogla sekme
+// değiştirmek sessizce veri kaybettirmesin.
+describe("Modal · unsavedRegistry bağlantısı", () => {
+  it("isDirty=true iken açıkken kayıt 'kirli' olur, isDirty false olunca düşer", () => {
+    const { rerender, unmount } = render(
+      <Modal title="Test" onClose={() => {}} isDirty={false}>
+        <span>gövde</span>
+      </Modal>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    rerender(
+      <Modal title="Test" onClose={() => {}} isDirty>
+        <span>gövde</span>
+      </Modal>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // "Kaydet" sonrası çağıran isDirty'yi false'a düşürür — modal AÇIK
+    // kalsa bile kayıt temizlenmeli.
+    rerender(
+      <Modal title="Test" onClose={() => {}} isDirty={false}>
+        <span>gövde</span>
+      </Modal>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    unmount();
+  });
+
+  it("diyalog kirliyken KAPANIRSA (unmount) kayıt da silinir", () => {
+    const { unmount } = render(
+      <Modal title="Test" onClose={() => {}} isDirty>
+        <span>gövde</span>
+      </Modal>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

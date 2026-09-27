@@ -11,6 +11,7 @@ import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { useContractDistribution, useEmployerContract } from "@/lib/api/hooks/useContract";
 import { useSaveContractDistribution } from "@/lib/api/hooks/useContractMutations";
 import { useProject } from "@/lib/api/hooks/useProjects";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import {
   buildDistributionSaveBody,
   distributionCellKey,
@@ -63,6 +64,8 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
   const [rejectionMessages, setRejectionMessages] = useState<readonly string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+
+  useUnsavedChanges(edits.size > 0, "Poz dağılımı");
 
   if (isForbidden(distributionQuery.error)) return <AccessDenied />;
 
