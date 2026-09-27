@@ -5,6 +5,7 @@ import { cx } from "@/lib/cx";
 import type { ProjectListItem } from "@/lib/api/hooks/useProjects";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleHint, pendingModuleLabel } from "@/lib/pending-modules";
+import { asPercent } from "@/lib/api/scale";
 
 import { ShareBar } from "./ShareBar";
 import "./projects.css";
@@ -124,7 +125,10 @@ function ProgressRow({
         <span>{label}</span>
         {value !== null ? (
           <span className="prj-progress__pct" data-testid={testids.pct}>
-            {formatPercent(value)}
+            {/* KAÇIŞ (MetricPlaceholder jenerik zarf): `Metric` hem para hem
+                yüzde alanlarının PAYLAŞTIĞI ortak zarf tipi (madde 8 aynı
+                kök) — ad-tabanlı DeepScale zarfın `value` alanını ayıramaz. */}
+            {formatPercent(asPercent(value))}
           </span>
         ) : (
           <span
@@ -258,9 +262,10 @@ function MarginChip({ metric }: { metric: Metric | undefined }) {
         📈
       </span>
       {value !== null ? (
+        // KAÇIŞ (MetricPlaceholder jenerik zarf) — bkz. ProgressRow yorumu.
         <span
           className={cx("prj-card__margin", Number(value) < 0 && "prj-card__margin--negative")}
-        >{`${formatPercent(value)} marj`}</span>
+        >{`${formatPercent(asPercent(value))} marj`}</span>
       ) : (
         <span
           className="prj-card__margin prj-card__margin--pending"

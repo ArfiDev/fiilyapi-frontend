@@ -2,7 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
-import type { DeepScale } from "@/lib/api/scale";
+import type { DeepScale, WithPlainProgressPctOptional } from "@/lib/api/scale";
 
 // F-P5 T1 · SZL (`/sozlesmeler`) sekmeli listesinin TEK kaynağı:
 // `GET /contracts?type=employer|subcontractor` — 4 KPI (`summary`) + tablo
@@ -21,7 +21,11 @@ import type { DeepScale } from "@/lib/api/scale";
 // tanımsız). `GET /subcontractor-contracts` (U1) ile KARIŞTIRILMAMALIDIR: o uç
 // TB3'ten beri sayfalıdır.
 export type ContractListResponse = DeepScale<components["schemas"]["ContractListResponse"]>;
-export type ContractListItem = DeepScale<components["schemas"]["ContractListItem"]>;
+// 🔴 `progress_pct` madde 8 istisnası — burada anahtar OPSİYONEL (bkz.
+// `scale.ts` `WithPlainProgressPctOptional`).
+export type ContractListItem = WithPlainProgressPctOptional<
+  DeepScale<components["schemas"]["ContractListItem"]>
+>;
 export type ContractSummary = DeepScale<components["schemas"]["ContractSummary"]>;
 export type ContractStatus = components["schemas"]["ContractStatus"];
 export type ContractType = "employer" | "subcontractor";

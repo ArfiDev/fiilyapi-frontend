@@ -1,4 +1,5 @@
 import { formatPercent } from "@/lib/format";
+import type { Percent } from "@/lib/api/scale";
 import type { ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
 
 type ProgressBlock = ProgressPaymentDetail["progress"];
@@ -10,7 +11,7 @@ const ROWS: { key: ProgressKey; label: string; tone: "financial" | "physical" | 
   { key: "duration_pct", label: "Süre", tone: "duration" },
 ];
 
-function clampPct(value: string): number {
+function clampPct(value: Percent): number {
   return Math.min(Math.max(Number(value), 0), 100);
 }
 
@@ -25,7 +26,9 @@ export function PaymentProgressCard({ progress }: { progress: ProgressBlock }) {
     <section className="pp-progress-card">
       <h2 className="pp-progress-card__title">Sözleşme İlerlemesi</h2>
       {rows.map((row) => {
-        const raw = progress[row.key] as string;
+        // filtre yukarıda `!== null`ı elediği için değer burada GERÇEKTEN
+        // dolu — tip sistemi indeksli erişimi satır bazında NARROW edemiyor.
+        const raw = progress[row.key] as Percent;
         return (
           <div key={row.key} className="pp-progress-row">
             <div className="pp-progress-row__head">

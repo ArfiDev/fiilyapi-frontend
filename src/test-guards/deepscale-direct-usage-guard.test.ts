@@ -2,6 +2,10 @@
 //
 // TYPE-F1 FAZ 2c · DeepScale DOĞRUDAN KULLANIM BEKÇİSİ.
 //
+// Var olmayan bir şema adı (`components["schemas"]["Yok"]`) bu bekçinin işi
+// DEĞİL, tsc yakalar. Bekçi yalnız VAR OLAN nesne şemalarının sarılmadan
+// kullanımını denetler.
+//
 // KÖK KURAL (TYPE-F1 emir §1, faz 2a/2c): `components["schemas"][X]` ya da
 // `EvSchema[X]` bir NESNE şemasına (enum/skaler DEĞİL) karşılık geliyorsa,
 // üretim kodunda bir tip takma adına aktarılırken `DeepScale<...>`den

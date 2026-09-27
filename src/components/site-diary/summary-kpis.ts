@@ -1,5 +1,6 @@
 import { computeGrossMargin } from "@/components/progress-payments/shared/margin";
 import { sumDecimalStrings } from "@/lib/decimal";
+import { asPercent, type Percent } from "@/lib/api/scale";
 
 import type { DiaryAccrual } from "./payment-accrual";
 
@@ -30,7 +31,7 @@ export interface DiarySummaryKpiInput {
   /** `ProgressPaymentSummary.cumulative_gross`. */
   cumulativeGross: string | null;
   /** `ProgressPaymentSummary.progress_pct` — backend türevi, yeniden hesaplanmaz. */
-  progressPct: string | null;
+  progressPct: Percent | null;
   isSummaryLoading: boolean;
   isSummaryError: boolean;
 }
@@ -48,7 +49,7 @@ export interface DiarySummaryKpis {
   employerTotal: string | null;
   employerPendingReason: string | null;
   /** HÖ103 — sözleşme bedeline oran ("18.75"); `null` ⇒ basılmaz. */
-  employerContractSharePct: string | null;
+  employerContractSharePct: Percent | null;
   /** Oranın neden basılmadığı (GÖRÜNÜR metin) — sözleşme bedeli yoksa. */
   employerContractShareReason: string | null;
 
@@ -57,7 +58,7 @@ export interface DiarySummaryKpis {
   /** HÖ108 "4 taşeron" — tekil taşeron sayısı; `null` ⇒ pending. */
   subcontractorCount: number | null;
   /** HÖ108 "%55,2" — işveren tutarına oran; `null` ⇒ basılmaz. */
-  subcontractorSharePct: string | null;
+  subcontractorSharePct: Percent | null;
   subcontractorPendingReason: string | null;
   /** HÖ190-204 — panel çubukları (tutara göre azalan; `payment-accrual` sırası). */
   subcontractorBars: DiarySummarySubcontractorBar[];
@@ -65,30 +66,31 @@ export interface DiarySummaryKpis {
   /** HÖ112 / HÖ219 — brüt kâr tutarı; `null` ⇒ pending. */
   grossProfit: string | null;
   /** HÖ113 / HÖ220 "%44,8 marj"; `null` ⇒ basılmaz. */
-  grossMarginPct: string | null;
+  grossMarginPct: Percent | null;
   /** HÖ216 "2.100.000 − 1.160.000" alt satırının iki terimi; biri yoksa `null`. */
   profitFormula: { employer: string; subcontractor: string } | null;
 
   /** HÖ117 — kümülatif hakediş; `null` ⇒ pending. */
   cumulativeGross: string | null;
   /** HÖ118 "Sözleşmenin %75'i"; `null` ⇒ basılmaz. */
-  cumulativeProgressPct: string | null;
+  cumulativeProgressPct: Percent | null;
   /** HÖ119 ilerleme çubuğu genişliği (0-100). */
   cumulativeWidthPct: number;
   cumulativePendingReason: string | null;
 }
 
 /** Payda `0`/sayı değilse oran UYDURULMAZ. Sonuç iki ondalıklı string. */
-function ratioPct(part: string, whole: string): string | null {
+function ratioPct(part: string, whole: string): Percent | null {
   const wholeValue = Number(whole);
   const partValue = Number(part);
   if (!Number.isFinite(wholeValue) || wholeValue === 0) return null;
   if (!Number.isFinite(partValue)) return null;
-  return ((partValue / wholeValue) * 100).toFixed(2);
+  // toPoints dönüşü — kanonik ×100 türetimi (bkz. escape-hatch-inventory-guard).
+  return asPercent(((partValue / wholeValue) * 100).toFixed(2));
 }
 
 /** CSS genişliği: 0-100 arasına kırpılır; hesaplanamayan oran `0` basar. */
-export function clampWidthPct(value: string | null): number {
+export function clampWidthPct(value: Percent | string | null): number {
   if (value === null) return 0;
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;

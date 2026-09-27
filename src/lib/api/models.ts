@@ -1,5 +1,5 @@
 import type { components, paths } from "./schema";
-import type { DeepScale } from "./scale";
+import type { DeepScale, WithPlainProgressPct } from "./scale";
 
 export type UserResponse = DeepScale<components["schemas"]["UserResponse"]>;
 export type UserListResponse = DeepScale<components["schemas"]["UserListResponse"]>;
@@ -11,7 +11,7 @@ export type RoleCreate = DeepScale<components["schemas"]["RoleCreate"]>;
 export type RoleRename = DeepScale<components["schemas"]["RoleRename"]>;
 export type ModuleResponse = DeepScale<components["schemas"]["ModuleResponse"]>;
 export type ModuleGroup = DeepScale<components["schemas"]["ModuleGroup"]>;
-export type ProjectResponse = DeepScale<components["schemas"]["ProjectListItem"]>;
+export type ProjectResponse = WithPlainProgressPct<DeepScale<components["schemas"]["ProjectListItem"]>>;
 export type ProjectAccessInput = DeepScale<components["schemas"]["ProjectAccessInput"]>;
 export type ProjectAccessResponse = DeepScale<components["schemas"]["ProjectAccessResponse"]>;
 export type PermissionCell = DeepScale<components["schemas"]["PermissionCell"]>;

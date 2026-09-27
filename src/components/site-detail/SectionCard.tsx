@@ -6,7 +6,7 @@ import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules"
 import { SECTION_STATUS_CLASS_SUFFIX, SECTION_STATUS_LABELS } from "@/lib/section-labels";
 import type { components } from "@/lib/api/schema";
 import { routes, routeKeyOf } from "@/lib/routes";
-import type { DeepScale } from "@/lib/api/scale";
+import { asPercent, type DeepScale } from "@/lib/api/scale";
 
 export type SectionResponse = DeepScale<components["schemas"]["SectionResponse"]>;
 type SectionStatus = SectionResponse["status"];
@@ -262,7 +262,8 @@ function ProgressMetricCell({
             progressClass,
           )}
         >
-          {formatPercent(progress.value ?? "0")}
+          {/* KAÇIŞ (MetricPlaceholder jenerik zarf, madde 8 aynı kök). */}
+          {formatPercent(asPercent(progress.value ?? "0"))}
         </div>
       ) : (
         <PlaceholderValue

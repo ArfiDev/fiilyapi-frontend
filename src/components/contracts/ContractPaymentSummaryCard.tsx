@@ -1,4 +1,5 @@
 import { formatCurrency, formatPercent } from "@/lib/format";
+import type { Percent } from "@/lib/api/scale";
 import type { ProgressPaymentSummary } from "@/lib/api/hooks/useProgressPayments";
 
 import { isProvenZeroAmount } from "./contract-progress";
@@ -31,7 +32,7 @@ import "./employer-contract-detail.css";
 export interface ContractPaymentSummaryCardProps {
   summary: ProgressPaymentSummary;
   /** 140 · parantez içindeki teminat oranı (`EmployerContractDetail.retainage_pct`). */
-  retainagePct: string;
+  retainagePct: Percent;
 }
 
 const DASH = "—";

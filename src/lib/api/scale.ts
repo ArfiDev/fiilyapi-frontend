@@ -97,6 +97,56 @@ export function asPercentOrNull<T extends string | null | undefined>(
 export const SCALE_NAME_EXCEPTIONS = ["progress_pct", "rate"] as const;
 type ScaleNameException = (typeof SCALE_NAME_EXCEPTIONS)[number];
 
+/**
+ * FAZ 2b · `progress_pct` istisnasının maliyet ÖLÇÜMÜ (TYPE-F1 emir madde 8):
+ * ad düzeyinde DeepScale bu alanı KALICI OLARAK ayıramaz (yukarıdaki not) ama
+ * ŞEMA düzeyinde — tek tek her takma ad için — ucuza marka'lanabilir. Ölçüldü
+ * (`scale-table.ts`teki TÜM `progress_pct` satırları tarandı): ALTI şemada
+ * (`ProjectListItem`, `DashboardProjectCard`, `ProjectDetailResponse`,
+ * `SubcontractorCostRow`, `ProgressPaymentSummary`, `ContractListItem`)
+ * `progress_pct` GERÇEKTEN düz `string | null` (`ContractListItem`de
+ * OPSİYONEL anahtar) PERCENT'tir (zarf DEĞİL) — yedinci bir takma ad
+ * (`ProjectResponse`, aynı `ProjectListItem` şemasını sarar) dahil TOPLAM 7
+ * alias satırı dokunuldu (`models.ts`, `useProjects.ts`,
+ * `useDashboardSummary.ts`, `useProjectCosts.ts`, `useProgressPayments.ts`,
+ * `useContracts.ts`, `dashboard/ProjectCard.tsx`, `dashboard/ProjectGrid.tsx`).
+ * Maliyet UCUZ: `Omit<DeepScale<T>, "progress_pct"> & {progress_pct: Percent
+ * | null}` sarmalayıcısı (opsiyonel anahtarlı `ContractListItem` için ayrı
+ * `WithPlainProgressPctOptional` varyantı) — davranış/metin DEĞİŞMEZ, yalnız
+ * önceden markasız giden değer artık derleyici düzeyinde korunur.
+ *
+ * 🔴 KALAN KORUMASIZ: bu altı şemanın LİSTE/nested kullanımları (ör.
+ * `ProjectListResponse.items[]`, `DashboardSummary.projects[]`,
+ * `ProjectCostsResponse.breakdown.subcontractors[]`,
+ * `ContractListResponse.items[]`) bu sarmalayıcıya GİRMEZ — dizinin öge tipi
+ * ayrı bir DeepScale uygulamasıdır ve isim istisnası orada da geçerlidir;
+ * yalnız DÜZ tekil takma adlar elle düzeltildi (maliyet/fayda: bu nested
+ * yollarda doğrudan `.progress_pct` OKUYAN üretim kodu ÖLÇÜLMEDİ —
+ * bulunursa aynı sarmalayıcı orada da ucuzdur). Diğer `MetricPlaceholder`
+ * zarflı şemalar (`BoqItemResponse`/`SiteCard`/`SectionResponse`/
+ * `SiteDetailResponse`/`SectionDetailResponse`) bu sarmalayıcıya HİÇ
+ * GİRMEZ — onlarda `.value` iç alanı ayrı bir sorun (bkz.
+ * `ProgressCell`/`asPercent` kaçışları, "MetricPlaceholder jenerik zarf"
+ * sınıfı, `escape-hatch-inventory-guard.test.ts`), zarfın KENDİSİ
+ * `progress_pct` değil `value` adını taşıdığı için bu tipin kapsamı dışında.
+ */
+export type WithPlainProgressPct<T extends { progress_pct: string | null }> = Omit<
+  T,
+  "progress_pct"
+> & { progress_pct: Percent | null };
+
+/**
+ * `WithPlainProgressPct`in İSTEĞE BAĞLI alan sürümü — `ContractListItem`de
+ * `progress_pct` openapi'de `progress_pct?:` (anahtar OPSİYONEL) olarak
+ * üretilir, diğer beş şemadaki gibi ZORUNLU değil. Ayrı tip: zorunlu sürümün
+ * kısıtını gevşetmek beş şemadaki garantiyi de gevşetirdi (anahtar HER ZAMAN
+ * var olma garantisi kaybolurdu) — iki ayrı sözleşme, iki ayrı yardımcı tip.
+ */
+export type WithPlainProgressPctOptional<T extends { progress_pct?: string | null }> = Omit<
+  T,
+  "progress_pct"
+> & { progress_pct?: Percent | null };
+
 type TableRow = ScaleTableLiteral[number];
 
 /** Tablodan türetilen, `scale: "fraction"` taşıyan alan adları (istisnalar hariç). */

@@ -13,12 +13,13 @@
 //   ör. bazı sözleşme detayları yüklenemedi) → marj BASILMAZ — yanlış bir
 //   sayı basmaktansa boş bas (brief §sınır durumları).
 import { sumDecimalStrings } from "@/lib/decimal";
+import { asPercent, type Percent } from "@/lib/api/scale";
 
 export function computeGrossMargin(
   employerGrossTotal: string,
   subcontractorGrossTotal: string,
   isSubcontractorTotalComplete: boolean,
-): string | null {
+): Percent | null {
   if (!isSubcontractorTotalComplete) return null;
 
   const employer = Number(employerGrossTotal);
@@ -28,7 +29,7 @@ export function computeGrossMargin(
   if (!Number.isFinite(subcontractor)) return null;
 
   const marginPct = ((employer - subcontractor) / employer) * 100;
-  return marginPct.toFixed(2);
+  return asPercent(marginPct.toFixed(2));
 }
 
 /**

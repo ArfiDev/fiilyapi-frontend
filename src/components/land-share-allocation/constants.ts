@@ -6,6 +6,7 @@
 import { SALES_LIST_HREF } from "@/components/unit-shell/routes";
 import type { LandShareCountBalance, LandShareShareholderRow } from "@/lib/api/hooks/useLandShare";
 import { formatPercent } from "@/lib/format";
+import type { Percent } from "@/lib/api/scale";
 
 export const ALLOCATION_FORM_TITLE = "Kat Karşılığı Paylaşım Girişi"; // PG 53
 export const ALLOCATION_FORM_SUBTITLE =
@@ -79,7 +80,7 @@ export const ALLOCATION_CANCEL_HREF = SALES_LIST_HREF;
  * düğme YANLIŞ oran vaat eder. Etiket `LandShareContract.our_share_pct` /
  * `.owner_share_pct` alanlarından TÜRETİLİR.
  */
-export function autoDistributeLabel(ourPct: string, ownerPct: string): string {
+export function autoDistributeLabel(ourPct: Percent, ownerPct: Percent): string {
   return `Otomatik Dağıt (${formatPercent(ourPct)}/${formatPercent(ownerPct)})`;
 }
 
@@ -220,7 +221,7 @@ export function shareholderOptionLabel(row: LandShareShareholderRow): string {
 }
 
 /** PG 68/69 "Biz %55" · "Arsa %45" — oran SÖZLEŞMEDEN gelir, sabit değil. */
-export function contractSideLabel(sideLabel: string, pct: string): string {
+export function contractSideLabel(sideLabel: string, pct: Percent): string {
   return `${sideLabel} ${formatPercent(pct)}`;
 }
 
@@ -264,7 +265,7 @@ function sideRemainderPhrase(missing: number, who: string): string | null {
 }
 
 /** PG 249 "Sözleşme gereği (Biz %55)" — oran sözleşmeden TÜRER. */
-export function allocationContractRequirementLabel(ourPct: string): string {
+export function allocationContractRequirementLabel(ourPct: Percent): string {
   return `Sözleşme gereği (${ALLOCATION_CONTRACTOR_LABEL} ${formatPercent(ourPct)})`;
 }
 
@@ -275,8 +276,8 @@ export function allocationUnitCountLabel(count: number): string {
 
 /** PG 260 "%55,6 / %44,4" — İKİSİ DE `null` olabilir (hesaplanamaz hâl). */
 export function allocationActualRatioLabel(
-  ourPct: string | null,
-  ownerPct: string | null,
+  ourPct: Percent | null,
+  ownerPct: Percent | null,
 ): string {
   if (ourPct === null || ownerPct === null) return ALLOCATION_UNCOMPUTABLE;
   return `${formatPercent(ourPct)} / ${formatPercent(ownerPct)}`;

@@ -34,21 +34,25 @@ interface EscapeRecord {
 }
 
 /**
- * GEREKÇELİ KAÇIŞ ENVANTERİ (11 kayıt, TYPE-F1 faz 2a/2c ölçümü).
+ * GEREKÇELİ KAÇIŞ ENVANTERİ (19 kayıt, TYPE-F1 faz 2a/2b/2c ölçümü).
  *
  * Gerekçe sınıfları:
- *   · "toPoints dönüşü"        — Fraction→Percent kanonik ×100 dönüşümü
+ *   · "toPoints dönüşü"          — Fraction→Percent kanonik ×100 dönüşümü
  *     (`toPoints()` ve aynı deseni yerel olarak tekrarlayan tek-kullanımlık
  *     eşdeğerleri).
- *   · "EvNumber sınırı"        — girdi `EvNumber` (gevşek Decimal-uyumlu
+ *   · "EvNumber sınırı"          — girdi `EvNumber` (gevşek Decimal-uyumlu
  *     birleşim) sınırında Fraction'a marka'lanır.
- *   · "çift kullanımlı türev"  — aynı sayısal değer HEM numara olarak
+ *   · "çift kullanımlı türev"    — aynı sayısal değer HEM numara olarak
  *     (genişlik/ton/karşılaştırma) HEM gösterim için Percent olarak kullanılır.
- *   · "test kesinliği türevi"  — üreten fonksiyon `toBeCloseTo` ile
+ *   · "test kesinliği türevi"    — üreten fonksiyon `toBeCloseTo` ile
  *     doğrulanan `number` döndürür (davranış testi bozulmasın diye kaçış
  *     yalnız `formatPercent` SINIRINDA uygulanır).
- *   · "gösterim-amaçlı türev"  — hiçbir API gövdesine yazılmayan, yalnız
+ *   · "gösterim-amaçlı türev"    — hiçbir API gövdesine yazılmayan, yalnız
  *     ekrana basılan türetilmiş yüzde.
+ *   · "MetricPlaceholder jenerik zarf" — FAZ 2b: `.value` alanı bir envelope
+ *     (`MetricPlaceholder`) İÇİNDE; ad-tabanlı DeepScale zarfın GENEL `value`
+ *     alanını marka'layamaz (TYPE-F1 emir madde 8 ile aynı kök — `progress_pct`
+ *     ADI için şema-düzeyinde çözüldü, ama zarfın `value` alanı için HENÜZ yok).
  */
 const EXPECTED_ESCAPES: readonly EscapeRecord[] = [
   { file: "lib/earned-value/decimal-input.ts", fn: "toPoints()", gerekce: "toPoints dönüşü" },
@@ -62,6 +66,16 @@ const EXPECTED_ESCAPES: readonly EscapeRecord[] = [
   {
     file: "components/site-diary/DiarySummaryAccrualTable.tsx",
     fn: "toCompletionPercent()",
+    gerekce: "toPoints dönüşü",
+  },
+  {
+    file: "components/site-diary/summary-kpis.ts",
+    fn: "ratioPct()",
+    gerekce: "toPoints dönüşü",
+  },
+  {
+    file: "components/progress-payments/shared/margin.ts",
+    fn: "computeGrossMargin()",
     gerekce: "toPoints dönüşü",
   },
   {
@@ -85,6 +99,36 @@ const EXPECTED_ESCAPES: readonly EscapeRecord[] = [
     file: "components/progress-payments/ProgressPaymentForm.tsx",
     fn: "coefficientPercentLabel() — (katsayı−1)×100 dalı",
     gerekce: "gösterim-amaçlı türev",
+  },
+  {
+    file: "components/site-detail/SiteHeroBar.tsx",
+    fn: "ProgressCell()",
+    gerekce: "MetricPlaceholder jenerik zarf",
+  },
+  {
+    file: "components/section-detail/SectionHeroCard.tsx",
+    fn: "ProgressCell()",
+    gerekce: "MetricPlaceholder jenerik zarf",
+  },
+  {
+    file: "components/projects/ProjectCard.tsx",
+    fn: "ProgressRow()",
+    gerekce: "MetricPlaceholder jenerik zarf",
+  },
+  {
+    file: "components/projects/ProjectCard.tsx",
+    fn: "MarginChip()",
+    gerekce: "MetricPlaceholder jenerik zarf",
+  },
+  {
+    file: "components/project-detail/SiteCard.tsx",
+    fn: "SiteCard() — ilerleme KPI hücresi",
+    gerekce: "MetricPlaceholder jenerik zarf",
+  },
+  {
+    file: "components/site-detail/SectionCard.tsx",
+    fn: "ProgressMetricCell()",
+    gerekce: "MetricPlaceholder jenerik zarf",
   },
 ];
 
@@ -123,8 +167,8 @@ describe("kaçış envanteri bekçisinin kendisi", () => {
 });
 
 describe("TYPE-F1 · kaçış (asPercent/asFraction ailesi) envanteri GEREKÇELİ listeyle birebir eşit", () => {
-  it("beklenen envanter 11 kayıt", () => {
-    expect(EXPECTED_ESCAPES.length).toBe(11);
+  it("beklenen envanter 19 kayıt (faz 2b: +8 — 6 MetricPlaceholder jenerik zarf, 2 toPoints dönüşü)", () => {
+    expect(EXPECTED_ESCAPES.length).toBe(19);
   });
 
   it("üretim kodundaki kaçış sayısı, dosya başına, GEREKÇELİ envanterle birebir eşleşir", () => {

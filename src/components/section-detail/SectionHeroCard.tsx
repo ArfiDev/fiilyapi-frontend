@@ -8,6 +8,7 @@ import {
   type PendingModuleKey,
 } from "@/lib/pending-modules";
 import { SECTION_STATUS_CLASS_SUFFIX, SECTION_STATUS_LABELS } from "@/lib/section-labels";
+import { asPercent } from "@/lib/api/scale";
 import type { SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import { remainingDays } from "./remainingDays";
 import { routes } from "@/lib/routes";
@@ -70,7 +71,11 @@ function ProgressCell({ progress }: { progress: SectionDetailResponse["progress_
     <div className="section-hero__kpi" data-testid="section-hero-kpi-progress">
       <div className="section-hero__kpi-label">Fiziksel İlerleme</div>
       {isReal ? (
-        <div className="section-hero__kpi-value">{formatPercent(progress.value as string)}</div>
+        // KAÇIŞ (MetricPlaceholder jenerik zarf, madde 8) — bkz. SiteHeroBar
+        // ProgressCell yorumu.
+        <div className="section-hero__kpi-value">
+          {formatPercent(asPercent(progress.value ?? "0"))}
+        </div>
       ) : (
         <PlaceholderValue pendingModule={progress.pending_module} />
       )}

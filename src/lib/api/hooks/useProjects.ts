@@ -3,13 +3,20 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import type { ProjectAccessResponse } from "@/lib/api/models";
-import type { DeepScale } from "@/lib/api/scale";
+import type { DeepScale, WithPlainProgressPct } from "@/lib/api/scale";
 
 // NOT: Plan "ProjectResponse" adini varsayiyordu; gercek semada oge tipi
 // "ProjectListItem" (bkz. src/lib/api/schema.d.ts). Gercek adi kullaniyoruz.
+//
+// 🔴 `ProjectListResponse.items[]`in İÇİNDEKİ `progress_pct` bu sarmalayıcıya
+// GİRMEZ (yalnız DÜZ `ProjectListItem`/`ProjectDetail` takma adları elle
+// düzeltildi) — dizinin öge tipi ayrı bir DeepScale uygulaması, `scale.ts`
+// `WithPlainProgressPct` notu bunu KALAN KORUMASIZ YER olarak işaretler.
 export type ProjectListResponse = DeepScale<components["schemas"]["ProjectListResponse"]>;
-export type ProjectListItem = DeepScale<components["schemas"]["ProjectListItem"]>;
-export type ProjectDetail = DeepScale<components["schemas"]["ProjectDetailResponse"]>;
+export type ProjectListItem = WithPlainProgressPct<DeepScale<components["schemas"]["ProjectListItem"]>>;
+export type ProjectDetail = WithPlainProgressPct<
+  DeepScale<components["schemas"]["ProjectDetailResponse"]>
+>;
 export type ProjectCounts = ProjectListResponse["counts"];
 /**
  * Proje türü enum'u — `ProjectDetailResponse.project_type` ve

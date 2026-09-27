@@ -2,7 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
-import type { DeepScale } from "@/lib/api/scale";
+import type { DeepScale, WithPlainProgressPct } from "@/lib/api/scale";
 
 /**
  * F-PKK T1 · Proje Özeti (`/projeler/[projectId]/ozet`) maliyet katmanı —
@@ -31,7 +31,13 @@ import type { DeepScale } from "@/lib/api/scale";
 export type ProjectCostsResponse = DeepScale<components["schemas"]["ProjectCostsResponse"]>;
 export type ProjectCostBreakdown = DeepScale<components["schemas"]["ProjectCostBreakdown"]>;
 export type ProjectProfitProjection = DeepScale<components["schemas"]["ProjectProfitProjection"]>;
-export type SubcontractorCostRow = DeepScale<components["schemas"]["SubcontractorCostRow"]>;
+// 🔴 `progress_pct` madde 8 istisnası (bkz. `scale.ts` `WithPlainProgressPct`)
+// — bu şemada da düz string PERCENT'tir, ad-tabanlı DeepScale eşlemesine
+// GİRMEZ. `ProjectCostsResponse.breakdown.subcontractors[]`in İÇİNDEKİ satır
+// bu sarmalayıcıya GİRMEZ (yalnız düz takma ad elle düzeltildi).
+export type SubcontractorCostRow = WithPlainProgressPct<
+  DeepScale<components["schemas"]["SubcontractorCostRow"]>
+>;
 export type SubcontractorCostSummary = DeepScale<components["schemas"]["SubcontractorCostSummary"]>;
 
 export const PROJECT_COSTS_QUERY_KEY = "project-costs";
