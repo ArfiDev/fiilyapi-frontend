@@ -6,9 +6,22 @@
  * ─── 🔴 K5/B3: İKİNCİ İSTEK YOK ──────────────────────────────────────────
  * Kırıntı HER ekranda basılır. Adı kendi sorgusuyla çekseydi uygulamadaki
  * her sayfa açılışına 1-3 ek istek eklerdi — üstelik sayfanın ZATEN çektiği
- * veriyi ikinci kez. Bu yüzden bu modül `queryFn: skipToken` ile abone olur:
- * gözlemci önbelleğe BAĞLANIR (veri geldiğinde/değiştiğinde yeniden render
- * eder) ama HİÇBİR ZAMAN fetch etmez.
+ * veriyi ikinci kez. Bu yüzden bu modül `useQueryCacheSnapshot` ile
+ * (`src/lib/query/useQueryCacheSnapshot.ts`) abone olur: paylaşılan Query'nin
+ * ANLIK durumunu okur (veri geldiğinde/değiştiğinde yeniden render eder) ama
+ * HİÇBİR ZAMAN fetch etmez VE paylaşılan Query'nin `options`'ına dokunmaz.
+ *
+ * 🔴 SEKME-F1.5-FIX (ölçüldü) — ÖNCEKİ mekanizma (`useQuery({ queryFn:
+ * skipToken })`) bu son cümleyi İHLAL EDİYORDU: react-query 5'te her
+ * `useQuery` render'ı `Query#setOptions` çağırır ve paylaşılan Query'nin
+ * `options`'ını TÜMÜYLE yazar (son çağıran kazanır). Bu bileşen sayfanın
+ * KENDİ (gerçek queryFn'li) gözlemcisinden SONRA render olduğunda (ör.
+ * `TabsRouterSync`), paylaşılan `options`'ı skipToken'a çeviriyordu.
+ * `QueryProvider`'da `retry: 1` açık olduğu için sayfanın ilk denemesi
+ * başarısız olunca YENİDEN DENEME bu zehirlenmiş `options`'ı okuyor, ağa hiç
+ * çıkmadan `Error("Missing queryFn: ...")` fırlatıyordu — sayfa gerçek
+ * `BackendError`ı (dolayısıyla 403/404 dallanmasını) hiç görmüyordu. Şimdiki
+ * mekanizma `setOptions` hiç çağırmaz, bu sınıf kusur YAPISAL OLARAK yok.
  *
  * Bunun çalışmasının ön koşulu, anahtarın sayfanınkiyle BİREBİR aynı olması:
  *
@@ -31,7 +44,7 @@
  * `SiteHeroBar` proje bağlantısını da ondan kurar. Düşüş sırası bu yüzden
  * "önce proje sorgusu, yoksa şantiye yanıtının proje gövdesi"dir.
  */
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { useQueryCacheSnapshot } from "@/lib/query/useQueryCacheSnapshot";
 
 import { PROJECT_QUERY_KEY, type ProjectDetail } from "@/lib/api/hooks/useProjects";
 import { SECTION_QUERY_KEY, type SectionDetailResponse } from "@/lib/api/hooks/useSection";
@@ -43,29 +56,24 @@ import type { CrumbNames } from "./trail";
 import type { NamedEntity, RouteKeys } from "./trail-node";
 
 export function useCrumbNames(keys: RouteKeys): CrumbNames {
-  const project = useQuery<ProjectDetail>({
-    queryKey: [PROJECT_QUERY_KEY, keys.projectId],
-    queryFn: skipToken,
-  });
-  const site = useQuery<SiteDetail>({
-    queryKey: [SITE_QUERY_KEY, keys.siteId, keys.projectId],
-    queryFn: skipToken,
-  });
-  const section = useQuery<SectionDetailResponse>({
-    queryKey: [SECTION_QUERY_KEY, keys.sectionId, keys.siteId, keys.projectId],
-    queryFn: skipToken,
-  });
+  const project = useQueryCacheSnapshot<ProjectDetail>([PROJECT_QUERY_KEY, keys.projectId]);
+  const site = useQueryCacheSnapshot<SiteDetail>([SITE_QUERY_KEY, keys.siteId, keys.projectId]);
+  const section = useQueryCacheSnapshot<SectionDetailResponse>([
+    SECTION_QUERY_KEY,
+    keys.sectionId,
+    keys.siteId,
+    keys.projectId,
+  ]);
 
   // DET-1.2 — günlük kayıt detayı: anahtar SAYFANIN anahtarıdır (tek üretici
   // `siteDiaryEntryQueryKey`). Sayfa kaydı bölümün kanonik kimliğiyle ister;
   // o kimlik AYNI önbellekteki bölüm yanıtından okunur (bölüm okunamadıysa
   // ikisi de bölümsüz anahtara düşer).
-  const diaryEntry = useQuery<SiteDiaryEntryDetail>({
-    queryKey: siteDiaryEntryQueryKey(keys.entityId, section.data?.id),
-    queryFn: skipToken,
-  });
+  const diaryEntry = useQueryCacheSnapshot<SiteDiaryEntryDetail>(
+    siteDiaryEntryQueryKey(keys.entityId, section?.data?.id),
+  );
 
-  const projectName = project.data?.name ?? site.data?.project.name;
+  const projectName = project?.data?.name ?? site?.data?.project.name;
 
   /**
    * Sorgusu HATA vermiş türler. Yedek etikete düşerler, iskelette DONMAZLAR:
@@ -74,16 +82,18 @@ export function useCrumbNames(keys: RouteKeys): CrumbNames {
    * vermeden proje "çözülemedi" sayılmaz.
    */
   const unresolved = new Set<NamedEntity>();
-  if (projectName === undefined && (project.isError || site.isError)) unresolved.add("project");
-  if (site.data === undefined && site.isError) unresolved.add("site");
-  if (section.data === undefined && section.isError) unresolved.add("section");
-  if (diaryEntry.data === undefined && diaryEntry.isError) unresolved.add("diaryEntry");
+  if (projectName === undefined && (project?.status === "error" || site?.status === "error")) {
+    unresolved.add("project");
+  }
+  if (site?.data === undefined && site?.status === "error") unresolved.add("site");
+  if (section?.data === undefined && section?.status === "error") unresolved.add("section");
+  if (diaryEntry?.data === undefined && diaryEntry?.status === "error") unresolved.add("diaryEntry");
 
   return {
     project: projectName,
-    site: site.data?.name,
-    section: section.data?.name,
-    diaryEntry: diaryEntry.data === undefined ? undefined : formatDateDots(diaryEntry.data.entry_date),
+    site: site?.data?.name,
+    section: section?.data?.name,
+    diaryEntry: diaryEntry?.data === undefined ? undefined : formatDateDots(diaryEntry.data.entry_date),
     unresolved,
   };
 }

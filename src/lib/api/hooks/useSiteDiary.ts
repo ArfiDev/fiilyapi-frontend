@@ -118,9 +118,10 @@ export interface SiteDiaryEntryOptions {
 
 /**
  * Tekil kaydın önbellek anahtarı — TEK üretici. Kırıntı (`useCrumbNames`)
- * aynı anahtara `skipToken` ile bağlanır; elle kopyalansaydı anahtar bir gün
- * ayrıştığında kırıntı sessizce iskelette kalırdı. Bölümsüz çağrının anahtarı
- * BUGÜNKÜYLE aynıdır (`[KEY, id]`).
+ * aynı anahtara `useQueryCacheSnapshot` ile GÖZLEMCİSİZ okur (bkz.
+ * `src/lib/query/useQueryCacheSnapshot.ts`); elle kopyalansaydı anahtar bir
+ * gün ayrıştığında kırıntı sessizce iskelette kalırdı. Bölümsüz çağrının
+ * anahtarı BUGÜNKÜYLE aynıdır (`[KEY, id]`).
  */
 export function siteDiaryEntryQueryKey(entryId: string, sectionId?: string): readonly unknown[] {
   return sectionId === undefined
