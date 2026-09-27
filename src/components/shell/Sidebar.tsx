@@ -8,12 +8,38 @@ import { useLogout } from "@/lib/shell/useLogout";
 import { LockIcon } from "@/components/ui/icons";
 import { activeNavHref, NAV_GROUPS } from "./nav-config";
 import { useSession } from "./SessionProvider";
+import { UnsavedTabGuardModal } from "./workspace-tabs/UnsavedTabGuardModal";
+import { useWorkspaceTabsController } from "./workspace-tabs/useWorkspaceTabsController";
 import "./sidebar.css";
 import { routes } from "@/lib/routes";
+
+/** Tarayıcının kendi davranışına bırakılan tıklar (yeni pencere, indirme, orta tuş). */
+function isPlainPrimaryClick(event: React.MouseEvent<HTMLAnchorElement>): boolean {
+  return (
+    !event.defaultPrevented &&
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { me } = useSession();
+  // SEKME-F1.4a — nav öğesine DÜZ tık çalışma sekmesi kuralıyla yürür
+  // (KARARLAR §1.10 (3)): açık modül öne gelir (hatırlanan adresiyle), aktif
+  // modül köküne döner, kapalı modül yeni sekmede açılır; aktif sekme
+  // değişecekse ve kaydedilmemiş veri varsa önce onay. Ctrl/Cmd/orta tık
+  // belge düzeyi yakalayıcıdadır (`useTabLinkCapture`) — burada ELLENMEZ.
+  const tabs = useWorkspaceTabsController();
+  function handleNavClick(event: React.MouseEvent<HTMLAnchorElement>, href: string): void {
+    // Oturum gelmeden mağaza kullanıcıya iliştirilmemiştir: düz Link gezinmesi.
+    if (!tabs.isReady || !isPlainPrimaryClick(event)) return;
+    event.preventDefault();
+    tabs.openFromSidebar(href);
+  }
   // 🔴 KAYIT NO 297 — çıkış mantığı `useLogout` (src/lib/shell/useLogout.ts)
   // ortak kancasında yaşar: ne `response.ok` kontrolsüz ne `try/catch`siz
   // bırakılır (aksi hâlde sunucu oturumu kapatamasa bile kullanıcı "çıktım"
@@ -39,6 +65,7 @@ export default function Sidebar() {
                   href={href}
                   className={cx("sidebar-item", active && "sidebar-item--active")}
                   aria-current={active ? "page" : undefined}
+                  onClick={(event) => handleNavClick(event, href)}
                 >
                   <Icon width={16} height={16} className="sidebar-item__icon" />
                   <span>{label}</span>
@@ -72,6 +99,12 @@ export default function Sidebar() {
           </p>
         )}
       </div>
+      <UnsavedTabGuardModal
+        isOpen={tabs.guard.isOpen}
+        labels={tabs.guard.labels}
+        onCancel={tabs.guard.cancel}
+        onDiscard={tabs.guard.confirm}
+      />
     </aside>
   );
 }

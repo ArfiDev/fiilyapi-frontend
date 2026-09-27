@@ -14,6 +14,7 @@
 .topbar-logo {
   width: 220px;
   height: 100%;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -36,6 +37,16 @@
   height: 36px;
   width: auto;
   flex-shrink: 0;
+}
+/* SEKME-F1.4a — çalışma sekmeleri şeridinin YUVASI (logo ile eylemler arası).
+   `flex: 1` kalan genişliği alır; `min-width: 0` flex öğesinin içerik
+   genişliğinin altına daralabilmesi için ŞART (varsayılan `min-width:auto`
+   uzun şeridin zil/avatarı sağdan taşırmasına yol açardı) — şerit kendi
+   içinde daralır/kayar. `height: 100%` şeridin 52px çubuğu doldurmasını sağlar. */
+.topbar-tabs {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
 }
 .topbar-actions {
   /* SEKME-F1.2: kırıntı topbar'dan içeriğe indi, `topbar-logo` ile
@@ -80,3 +91,47 @@
 /* SEKME-F1.2: kırıntının kendi kuralları (`.topbar-crumbs*`) buradan
    `breadcrumb/page-breadcrumb.css`e (`.page-crumbs*`) TAŞINDI — kırıntı artık
    `<main class="app-content">`in içinde basılıyor, üst çubukta DEĞİL. */
+
+/* SEKME-F1.4c — dar ekran (kullanıcı kararı): 768px altında logodaki "FİİL
+   YAPI" yazısı gizlenir, yalnız sol baştaki F amblemi kalır. Ölçüm (Pillow,
+   F1.4b): kaynak PNG 1569x418, amblem bbox x:[0,146] y:[67,290]; hedef amblem
+   yüksekliği 26px -> ölçek 0,11607 -> görsel 182x48,52px, amblem genişliği
+   17px, üst ofset 7,78px.
+   v3 turu KUSURU (lider gözlemi, ölçüldü): amblem ekranın/şeridin SOL KENARINA
+   0px yapışıktı — "kesik" algısı buradan geliyordu (kaynak PNG'de amblem
+   TAMDI, bu ÇÜRÜTÜLDÜ; eksik olan NEFES PAYIYDI). Çözüm: masaüstü
+   `.topbar-logo`nun `padding: 0 14px`iyle AYNI 14px değeri sol boşluk VE
+   amblem-şerit arası boşluk olarak kullanılır. `padding-left` DENENMEDİ
+   ÖNCE ÇÜRÜTÜLDÜ: mutlak konumlu `.topbar-logo__image`in konumlanma kutusu
+   (containing block) ebeveynin PADDING KUTUSU'dur ve `left:0` bu kutunun
+   dış kenarına (paddingi YOK SAYARAK) oturur — `padding-left` TEK BAŞINA
+   görseli kaydırmaz (ölçüldü). Bunun yerine hücre genişliği
+   14(sol)+17(amblem)+14(sağ)=45px'e büyütülür, görsel `left: 14px`e
+   TAŞINIR ve `clip-path` görselin KENDİ 182px kutusundan yalnızca ilk 17px'i
+   (amblem sağ kenarına KADAR) bırakır — sağdaki 14px boşluk "FİİL" yazısından
+   bir kırıntı DEĞİL, `clip-path`in kestiği tamamen boş alandır. Konteynerin
+   `overflow: hidden`i dikey taşmayı (48,52px > 26px) kırpmaya devam eder. */
+@media (max-width: 767px) {
+  .topbar-logo {
+    width: 45px;
+    min-width: 45px;
+    flex-shrink: 0;
+    height: 26px;
+    padding: 0;
+    border-right: none;
+    overflow: hidden;
+    position: relative;
+  }
+  .topbar-logo__image {
+    position: absolute;
+    top: -7.78px;
+    left: 14px;
+    width: 182px;
+    height: 48.52px;
+    max-width: none;
+    /* 182 - 17 (amblem genişliği) = 165px sağdan kes — amblemin SAĞ KENARINDAN
+       itibaren "FİİL YAPI" yazısının TAMAMI kaybolur, yalnız yayın (emblem)
+       kalır. */
+    clip-path: inset(0 165px 0 0);
+  }
+}

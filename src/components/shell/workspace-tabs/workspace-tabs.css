@@ -1,0 +1,279 @@
+/* Çalışma sekmeleri şeridi — SEKME-F1.4b, mockup YOK (KARARLAR §1.10).
+   Emsal: `topbar.css` (yüzey/kenarlık/gölge dili) + `sidebar.css`
+   `.sidebar-item--active` (aktif öğe dili: nav-active-bg zemin, primary metin,
+   600 ağırlık) buradan TÜRETİLDİ — yeni renk/hex İCAT EDİLMEDİ. */
+
+.workspace-tabs {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  min-width: 0;
+  /* Zil/avatar'ı ezmemek için: topbar-actions `flex-shrink: 0` ile sağda
+     sabit kalıyor, şerit kalan alanı KENDİ min-width:0'ıyla paylaşır. */
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+/* SEKME-F1.4c (kullanıcı onayı): "daha fazla var" ipucu — yalnız o yönde
+   gerçekten kayma MÜMKÜNKEN görünür (`WorkspaceTabsStrip`teki kaydırma
+   ölçümü `workspace-tabs--fade-left/right` sınıfını takar/söker). Yeni renk
+   YOK — `--color-surface`ten şeffafa geçiş, yalnızca `opacity` üzerinden
+   (compositor dostu).
+   SOL SOLMA `.workspace-tabs::before` DEĞİL — panel (`.workspace-tab--pinned`)
+   `position: sticky` olduğundan (aşağıda) şeridin SOL KENARINDA HER ZAMAN
+   panel oturur; konteynerin mutlak sol kenarına bir gradyan koymak panelin
+   ALTINDA/ÜSTÜNDE kalıp görünmezdi. Bunun yerine sol solma panelin KENDİ
+   `::after`ı (panelin SAĞ kenarından başlar) — bkz. `.workspace-tab--pinned::after`. */
+.workspace-tabs::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  background: linear-gradient(to left, var(--color-surface), transparent);
+}
+.workspace-tabs--fade-right::after {
+  opacity: 1;
+}
+
+.workspace-tabs__list {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  /* v4 turu KUSURU (lider gözlemi, `elementFromPoint`le ÖLÇÜLDÜ): sol
+     `padding-inline-start` STICKY panelin `left:0`ından ÖNCE kalan 8px'lik
+     bir "boşluk" bırakıyordu — sticky ofseti konteynerin PADDING KUTUSUNA
+     göre hesaplanır (panel padding BİTTİKTEN SONRA sabitlenir), ama o
+     8px'lik padding şeridinin KENDİSİ kayan içeriğin ALTINDA/İÇİNDE kalmaya
+     devam eder ve kayan sekmeler oraya "sızar" (ölçüldü: 1440px/10 sekme,
+     sona kaydırılmışken x=220-226 aralığında `elementFromPoint`
+     "Sözleşmeler" sekmesini buluyordu). Çözüm: sol iç boşluk konteynerden
+     KALDIRILDI, panelin KENDİ `padding-left`ine taşındı (aşağıda) — panel
+     artık scrollport'un GERÇEK sol kenarından (x=0) başlıyor, kendi opak
+     zemini eski boşluk şeridini de KAPSIYOR, sızacak "sahipsiz" piksel
+     KALMIYOR. (Alternatif: sticky `left`i negatif padding kadar kaydırıp
+     zeminle örtmek — DENENMEDİ: `--space-2` değeri iki yerde tekrarlanır,
+     token değişirse SENKRONDAN DÜŞME riski taşır; bu çözüm padding'i TEK
+     kaynağa — panelin kendisine — taşıyarak bunu YAPISAL olarak imkânsız
+     kılıyor.) Sağ `padding-inline-end` KORUNDU — orada sticky/sızıntı
+     sorunu YOK (`.workspace-tabs::after` zaten viewport'a göre sabit ve
+     opak bir solma katmanıyla o kenarı örtüyor, ölçüldü: sağda leak YOK). */
+  padding-block: var(--space-1);
+  padding-inline: 0 var(--space-2);
+  /* Aktif sekme `scrollIntoView`le görünür alana kayınca STICKY panelin
+     ALTINA düşmesin diye şeridin sol "görünür" sınırı panel genişliği kadar
+     içeri çekilir. Değer `WorkspaceTabsStrip`te panel genişliği ÖLÇÜLEREK
+     `--pinned-tab-width` özel özelliğine yazılır; ölçülmeden önce (ilk
+     kare) 0px'e düşer — zararsız, bir sonraki ölçümde düzelir. */
+  scroll-padding-inline-start: var(--pinned-tab-width, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-tabs__list {
+    scroll-behavior: auto;
+  }
+}
+
+.workspace-tab {
+  /* SEKME-F1.4c (kullanıcı onayı, dar-önce daralma kuralının yerini alır):
+     sekme genişliği İÇERİĞE göre belirlenir, ad kısaltılmaz — `flex: 0 0
+     auto`. Tek güvenlik sınırı `max-width: 320px`; yalnız bu aşılırsa
+     `.workspace-tab__title`in `text-overflow: ellipsis`i devreye girer.
+     Sığmayan sekmeler `.workspace-tabs__list`in `overflow-x: auto`suyla
+     YATAY KAYAR — daralma YOK. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  max-width: 320px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-8);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.workspace-tab--pinned {
+  /* v3 turu KUSURU (lider gözlemi): "Gösterge Paneli" kayma sırasında
+     sola kaybolabiliyordu — sabit ilk sekme her zaman görünür KALMALI
+     (tarayıcı sekmesi pinned deseni). `position: sticky; left: 0` şeridin
+     GÖRÜNÜR sol kenarında tutar; `z-index: 2` altından kayan sekmelerin
+     ÜSTÜNDE kalmasını, opak `background` ise altlarının GÖRÜNMEMESİNİ
+     sağlar (aksi hâlde kayan sekme metni panelin arkasından sızardı). */
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: 0 0 auto;
+  min-width: auto;
+  max-width: none;
+  font-weight: var(--weight-medium);
+  background: var(--color-surface);
+  /* `.workspace-tabs__list`in KALDIRILAN `padding-inline-start`i (eski
+     `--space-2`) BURAYA taşındı — `.workspace-tab`in taban `padding: 0
+     var(--space-3)`ine EK olarak, tek kaynaktan (panelin kendi kutusu). */
+  padding-left: calc(var(--space-3) + var(--space-2));
+}
+
+/* "Daha fazla var" sol ipucu artık PANELİN kendi sağ kenarından başlar
+   (bkz. yukarıdaki `.workspace-tabs::after` yorumu) — panel sticky
+   olduğundan bu `::after` de görünür alanda panelin hemen ardında kalır,
+   panel genişliği HİÇ hesaplanmadan. */
+.workspace-tab--pinned::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 24px;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  background: linear-gradient(to right, var(--color-surface), transparent);
+}
+.workspace-tabs--fade-left .workspace-tab--pinned::after {
+  opacity: 1;
+}
+
+.workspace-tab:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+}
+
+.workspace-tab--active {
+  background: var(--color-nav-active-bg);
+  color: var(--color-primary);
+  font-weight: var(--weight-semibold);
+}
+
+/* rv3 ORTA bulgusu: `role="tab"` artık ayrı bir eleman (`.workspace-tab__hit`,
+   aşağıda) — × düğmesinin KARDEŞİ, sarmalayıcının (`.workspace-tab`) İKİNCİ
+   çocuğu (axe "nested-interactive" bekçisi: role=tab içinde etkileşimli öğe
+   yasak). Odak halkası GÖRSEL OLARAK DEĞİŞMEMELİ: önceden tüm pilin (başlık +
+   ×) etrafını sarıyordu — `:has()` ile aynı görsel korunur, halka gerçek
+   klavye odağını taşıyan iç elemana göre TETİKLENİR ama sarmalayıcının TÜM
+   kutusuna çizilir. */
+.workspace-tab:has(.workspace-tab__hit:focus-visible) {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.workspace-tab__hit {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  outline: none;
+}
+
+.workspace-tab--dragging {
+  opacity: 0.5;
+}
+
+/* Bırakma göstergesi: ince dikey çizgi, token rengi (`--color-primary`).
+   Ek DOM düğümü YOK — dekoratif, `::before/::after` yeter. */
+.workspace-tab--drop-before::before,
+.workspace-tab--drop-after::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+}
+.workspace-tab--drop-before::before {
+  left: -3px;
+}
+.workspace-tab--drop-after::after {
+  right: -3px;
+}
+
+.workspace-tab__title {
+  /* `flex: 1` ZORUNLU: tarayıcı sekmesi dilinde × sekmenin SAĞ KENARINA
+     yaslanır, başlık aralarındaki TÜM boşluğu doldurup ellipsis alır.
+     `flex-grow` olmadan başlık kendi içerik genişliğinde kalır ve ×
+     hemen ardına yapışır — geniş sekmelerde sağda boş alan kalırdı
+     (lider incelemesi, v1 kusuru). */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-tab__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.workspace-tab__close:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.workspace-tab__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Sağ tık menüsü — imlece sabitlenir (`TabContextMenu.tsx` gerekçesi). */
+.workspace-tab-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 176px;
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  box-shadow: var(--shadow-md);
+}
+
+.workspace-tab-menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspace-tab-menu__item:hover,
+.workspace-tab-menu__item:focus-visible {
+  background: var(--color-surface-2);
+  outline: none;
+}

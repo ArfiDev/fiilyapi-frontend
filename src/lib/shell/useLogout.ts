@@ -3,6 +3,8 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { routes } from "@/lib/routes";
+import { clearAllWorkspaceTabs } from "@/lib/workspace-tabs/persistence";
+import { workspaceTabsStore } from "@/lib/workspace-tabs/tabs-store";
 
 export const LOGOUT_ERROR_MESSAGE = "Çıkış yapılamadı, tekrar deneyin.";
 
@@ -24,6 +26,13 @@ export interface UseLogoutResult {
  * (b) `fetch` ağ hatasıyla REDDEDERSE (offline) yakalanmamış bir promise
  *     reddi kullanıcıya sessizce kalır. Yalnız BAŞARILI yanıtta yönlendirilir;
  *     diğerlerinde çağırana görünür bir hata döner, sessiz yutma YOKTUR.
+ *
+ * SEKME-F1.4a · KARARLAR §1.10 (5): Çıkış'ta açık çalışma sekmeleri
+ * TEMİZLENİR — yalnız BAŞARILI yanıtta ve yönlendirmeden ÖNCE: önce mağaza
+ * ayrılır (bellek panele döner, sonraki eylemler hiçbir anahtara yazılmaz),
+ * sonra önekli TÜM anahtarlar silinir. Başarısız çıkışta oturum sürüyor
+ * demektir, hiçbir şey silinmez. Oturumun süresi dolup yeniden girişte
+ * (middleware `?next=`) bu yol koşmaz, sekmeler geri gelir.
  */
 export function useLogout(): UseLogoutResult {
   const router = useRouter();
@@ -37,6 +46,8 @@ export function useLogout(): UseLogoutResult {
         setError(LOGOUT_ERROR_MESSAGE);
         return;
       }
+      workspaceTabsStore.detachUser();
+      clearAllWorkspaceTabs();
       router.push(routes.login());
     } catch {
       setError(LOGOUT_ERROR_MESSAGE);

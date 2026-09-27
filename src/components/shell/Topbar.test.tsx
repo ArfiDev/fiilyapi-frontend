@@ -11,6 +11,11 @@ vi.mock("./SessionProvider", () => ({
 vi.mock("next/navigation", () => ({
   usePathname: () => "/projeler/gunesken-konut",
 }));
+// SEKME-F1.4a — şerit yuvasının kendi davranışı `workspace-tabs/` testlerinde;
+// burada yalnız YERİ (logo ile eylemler arası) ölçülür.
+vi.mock("./workspace-tabs/WorkspaceTabsBar", () => ({
+  WorkspaceTabsBar: () => <div className="topbar-tabs" data-testid="fake-tabs-bar" />,
+}));
 
 function renderTopbar() {
   return render(
@@ -30,13 +35,14 @@ describe("Topbar", () => {
     expect(screen.getByText("AY")).toBeInTheDocument();
   });
 
-  it("SEKME-F1.2 — kırıntı artık TOPBAR'DA basılmaz, logo + eylemler tek çift kardeştir", () => {
+  it("SEKME-F1.2 — kırıntı artık TOPBAR'DA basılmaz; SEKME-F1.4a — logo | sekme yuvası | eylemler", () => {
     // Mutasyon (M2): `<PageBreadcrumb />`u `Topbar.tsx`e geri koy → bu iddia
-    // kırmızı olur (üçüncü bir kardeş belirir / testid bulunur).
+    // kırmızı olur (dördüncü bir kardeş belirir / testid bulunur).
     const { container } = renderTopbar();
     const header = container.querySelector(".topbar");
     const order = [...(header?.children ?? [])].map((el) => el.className);
-    expect(order).toEqual(["topbar-logo", "topbar-actions"]);
+    expect(order).toEqual(["topbar-logo", "topbar-tabs", "topbar-actions"]);
+    expect(screen.getByTestId("fake-tabs-bar")).toBeInTheDocument();
     expect(screen.queryByTestId("page-crumbs")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Yol göstergesi" })).toBeNull();
   });
