@@ -14,6 +14,7 @@ import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateBlock } from "@/lib/api/hooks/useUnitMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildBlockBody } from "./build-body";
 import {
@@ -87,6 +88,9 @@ export function BlockCreateView() {
 
   const projects = projectsQuery.data?.items ?? [];
   const sites = sitesQuery.data?.items ?? [];
+
+  // SEKME-F1.3b — hook, erken dönüşten ÖNCE (Rules of Hooks).
+  useUnsavedChanges(touched.size > 0, "Blok formu");
 
   if (!permission.canWrite) return <AccessDenied />;
 

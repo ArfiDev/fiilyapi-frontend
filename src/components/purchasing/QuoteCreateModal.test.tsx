@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 
 import { QuoteCreateModal } from "./QuoteCreateModal";
 import { useCreateQuote } from "@/lib/api/hooks/useQuoteMutations";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useQuoteMutations", () => ({ useCreateQuote: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSuppliers", async (importOriginal) => ({
@@ -111,5 +112,21 @@ describe("QuoteCreateModal — şemadan türeyen minimal diyalog (spec K5)", () 
     fillRequired();
     fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
     expect(screen.getByText("Teklif kaydedilemedi.")).toBeInTheDocument();
+  });
+
+  it("SEKME-F1.3b · açıldı/dokunulmadı → false; alan dolduruldu → true; başarılı kayıt → false (kapanış)", () => {
+    mutateMock.mockImplementation(
+      (_body: unknown, options: { onSuccess: () => void }) => options.onSuccess(),
+    );
+    let unmount = () => {};
+    const onClose = vi.fn(() => unmount());
+    ({ unmount } = render(<QuoteCreateModal requestId="pr-1" onClose={onClose} />));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    fillRequired();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

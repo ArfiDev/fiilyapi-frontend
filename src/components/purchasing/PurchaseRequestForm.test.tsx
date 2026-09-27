@@ -18,6 +18,7 @@ import {
 import { useApprovalSettings } from "@/lib/api/hooks/useApprovals";
 import type { MeResponse } from "@/lib/auth/types";
 import type { components } from "@/lib/api/schema";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -491,5 +492,19 @@ describe("FST · Taslak Kaydet + Onaya Gönder GERÇEKTİR", () => {
         "Proje bulunamadı.",
       ),
     );
+  });
+});
+
+describe("FST · SEKME-F1.3b kaydedilmemiş değişiklik kaydı (KULLANICI KARARI B3)", () => {
+  it("açıldı/dokunulmadı → false; proje seçildi → true; 'Taslak Kaydet' başarılı → false (temiz)", async () => {
+    render(<PurchaseRequestForm />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    fireEvent.change(screen.getByTestId("talep-proje"), { target: { value: "p-1" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
+    await waitFor(() => expect(createMutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 });

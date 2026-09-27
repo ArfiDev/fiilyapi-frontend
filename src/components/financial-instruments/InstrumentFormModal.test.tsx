@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { useBankAccounts } from "@/lib/api/hooks/useBankAccounts";
 import { useCreateFinancialInstrument } from "@/lib/api/hooks/useFinancialInstrumentMutations";
@@ -252,5 +253,30 @@ describe("FCE · gönderim", () => {
       expect(screen.getByTestId("fin-form-error")).toBeInTheDocument(),
     );
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("InstrumentFormModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    render(<InstrumentFormModal onClose={onClose} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan değiştirildi → kirli", async () => {
+    const user = userEvent.setup();
+    render(<InstrumentFormModal onClose={onClose} />);
+    await user.type(screen.getByTestId("fin-form-serial"), "0123456789");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<InstrumentFormModal onClose={onClose} />);
+    await fillRequired(user);
+    await user.click(screen.getByTestId("fin-form-submit"));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

@@ -18,6 +18,7 @@ import {
 } from "@/lib/api/hooks/useUnitImport";
 import type { UnitImportUploadInput } from "@/lib/api/units-import-client";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildImportFields, emptyUnitImportFormValues, type UnitImportFormValues } from "./build-request";
 import { checkImportFile } from "./file-check";
@@ -131,6 +132,19 @@ export function UnitImportView() {
     const projeParam = searchParams.get(PROJECT_PARAM);
     if (projeParam) setValues((prev) => ({ ...prev, projectId: projeParam }));
   }, [searchParams]);
+
+  // SEKME-F1.3b · dirty (tercih 1): ASYNC TABAN KISMEN — `?proje=` seed'i
+  // senkron `useEffect`le TEK SEFER (`touched` kirletmez, `projectSeededRef`
+  // deseniyle aynı güvenlik). 🔴 SIFIRLAMA — ORTAK EMİR KURAL 1 (B4): "aktarma
+  // başarılı → TEMİZ" (kullanıcı/CEO kararı). Sayfadan ÇIKILMASA da
+  // (bilerek — `created`/`skipped` sonucu ekranda kalır) `result !== null`
+  // olduğunda form TEMİZ sayılır; dosya/proje seçimleri ekranda dursa da
+  // "kaybolacak commit edilmemiş veri" artık YOKTUR.
+  const isDirty =
+    result === null &&
+    (file !== null || JSON.stringify(values) !== JSON.stringify(emptyUnitImportFormValues()));
+  // Hook, erken dönüşten (`AccessDenied`) ÖNCE çağrılır.
+  useUnsavedChanges(isDirty, "Ünite içe aktarma");
 
   if (!permission.canWrite) return <AccessDenied />;
 

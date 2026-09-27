@@ -11,6 +11,7 @@ import { useCreateLeaveRequest } from "@/lib/api/hooks/useLeaveMutations";
 import { useHrLeavesSummary, useLeaveTypes } from "@/lib/api/hooks/useLeaves";
 import { usePersonnel, PERSONNEL_MAX_LIMIT } from "@/lib/api/hooks/usePersonnel";
 import { initials } from "@/lib/shell/initials";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import {
   buildBalanceIndex,
@@ -129,6 +130,19 @@ export function LeaveRequestFormModal({ year, onClose }: LeaveRequestFormModalPr
     deductsFromAnnual: selectedType?.deducts_from_annual ?? false,
     startDate,
   });
+
+  // SEKME-F1.3b · dirty = herhangi bir alanın başlangıçtan (boş form) sapması
+  // (tercih 1) — dosya/yükleme durumu da dahildir (envanter notu).
+  const isDirty =
+    personnelId !== EMPTY_OPTION ||
+    leaveTypeId !== EMPTY_OPTION ||
+    startDate !== "" ||
+    endDate !== "" ||
+    note !== "" ||
+    file !== null ||
+    uploadedDocumentId !== null;
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır.
+  useUnsavedChanges(isDirty, "İzin talebi");
 
   const hasDocument = uploadedDocumentId !== null || file !== null;
   // Arşiv yüklemesi proje ZORUNLU tutar; projesiz personelde birinci adım koşamaz.

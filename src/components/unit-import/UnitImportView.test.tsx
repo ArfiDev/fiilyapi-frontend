@@ -26,6 +26,7 @@ import {
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
@@ -694,5 +695,29 @@ describe("UnitImportView — KISMİ AKTARIM ve sessiz başarı YASAĞI", () => {
     expect(screen.queryByTestId("excel-form-dosya-ozet")).toBeNull();
     expect(screen.queryByTestId("excel-form-sayaclar")).toBeNull();
     expect(screen.getByTestId("excel-form-dosya-bos")).toBeInTheDocument();
+  });
+});
+
+describe("UnitImportView — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false", () => {
+    render(<UnitImportView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("proje seçilip dosya yüklendi → true", async () => {
+    render(<UnitImportView />);
+    await fillAndValidate();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı aktarma sonrası → false (ORTAK EMİR KURAL 1, B4: sayfadan çıkılmasa da TEMİZ)", async () => {
+    render(<UnitImportView />);
+    await fillAndValidate();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByTestId("excel-form-aktar"));
+    await waitFor(() => expect(importAsync).toHaveBeenCalled());
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+    // Sayfadan ÇIKILMADI (sonuç ekranda kalır) — bileşen hâlâ MONTE.
+    expect(screen.getByTestId("excel-form-govde")).toBeInTheDocument();
   });
 });

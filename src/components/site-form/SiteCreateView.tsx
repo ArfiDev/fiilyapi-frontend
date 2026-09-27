@@ -26,6 +26,7 @@ import {
   type SectionRow,
 } from "./sections-validate";
 import { emptySiteFormValues, type SiteFormValues } from "./form-state";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { isUserListUnavailable } from "./user-picker";
 import {
   MESSAGES,
@@ -121,6 +122,19 @@ export function SiteCreateView() {
   const [errors, setErrors] = useState<SiteFormErrors>({});
   const [sectionIssues, setSectionIssues] = useState<SectionIssue[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // SEKME-F1.3b · dirty (tercih 1): `values`/`sectionRows` boş formdan farkı.
+  // ASYNC TABAN DEĞİL (`projectQuery` yalnız salt-okunur banner için).
+  // `emptySectionRow().id` HER ÇAĞRIDA yeni üretilir (sayaç) — bu yüzden
+  // satır karşılaştırması `id` HARİÇ alanlarla yapılır (aksi halde başlangıç
+  // tek boş satırı bile "kirli" görünürdü).
+  const isSectionRowBlank = (row: SectionRow) =>
+    row.name.trim() === "" && row.managerUserId === "" && row.startDate === "" && row.endDate === "";
+  const isDirty =
+    JSON.stringify(values) !== JSON.stringify(emptySiteFormValues()) ||
+    sectionRows.length > 1 ||
+    sectionRows.some((row) => !isSectionRowBlank(row));
+  useUnsavedChanges(isDirty, "Şantiye");
 
   // Doğrulama sonrası ilk hatalı alana odak (§13). Hangi alanın "ilk" olduğunu
   // DOM sırası söyler; odak isteği bayrakla taşınır.

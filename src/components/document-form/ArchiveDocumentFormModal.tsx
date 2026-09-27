@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { Button, Checkbox, Field, FileInput, Input, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useDocumentFolders } from "@/lib/api/hooks/useDocumentFolders";
 import { useUploadDocument } from "@/lib/api/hooks/useDocumentMutations";
@@ -62,6 +63,17 @@ export function ArchiveDocumentFormModal({
   const [values, setValues] = useState<ArchiveDocumentFormValues>(() =>
     emptyValues(initialProjectId ?? EMPTY_OPTION_VALUE),
   );
+  // SEKME-F1.3b — taban anlık görüntüsü. `File` `JSON.stringify` ile
+  // KIYASLANAMAZ (her zaman "{}") — `file !== null` ayrı kontrol edilir.
+  const [initialValues, setInitialValues] = useState(values);
+  const isDirty =
+    values.file !== null ||
+    values.description !== initialValues.description ||
+    values.projectId !== initialValues.projectId ||
+    values.siteId !== initialValues.siteId ||
+    values.folderId !== initialValues.folderId;
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Belge arşiv formu");
   const [keepOpen, setKeepOpen] = useState(false); // 138 · mockup'ta İŞARETSİZ
   const [formError, setFormError] = useState<string | null>(null);
   const [savedName, setSavedName] = useState<string | null>(null);
@@ -161,8 +173,10 @@ export function ArchiveDocumentFormModal({
     }
     setSavedName(file.name);
     // Proje/şantiye/klasör seçimi KORUNUR: art arda yükleme aynı kapsamda
-    // yapılır, kullanıcı her belgede yeniden seçmez.
+    // yapılır, kullanıcı her belgede yeniden seçmez. Taban da AYNI KISMİ
+    // sıfırlamayla tazelenir — korunan alanlar yeni "temiz" durumdur.
     setValues((prev) => ({ ...prev, file: null, description: "" }));
+    setInitialValues({ ...values, file: null, description: "" });
     if (fileRef.current) fileRef.current.value = "";
     fileRef.current?.focus();
   }

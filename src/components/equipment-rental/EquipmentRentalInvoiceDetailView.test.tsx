@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 import {
   QueryClient,
   QueryClientProvider,
@@ -207,5 +208,54 @@ describe("EquipmentRentalInvoiceDetailView · şantiye seçeneklerinin 'yüklend
     renderView();
 
     expect(screen.getByTestId("makine-kira-loaded-sites")).toBeInTheDocument();
+  });
+});
+
+/**
+ * SEKME-F1.3b · merkezi kayda bağlanma bekçisi. 🔴 ASYNC TABAN: `draft`
+ * yalnız GET başarıyla dönünce dolar (üstteki `useEffect`); dirty hesabı da
+ * AYNI karşılaştırmayı kullanır, kayıt sonrası invalidation `detail`i
+ * tazeler ve efekt `draft`ı yeniden hizalar — dolaylı sıfırlama.
+ */
+describe("EquipmentRentalInvoiceDetailView — kaydedilmemiş değişiklik kaydı", () => {
+  it("yüklendi, dokunulmadı → temiz (seed efektinden SONRA da)", () => {
+    mockDetail.mockReturnValue(detailQuery({ isSuccess: true, data: DETAIL_FIXTURE }));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <EquipmentRentalInvoiceDetailView invoiceId="rental-2" />
+      </QueryClientProvider>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("başlık alanı değiştirildi → kirli", () => {
+    mockDetail.mockReturnValue(detailQuery({ isSuccess: true, data: DETAIL_FIXTURE }));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <EquipmentRentalInvoiceDetailView invoiceId="rental-2" />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByTestId("makine-kira-invoice-no"), { target: { value: "F-2" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("sunucudan gelen YENİ `detail` (kayıt sonrası invalidation) taslağı hizalar → temiz", () => {
+    mockDetail.mockReturnValue(detailQuery({ isSuccess: true, data: DETAIL_FIXTURE }));
+    const { rerender } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <EquipmentRentalInvoiceDetailView invoiceId="rental-2" />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByTestId("makine-kira-invoice-no"), { target: { value: "F-2" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    const updated = { ...DETAIL_FIXTURE, invoice_no: "F-2" };
+    mockDetail.mockReturnValue(detailQuery({ isSuccess: true, data: updated }));
+    rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <EquipmentRentalInvoiceDetailView invoiceId="rental-2" />
+      </QueryClientProvider>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

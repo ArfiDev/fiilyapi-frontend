@@ -6,6 +6,7 @@ import { Modal } from "./Modal";
 import { useResetPassword } from "@/lib/api/hooks/useUserMutations";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { UserResponse } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 const MIN_PASSWORD = 8;
 
@@ -13,6 +14,10 @@ export function PasswordResetModal({ user, onClose }: { user: UserResponse; onCl
   const reset = useResetPassword();
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ (arka plan tıklaması
+  // window.confirm ekler — görünür davranış değişikliği). Doğrudan kayda
+  // bağlanır. `onSuccess: onClose` unmount ile sıfırlar.
+  useUnsavedChanges(password.length > 0, "Parola sıfırlama");
 
   function handleSubmit() {
     if (password.length < MIN_PASSWORD) {

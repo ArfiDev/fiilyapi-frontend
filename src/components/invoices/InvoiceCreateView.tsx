@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/hooks/useInvoiceMutations";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { formatAmount, formatPeriod } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { InvoiceLinesEditor } from "./InvoiceLinesEditor";
 import {
@@ -153,6 +154,36 @@ export function InvoiceCreateView() {
   const progressPaymentsQuery = useProgressPayments({ status: "approved" });
   const createMutation = useCreateInvoice();
   const actionMutation = useInvoiceAction();
+
+  // SEKME-F1.3b · dirty = başlangıç değerinden herhangi bir alanın sapması
+  // (tercih 2). `issueDate` bilerek DIŞARIDA: `today`den TEK yerde senkron
+  // türer, kullanıcı dokunmadan hep dolu — dahil edilirse form hep "kirli"
+  // görünürdü. Bir satırın "dokunulmamış" hâli `emptyLineDraft` iledir.
+  const isDirty =
+    source !== "manual" ||
+    progressPaymentId !== "" ||
+    partySelection !== MANUAL_PARTY ||
+    partyName !== "" ||
+    taxNumber !== "" ||
+    taxOffice !== "" ||
+    address !== "" ||
+    dueDate !== "" ||
+    documentType !== "einvoice" ||
+    paymentMethod !== "transfer" ||
+    note !== "" ||
+    lines.length > 1 ||
+    lines.some(
+      (line) =>
+        line.description !== "" ||
+        line.unit !== "" ||
+        line.quantity !== "" ||
+        line.unitPrice !== "" ||
+        line.vatRate !== "20",
+    ) ||
+    advanceOn ||
+    retentionOn ||
+    withholdingOn;
+  useUnsavedChanges(isDirty, "Fatura");
 
   // InvoicesView.tsx / InvoiceDetailView.tsx deseniyle AYNI: istemci izin
   // matrisi yeterli değildir, sunucunun ANLIK 403'ü de AccessDenied'e döner

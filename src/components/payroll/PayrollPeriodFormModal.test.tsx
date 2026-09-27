@@ -14,6 +14,7 @@ import {
   OPEN_PERIOD_STEP,
 } from "./payroll-labels";
 import { PayrollPeriodFormModal } from "./PayrollPeriodFormModal";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/usePayrollMutations", () => ({
   useCreatePayrollPeriod: vi.fn(),
@@ -233,5 +234,23 @@ describe("PayrollPeriodFormModal · FDA yüzeyleri", () => {
     expect(hint).not.toBeNull();
     expect(hint!.textContent).toBe(OPEN_PERIOD_DUE_HINT);
     expect(hint!.textContent).not.toMatch(/gösterge panel/i);
+  });
+});
+
+describe("PayrollPeriodFormModal · SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı/öneriden dokunulmadı → false; vade tarihi girildi → true; başarılı kayıt → false (kapanış)", async () => {
+    const user = userEvent.setup();
+    let unmount = () => {};
+    const wrappedOnClose = vi.fn(() => unmount());
+    ({ unmount } = render(
+      <PayrollPeriodFormModal rows={ROWS} onClose={wrappedOnClose} onCreated={onCreated} />,
+    ));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByTestId("bordro-open-due"), "01.09.2026");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.click(screen.getByTestId("bordro-open-submit"));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 });

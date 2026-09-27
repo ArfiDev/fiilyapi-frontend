@@ -3,6 +3,7 @@ import { act, render, screen, fireEvent } from "@testing-library/react";
 
 import { SupplierModal } from "./SupplierModal";
 import { useCreateSupplier } from "@/lib/api/hooks/useSupplierMutations";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useSupplierMutations", () => ({ useCreateSupplier: vi.fn() }));
 
@@ -103,5 +104,33 @@ describe("SupplierModal — TED kartından türetilmiş minimal diyalog (spec K5
     const [, options] = mutate.mock.calls[0];
     act(() => options.onSuccess());
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("SEKME-F1.3b · açıldı/dokunulmadı → false; ad yazıldı → true; başarılı kayıt (kapanış) → false", () => {
+    let unmount = () => {};
+    const wrappedOnClose = vi.fn(() => unmount());
+    ({ unmount } = render(<SupplierModal onClose={wrappedOnClose} />));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    fireEvent.change(screen.getByLabelText(/Tedarikçi Adı/), { target: { value: "Demirsan" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+    const [, options] = mutate.mock.calls[0];
+    act(() => options.onSuccess());
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("KURAL 7 · dirty hâldeyken arka plana tıklamak window.confirm'ü ÇAĞIRMAZ (settings/Modal'a isDirty verilmez)", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<SupplierModal onClose={onClose} />);
+
+    fireEvent.change(screen.getByLabelText(/Tedarikçi Adı/), { target: { value: "Demirsan" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    fireEvent.click(screen.getByRole("presentation"));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    // Bugünkü davranış AYNI kalır: overlay tıklaması doğrudan kapatır.
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

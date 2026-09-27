@@ -9,6 +9,7 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { isForbidden } from "@/lib/api/unwrap";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { CompanyUpdate } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "./company-screen.css";
 
 // e-Arşiv portalı seçenekleri (ref mockup — backend serbest metin alanı kabul eder).
@@ -37,10 +38,19 @@ export function CompanyScreen() {
   const update = useUpdateCompany();
   const [form, setForm] = useState<CompanyUpdate>({});
   const [err, setErr] = useState<string | null>(null);
+  // SEKME-F1.3b · dirty (tercih 2), taban `form`u dolduran AYNI efektte
+  // alınır. 🔴 ASYNC TABAN: `baseline` `null` iken (GET henüz dönmedi) dirty
+  // FALSE. Kayıt başarısında `useUpdateCompany` zaten `COMPANY_QUERY_KEY`i
+  // geçersiz kılıyor (bkz. useCompany.ts) — `query.data` yenilenince bu efekt
+  // YENİDEN çalışır ve `baseline`ı da kaydedilen değerle hizalar (dolaylı
+  // sıfırlama, `AppearanceScreen` deseniyle aynı).
+  const [baseline, setBaseline] = useState<CompanyUpdate | null>(null);
+  const isDirty = baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
+  useUnsavedChanges(isDirty, "Şirket bilgileri");
 
   useEffect(() => {
     if (!query.data) return;
-    setForm({
+    const next: CompanyUpdate = {
       name: query.data.name,
       tax_number: query.data.tax_number,
       tax_office: query.data.tax_office,
@@ -55,7 +65,9 @@ export function CompanyScreen() {
       earsiv_portal: query.data.earsiv_portal,
       default_vat_rate: query.data.default_vat_rate,
       auto_einvoice: query.data.auto_einvoice,
-    });
+    };
+    setForm(next);
+    setBaseline(next);
   }, [query.data]);
 
   if (query.isLoading) return <p className="settings-note">Yükleniyor…</p>;

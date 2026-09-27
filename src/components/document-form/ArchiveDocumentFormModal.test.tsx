@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { BackendError } from "@/lib/api/unwrap";
 import { useDocumentFolders } from "@/lib/api/hooks/useDocumentFolders";
@@ -212,5 +213,39 @@ describe("ArchiveDocumentFormModal (ARŞ · Form - Belge Ekle)", () => {
       "Bu uzantı kabul edilmiyor.",
     );
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("ArchiveDocumentFormModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    renderModal(PROJECT_ID);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("dosya seçildi → kirli", () => {
+    renderModal(PROJECT_ID);
+    selectFile();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("keepOpen ile kayıt sonrası (file/description sıfırlanır, taban da tazelenir) → temiz", async () => {
+    renderModal(PROJECT_ID);
+    fireEvent.click(screen.getByTestId("adf-keep-open"));
+    selectFile("plan.pdf");
+    fireEvent.change(screen.getByTestId("adf-description"), { target: { value: "Ruhsat" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+    await screen.findByTestId("adf-saved");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("keepOpen kapalıyken kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const { unmount } = renderModal(PROJECT_ID);
+    selectFile();
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

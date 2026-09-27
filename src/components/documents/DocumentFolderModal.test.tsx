@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { DocumentFolderModal } from "./DocumentFolderModal";
 import { useCreateDocumentFolder } from "@/lib/api/hooks/useDocumentMutations";
@@ -131,5 +132,32 @@ describe("DocumentFolderModal", () => {
 
     expect(screen.getByRole("button", { name: "Oluştur" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Vazgeç" })).toBeDisabled();
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("DocumentFolderModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    render(<DocumentFolderModal projectId="p-1" siteId="s-1" onClose={vi.fn()} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("ad yazıldı → kirli", async () => {
+    const user = userEvent.setup();
+    render(<DocumentFolderModal projectId="p-1" siteId="s-1" onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText("Klasör Adı"), "Ruhsatlar");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { unmount } = render(<DocumentFolderModal projectId="p-1" siteId="s-1" onClose={onClose} />);
+    await user.type(screen.getByLabelText("Klasör Adı"), "Hakedişler");
+    await user.click(screen.getByRole("button", { name: "Oluştur" }));
+    lastCallbacks().onSuccess?.({});
+    expect(onClose).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

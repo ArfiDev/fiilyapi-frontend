@@ -7,6 +7,7 @@ import { SubcontractorProgressPaymentStatusActions } from "./SubcontractorProgre
 import { useSession } from "@/components/shell/SessionProvider";
 import type { MeResponse } from "@/lib/auth/types";
 import type { SubcontractorProgressPaymentDetail } from "@/lib/api/hooks/useSubcontractorProgressPayments";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
@@ -196,5 +197,25 @@ describe("SubcontractorProgressPaymentStatusActions — hata gösterimi", () => 
     await userEvent.click(screen.getByRole("button", { name: "Onayla" }));
 
     expect(await screen.findByText("Bu hakediş zaten onaylanmış.")).toBeInTheDocument();
+  });
+});
+
+describe("SubcontractorProgressPaymentStatusActions — SEKME-F1.3b kaydedilmemiş değişiklik kaydı (yalnız Reddet diyaloğu)", () => {
+  it("kapalı → false; diyalog açık + gerekçe yazıldı → true; başarılı reddet → false", async () => {
+    mockSession({ progress_payments: "approve" });
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(makeDetail("draft"))));
+
+    renderActions(makeDetail("pending_approval"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reddet" }));
+    const dialog = screen.getByRole("dialog", { name: "Hakedişi Reddet" });
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await userEvent.type(within(dialog).getByLabelText("Gerekçe (zorunlu)"), "eksik belge");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reddet" }));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 });

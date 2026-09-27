@@ -55,6 +55,7 @@ import { PROJECT_PARAM } from "@/lib/navigation-params";
 // Sıra önemli: önce paylaşılan kabuk, sonra forma özgü bloklar.
 import "@/styles/form-shell.css";
 import "./sales-form.css";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 /** `?proje=` / `?unit=` bağlam parametreleri (spec §1/DS "?unit ile de gelinebilir"). */
 const UNIT_PARAM = "unit";
@@ -89,6 +90,42 @@ export function SaleCreateView() {
   const [planRows, setPlanRows] = useState<PlanRowValues[]>([]);
   const [planTotalText, setPlanTotalText] = useState<string | null>(null);
   const [planEdited, setPlanEdited] = useState(false);
+  // SEKME-F1.3b · dirty = `values` (⚠️ `projectId`/`unitId` HARİÇ) +
+  // `planRows`/`planEdited`in boş formdan sapması. 🔴 ASYNC TABAN KISMEN
+  // RİSKLİ: `projectId`/`unitId` `?proje=`/`?unit=` URL parametrelerinden
+  // OTOMATİK dolar (aşağıdaki iki efekt) — `unitId` seed'i ayrıca
+  // `unitsQuery.data` gelene KADAR bekler (gerçek GET yarışı). Bu iki alan
+  // KARŞILAŞTIRMA DIŞI tutulur (envanter notu, ikinci seçenek): otomatik
+  // URL tohumu asla "kullanıcı kirletti" SAYILMAZ.
+  const emptyValues = emptySaleFormValues();
+  const isDirty =
+    values.saleType !== emptyValues.saleType ||
+    values.customerMode !== emptyValues.customerMode ||
+    values.existingCustomerId !== emptyValues.existingCustomerId ||
+    values.buyerType !== emptyValues.buyerType ||
+    values.buyerName !== emptyValues.buyerName ||
+    values.buyerNationalOrTaxId !== emptyValues.buyerNationalOrTaxId ||
+    values.buyerPhone !== emptyValues.buyerPhone ||
+    values.buyerEmail !== emptyValues.buyerEmail ||
+    values.advisorUserId !== emptyValues.advisorUserId ||
+    values.buyerAddress !== emptyValues.buyerAddress ||
+    values.discountAmount !== emptyValues.discountAmount ||
+    values.salePrice !== emptyValues.salePrice ||
+    values.vatPct !== emptyValues.vatPct ||
+    values.paymentPlanType !== emptyValues.paymentPlanType ||
+    values.downPayment !== emptyValues.downPayment ||
+    values.installmentCount !== emptyValues.installmentCount ||
+    values.firstInstallmentDate !== emptyValues.firstInstallmentDate ||
+    values.termInterestPct !== emptyValues.termInterestPct ||
+    values.deedCondition !== emptyValues.deedCondition ||
+    values.plannedDeedDate !== emptyValues.plannedDeedDate ||
+    values.deliveryDate !== emptyValues.deliveryDate ||
+    values.hasCondominiumEasement !== emptyValues.hasCondominiumEasement ||
+    values.hasMortgage !== emptyValues.hasMortgage ||
+    values.lateFeeEnabled !== emptyValues.lateFeeEnabled ||
+    planRows.length > 0 ||
+    planEdited;
+  useUnsavedChanges(isDirty, "Satış");
 
   const projectsQuery = useProjects();
   const unitsQuery = useProjectUnits(values.projectId);

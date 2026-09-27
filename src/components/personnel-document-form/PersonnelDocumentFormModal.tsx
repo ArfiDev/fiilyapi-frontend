@@ -12,6 +12,7 @@ import { useUploadDocument } from "@/lib/api/hooks/useDocumentMutations";
 import { useCreatePersonnelDocument } from "@/lib/api/hooks/usePersonnelDocumentMutations";
 import type { PersonnelDetailResponse } from "@/lib/api/hooks/usePersonnelDetail";
 import { initials } from "@/lib/shell/initials";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildPersonnelDocumentBody } from "./build-body";
 import {
@@ -103,6 +104,19 @@ export function PersonnelDocumentFormModal({
   const validUntilRef = useRef<HTMLInputElement>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
+  // SEKME-F1.3b · dirty = `values` `EMPTY_VALUES`den farklı mı (tercih 2);
+  // ayrıca yüklenmiş-ama-künyesi-daha-kaydedilmemiş dosya da (öksüz dosya
+  // koruması) kirli sayılır.
+  const isDirty =
+    values.file !== null ||
+    values.typeId !== EMPTY_OPTION_VALUE ||
+    values.freeLabel !== "" ||
+    values.issuedAt !== "" ||
+    values.validUntil !== "" ||
+    values.note !== "" ||
+    uploadedDocumentId !== null;
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır.
+  useUnsavedChanges(isDirty, "Personel belgesi");
   const isPending = uploadDocument.isPending || createDocument.isPending;
   const types = summaryQuery.data?.by_type ?? [];
   // 85 · mockup'ın "4"ü GÖSTERMELİKtir; gerçek sayaç sunucudan gelir.

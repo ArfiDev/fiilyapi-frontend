@@ -15,6 +15,7 @@ import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateUnit } from "@/lib/api/hooks/useUnitMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildUnitBody } from "./build-body";
 import {
@@ -105,6 +106,11 @@ export function UnitCreateView() {
     () => allBlocks.find((block) => block.id === values.blockId) ?? null,
     [allBlocks, values.blockId],
   );
+
+  // SEKME-F1.3b · dirty (tercih 1, hazır): `touched` Set'i ZATEN VAR. ASYNC
+  // TABAN DEĞİL (yalnız `?proje=` URL tohumu, `touched`ı kirletmez).
+  // 🔴 Hook, erken dönüşten (`AccessDenied`) ÖNCE çağrılır.
+  useUnsavedChanges(touched.size > 0, "Ünite");
 
   if (!permission.canWrite) return <AccessDenied />;
 

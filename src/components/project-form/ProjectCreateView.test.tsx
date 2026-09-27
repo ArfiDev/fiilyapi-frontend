@@ -8,6 +8,7 @@ import { useEmployers } from "@/lib/api/hooks/useEmployers";
 import { useCreateEmployer } from "@/lib/api/hooks/useEmployerMutations";
 import { useUsers } from "@/lib/api/hooks/useUsers";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -271,5 +272,25 @@ describe("ProjectCreateView — gönderim (F12)", () => {
     expect(
       screen.getByText("Şantiye adı zaten kullanımda."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ProjectCreateView — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockHooks();
+  });
+
+  it("açıldı/dokunulmadı → false; proje adı yazıldı → true; başarılı kayıt → false (unmount)", async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_body, opts) => opts.onSuccess?.({ id: "prj-1" }));
+    const { unmount } = render(<ProjectCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByLabelText("Proje Adı"), "Güneşkent Konut Kompleksi");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

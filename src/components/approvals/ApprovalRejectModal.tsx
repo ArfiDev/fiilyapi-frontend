@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button, Field, Textarea } from "@/components/ui";
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { WarningTriangleIcon } from "@/components/ui/icons";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import {
@@ -56,6 +57,8 @@ export function ApprovalRejectModal({ item, onClose }: ApprovalRejectModalProps)
   const [formError, setFormError] = useState<string | null>(null);
 
   const isPending = rejectItem.isPending;
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(reason.trim() !== "", "Ret gerekçesi");
 
   // TEK TÜRETME — boş gerekçede `null`. Kapı `isApprovalRejectReasonReady`
   // (`trim()`) üzerinden kurulur, `!== ""` üzerinden DEĞİL: yalnız boşluktan

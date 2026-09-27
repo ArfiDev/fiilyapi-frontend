@@ -12,6 +12,7 @@ import { EMPTY_PERSONNEL_HR_FIELDS } from "@/lib/api/hooks/personnel-fixtures";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const push = vi.fn();
 let searchParams = new URLSearchParams();
@@ -836,5 +837,30 @@ describe("PersonnelForm (edit) · gönderim", () => {
     render(<PersonnelForm mode="edit" personnelId="per-9" />);
     await user.click(submitButton("Kaydet"));
     expect(screen.getByTestId("personnel-form-error")).toHaveTextContent(/geçersiz istek/);
+  });
+});
+
+describe("PersonnelForm — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("oluşturma: açıldı/dokunulmadı → false; ad yazıldı → true; başarılı kayıt → false (yönlendirme)", async () => {
+    const user = userEvent.setup();
+    createMutate.mockImplementation((_body, options) => options.onSuccess?.());
+    const { unmount } = render(<PersonnelForm mode="create" />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByLabelText("Ad"), "Mehmet");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("düzenleme: 🔴 ASYNC TABAN — sunucu verisi geldikten sonra da false (tohumlama `touched` kirletmez)", async () => {
+    const user = userEvent.setup();
+    render(<PersonnelForm mode="edit" personnelId="per-9" />);
+    expect(screen.getByLabelText("Ad")).toHaveValue("Mehmet");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByLabelText("Soyad"), "x");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
   });
 });

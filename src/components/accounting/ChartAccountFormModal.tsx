@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { Badge, Button, Checkbox, Field, Input, Select, Toggle } from "@/components/ui";
 import { WarningTriangleIcon } from "@/components/ui/icons";
 import { backendErrorMessage } from "@/lib/api/error-message";
@@ -87,6 +88,13 @@ export function ChartAccountFormModal({ account, onClose }: ChartAccountFormModa
   const [form, setForm] = useState<ChartAccountFormState>(() =>
     account ? chartAccountFormOf(account) : emptyChartAccountForm(),
   );
+  // SEKME-F1.3b — sekme-değiştirme onayı için taban anlık görüntüsü (alanlar
+  // yalnız string/boolean, JSON.stringify kıyası güvenli).
+  const [initialForm, setInitialForm] = useState(form);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ (arka plan tıklaması
+  // davranışını değiştirir); doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Hesap formu");
   const [formError, setFormError] = useState<string | null>(null);
   /** `M:153` — yalnız oluşturma kipinde anlamlı. */
   const [keepOpen, setKeepOpen] = useState(false);
@@ -119,7 +127,9 @@ export function ChartAccountFormModal({ account, onClose }: ChartAccountFormModa
         if (keepOpen) {
           // `M:154` — diyalog açık kalır, form sıfırlanır. Ardışık hesap girişi
           // hesap planını sıfırdan kurarken tek tek diyalog açmaya bedeldir.
-          setForm(emptyChartAccountForm());
+          const reset = emptyChartAccountForm();
+          setForm(reset);
+          setInitialForm(reset);
           return;
         }
       } else {

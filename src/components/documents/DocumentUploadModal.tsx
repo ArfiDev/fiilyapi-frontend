@@ -8,6 +8,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import type { DocumentUploadInput } from "@/lib/api/documents-client";
 import type { DocumentFolderRead } from "@/lib/api/hooks/useDocumentFolders";
 import { useUploadDocument } from "@/lib/api/hooks/useDocumentMutations";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "@/components/settings/settings.css";
 import "@/styles/form-shell.css";
 
@@ -55,6 +56,11 @@ export function DocumentUploadModal({
   const [formError, setFormError] = useState<string | null>(null);
 
   const isPending = uploadDocument.isPending;
+  // SEKME-F1.3b — `File` `JSON.stringify` ile KIYASLANAMAZ, ayrı `!== null`.
+  const isDirty =
+    file !== null || description.trim() !== "" || folderId !== (activeFolderId ?? NO_FOLDER);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Belge yükleme formu");
 
   function handleSubmit() {
     if (!file) {

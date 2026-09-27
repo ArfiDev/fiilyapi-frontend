@@ -9,6 +9,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import type { PayrollPeriodListRow } from "@/lib/api/hooks/usePayroll";
 import { useCreatePayrollPeriod } from "@/lib/api/hooks/usePayrollMutations";
 import { PERIOD_MONTHS } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import {
   MAX_PAYROLL_YEAR,
@@ -108,6 +109,16 @@ export function PayrollPeriodFormModal({
   const isPending = createPeriod.isPending;
   const year = parseYear(yearText);
   const blockReason = periodFormBlockReason({ year, month, rows });
+  // SEKME-F1.3b · dirty = alanların ÖNERİ tabanından sapması (tercih 2).
+  // `suggestion` senkron `rows` prop'undan türer (ASYNC TABAN DEĞİL) — ayrı
+  // bir GET yarışı yok, `useState(() => nextPeriodSuggestion(rows))` ile
+  // BİR KEZ yakalanır.
+  const isDirty =
+    yearText !== (suggestion === undefined ? "" : String(suggestion.year)) ||
+    month !== (suggestion?.month ?? null) ||
+    dueDate !== "";
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır.
+  useUnsavedChanges(isDirty, "Bordro dönemi");
 
   async function handleSubmit() {
     // Tip daraltması: `blockReason` ikisinin de dolu olduğunu zaten garanti

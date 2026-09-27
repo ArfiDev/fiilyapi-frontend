@@ -15,6 +15,7 @@ import { BackendError } from "@/lib/api/unwrap";
 import { MESSAGES } from "./validate";
 import { GANTT_AUTO_ADD_REASON } from "./SectionForm";
 import { CREATE_MODE_DISABLED_REASON } from "@/components/boq-assignment/BoqAssignmentCard";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
@@ -460,5 +461,30 @@ describe("SectionForm — edit kipi", () => {
 
     expect(screen.queryByText(MESSAGES.managerRequired)).not.toBeInTheDocument();
     expect(updateMutate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SectionForm — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("oluşturma: açıldı/dokunulmadı → false; ad yazıldı → true; başarılı kayıt → false (yönlendirme/unmount)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderCreate();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByLabelText("Bölüm Adı"), "Temel");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("düzenleme: 🔴 ASYNC TABAN — veri geldikten sonra da false; sonra değişiklik → true", async () => {
+    const user = userEvent.setup();
+    renderEdit();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    expect(screen.getByLabelText("Bölüm Adı")).toHaveValue("Kat 11–14 Kaba İnşaat");
+
+    await user.clear(screen.getByLabelText("Bölüm Adı"));
+    await user.type(screen.getByLabelText("Bölüm Adı"), "Kat 15-18");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
   });
 });

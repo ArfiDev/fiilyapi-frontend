@@ -8,6 +8,7 @@ import { taxNumberError } from "@/components/project-form/validate";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useCreateSubcontractor } from "@/lib/api/hooks/useSubcontractorMutations";
 import type { SubcontractorResponse } from "@/lib/api/hooks/useSubcontractorMutations";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "@/components/settings/settings.css";
 
 /**
@@ -73,6 +74,20 @@ export function SubcontractorFormModal({
   const [email, setEmail] = useState("");
   const [category, setCategory] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // SEKME-F1.3b · dirty (tercih 1): oluşturma formu, taban boş — `name` yalnız
+  // `initialName` ile ÖN DOLU olabilir (T6 seçiciden taşınan yazılmış ad), bu
+  // yüzden `name` tabanı `initialName`e göre karşılaştırılır. ASYNC TABAN
+  // DEĞİL. `onCreated`/`onClose` çağıranın kapatmasıyla unmount olur.
+  const isDirty =
+    name !== initialName ||
+    taxNumber.trim() !== "" ||
+    contactPerson.trim() !== "" ||
+    phone.trim() !== "" ||
+    email.trim() !== "" ||
+    category.trim() !== "";
+  // KURAL 7 · Modal'a isDirty VERİLMEZ, doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Taşeron");
 
   const isPending = createSubcontractor.isPending;
 

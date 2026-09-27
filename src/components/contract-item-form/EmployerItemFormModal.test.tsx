@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { EmployerItemFormModal } from "./EmployerItemFormModal";
 import {
@@ -372,5 +373,28 @@ describe("EmployerItemFormModal · ilk poz regresyonu (F-POZGRUP)", () => {
       const groupRow = screen.getByText(TEXT.summaryGroup).closest(".pif-summary__row");
       expect(groupRow).toHaveTextContent(NEW_GROUP_NAME);
     });
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("EmployerItemFormModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    renderModal();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan değiştirildi → kirli", () => {
+    renderModal();
+    fillAll();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const { unmount } = renderModal();
+    fillAll();
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

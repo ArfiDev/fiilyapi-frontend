@@ -9,6 +9,7 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { isForbidden } from "@/lib/api/unwrap";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { NotificationPrefItem } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "./notifications-screen.css";
 
 type Channel = "email" | "in_app" | "sms";
@@ -21,9 +22,20 @@ export function NotificationsScreen() {
   const update = useUpdateNotificationPrefs();
   const [items, setItems] = useState<NotificationPrefItem[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  // SEKME-F1.3b · dirty (tercih 2), taban `items`i dolduran AYNI efektte
+  // alınır. 🔴 ASYNC TABAN: `baseline` `null` iken dirty FALSE. Kayıt
+  // başarısında `useUpdateNotificationPrefs` `NOTIF_QUERY_KEY`i geçersiz
+  // kılıyor — `query.data` yenilenince efekt `baseline`ı da hizalar
+  // (dolaylı sıfırlama).
+  const [baseline, setBaseline] = useState<NotificationPrefItem[] | null>(null);
+  const isDirty = baseline !== null && JSON.stringify(items) !== JSON.stringify(baseline);
+  useUnsavedChanges(isDirty, "Bildirim ayarları");
 
   useEffect(() => {
-    if (query.data) setItems(query.data);
+    if (query.data) {
+      setItems(query.data);
+      setBaseline(query.data);
+    }
   }, [query.data]);
 
   if (query.isLoading) return <p className="settings-note">Yükleniyor…</p>;

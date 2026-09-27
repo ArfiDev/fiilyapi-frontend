@@ -21,6 +21,7 @@ import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { parseCountInput } from "@/lib/decimal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildBulkUnitBody } from "./build-body";
 import {
@@ -98,6 +99,11 @@ export function BulkUnitCreateView() {
   const permission = useModulePermission("projects");
 
   const [values, setValues] = useState<BulkUnitFormValues>(() => emptyBulkUnitFormValues());
+  // SEKME-F1.3b — taban anlık görüntüsü. ÖNİZLEME (`preview`) BİLEREK dışarıda
+  // tutulur (envanter uyarısı): önizleme "yenile" tıklamak kullanıcı girdisi
+  // kaybettirmez, formu değiştirmez.
+  const [initialValues] = useState(values);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(initialValues);
   const [preview, setPreview] = useState<UnitBulkPreview | null>(null);
   const [previewStale, setPreviewStale] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -167,6 +173,9 @@ export function BulkUnitCreateView() {
       unitsPerFloor: parseCountInput(values.unitsPerFloor),
     });
   }, [values.startFloor, values.endFloor, values.unitsPerFloor, range]);
+
+  // SEKME-F1.3b — hook, erken dönüşten ÖNCE (Rules of Hooks).
+  useUnsavedChanges(isDirty, "Toplu ünite formu");
 
   if (!hasAtLeast(permission.level, "full")) return <AccessDenied />;
 

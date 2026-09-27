@@ -18,6 +18,7 @@ import {
 } from "@/lib/api/hooks/useEquipmentMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 
 import {
@@ -181,6 +182,11 @@ export function EquipmentForm(props: EquipmentFormProps) {
       },
     );
   }
+
+  // SEKME-F1.3b — hook, erken dönüşlerden ÖNCE (Rules of Hooks). `touched`
+  // seed efektinden (üstte) geçmez, doğal olarak "otomatik doldurma"yı
+  // kirletmez.
+  useUnsavedChanges(touched.size > 0, "Ekipman formu");
 
   // Yazma yetkisi olmayan kullanıcı bu rotayı hiç görmemeli (giriş noktaları
   // zaten gizli); doğrudan URL ile gelen için kapı burada.

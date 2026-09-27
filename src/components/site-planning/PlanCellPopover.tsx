@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button/Button";
 import { Input } from "@/components/ui/input/Input";
 import type { PlanCellTag } from "@/lib/api/hooks/useSitePlan";
 import { cx } from "@/lib/cx";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import type { PlanDraftCell } from "./plan-draft";
 import { planCellValue } from "./plan-draft-reducer";
@@ -44,6 +45,15 @@ export interface PlanCellPopoverProps {
 export function PlanCellPopover({ cell, label, onSubmit, onClose }: PlanCellPopoverProps) {
   const [text, setText] = useState(cell?.text ?? "");
   const [tag, setTag] = useState<PlanCellTag | null>(cell?.tag ?? null);
+
+  // SEKME-F1.3b · dirty (tercih 2): `cell` senkron prop'tur (ASYNC TABAN
+  // DEĞİL). `usePlanDraft` ZATEN kayda bağlı (şantiye planı taslağı) — bu
+  // popover taslağa YAZMAZ, yalnız "Uygula"ya kadar kendi yerel durumunu
+  // taşır; çift kayıt YOK, yalnız popover'ın kendi commit edilmemiş girdisi
+  // bağlanır. Modal kullanılmıyor (kendi PlanPopover sarmalayıcısı) —
+  // doğrudan çağrı.
+  const isDirty = text !== (cell?.text ?? "") || tag !== (cell?.tag ?? null);
+  useUnsavedChanges(isDirty, "Plan hücresi");
 
   return (
     <PlanPopover label={`${label} — hücre düzenleme`} onClose={onClose} className="plan-pop--cell">

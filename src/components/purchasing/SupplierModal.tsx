@@ -10,6 +10,7 @@ import type { PaymentTerms } from "@/lib/api/hooks/useSuppliers";
 import "@/components/settings/settings.css";
 
 import { PAYMENT_TERMS_LABELS, PAYMENT_TERMS_OPTIONS } from "./purchasing-labels";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 /**
  * TED 36 "+ Tedarikçi Ekle" — spec §3 **K5 (ONAYLI SAPMA, F-BC emsali)**:
@@ -58,6 +59,16 @@ export function SupplierModal({ onClose }: SupplierModalProps) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const isPending = createSupplier.isPending;
+  // SEKME-F1.3b · `paymentTerms` VARSAYILAN değer taşır (aynı uyarı
+  // `QuoteCreateModal` ile) — dirty spesifik varsayılanla eşitliktir.
+  const isDirty =
+    name !== "" ||
+    category !== "" ||
+    taxNo !== "" ||
+    phone !== "" ||
+    paymentTerms !== DEFAULT_PAYMENT_TERMS;
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır.
+  useUnsavedChanges(isDirty, "Tedarikçi");
 
   function handleSubmit() {
     const trimmedName = name.trim();

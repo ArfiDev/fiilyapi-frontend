@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { StockItemModal } from "./StockItemModal";
 import { useCreateStockItem } from "@/lib/api/hooks/useStockMutations";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useStockMutations", () => ({ useCreateStockItem: vi.fn() }));
 
@@ -109,5 +110,31 @@ describe("StockItemModal — S1 türetilmiş diyalog", () => {
       "Mekanik",
       "İç Yapı",
     ]);
+  });
+});
+
+describe("StockItemModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false", () => {
+    render(<StockItemModal onClose={onClose} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan dolduruldu → true", () => {
+    render(<StockItemModal onClose={onClose} />);
+    fill("Malzeme Kodu", "SNK-9001");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: onClose) → unmount ile false", () => {
+    mutate.mockImplementation((_body, options) => options.onSuccess());
+    const { unmount } = render(<StockItemModal onClose={onClose} />);
+    fill("Malzeme Kodu", "A-2");
+    fill("Malzeme Adı", "Test");
+    fill("Birim", "Adet");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    submit();
+    expect(onClose).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

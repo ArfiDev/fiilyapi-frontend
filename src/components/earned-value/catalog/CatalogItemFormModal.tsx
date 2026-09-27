@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { Alert, Button, Field, Input, Segmented, Select, Textarea } from "@/components/ui";
 import { cx } from "@/lib/cx";
 import { formatUnitRate } from "@/lib/earned-value";
@@ -79,6 +80,12 @@ export function CatalogItemFormModal({
   const isPending = create.isPending || update.isPending;
   const saveError = create.error ?? update.error;
 
+  // SEKME-F1.3b — readOnly dalında dirty ZORLA false (salt-okunur görünümde
+  // uyarı çıkmaz); aksi hâlde taban `initial` ile kıyaslanır.
+  const isDirty = !readOnly && JSON.stringify(form) !== JSON.stringify(initial);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "İş tipi formu");
+
   const errors = isSubmitted ? validateCatalogForm(form) : {};
   const errorCount = Object.keys(errors).length;
   const units = unitOptions(catalogUnits, form.uom);
@@ -137,7 +144,12 @@ export function CatalogItemFormModal({
   );
 
   return (
-    <Modal title={formTitle(mode, readOnly)} onClose={onClose} footer={footer} className="ev-cat-modal--form">
+    <Modal
+      title={formTitle(mode, readOnly)}
+      onClose={onClose}
+      footer={footer}
+      className="ev-cat-modal--form"
+    >
       <div className="ev-cat-modal__body">
         <p className="ev-cat-modal__subtitle">Şirket kataloğu · bütün şantiyelerde öneri olarak görünür</p>
         {errorCount > 0 && (

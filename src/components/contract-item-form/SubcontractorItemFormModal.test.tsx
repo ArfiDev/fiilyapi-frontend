@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { SubcontractorItemFormModal } from "./SubcontractorItemFormModal";
 import {
@@ -172,5 +173,38 @@ describe("SubcontractorItemFormModal (TAŞ · Form - Poz Ekle Taseron)", () => {
     expect(stats).toHaveTextContent(`${TEXT.contractItemCount}1`);
     expect(stats).toHaveTextContent(`${TEXT.contractPricedCount}0`);
     expect(stats).toHaveTextContent(`${TEXT.contractUnpricedCount}1`);
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("SubcontractorItemFormModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    renderModal();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan değiştirildi → kirli", () => {
+    renderModal();
+    fillRequired();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("keepOpen ile kayıt sonrası (form + taban BİRLİKTE sıfırlanır) → temiz", async () => {
+    renderModal();
+    fillRequired();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+    await waitFor(() => expect(screen.getByTestId("tsi-saved")).toBeInTheDocument());
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("keepOpen kapalıyken kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const { unmount } = renderModal();
+    fireEvent.click(screen.getByTestId("tsi-keep-open"));
+    fillRequired();
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

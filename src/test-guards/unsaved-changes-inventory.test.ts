@@ -17,15 +17,22 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "./_shared/strip-comments";
 
 const SRC_DIR = fileURLToPath(new URL("..", import.meta.url));
 
-/** SEKME-F1.3 emrindeki 10 kaynağın TAMAMI (SEKME-F1.3-FIX ile doğrulandı). */
+/**
+ * SEKME-F1.3 emrindeki 10 kaynak + SEKME-F1.3b0 envanterinde bulunan 11.
+ * kaynak (`DayLockBanner.tsx` iç `UnlockDayModal` — `<Modal isDirty=...>`
+ * ile ZATEN fiilen bağlıydı, resmi listede yoktu; bu bir bekçi kör
+ * noktasıydı, madde 9 gereği burada kapatıldı).
+ */
 const BOUND_SOURCES = [
   "components/timesheet/useTimesheetWeekEditor.ts",
   "components/site-planning/usePlanDraft.ts",
   "components/earned-value/settings/PlanningSettingsForm.tsx",
   "components/earned-value/diary/useAllocationDraft.ts",
+  "components/earned-value/diary/DayLockBanner.tsx",
   "components/site-diary/SiteDiaryEntryView.tsx",
   "components/contracts/ContractDistributionView.tsx",
   "components/progress-payments/ProgressPaymentForm.tsx",
@@ -35,10 +42,6 @@ const BOUND_SOURCES = [
 ];
 
 const HOOK_CALL = /\buseUnsavedChanges\s*\(/;
-
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
-}
 
 describe("bekçinin kendisi", () => {
   it("yorumdaki sahte çağrıyı saymaz, koddakini görür", () => {
@@ -55,14 +58,16 @@ describe("SEKME-F1.3 — kaydedilmemiş değişiklik kaynakları merkezi kayda b
     expect(BOUND_SOURCES.length).toBeGreaterThan(0);
   });
 
-  it.each(BOUND_SOURCES)("%s → useUnsavedChanges( çağırır", (relativePath) => {
+  it.each(BOUND_SOURCES)("%s → useUnsavedChanges( çağırır (doğrudan ya da <Modal isDirty=)", (relativePath) => {
     const file = path.join(SRC_DIR, relativePath);
     const source = readFileSync(file, "utf8");
     const code = stripComments(source);
+    const boundDirectly = HOOK_CALL.test(code);
+    const boundViaModalIsDirty = /<Modal[^>]*\bisDirty\s*=/.test(code);
     expect(
-      HOOK_CALL.test(code),
-      `${relativePath} artık useUnsavedChanges(...) çağırmıyor — sekme onayı bu ekranın ` +
-        `kaydedilmemiş verisini GÖREMEZ (kayıp sessiz olur).`,
+      boundDirectly || boundViaModalIsDirty,
+      `${relativePath} artık useUnsavedChanges(...) çağırmıyor ve <Modal isDirty=...> da geçmiyor — ` +
+        `sekme onayı bu ekranın kaydedilmemiş verisini GÖREMEZ (kayıp sessiz olur).`,
     ).toBe(true);
   });
 });

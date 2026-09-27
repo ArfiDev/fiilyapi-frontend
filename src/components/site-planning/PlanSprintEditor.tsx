@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button/Button";
 import { Field } from "@/components/ui/field/Field";
 import { Input } from "@/components/ui/input/Input";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { PlanPopover } from "./PlanPopover";
 
@@ -30,6 +31,12 @@ export interface PlanSprintEditorProps {
 export function PlanSprintEditor({ name, canWrite, onChange }: PlanSprintEditorProps) {
   const [draftName, setDraftName] = useState<string | null>(null);
   const isEditing = draftName !== null;
+
+  // SEKME-F1.3b · dirty (tercih 2): `name` senkron prop. Hook KOŞULSUZ
+  // çağrılır (`isEditing` false iken de) — erken dönüş yok, ifade `isEditing
+  // && ...` ile "düzenleniyor değilken" false'a düşer. `usePlanDraft` bu
+  // popover'ın DIŞINDA, çift kayıt yok (yalnız "Uygula" `onChange`i çağırır).
+  useUnsavedChanges(isEditing && draftName !== name, "Sprint");
 
   return (
     <span className="plan-pop-anchor plan-week-nav__sprint-slot">
