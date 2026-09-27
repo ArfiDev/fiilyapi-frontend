@@ -28,6 +28,18 @@ const PERCENT_MAX_ABOVE_100_OK = 10_000;
 const PERCENT_MIN_DEFAULT = 0;
 const PERCENT_MIN_NEGATIVE_OK = -10_000;
 
+/**
+ * Lider + CEO kararı (2026-09-27, TYPE-F1 faz 2d eki) — `MetricPlaceholder`
+ * ZARFLARININ `.value`si için ÖZEL üst sınır: gerçek ilerleme/marj %1000'i
+ * aşmaz; ×100 ölçek hatası (ör. 75 → 7500) yakalansın diye —
+ * `percentAbove100Ok`nin GENEL 10000 sınırı zarflarda fazla gevşek kalıyordu
+ * (7500 < 10000, yakalanmıyordu). KAPSAM: YALNIZ zarf `.value` denetimini
+ * etkiler (`metric-envelope-value.test.ts` `checkScaleRow`e üçüncü parametre
+ * olarak verir) — düz `percent` alanlarındaki (ör. `usage_pct`, `late_fee`,
+ * `physical_pct`) genel `percentAbove100Ok` sınırı (10000) DEĞİŞMEZ.
+ */
+export const ENVELOPE_PERCENT_MAX = 1000;
+
 // factor sınırları (bayraklardan etkilenmez — emirde değişmedi)
 const FACTOR_MAX = 10;
 
@@ -56,12 +68,13 @@ export function checkScaleRow(
   values: readonly unknown[],
   url: string,
   allowedEnumValues?: readonly unknown[],
+  percentMaxOverride?: number,
 ): ScaleViolation[] {
   switch (row.scale) {
     case "fraction":
       return checkFraction(row, values, url);
     case "percent":
-      return checkPercent(row, values, url);
+      return checkPercent(row, values, url, percentMaxOverride);
     case "factor":
       return checkFactor(row, values, url);
     case "enum":
@@ -96,8 +109,13 @@ function checkFraction(row: ScaleRow, values: readonly unknown[], url: string): 
   return violations;
 }
 
-function checkPercent(row: ScaleRow, values: readonly unknown[], url: string): ScaleViolation[] {
-  const max = hasFlag(row, "percentAbove100Ok") ? PERCENT_MAX_ABOVE_100_OK : PERCENT_MAX_DEFAULT;
+function checkPercent(
+  row: ScaleRow,
+  values: readonly unknown[],
+  url: string,
+  maxOverride?: number,
+): ScaleViolation[] {
+  const max = maxOverride ?? (hasFlag(row, "percentAbove100Ok") ? PERCENT_MAX_ABOVE_100_OK : PERCENT_MAX_DEFAULT);
   const min = hasFlag(row, "negativeOk") ? PERCENT_MIN_NEGATIVE_OK : PERCENT_MIN_DEFAULT;
   const violations: ScaleViolation[] = [];
   const numbers: number[] = [];

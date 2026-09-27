@@ -52,6 +52,20 @@ function pushObserved(observed: ObservedValues, key: string, value: unknown): vo
 }
 
 /**
+ * FAZ 2d (TYPE-F1 madde 4) — bir alan `MetricPlaceholder` ZARFI mı? Ad
+ * regex'inden (`SCALE_FIELD_NAME_PATTERN`) BAĞIMSIZ: `physical_progress`,
+ * `margin`, `average_margin` gibi adlar "pct/ratio/share/rate/percent/band"
+ * kalıbına UYMAZ ama yine de `MetricPlaceholder` zarfı taşırlar (bkz.
+ * `scale-table.ts` innerScale satırları). `$ref` doğrudan ya da `anyOf`/
+ * `oneOf` içinde (nullable zarf, ör. `financial_progress?: ... | null`) olabilir.
+ */
+function refsMetricPlaceholder(node: JsonSchemaNode): boolean {
+  if (node.$ref) return node.$ref.endsWith("/MetricPlaceholder");
+  const branches = [...(node.anyOf ?? []), ...(node.oneOf ?? [])];
+  return branches.some((b) => refsMetricPlaceholder(b));
+}
+
+/**
  * `anyOf`/`oneOf` dallarından, gözlenen DEĞERİN tipine en uygun olanı seçer.
  * `null` değer → nullable dal (type: "null" ya da içinde başka özellik olmayan boş şema).
  * Aksi halde: object değer → properties'i olan ilk dal; array değer → items'ı olan ilk dal;
@@ -161,7 +175,7 @@ function walkProperties(
     for (const [field, fieldSchema] of Object.entries(node.properties)) {
       if (!(field in obj)) continue;
       const fieldValue = obj[field];
-      if (SCALE_FIELD_NAME_PATTERN.test(field) && schemaName) {
+      if (schemaName && (SCALE_FIELD_NAME_PATTERN.test(field) || refsMetricPlaceholder(fieldSchema))) {
         pushObserved(observed, `${schemaName}.${field}`, fieldValue);
       }
       walkSchema(fieldSchema, fieldValue, doc, observed, schemaName);

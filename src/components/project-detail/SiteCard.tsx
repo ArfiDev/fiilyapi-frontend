@@ -3,7 +3,6 @@ import Link from "next/link";
 import { cx } from "@/lib/cx";
 import { formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules";
-import { asPercent } from "@/lib/api/scale";
 import type { SiteListItem } from "@/lib/api/hooks/useSites";
 import type { ProjectType } from "@/lib/api/hooks/useProjects";
 
@@ -258,10 +257,9 @@ export function SiteCard({ projectKey, site, projectType }: SiteCardProps) {
 
           <div className="site-card__kpi">
             {site.progress_pct.available && site.progress_pct.value !== null && site.progress_pct.value !== undefined ? (
-              // KAÇIŞ (MetricPlaceholder jenerik zarf, madde 8 aynı kök) —
-              // asPercent(site.progress_pct.value) aşağıda.
+              // FAZ 2d: `.value` artık Percent marka'lı — kaçış YOK.
               <div className="site-card__kpi-value site-card__kpi-value--progress">
-                {formatPercent(asPercent(site.progress_pct.value))}
+                {formatPercent(site.progress_pct.value)}
               </div>
             ) : (
               <PlaceholderValue

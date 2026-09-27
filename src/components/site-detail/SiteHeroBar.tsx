@@ -3,7 +3,6 @@ import Link from "next/link";
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules";
-import { asPercent } from "@/lib/api/scale";
 import type { SiteDetail } from "@/lib/api/hooks/useSites";
 import { routes, routeKeyOf } from "@/lib/routes";
 
@@ -70,12 +69,10 @@ function ProgressCell({ progress }: { progress: SiteDetail["progress_pct"] }) {
     <div className="site-hero__kpi" data-testid="site-hero-kpi-progress">
       <div className="site-hero__kpi-label">Fiziksel İlerleme</div>
       {isReal ? (
-        // KAÇIŞ (MetricPlaceholder jenerik zarf, madde 8): `.value` alanı
-        // envelope İÇİNDE, ad-tabanlı DeepScale oraya inemiyor — `isReal`
-        // zaten null/undefined'ı elemiş durumda.
-        <div className="site-hero__kpi-value">
-          {formatPercent(asPercent(progress.value ?? "0"))}
-        </div>
+        // FAZ 2d: `.value` artık DeepScale'in `innerScale: "percent"`
+        // eşlemesiyle `Percent` marka'lı geliyor (bkz. `scale-table.ts`
+        // SiteDetailResponse.progress_pct) — kaçış YOK.
+        <div className="site-hero__kpi-value">{formatPercent(progress.value ?? "0")}</div>
       ) : (
         <PlaceholderValue pendingModule={progress.pending_module} />
       )}

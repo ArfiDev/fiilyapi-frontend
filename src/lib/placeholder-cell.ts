@@ -1,4 +1,5 @@
 import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules";
+import type { MetricPlaceholder } from "@/lib/api/scale";
 
 /**
  * K-ZARF — yer tutucu zarfın ÜÇ hâlini tek yerden okur (F-ILRUI).
@@ -26,11 +27,10 @@ import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules
  *     `pending_module="timesheet"` döner). Bu yüzden dolu/boş ayrımını
  *     `pending_module`dan yapmak sayaçlarda KESİNLİKLE yanlıştır.
  */
-export interface MetricEnvelope<V extends string | number = string | number> {
-  available: boolean;
-  value?: V | null;
-  pending_module?: PendingModuleKey;
-}
+// TEK KAYNAK: `@/lib/api/scale`teki `MetricPlaceholder<V>` (FAZ 2d, TYPE-F1
+// madde 1) — DeepScale'in ürettiği tiplerle birebir aynı şekli paylaşsın diye
+// burada YENİDEN TANIMLANMAZ, yeniden ihraç edilir.
+export type MetricEnvelope<V extends string | number = string | number> = MetricPlaceholder<V>;
 
 export interface CountEnvelope {
   available: boolean;

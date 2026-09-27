@@ -155,6 +155,45 @@ export type FractionFieldName = Exclude<Extract<TableRow, { scale: "fraction" }>
 /** Tablodan türetilen, `scale: "percent"` taşıyan alan adları (istisnalar hariç). */
 export type PercentFieldName = Exclude<Extract<TableRow, { scale: "percent" }>["field"], ScaleNameException>;
 
+/**
+ * FAZ 2d (TYPE-F1 madde 1/2) · `MetricPlaceholder` ZARFI taşıyan, iç `.value`
+ * ölçüsü `innerScale: "percent"` olarak işaretli alan adları (bkz.
+ * `scale-table.ts`). 8 farklı ad, 13 şema satırı (7'si CEO'nun önceden
+ * ölçtüğü + 6'sı bu fazda EKLENEN — bkz. `scale-table.ts` başlık notu).
+ * `progress_pct` burada da geçer: `SCALE_NAME_EXCEPTIONS` yalnız DÜZ
+ * `string` çakışmasını dışlar, zarf tespiti (`BrandMetricValue`in yapısal
+ * testi) ayrı bir mekanizmadır — aynı ad iki bağlamda da güvenle çalışır.
+ */
+export type PercentEnvelopeFieldName = Extract<
+  TableRow,
+  { scale: "not-scale"; innerScale: "percent" }
+>["field"];
+
+/**
+ * `MetricPlaceholder` — backend `schema.d.ts` üretimiyle BİREBİR yapısal
+ * biçim (`available: boolean`, opsiyonel `value`/`pending_module`), `.value`
+ * tipi `V` ile jenerik. TEK KAYNAK burasıdır: `placeholder-cell.ts`teki
+ * `MetricEnvelope<V>` bunu yeniden ihraç eder (FAZ 2d, TYPE-F1 madde 1).
+ * Varsayılan `V = string | number`, schema'nın markasız hâliyle (`value?:
+ * string | null`) uyumlu — `BrandMetricValue`in yapısal testinde de bu
+ * varsayılan kullanılır (bkz. altta).
+ */
+export interface MetricPlaceholder<V extends string | number = string | number> {
+  available: boolean;
+  pending_module?: string | null;
+  value?: V | null;
+}
+
+/**
+ * Zarfın `.value` alanını `V` ile marka'lar; zarf biçimine uymayan bir tip
+ * (ör. `null`, opsiyonel alan birleşiminin `null` kolu) DOKUNULMADAN geçer —
+ * dağıtıcı (distributive) koşullu tip sayesinde `MetricPlaceholder | null`
+ * gibi birleşimler doğru işlenir.
+ */
+export type BrandMetricValue<T, V extends string> = T extends MetricPlaceholder
+  ? Omit<T, "value"> & { value?: V | null }
+  : T;
+
 /** `X` tam olarak `string` ya da `string | null` ise `B` (uygun null varyantıyla) döner, aksi hâlde `X` değişmez. */
 type BrandIfPlainString<X, B> = [X] extends [string]
   ? B
@@ -183,6 +222,8 @@ export type DeepScale<T, D extends number = 6> = D extends 0
             ? BrandIfPlainString<T[K], Fraction>
             : K extends PercentFieldName
               ? BrandIfPlainString<T[K], Percent>
-              : DeepScale<T[K], Prev[D]>;
+              : K extends PercentEnvelopeFieldName
+                ? BrandMetricValue<T[K], Percent>
+                : DeepScale<T[K], Prev[D]>;
         }
       : T;

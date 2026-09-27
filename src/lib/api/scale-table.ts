@@ -15,15 +15,37 @@
 // CEO karariyla ZARF notu tasir (bkz. TEST-F2 rapor). LandShareCard.our_share_value de
 // yapisal olarak MetricPlaceholder ama PARA zarfidir (percent DEGIL) — ZARF metni
 // UYGULANMADI, mevcut "para tutari zarfi" notu KORUNDU (bkz. rapor "olcum farki").
+//
+// FAZ 2d (TYPE-F1 madde 2) — `innerScale` alani: yukaridaki 7 zarf satirina
+// `innerScale: "percent"` eklendi (DeepScale artik BUNLARIN `.value`'sunu
+// `Percent` olarak markalar, bkz. `scale.ts` `BrandMetricValue`). AYRICA
+// ÖLÇÜLDÜ: `schema.d.ts`teki TÜM `MetricPlaceholder` alan ADLARI tarandı (32
+// benzersiz ad) — 8'i GERÇEKTEN yüzde (frontend `formatPercent` tüketimiyle
+// doğrulandı), CEO'nun "7" tahmininin ÜZERİNDE. Eksik 6 satir (ContractingCard
+// .physical_progress/.financial_progress, InvestmentCard.margin, LandShareCard
+// .construction_progress/.margin, DashboardSummaryResponse.average_margin)
+// buraya EKLENDI — kanitlari yalniz FRONTEND tuketimine dayanir (bu worktree'de
+// backend YOK, "TAHMİN DÜZEYİ ÖLÇÜM" olarak isaretlendi, CEO/backend caprazı
+// ONERILIR). Geri kalan 24 MetricPlaceholder adi PARA/tutar alanlaridir
+// (`innerScale` yok = "not-scale" varsayilir, DeepScale onlara DOKUNMAZ).
 
 export type Scale = "fraction" | "percent" | "factor" | "enum" | "not-scale";
 
 export type ScaleFlag = "fractionAboveOneOk" | "negativeOk" | "percentAbove100Ok" | "percentBelowOneOk";
 
+/**
+ * Yalnız `scale: "not-scale"` taşıyan `MetricPlaceholder` ZARF satırlarında
+ * anlamlı: zarfın İÇ `.value` alanının ölçüsü. `"percent"` ⇒ DeepScale
+ * `.value`i `Percent` marka'lar (bkz. `scale.ts` `BrandMetricValue`).
+ * Belirtilmezse (para/sayaç zarfları) DeepScale zarfa DOKUNMAZ.
+ */
+export type InnerScale = "percent" | "not-scale";
+
 export interface ScaleRow {
   schema: string;
   field: string;
   scale: Scale;
+  innerScale?: InnerScale;
   kanit: string;
   not?: string;
   flags?: readonly ScaleFlag[];
@@ -36,8 +58,8 @@ export interface ScaleRow {
 // derleme hatasına çevirirdi).
 const SCALE_TABLE_LITERAL = [
   { schema: "AiMessageRead", field: "duration_ms", scale: "not-scale", kanit: "app/modules/ai/router.py:321", not: "süre (ms); 'rate/oran' değil, isim eşleşmesi yanlış." },
-  { schema: "BoqItemResponse", field: "progress_pct", scale: "not-scale", kanit: "boq/progress.py:53-60 weighted_pct = quantize(num/den*100), üst sınır yok; boq/service.py:94,129; boq/schemas.py:98; projects/schemas.py:83-116 MetricPlaceholder{available,value,pending_module}; çakışma dosyası progress_pct not-scale listesi", not: "para ağırlıklı oran (Σgerçekleşen×fiyat/Σtaban×fiyat×100); üst sınır yok, aşım >100 mümkün (fractionAboveOneOk eşdeğeri percent tarafında). ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
-  { schema: "BoqTotals", field: "grand_progress_pct", scale: "not-scale", kanit: "boq/service.py:205-221; boq/progress.py:53-60,201-213; boq/schemas.py:191", not: "BoqItemResponse.progress_pct ile AYNI motor (progress.py), grup satırlarından yeniden toplanmaz. ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "BoqItemResponse", field: "progress_pct", scale: "not-scale", innerScale: "percent", kanit: "boq/progress.py:53-60 weighted_pct = quantize(num/den*100), üst sınır yok; boq/service.py:94,129; boq/schemas.py:98; projects/schemas.py:83-116 MetricPlaceholder{available,value,pending_module}; çakışma dosyası progress_pct not-scale listesi", flags: ["percentAbove100Ok"], not: "para ağırlıklı oran (Σgerçekleşen×fiyat/Σtaban×fiyat×100); üst sınır yok, aşım >100 mümkün (fractionAboveOneOk eşdeğeri percent tarafında). ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "BoqTotals", field: "grand_progress_pct", scale: "not-scale", innerScale: "percent", kanit: "boq/service.py:205-221; boq/progress.py:53-60,201-213; boq/schemas.py:191", flags: ["percentAbove100Ok"], not: "BoqItemResponse.progress_pct ile AYNI motor (progress.py), grup satırlarından yeniden toplanmaz. ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
   { schema: "BudgetTotals", field: "empty_rate_leaf_count", scale: "not-scale", kanit: "app/modules/earned_value/budget_present.py:174", not: "sayaç (COUNT), oran değil." },
   { schema: "CatalogActualSite", field: "rate", scale: "not-scale", kanit: "app/modules/earned_value/schemas_catalog.py:144-160 (CatalogActual.avg = Σspent/Σqty, catalog_service.py)", not: "birim oran/fiyat tutarı (para benzeri), 0-1/0-100 ölçekli bir pay değil." },
   { schema: "CatalogItemRead", field: "diff_pct", scale: "fraction", kanit: "earned_value/catalog_service.py:225-229; schemas_catalog.py:219-221; models.py:164 standard_unit_mhr > 0 (payda hiç 0 olmaz)", flags: ["fractionAboveOneOk", "negativeOk"], not: "negatifOk (avg < standart olabilir); ±%10 eşiği istemcide uygulanır." },
@@ -47,6 +69,8 @@ const SCALE_TABLE_LITERAL = [
   { schema: "CompanyRead", field: "gib_integration_code", scale: "not-scale", kanit: "app/modules/company/schemas.py:44 / models.py (gib_integration_code string kolon)", not: "entegrasyon kodu (dizge kimlik), ölçek değil." },
   { schema: "CompanyUpdate", field: "default_vat_rate", scale: "percent", kanit: "app/modules/company/schemas.py:28 (Field(default=None, ge=0, le=100)) + models.py:54-55 Numeric(5,2) server_default 20.00", not: "yazma ucu; aynı kolonu hedefler (CompanyRead.default_vat_rate)." },
   { schema: "CompanyUpdate", field: "gib_integration_code", scale: "not-scale", kanit: "app/modules/company/schemas.py:25 (gib_integration_code)", not: "entegrasyon kodu, ölçek değil." },
+  { schema: "ContractingCard", field: "financial_progress", scale: "not-scale", innerScale: "percent", kanit: "frontend kanıtı (backend bu worktree'de YOK): src/components/projects/ProjectCard.tsx:85,425 (\"Mali İlerleme\" satırı, formatPercent ile basılıyor); schema.d.ts ContractingCard.financial_progress MetricPlaceholder zarfı", flags: ["percentAbove100Ok"], not: "TAHMİN DÜZEYİ ÖLÇÜM (madde 2 faz 2d) — backend formülü doğrulanmadı, yalnız tüketen frontend kodu kanıt; CEO/backend çaprazı ÖNERİLİR. ZARF: .value ölçüsü percent (0–100, >100 olabilir eşdeğeri diğer progress zarflarıyla aynı aile) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "ContractingCard", field: "physical_progress", scale: "not-scale", innerScale: "percent", kanit: "frontend kanıtı (backend bu worktree'de YOK): src/components/projects/ProjectCard.tsx:56 (\"Fiziksel İlerleme\" satırı, formatPercent ile basılıyor); schema.d.ts ContractingCard.physical_progress MetricPlaceholder zarfı", flags: ["percentAbove100Ok"], not: "TAHMİN DÜZEYİ ÖLÇÜM (madde 2 faz 2d) — backend formülü doğrulanmadı, yalnız tüketen frontend kodu kanıt. ZARF: .value ölçüsü percent (0–100, >100 olabilir) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
   { schema: "ContractListItem", field: "progress_pct", scale: "percent", kanit: "progress_payments/summary.py:35-43; progress_payments/guards.py:56 (yalnız miktar kotası); contracts/service.py:113,189", flags: ["percentAbove100Ok"], not: "para etiketli finansal ilerleme (§8); fiziksel ilerlemeden AYRI kavram (kullanıcı kararı 2026-09-19)." },
   { schema: "CurvePoint", field: "planned_pct_cum", scale: "fraction", kanit: "engine/plan.py:29-37; engine/series.py:205-216,341-355; engine/spread.py:63-79; ev_input.py:133; report_panel.py:152/197/221", not: "fractionAboveOneOk: qty_overrun uyarı kodu var (WarningOut), aşım mümkün." },
   { schema: "CurvePoint", field: "progress_pct_cum", scale: "fraction", kanit: "app/modules/earned_value/engine/numeric.py:42-45; app/modules/earned_value/engine/metrics.py:162 (progress_pct_cum=ratio(ec,budget))", flags: ["fractionAboveOneOk"], not: "fractionAboveOneOk (aşım mümkün, K18/K27 bant kararı GÖSTERİLEN değerle verilir)." },
@@ -54,6 +78,7 @@ const SCALE_TABLE_LITERAL = [
   { schema: "DailyReport", field: "pf_bands", scale: "not-scale", kanit: "app/modules/earned_value/schemas_reports.py:65-70 (PfBandsOut iç içe şema)", not: "nested obje (eşik seti), kendisi bir skaler değer değil — alt alanları (red_below/green_from/high_above) EvDecimal tutar/eşiktir." },
   { schema: "DailyReport", field: "unrated_entries", scale: "not-scale", kanit: "app/modules/earned_value/schemas_reports.py:33-57 (WarningOut dizisi)", not: "liste (array<WarningOut>), ölçek değil." },
   { schema: "DashboardProjectCard", field: "progress_pct", scale: "percent", kanit: "app/modules/projects/models.py:172 (Numeric(5,2), default=0) + alembic/versions/795d6498e4da_projects_seed.py:37-65 (tohum değerleri 42.50/15.00/100.00); gerekçe app/modules/projects/cards.py:317-338", not: "FOSİL sütun: hiçbir yazma yolu yoktur (bekçi test_projects_progress_pct_sutununun_YAZMA_YOLU_YOKTUR), ama DEĞER 0-100 aralığında yüzdedir; ProjectListItem.progress_pct ile aynı kolon." },
+  { schema: "DashboardSummaryResponse", field: "average_margin", scale: "not-scale", innerScale: "percent", kanit: "frontend kanıtı (backend bu worktree'de YOK): src/components/project-detail/SiteTotalsStrip.tsx:58 (metricCell(totals.average_margin, formatPercent)); schema.d.ts DashboardSummaryResponse.average_margin MetricPlaceholder zarfı", flags: ["percentAbove100Ok"], not: "TAHMİN DÜZEYİ ÖLÇÜM (madde 2 faz 2d) — backend formülü doğrulanmadı, yalnız tüketen frontend kodu kanıt. ZARF: .value ölçüsü percent (0–100, >100 olabilir) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
   { schema: "DayOut", field: "planned_pct_cum", scale: "fraction", kanit: "earned_value/budget_present.py:217; engine/preview.py:281-303; schemas_budget.py:272-276", not: "fractionAboveOneOk mümkün (aynı motor ailesi)." },
   { schema: "DisciplineOut", field: "share", scale: "fraction", kanit: "app/modules/earned_value/budget_present.py:50-51 (_share = part/total, ×100 YOK)", not: "0-1 kesir (doğrudan bütçe ÷ toplam doğrudan bütçe)." },
   { schema: "DisciplinePreviewOut", field: "share", scale: "fraction", kanit: "engine/preview.py:61,202-205; budget_present.py:240", not: "aynı _share fonksiyonu." },
@@ -69,7 +94,8 @@ const SCALE_TABLE_LITERAL = [
   { schema: "EquipmentUpdate", field: "rate_period", scale: "not-scale", kanit: "app/modules/equipment/models/enums.py:63-68 (EquipmentRatePeriod: hourly/daily/monthly)", not: "kategorik dönem enum'u (hourly/daily/monthly) — ölçek/bant DEĞİL; lider denetimiyle tüm rate_period satırları tek sınıfa çekildi" },
   { schema: "FuelSummaryRow", field: "deviation_pct", scale: "percent", kanit: "equipment/consumption.py:127-135", flags: ["negativeOk", "percentAbove100Ok"], not: "negatifOk: 'Negatif değer normun ALTINDA kalmaktır (iyi)'." },
   { schema: "GroupOut", field: "share", scale: "fraction", kanit: "app/modules/earned_value/budget_present.py:50-51,116,132,150", not: "_share fonksiyonu, GroupOut için de aynı kaynak." },
-  { schema: "InvestmentCard", field: "sales_ratio", scale: "not-scale", kanit: "projects/cards.py:45,51,231; projects/schemas.py:216; projects/cost_cards.py:20; frontend ProjectCard.tsx:58 (investment.sales_ratio zarfı)", not: "BELİRSİZ: alan HER ZAMAN yer tutucu (MetricPlaceholder, restricted/pending) döner — P10 kapsamı dışı (cost_cards.py:20 'P10 kapsamı dışı, yer tutucu KALIR'); repoda 'sales_ratio' hesaplayan tek bir formül YOK. İsim 'ratio' → en olası tahmin percent, ama gerçek formül yok. ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda. value her zaman null (cards.py:51,231)." },
+  { schema: "InvestmentCard", field: "margin", scale: "not-scale", innerScale: "percent", kanit: "frontend kanıtı (backend bu worktree'de YOK): src/components/projects/ProjectCard.tsx:424-426 (MarginChip, formatPercent ile \"marj\" basıyor); schema.d.ts InvestmentCard.margin MetricPlaceholder zarfı", flags: ["percentAbove100Ok"], not: "TAHMİN DÜZEYİ ÖLÇÜM (madde 2 faz 2d) — backend formülü doğrulanmadı. ZARF: .value ölçüsü percent (0–100, >100 olabilir) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "InvestmentCard", field: "sales_ratio", scale: "not-scale", innerScale: "percent", kanit: "projects/cards.py:45,51,231; projects/schemas.py:216; projects/cost_cards.py:20; frontend ProjectCard.tsx:58 (investment.sales_ratio zarfı)", flags: ["percentAbove100Ok"], not: "BELİRSİZ: alan HER ZAMAN yer tutucu (MetricPlaceholder, restricted/pending) döner — P10 kapsamı dışı (cost_cards.py:20 'P10 kapsamı dışı, yer tutucu KALIR'); repoda 'sales_ratio' hesaplayan tek bir formül YOK. İsim 'ratio' → en olası tahmin percent, ama gerçek formül yok. ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda. value her zaman null (cards.py:51,231)." },
   { schema: "InvoiceCreate", field: "advance_rate", scale: "percent", kanit: "app/modules/invoicing/schemas.py:80 (_RATE = Field(ge=0, le=100))" },
   { schema: "InvoiceCreate", field: "retention_rate", scale: "percent", kanit: "app/modules/invoicing/schemas.py:80" },
   { schema: "InvoiceCreate", field: "withholding_rate", scale: "percent", kanit: "app/modules/invoicing/schemas.py:80" },
@@ -95,6 +121,8 @@ const SCALE_TABLE_LITERAL = [
   { schema: "KpiRowOut", field: "planned_pct_day", scale: "fraction", kanit: "report_daily.py:100; engine/plan.py:29-37", not: "fractionAboveOneOk mümkün." },
   { schema: "KpiRowOut", field: "progress_pct_cum", scale: "fraction", kanit: "app/modules/earned_value/engine/numeric.py:42-45; engine/metrics.py:162", flags: ["fractionAboveOneOk"], not: "fractionAboveOneOk mümkün." },
   { schema: "KpiRowOut", field: "progress_pct_day", scale: "fraction", kanit: "app/modules/earned_value/engine/numeric.py:42-45", flags: ["fractionAboveOneOk"], not: "fractionAboveOneOk mümkün." },
+  { schema: "LandShareCard", field: "construction_progress", scale: "not-scale", innerScale: "percent", kanit: "frontend kanıtı (backend bu worktree'de YOK): src/components/projects/ProjectCard.tsx:57 (\"İnşaat İlerlemesi\" satırı, formatPercent ile basılıyor); schema.d.ts LandShareCard.construction_progress MetricPlaceholder zarfı", flags: ["percentAbove100Ok"], not: "TAHMİN DÜZEYİ ÖLÇÜM (madde 2 faz 2d) — backend formülü doğrulanmadı. ZARF: .value ölçüsü percent (0–100, >100 olabilir) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "LandShareCard", field: "margin", scale: "not-scale", innerScale: "percent", kanit: "frontend kanıtı (backend bu worktree'de YOK): src/components/projects/ProjectCard.tsx:428-429 (MarginChip, formatPercent ile \"marj\" basıyor); schema.d.ts LandShareCard.margin MetricPlaceholder zarfı", flags: ["percentAbove100Ok"], not: "TAHMİN DÜZEYİ ÖLÇÜM (madde 2 faz 2d) — backend formülü doğrulanmadı. ZARF: .value ölçüsü percent (0–100, >100 olabilir) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
   { schema: "LandShareCard", field: "our_share_pct", scale: "percent", kanit: "app/modules/projects/models.py:273,280 (CHECK 'our_share_pct + owner_share_pct = 100', Numeric(5,2))" },
   { schema: "LandShareCard", field: "our_share_value", scale: "not-scale", kanit: "app/modules/projects/schemas.py:245 (MetricPlaceholder, Gorunurluk.para)", not: "para tutarı zarfı, oran değil." },
   { schema: "LandShareCard", field: "owner_share_pct", scale: "percent", kanit: "app/modules/projects/models.py:273,281" },
@@ -189,8 +217,8 @@ const SCALE_TABLE_LITERAL = [
   { schema: "RentalInvoiceUpdate", field: "rate_period", scale: "not-scale", kanit: "app/modules/equipment/models/enums.py:63-68 (EquipmentRatePeriod: hourly/daily/monthly)", not: "kategorik dönem enum'u (hourly/daily/monthly) — ölçek/bant DEĞİL; lider denetimiyle tüm rate_period satırları tek sınıfa çekildi" },
   { schema: "RentalInvoiceUpdate", field: "vat_rate", scale: "percent", kanit: "app/modules/equipment/rental_schemas.py:46 (_VAT_RATE_OPTIONAL = Field(default=None, ge=0, le=100, ...)) — satır 96" },
   { schema: "RowPatternOut", field: "shares", scale: "not-scale", kanit: "app/modules/earned_value/schemas_day.py:171-173 (shares: list[ShareOut] — dizi alanı)", not: "alan tipi dizi; iç eleman ShareOut.share fraction'dır (bkz. o satır)" },
-  { schema: "SectionDetailResponse", field: "progress_pct", scale: "not-scale", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder — zarf nesnesi: available/value/pending_module)", not: "alan tipi MetricPlaceholder (nesne zarfı), skaler değil; iç .value alanı muhtemelen percent ama bu satırın kapsamı dışında ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
-  { schema: "SectionResponse", field: "progress_pct", scale: "not-scale", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder zarfı)", not: "alan tipi MetricPlaceholder (nesne) ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "SectionDetailResponse", field: "progress_pct", scale: "not-scale", innerScale: "percent", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder — zarf nesnesi: available/value/pending_module)", flags: ["percentAbove100Ok"], not: "alan tipi MetricPlaceholder (nesne zarfı), skaler değil; iç .value alanı muhtemelen percent ama bu satırın kapsamı dışında ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "SectionResponse", field: "progress_pct", scale: "not-scale", innerScale: "percent", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder zarfı)", flags: ["percentAbove100Ok"], not: "alan tipi MetricPlaceholder (nesne) ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
   { schema: "SettingsPreview", field: "pf_day_band", scale: "enum", kanit: "app/modules/earned_value/engine/types.py:39-44 (PfBand enum) + schemas_reports.py:441" },
   { schema: "SettingsPreview", field: "pf_week_band", scale: "enum", kanit: "app/modules/earned_value/engine/types.py:39-44 (PfBand enum) + schemas_reports.py:442" },
   { schema: "SettingsRead", field: "pf_bands", scale: "not-scale", kanit: "app/modules/earned_value/schemas_settings.py:124-132 (pf_bands: PfBands — nesne, günlük/kümülatif eşik çifti)", not: "alan tipi nesne (PfBands)" },
@@ -198,8 +226,8 @@ const SCALE_TABLE_LITERAL = [
   { schema: "ShareOut", field: "share", scale: "fraction", kanit: "app/modules/earned_value/schemas_day.py:166-168 (share: EvDecimal  # satirin saatinin o koda dusen payi (0-1))", not: "docstring açıkça 0-1 diyor" },
   { schema: "ShareholderInput", field: "share_pct", scale: "percent", kanit: "app/modules/projects/schemas.py:584 (share_pct: Decimal = Field(gt=0, le=100))" },
   { schema: "ShareholderResponse", field: "share_pct", scale: "percent", kanit: "app/modules/projects/schemas.py:228 (share_pct: Annotated[Decimal, Gorunurluk.kimlik]) — ShareholderInput ile aynı kaynaktan (gt=0, le=100)" },
-  { schema: "SiteCard", field: "progress_pct", scale: "not-scale", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder zarfı)", not: "alan tipi MetricPlaceholder (nesne) ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
-  { schema: "SiteDetailResponse", field: "progress_pct", scale: "not-scale", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder zarfı)", not: "alan tipi MetricPlaceholder (nesne) ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "SiteCard", field: "progress_pct", scale: "not-scale", innerScale: "percent", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder zarfı)", flags: ["percentAbove100Ok"], not: "alan tipi MetricPlaceholder (nesne) ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
+  { schema: "SiteDetailResponse", field: "progress_pct", scale: "not-scale", innerScale: "percent", kanit: "app/modules/projects/schemas.py:83-116 (MetricPlaceholder zarfı)", flags: ["percentAbove100Ok"], not: "alan tipi MetricPlaceholder (nesne) ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
   { schema: "SiteDiarySummaryItem", field: "completion_ratio", scale: "fraction", kanit: "app/modules/site_diary/summary.py:46-52 (_completion_ratio = quantity/boq_quantity, *100 YOK, quantize(_RATIO_STEP=0.0001))", flags: ["fractionAboveOneOk"], not: "BELİRSİZ: mockup etiketi '%' der ama backend değeri 0-1 fraction'dır (frontend çarpıyor olabilir) — fractionAboveOneOk (aşan iş kalemi mümkün)" },
   { schema: "SubcontractorContractCreate", field: "advance_pct", scale: "percent", kanit: "app/modules/contracts/schemas.py:573 (Field(default=Decimal('10'), ge=0, le=100))" },
   { schema: "SubcontractorContractCreate", field: "retainage_pct", scale: "percent", kanit: "app/modules/contracts/schemas.py:574 (Field(default=Decimal('5'), ge=0, le=100))" },
