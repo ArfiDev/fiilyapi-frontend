@@ -46,6 +46,45 @@ export function newDisciplineForm(existingCount: number): DisciplineFormState {
   return { code: "", name: "", color: suggestedPaletteColor(existingCount), own: "own" };
 }
 
+export interface PaletteEntry {
+  color: string;
+  /** "sıradaki" (yalnız oluşturmada) ya da bu rengi kullanan BAŞKA disiplinin kodu; yoksa boş. */
+  label: string;
+  isNext: boolean;
+}
+
+/**
+ * M6:314-320 `renderVals` — palet dairesinin altındaki etiket. Oluşturmada
+ * sıradaki önerilen renk "sıradaki" yazar (kullanan disiplin olsa bile
+ * öncelik ondadır); düzenlemede yalnız BAŞKA bir disiplinin kullandığı renk
+ * etiketlenir (kendi rengini "kendini kullanıyor" diye işaretlemez).
+ */
+export function paletteEntries(
+  palette: readonly string[],
+  existing: readonly EvDisciplineRead[],
+  editing: EvDisciplineRead | null,
+): PaletteEntry[] {
+  const nextColor = suggestedPaletteColor(existing.length);
+  const usedBy = new Map<string, string>();
+  for (const discipline of existing) {
+    if (!usedBy.has(discipline.color)) usedBy.set(discipline.color, discipline.code);
+  }
+  return palette.map((color) => {
+    if (editing) {
+      const owner = usedBy.get(color);
+      return { color, label: owner && owner !== editing.code ? owner : "", isNext: false };
+    }
+    const isNext = color === nextColor;
+    return { color, label: isNext ? "sıradaki" : (usedBy.get(color) ?? ""), isNext };
+  });
+}
+
+/** M6:351 — colHint oluşturma/düzenlemeye göre ayrılır. */
+export function disciplineColHint(existingCount: number, isEdit: boolean): string {
+  if (isEdit) return "Panel ve raporlardaki grafiklerde bu renk kullanılır";
+  return `Sıradaki palet rengi önceden seçildi (${existingCount + 1}. disiplin) · 6. disiplinde palet başa döner`;
+}
+
 export function disciplineFormFromRead(discipline: EvDisciplineRead): DisciplineFormState {
   return {
     code: discipline.code,

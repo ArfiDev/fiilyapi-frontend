@@ -201,7 +201,7 @@ describe("İş Tipi Ekle / Düzenle formu (KAT:234-296)", () => {
     const dialog = screen.getByRole("dialog", { name: "İş Tipi Ekle" });
     await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
 
-    expect(within(dialog).getByText("2 alan eksik.")).toBeInTheDocument();
+    expect(within(dialog).getByText("2 alan eksik ya da hatalı.")).toBeInTheDocument();
     expect(within(dialog).getByText("İş tipi adı zorunlu")).toBeInTheDocument();
     expect(within(dialog).getByText("Standart oran zorunlu · 0'dan büyük olmalı")).toBeInTheDocument();
     expect(backendClient.POST).not.toHaveBeenCalled();
@@ -217,7 +217,7 @@ describe("İş Tipi Ekle / Düzenle formu (KAT:234-296)", () => {
     await user.type(within(dialog).getByLabelText("Standart oran"), "0");
     await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
 
-    expect(within(dialog).getByText("1 alan eksik.")).toBeInTheDocument();
+    expect(within(dialog).getByText("1 alan eksik ya da hatalı.")).toBeInTheDocument();
     expect(backendClient.POST).not.toHaveBeenCalled();
   });
 
@@ -229,7 +229,7 @@ describe("İş Tipi Ekle / Düzenle formu (KAT:234-296)", () => {
     const dialog = screen.getByRole("dialog", { name: "İş Tipi Ekle" });
 
     await user.type(within(dialog).getByLabelText("İş tipi adı"), "Seramik kaplama");
-    await user.click(within(within(dialog).getByRole("group", { name: "Disiplin" })).getByRole("button", { name: "Duvar & Sıva" }));
+    await user.click(within(within(dialog).getByRole("group", { name: "Disiplin" })).getByRole("button", { name: /Duvar & Sıva/ }));
     expect(within(within(dialog).getByRole("group", { name: "Varsayılan yapan" })).getByRole("button", { name: "Taşeron" })).toHaveAttribute("aria-pressed", "true");
     await user.selectOptions(within(dialog).getByLabelText("Birim"), "m²");
     await user.type(within(dialog).getByLabelText("Standart oran"), "1,25");
@@ -303,6 +303,111 @@ describe("İş Tipi Ekle / Düzenle formu (KAT:234-296)", () => {
         body: { description: null },
       }),
     );
+  });
+
+  it("oluşturmada kullanım/gerçekleşen kutusu ve oran uyarı bandı YOK", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.click(await screen.findByRole("button", { name: "+ Yeni iş tipi" }));
+    const dialog = screen.getByRole("dialog", { name: "İş Tipi Ekle" });
+
+    expect(within(dialog).queryByText("Standart son güncelleme")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/Bu iş tipini kullanan/)).not.toBeInTheDocument();
+  });
+
+  it("düzenlemede kullanım/gerçekleşen kutusu: son güncelleme, kullanım, ort./min/max + fark rozeti (KAT:113-118)", async () => {
+    const user = userEvent.setup();
+    mockGets({ disciplines: [KAB, DUV], catalog: [BETON, KALIP_WITH_ACTUAL] });
+    renderScreen();
+    await user.click(await screen.findByRole("button", { name: "Kalıp" }));
+    const dialog = screen.getByRole("dialog", { name: "İş Tipi Düzenle" });
+
+    expect(within(dialog).getByText("Standart son güncelleme")).toBeInTheDocument();
+    expect(within(dialog).getByText("14.03.2026")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText((_, el) => el?.className === "ev-cat-use-value" && el.textContent === "4 şantiyede kullanılıyor"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Gerçekleşen · 2 tamamlanan şantiye")).toBeInTheDocument();
+    expect(within(dialog).getByText("0,93")).toBeInTheDocument();
+    expect(within(dialog).getByText("+%15,7")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        (_, el) => el?.className === "ev-cat-use-muted" && /en düşük 0,89 · en yüksek 0,95 a-s\/m²/.test(el.textContent ?? ""),
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("0,89")).toBeInTheDocument();
+    expect(within(dialog).getByText("0,95")).toBeInTheDocument();
+    // Oran henüz değiştirilmedi → uyarı bandı YOK.
+    expect(within(dialog).queryByText(/Bu iş tipini kullanan/)).not.toBeInTheDocument();
+  });
+
+  it("oran değiştirilince uyarı bandı basılır; geri alınca kaybolur (KAT:120-122)", async () => {
+    const user = userEvent.setup();
+    mockGets({ disciplines: [KAB, DUV], catalog: [BETON, KALIP_WITH_ACTUAL] });
+    renderScreen();
+    await user.click(await screen.findByRole("button", { name: "Kalıp" }));
+    const dialog = screen.getByRole("dialog", { name: "İş Tipi Düzenle" });
+
+    const rate = within(dialog).getByLabelText("Standart oran");
+    await user.clear(rate);
+    await user.type(rate, "1,00");
+
+    expect(within(dialog).getByText(/Bu iş tipini kullanan/)).toBeInTheDocument();
+    expect(within(dialog).getByText("4 şantiye")).toBeInTheDocument();
+
+    await user.clear(rate);
+    await user.type(rate, "0,80");
+    expect(within(dialog).queryByText(/Bu iş tipini kullanan/)).not.toBeInTheDocument();
+  });
+
+  it("ad ve açıklama karakter sayaçları (KAT:126,188)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.click(await screen.findByRole("button", { name: "+ Yeni iş tipi" }));
+    const dialog = screen.getByRole("dialog", { name: "İş Tipi Ekle" });
+
+    expect(within(dialog).getByText("0/120")).toBeInTheDocument();
+    expect(within(dialog).getByText("0/2000")).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("İş tipi adı"), "Seramik");
+    expect(within(dialog).getByText("7/120")).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("Açıklama"), "abc");
+    expect(within(dialog).getByText("3/2000")).toBeInTheDocument();
+  });
+
+  it("varsayılan yapan ipucu disipline göre dinamik, değiştirilince not düşer (KAT:184)", async () => {
+    const user = userEvent.setup();
+    mockGets({ disciplines: [KAB, DUV], catalog: [BETON, KALIP_WITH_ACTUAL] });
+    renderScreen();
+    await user.click(await screen.findByRole("button", { name: "Kalıp" }));
+    const dialog = screen.getByRole("dialog", { name: "İş Tipi Düzenle" });
+
+    expect(within(dialog).getByText("Varsayılan KAB disiplininden: Kendi")).toBeInTheDocument();
+    await user.click(within(within(dialog).getByRole("group", { name: "Varsayılan yapan" })).getByRole("button", { name: "Taşeron" }));
+    expect(
+      within(dialog).getByText("Varsayılan KAB disiplininden: Kendi · bu iş tipinde değiştirildi"),
+    ).toBeInTheDocument();
+  });
+
+  it("disiplin çipi renk noktası + kod gösterir (KAT:133-149)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.click(await screen.findByRole("button", { name: "+ Yeni iş tipi" }));
+    const dialog = screen.getByRole("dialog", { name: "İş Tipi Ekle" });
+    const group = within(dialog).getByRole("group", { name: "Disiplin" });
+
+    expect(within(group).getByRole("button", { name: /KAB Kaba İnşaat/ })).toBeInTheDocument();
+  });
+
+  it("'disiplin yok': boş durum kutusu basılır, çip listesi YOK (KAT:150-156)", async () => {
+    const user = userEvent.setup();
+    mockGets({ disciplines: [], catalog: [] });
+    renderScreen();
+    await user.click(await screen.findAllByRole("button", { name: "+ Yeni iş tipi" }).then((buttons) => buttons[0]));
+    const dialog = screen.getByRole("dialog", { name: "İş Tipi Ekle" });
+
+    expect(within(dialog).getByText("Önce disiplin ekleyin")).toBeInTheDocument();
+    expect(within(dialog).getByText("Katalogda henüz disiplin yok · iş tipi bir disipline bağlı olmalı")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("group", { name: "Disiplin" })).not.toBeInTheDocument();
   });
 });
 

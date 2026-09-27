@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 
-import { BETON, DUV, INC, KAB } from "./catalog-test-utils";
+import { BETON, DUV, INC, KAB, KALIP_WITH_ACTUAL } from "./catalog-test-utils";
 import {
   buildCatalogCreateBody,
   buildCatalogUpdateBody,
   catalogFormFromItem,
+  catalogOwnHint,
+  catalogRateChanged,
   rateToInput,
   unitOptions,
   validateCatalogForm,
@@ -12,7 +14,9 @@ import {
 import {
   buildDisciplineCreateBody,
   buildDisciplineUpdateBody,
+  disciplineColHint,
   disciplineFormFromRead,
+  paletteEntries,
   suggestedPaletteColor,
   validateDisciplineForm,
 } from "./discipline-form";
@@ -64,6 +68,22 @@ describe("iş tipi formu", () => {
   it("birim seçenekleri: KAT örnek birimleri + katalogdakiler + mevcut değer, tekil", () => {
     expect(unitOptions(["m³", "gtr"], "kg")).toEqual(["m³", "m²", "m", "ton", "adet", "gtr", "kg"]);
   });
+
+  it("catalogRateChanged: yalnız GEÇERLİ ve orijinalden FARKLI oranda true (KAT:120-122)", () => {
+    const form = catalogFormFromItem(KALIP_WITH_ACTUAL);
+    expect(catalogRateChanged(KALIP_WITH_ACTUAL, form)).toBe(false);
+    expect(catalogRateChanged(KALIP_WITH_ACTUAL, { ...form, rate: "1,00" })).toBe(true);
+    // Geçersiz oran (hata) uyarıyı TETİKLEMEZ.
+    expect(catalogRateChanged(KALIP_WITH_ACTUAL, { ...form, rate: "0" })).toBe(false);
+    expect(catalogRateChanged(KALIP_WITH_ACTUAL, { ...form, rate: "" })).toBe(false);
+  });
+
+  it("catalogOwnHint: disiplin yoksa sabit metin; seçiliyken varsayılan + değişiklik notu (KAT:184)", () => {
+    expect(catalogOwnHint(null, "own")).toBe("Disiplin seçilince varsayılanı gelir");
+    const selected = { code: "KAB", defaultContractorLabel: "Kendi", defaultContractorType: "own" as const };
+    expect(catalogOwnHint(selected, "own")).toBe("Varsayılan KAB disiplininden: Kendi");
+    expect(catalogOwnHint(selected, "subcon")).toBe("Varsayılan KAB disiplininden: Kendi · bu iş tipinde değiştirildi");
+  });
 });
 
 describe("disiplin formu", () => {
@@ -100,5 +120,29 @@ describe("disiplin formu", () => {
       sort_order: 4,
     });
     expect(buildDisciplineUpdateBody(KAB, { ...disciplineFormFromRead(KAB), code: "kba" })).toEqual({ code: "KBA" });
+  });
+
+  it("paletteEntries: oluşturmada sıradaki renk etiketlenir, kullanılan diğerleri kodla (M6:314-320)", () => {
+    // KAB #2563eb · DUV #93c5fd · INC #e2e8f0 kullanımda; existing.length=3 → sıradaki #cbd5e1.
+    const entries = paletteEntries(DISCIPLINE_PALETTE, list, null);
+    expect(entries).toEqual([
+      { color: "#2563eb", label: "KAB", isNext: false },
+      { color: "#93c5fd", label: "DUV", isNext: false },
+      { color: "#64748b", label: "", isNext: false },
+      { color: "#cbd5e1", label: "sıradaki", isNext: true },
+      { color: "#e2e8f0", label: "INC", isNext: false },
+    ]);
+  });
+
+  it("paletteEntries: düzenlemede KENDİ rengi etiketsiz kalır, 'sıradaki' hiç basılmaz", () => {
+    const entries = paletteEntries(DISCIPLINE_PALETTE, list, KAB);
+    expect(entries.find((e) => e.color === "#2563eb")).toEqual({ color: "#2563eb", label: "", isNext: false });
+    expect(entries.find((e) => e.color === "#93c5fd")).toEqual({ color: "#93c5fd", label: "DUV", isNext: false });
+    expect(entries.every((e) => !e.isNext)).toBe(true);
+  });
+
+  it("disciplineColHint: oluşturmada sıra numarası + döngü notu, düzenlemede sabit metin (M6:351)", () => {
+    expect(disciplineColHint(3, false)).toBe("Sıradaki palet rengi önceden seçildi (4. disiplin) · 6. disiplinde palet başa döner");
+    expect(disciplineColHint(3, true)).toBe("Panel ve raporlardaki grafiklerde bu renk kullanılır");
   });
 });
