@@ -13,6 +13,7 @@ import { subtractDecimalStrings, divideDecimalStrings } from "@/lib/decimal";
 import { compareDecimalStrings, roundHalfUp, toDecimalString, toPoints } from "@/lib/earned-value/decimal-input";
 import type { EvNumber } from "@/lib/earned-value";
 import type { EvCatalogItemRead } from "@/lib/api/models";
+import { asFractionOrNull } from "@/lib/api/scale";
 import { EMPTY_CELL } from "@/lib/format";
 
 /** ±%10 fark bandı (K4 · KAT:449-450) — puan cinsinden, sınır NORMAL sayılır. */
@@ -29,7 +30,7 @@ export type DiffBand = "over" | "under" | "normal" | "none";
 
 /** 0–1 oranın gösterilen puanı ("13.9") ya da veri yoksa null. */
 function shownPoints(ratio: EvNumber): string | null {
-  return roundHalfUp(toPoints(ratio), DIFF_DIGITS);
+  return roundHalfUp(toPoints(asFractionOrNull(ratio)), DIFF_DIGITS);
 }
 
 /** KAT:446-451 — over (+%10 üstü, kırmızı) · under (−%10 altı, yeşil) · normal. */

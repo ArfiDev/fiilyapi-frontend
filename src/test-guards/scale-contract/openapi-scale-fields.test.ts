@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { collectScaleSuspectFields, resolveEnumValues, schemaKey } from "./openapi-scale-fields";
-import { SCALE_TABLE } from "./scale-table";
+import { SCALE_TABLE } from "@/lib/api/scale-table";
 
 describe("openapi-scale-fields · resolveEnumValues", () => {
   it("KpiPf.pf_cum_band → PfBand enum üyeleri (anyOf[$ref, null] çözülür)", () => {

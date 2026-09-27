@@ -17,6 +17,7 @@ import {
   toPoints,
   type EvNumber,
 } from "./decimal-input";
+import { asFractionOrNull } from "@/lib/api/scale";
 
 /** Karşılaştırma basamağı = PF'nin gösterim basamağı (K18). */
 const PF_DISPLAY_SCALE = 2;
@@ -84,7 +85,7 @@ const VARIANCE_DISPLAY_SCALE = 1;
  * boyamaz. Sınır dahil Normal: |gösterilen sapma| ≤ tolerans.
  */
 export function varianceStatus(variance: EvNumber, tolerancePoints: EvNumber): VarianceStatus {
-  const shown = roundHalfUp(toPoints(variance), VARIANCE_DISPLAY_SCALE);
+  const shown = roundHalfUp(toPoints(asFractionOrNull(variance)), VARIANCE_DISPLAY_SCALE);
   const tolerance = toDecimalString(tolerancePoints)?.replace(/^[-+]/, "") ?? null;
   if (shown === null || tolerance === null) return "none";
 

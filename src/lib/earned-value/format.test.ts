@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { EMPTY_CELL, formatWindKmh as generalFormatWindKmh } from "@/lib/format";
+import { asFractionOrNull } from "@/lib/api/scale";
 
 import {
   formatFixedDecimal,
@@ -49,7 +50,7 @@ describe("formatPercent01 — 0–1 kesir → '%x,y' (spec §3.6)", () => {
   });
 
   it("tam yarım yukarı: 0.4485 → '%44,9'", () => {
-    expect(formatPercent01(0.4485)).toBe("%44,9");
+    expect(formatPercent01(asFractionOrNull(0.4485))).toBe("%44,9");
   });
 
   it("binlik ayraç: 12,345 → '%1.234,5'", () => {

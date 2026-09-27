@@ -16,6 +16,7 @@ import {
   toDecimalString,
   type DecimalLike,
 } from "@/lib/decimal";
+import { asPercent, type Fraction, type Percent } from "@/lib/api/scale";
 
 export type EvNumber = DecimalLike;
 
@@ -34,8 +35,13 @@ export function roundHalfUp(value: EvNumber, scale: number): string | null {
   return decimal === null ? null : divideDecimalStrings(decimal, "1", scale);
 }
 
-/** 0–1 kesri puana/yüzdeye çevirir (×100), kayıpsız. */
-export function toPoints(value: EvNumber): string | null {
+/**
+ * 0–1 kesri puana/yüzdeye çevirir (×100), kayıpsız.
+ *
+ * TYPE-F1 SPIKE: imza `Fraction → Percent | null` — FIX-F1 Kusur 1'in
+ * (kesir doğrudan yüzde sanılması) derleyici seviyesinde YAKALANMASI için.
+ */
+export function toPoints(value: Fraction | null | undefined): Percent | null {
   const decimal = toDecimalString(value);
-  return decimal === null ? null : multiplyDecimalStrings(decimal, "100");
+  return decimal === null ? null : asPercent(multiplyDecimalStrings(decimal, "100"));
 }

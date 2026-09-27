@@ -22,7 +22,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { AddressInfo } from "node:net";
 import { startMockBackend } from "../../../e2e/mock-backend";
-import { SCALE_TABLE } from "./scale-table";
+import { SCALE_TABLE } from "@/lib/api/scale-table";
 import { collectScaleSuspectFields, resolveEnumValues, schemaKey } from "./openapi-scale-fields";
 import { buildScaleUrls, MOCK_DISI_STATIC, type JsonGetter, type ScaleUrlEntry } from "./scale-urls";
 import { walkResponse, type ObservedValues } from "./schema-walker";

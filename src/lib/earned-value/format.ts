@@ -12,6 +12,7 @@ import { divideDecimalStrings } from "@/lib/decimal";
 import { EMPTY_CELL } from "@/lib/format";
 
 import { roundHalfUp, toDecimalString, toPoints, type EvNumber } from "./decimal-input";
+import { asFractionOrNull, type Fraction } from "@/lib/api/scale";
 
 const LOCALE = "tr-TR";
 const MINUS_SIGN = "−";
@@ -51,8 +52,16 @@ export function formatPf(value: EvNumber): string {
   return rounded === null ? EMPTY_CELL : formatFixed(rounded, PF_DIGITS);
 }
 
-/** 0–1 kesir → "%45,9" (sabit `digits` ondalık, sondaki sıfır korunur). */
-export function formatPercent01(value: EvNumber, digits: number = PERCENT_DEFAULT_DIGITS): string {
+/**
+ * 0–1 kesir → "%45,9" (sabit `digits` ondalık, sondaki sıfır korunur).
+ *
+ * TYPE-F1 SPIKE: imza `Fraction → string` — FIX-F1 Kusur 1'in (bir yüzdenin
+ * yanlışlıkla buraya verilmesi) derleyici seviyesinde YAKALANMASI için.
+ */
+export function formatPercent01(
+  value: Fraction | null | undefined,
+  digits: number = PERCENT_DEFAULT_DIGITS,
+): string {
   const rounded = roundHalfUp(toPoints(value), digits);
   return rounded === null ? EMPTY_CELL : `%${formatFixed(rounded, digits)}`;
 }
@@ -64,7 +73,7 @@ export function formatPercent01(value: EvNumber, digits: number = PERCENT_DEFAUL
  * trend "Fark (puan)" satırı 2 hane istiyor (`formatVariancePoints(v, 2)`).
  */
 export function formatVariancePoints(value: EvNumber, digits: number = VARIANCE_DIGITS): string {
-  const rounded = roundHalfUp(toPoints(value), digits);
+  const rounded = roundHalfUp(toPoints(asFractionOrNull(value)), digits);
   if (rounded === null) return EMPTY_CELL;
   const magnitude = formatFixed(rounded.replace(/^-/, ""), digits);
   if (Number(rounded) === 0) return magnitude;

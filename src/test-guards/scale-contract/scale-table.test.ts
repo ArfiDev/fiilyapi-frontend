@@ -9,7 +9,7 @@
 // 2) EŞİTLİK bekçisi: openapi/openapi.json'daki ölçek-şüpheli TÜM şema·alan
 //    kümesi ile SCALE_TABLE kümesi birebir aynı olmalı (fazla/eksik iki yön).
 import { describe, it, expect } from "vitest";
-import { SCALE_TABLE } from "./scale-table";
+import { SCALE_TABLE } from "@/lib/api/scale-table";
 import { collectScaleSuspectFields, schemaKey } from "./openapi-scale-fields";
 
 describe("scale-table · Katman 1 (TEST-F2 Ajan B)", () => {
