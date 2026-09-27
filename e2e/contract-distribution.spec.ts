@@ -32,7 +32,7 @@ async function login(page: Page) {
 
 /** Hücre erişilebilir adıyla bulunur: "03.001 · A-Blok Şantiyesi kotası". */
 function cell(page: Page, code: string, siteName: string) {
-  return page.getByLabel(`${code} · ${siteName} kotası`).first();
+  return page.locator("main").getByLabel(`${code} · ${siteName} kotası`).first();
 }
 
 async function saveDistribution(page: Page) {
@@ -45,7 +45,7 @@ test("poz dağılımı: rota ComingSoon değil, ızgara + dinamik şantiye kolon
   await login(page);
   await page.goto(URL);
 
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Kule A" })).toBeVisible();
 
   // Kolon sayısı VERİYE bağlıdır — p-1'de iki şantiye vardır.
@@ -102,7 +102,7 @@ test("poz dağılımı: `0` gönderilmez — istek atılmaz, gerekçe görünür
   await cell(page, "03.003", "B-Blok Şantiyesi").fill("0");
   await saveDistribution(page);
 
-  await expect(page.getByText(/Miktar 0 olamaz/)).toBeVisible();
+  await expect(page.locator("main").getByText(/Miktar 0 olamaz/)).toBeVisible();
   expect(putCount).toBe(0);
 
   // Sunucu HİÇ değişmedi: yeniden yüklenince eski kota durur.
@@ -131,7 +131,7 @@ test("poz dağılımı: BİRLEŞTİRME — dokunulmamış kota kaydetten sonra s
 
   await cell(page, "03.001", "A-Blok Şantiyesi").fill("1900");
   await saveDistribution(page);
-  await expect(page.getByText("Poz dağılımı kaydedildi.")).toBeVisible();
+  await expect(page.locator("main").getByText("Poz dağılımı kaydedildi.")).toBeVisible();
 
   expect(bodies).toEqual([
     { allocations: [{ contract_item_id: "ci-1", site_id: "s-1", quantity: "1900" }] },
@@ -146,7 +146,7 @@ test("poz dağılımı: BİRLEŞTİRME — dokunulmamış kota kaydetten sonra s
   // Fikstür geri alınır (paylaşılan mock state kirlenmesin).
   await cell(page, "03.001", "A-Blok Şantiyesi").fill("1800");
   await saveDistribution(page);
-  await expect(page.getByText("Poz dağılımı kaydedildi.")).toBeVisible();
+  await expect(page.locator("main").getByText("Poz dağılımı kaydedildi.")).toBeVisible();
   await page.reload();
   await expect(cell(page, "03.001", "A-Blok Şantiyesi")).toHaveValue("1800");
 });

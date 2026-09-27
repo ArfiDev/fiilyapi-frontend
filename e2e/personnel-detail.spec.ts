@@ -30,7 +30,7 @@ test("liste → Detay → başlık kartı sunucu fikstüründen gelir", async ({
   await page.goto("/personel");
   // Fikstür sayfalamada (PAGE_SIZE=6) ileri sayfada kalabilir — aramayla
   // (sunucuya `q=` giden GERÇEK süzgeç) TEK satıra indirilir.
-  await page.getByLabel("Personel ara").fill("Derya Aydın");
+  await page.locator("main").getByLabel("Personel ara").fill("Derya Aydın");
   const row = page.getByTestId(`personel-row-${FIXTURE_ID}`);
   await expect(row).toContainText("Derya Aydın");
   await row.getByRole("link", { name: "Detay" }).click();
@@ -100,9 +100,9 @@ test("İptal detay sayfasına döner; İK alanları düzenleme kipinde de ETKİN
 
   // F-İK T4: TC/IBAN artık GERÇEK alanlar (İK-1 sözleşmesi). PENDING kalan
   // tek alan "Bölüm"dür — proje düzeyinde bölüm listeleme ucu yok.
-  await expect(page.getByLabel("TC Kimlik No")).toBeEnabled();
-  await expect(page.getByLabel("IBAN")).toBeEnabled();
-  await expect(page.getByLabel("Bölüm")).toBeDisabled();
+  await expect(page.locator("main").getByLabel("TC Kimlik No")).toBeEnabled();
+  await expect(page.locator("main").getByLabel("IBAN")).toBeEnabled();
+  await expect(page.locator("main").getByLabel("Bölüm")).toBeDisabled();
 
   await page.getByRole("button", { name: "İptal" }).first().click();
   await expect(page).toHaveURL(new RegExp(`/personel/${FIXTURE_ID}$`));

@@ -30,12 +30,12 @@ test("taseron sozlesme formu gorsel", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByTestId("fso-body")).toBeVisible();
   // Seçiciler çözüldü — "yükleniyor" (devre-dışı) hâli baseline'a girmesin.
-  await expect(page.getByLabel("Proje", { exact: true })).toBeEnabled();
-  await expect(page.getByLabel("Taşeron Firma", { exact: true })).toBeEnabled();
+  await expect(page.locator("main").getByLabel("Proje", { exact: true })).toBeEnabled();
+  await expect(page.locator("main").getByLabel("Taşeron Firma", { exact: true })).toBeEnabled();
   // Proje seçilmeden poz yükleme kapalıdır — kadrajın beklenen başlangıcı.
   await expect(page.getByRole("button", { name: "İşveren Sözleşmesinden Yükle" })).toBeDisabled();
   // Altı belge kutusu + ortak "sürükle" satırı devre-dışı basılır.
-  await expect(page.locator(".pf-doc[aria-disabled='true']")).toHaveCount(7);
+  await expect(page.locator("main .pf-doc[aria-disabled='true']")).toHaveCount(7);
 
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("taseron-sozlesme-formu.png", { fullPage: true });

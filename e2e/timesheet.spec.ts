@@ -45,9 +45,10 @@ async function login(page: Page) {
   await expect(page.getByRole("heading", { name: "Gösterge Paneli" })).toBeVisible();
 }
 
-/** Saat kutusu — akış-SSR'da çift kopya riskine karşı ızgaraya kapsamlanır. */
+/** Saat kutusu — akış-SSR'da çift kopya riskine karşı `main` + ızgaraya kapsamlanır. */
 function hourBox(page: Page, person: string, dayMonth: string) {
   return page
+    .locator("main")
     .locator(".ts-week-table")
     .first()
     .getByLabel(`${person} · ${dayMonth} saati`);
@@ -63,6 +64,7 @@ async function setHours(page: Page, person: string, dayMonth: string, value: str
 /** Kod çapasını açıp rozet seçer (mockup rozeti çizer, seçme yolunu çizmez). */
 async function setCode(page: Page, person: string, dayMonth: string, codeLabel: string) {
   await page
+    .locator("main")
     .locator(".ts-week-table")
     .first()
     .getByRole("button", { name: `${person} · ${dayMonth} puantaj kodu` })
@@ -76,7 +78,7 @@ async function setCode(page: Page, person: string, dayMonth: string, codeLabel: 
 
 async function saveAndExpectSuccess(page: Page) {
   await page.getByRole("button", { name: "Haftayı Kaydet" }).first().click();
-  const status = page.locator(".ts-save-status").first();
+  const status = page.locator("main").locator(".ts-save-status").first();
   await expect(status).toContainText("Hafta kaydedildi.");
   await expect(status).not.toContainText("çakışma");
 }
@@ -85,15 +87,16 @@ test.describe("haftalık puantaj (SALT-OKUR, 2026-W32)", () => {
   test("şantiye ızgarası: 7 gün, saat kutuları, KPI ve türev kolonları", async ({ page }) => {
     await login(page);
     await page.goto(`${SITE_URL}?${WEEK_32}`);
+    const content = page.locator("main");
 
     await expect(
       page.getByRole("heading", { level: 1, name: "A-Blok Şantiyesi — Puantaj" }).first(),
     ).toBeVisible();
-    await expect(page.locator(".ts-week-nav__index").first()).toHaveText("32. Hafta");
+    await expect(content.locator(".ts-week-nav__index").first()).toHaveText("32. Hafta");
     // Gün başlıkları GERÇEK takvimden — mockup'ın "13 Tem"i kopyalanmaz.
     for (const weekday of ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]) {
       await expect(
-        page.locator(".ts-week-table").first().getByText(weekday, { exact: true }),
+        content.locator(".ts-week-table").first().getByText(weekday, { exact: true }),
       ).toBeVisible();
     }
     // 🔴 Normal/FM SUNUCUDAN gelir. Mehmet Kılıç: 9 + 5 + 9 = 23 saat, hiçbiri
@@ -115,13 +118,14 @@ test.describe("haftalık puantaj (SALT-OKUR, 2026-W32)", () => {
   test("izin/görev ROZETTİR ve KPI kartlarında AYRI sayılır", async ({ page }) => {
     await login(page);
     await page.goto(`${SITE_URL}?${WEEK_32}`);
-    const grid = page.locator(".ts-week-table").first();
+    const content = page.locator("main");
+    const grid = content.locator(".ts-week-table").first();
     await expect(grid.getByText("İzin", { exact: true }).first()).toBeVisible();
     await expect(grid.getByText("Görev", { exact: true }).first()).toBeVisible();
 
     // 🔴 Yönetim kararı: geçici görev bir izin DEĞİLDİR — ayrı kart, ayrı sayı.
-    const leaveCard = page.locator(".ts-kpi--leave").first();
-    const dutyCard = page.locator(".ts-kpi--duty").first();
+    const leaveCard = content.locator(".ts-kpi--leave").first();
+    const dutyCard = content.locator(".ts-kpi--duty").first();
     await expect(leaveCard.locator(".ts-kpi__value")).toHaveText("1");
     await expect(dutyCard.locator(".ts-kpi__value")).toHaveText("1");
   });
@@ -129,18 +133,20 @@ test.describe("haftalık puantaj (SALT-OKUR, 2026-W32)", () => {
   test("ay şeridi 'girilmedi' rozetini basar ve hafta değiştirir", async ({ page }) => {
     await login(page);
     await page.goto(`${SITE_URL}?${WEEK_32}`);
+    const content = page.locator("main");
     // W33'te (10–16 Ağu) hiç kayıt yok ⇒ "girilmedi".
-    const week33 = page.locator(".ts-month-week").filter({ hasText: "33. Hafta" }).first();
+    const week33 = content.locator(".ts-month-week").filter({ hasText: "33. Hafta" }).first();
     await expect(week33).toContainText("girilmedi");
     await week33.click();
-    await expect(page.locator(".ts-week-nav__index").first()).toHaveText("33. Hafta");
+    await expect(content.locator(".ts-week-nav__index").first()).toHaveText("33. Hafta");
   });
 
   test("genel puantaj (E5) ızgarayı basar; Excel YOKTUR", async ({ page }) => {
     await login(page);
     await page.goto(`/puantaj?site=s-1&${WEEK_32}`);
+    const content = page.locator("main");
     await expect(page.getByRole("heading", { level: 1, name: "Puantaj" }).first()).toBeVisible();
-    await expect(page.getByLabel("Meslek").first()).toBeVisible();
+    await expect(content.getByLabel("Meslek").first()).toBeVisible();
     // E5 mockup'ında dışa aktarım YOKTUR — uydurulmaz.
     await expect(page.getByRole("button", { name: "Excel" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Dışa Aktar" })).toHaveCount(0);
@@ -158,13 +164,14 @@ test.describe("haftalık puantaj (SALT-OKUR, 2026-W32)", () => {
   test("E5 satır süzgeci istemci tarafında süzer ve sayacı günceller", async ({ page }) => {
     await login(page);
     await page.goto(`/puantaj?site=s-1&${WEEK_32}`);
-    await expect(page.locator(".ts-week-table tbody tr").first()).toBeVisible();
-    await page.getByLabel("Meslek").first().selectOption("Elektrikçi");
+    const content = page.locator("main");
+    await expect(content.locator(".ts-week-table tbody tr").first()).toBeVisible();
+    await content.getByLabel("Meslek").first().selectOption("Elektrikçi");
     await expect(
-      page.locator(".ts-week-table tbody tr").filter({ hasText: "Ramazan Yıldız" }),
+      content.locator(".ts-week-table tbody tr").filter({ hasText: "Ramazan Yıldız" }),
     ).toHaveCount(1);
     await expect(
-      page.locator(".ts-week-table tbody tr").filter({ hasText: "Mehmet Kılıç" }),
+      content.locator(".ts-week-table tbody tr").filter({ hasText: "Mehmet Kılıç" }),
     ).toHaveCount(0);
   });
 });
@@ -332,7 +339,8 @@ test.describe("puantaj düzenleme (MUTASYON, 2026-W36 · s-1)", () => {
     await login(page);
     // sec-1 süzgeci açık: İsmail Aksoy'un 1 Eyl kaydı (sec-2) EKRANDA YOK.
     await page.goto(`${SITE_URL}?${WEEK_36}&section=sec-1`);
-    await expect(page.locator(".ts-summary__title").first()).toHaveText("Kat 6–10 Kaba İnşaat");
+    const content = page.locator("main");
+    await expect(content.locator(".ts-summary__title").first()).toHaveText("Kat 6–10 Kaba İnşaat");
     await expect(hourBox(page, "İsmail Aksoy", "1 Eyl")).toHaveValue("");
 
     // Süzülmüş görünümde bir düzenleme yapıp kaydet.
@@ -370,11 +378,12 @@ test.describe("puantaj düzenleme (MUTASYON, 2026-W36 · s-1)", () => {
   test("BOŞ hücreye ondalık saat girilir ve kalıcı olur", async ({ page }) => {
     await login(page);
     await page.goto(`${SITE_URL}?${WEEK_36}`);
+    const content = page.locator("main");
 
     // Osman Şahin'in bu haftada HİÇ kaydı yok — satırı kartoteksten gelir (K1).
     await expect(hourBox(page, "Osman Şahin", "2 Eyl")).toHaveValue("");
     await setHours(page, "Osman Şahin", "2 Eyl", "6,5");
-    await expect(page.locator(".ts-save-status").first()).toContainText("Kaydedilmemiş 1 hücre");
+    await expect(content.locator(".ts-save-status").first()).toContainText("Kaydedilmemiş 1 hücre");
     await saveAndExpectSuccess(page);
 
     await page.reload();
@@ -390,7 +399,8 @@ test.describe("puantaj düzenleme (MUTASYON, 2026-W36 · s-1)", () => {
     await saveAndExpectSuccess(page);
 
     await page.reload();
-    const grid = page.locator(".ts-week-table").first();
+    const reloadedContent = page.locator("main");
+    const grid = reloadedContent.locator(".ts-week-table").first();
     await expect(
       grid.getByRole("button", { name: "Mehmet Kılıç · 1 Eyl puantajı" }),
     ).toHaveText("İzin");
@@ -413,8 +423,9 @@ test.describe("puantaj düzenleme (MUTASYON, 2026-W36 · s-1)", () => {
   test("geçersiz saat REDDEDİLİR — gerekçe hücrede kalır, taslağa yazılmaz", async ({ page }) => {
     await login(page);
     await page.goto(`${SITE_URL}?${WEEK_36}`);
+    const content = page.locator("main");
     await setHours(page, "Osman Şahin", "3 Eyl", "25");
-    await expect(page.getByText("Gün saati 0'dan büyük ve en çok 24 olmalı.").first()).toBeVisible();
+    await expect(content.getByText("Gün saati 0'dan büyük ve en çok 24 olmalı.").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Haftayı Kaydet" }).first()).toBeDisabled();
   });
 
@@ -422,8 +433,9 @@ test.describe("puantaj düzenleme (MUTASYON, 2026-W36 · s-1)", () => {
     await login(page);
     // W37'ye geç: boş bir hafta. Önceki hafta (W36) kopyalanır.
     await page.goto(`${SITE_URL}?${WEEK_37}`);
+    const content = page.locator("main");
     await page.getByRole("button", { name: "Önceki Haftayı Kopyala" }).first().click();
-    const status = page.locator(".ts-save-status").first();
+    const status = content.locator(".ts-save-status").first();
     await expect(status).toContainText("Önceki haftadan");
     await expect(status).toContainText("kopyalandı");
     // Kopya HENÜZ kaydedilmedi — "Haftayı Kaydet" açık.
@@ -435,10 +447,11 @@ test.describe("puantaj düzenleme (MUTASYON, 2026-W36 · s-1)", () => {
     // Ramazan Yıldız 10 Eylül'de BAŞKA şantiyede (s-2) kayıtlı — mock bu
     // kişi-günü s-1'e yazmayı 409'la reddeder (gerçek backend kuralı).
     await page.goto(`${SITE_URL}?${WEEK_37}`);
+    const content = page.locator("main");
     await setHours(page, "Ramazan Yıldız", "10 Eyl", "9");
     await page.getByRole("button", { name: "Haftayı Kaydet" }).first().click();
 
-    const status = page.locator(".ts-save-status").first();
+    const status = content.locator(".ts-save-status").first();
     await expect(status).toContainText("Kişi-gün çakışması");
     await expect(status).toContainText("B-Blok Şantiyesi");
     // Taslak KAYBOLMAZ: kullanıcı yazdığını görmeye devam eder.

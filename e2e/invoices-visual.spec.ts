@@ -110,14 +110,14 @@ test("fatura listesi giden sekmesi gorsel", async ({ page }) => {
   await expect(page.getByTestId("fat-kpi-issued")).toContainText("₺4,92M");
   // 📅 `page.clock` KANITI: başlık ve tablo Temmuz 2026'ya süzülü, tablo BOŞ
   // değil. Saat dondurulmasaydı gerçek ay süzülür, bu satırlar düşerdi.
-  await expect(page.getByText("Giden Faturalar — Temmuz 2026")).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-out-1"]')).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-out-2"]')).toBeVisible();
+  await expect(page.locator("main").getByText("Giden Faturalar — Temmuz 2026")).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-out-1"]')).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-out-2"]')).toBeVisible();
   // Gelen (onay bekleyen) tablosu: sabitleme sonrası İKİ tohum satır.
   await expect(page.getByTestId("fat-incoming-row")).toHaveCount(2);
-  await expect(page.locator('[data-invoice-id="inv-in-1"]')).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-in-2"]')).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-in-mut"]')).toHaveCount(0);
+  await expect(page.locator('main [data-invoice-id="inv-in-1"]')).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-in-2"]')).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-in-mut"]')).toHaveCount(0);
   await expectNoLoadingText(page);
 
   await prepareFrame(page);
@@ -140,9 +140,9 @@ test("fatura listesi gelen sekmesi gorsel", async ({ page }) => {
   await expect(page.getByTestId("fat-kpi-issued")).toContainText("₺4,92M");
   // Durum süzgeci kalkar: iki tohum satır (biri kira kaynaklı, biri sipariş).
   await expect(page.getByTestId("fat-incoming-row")).toHaveCount(2);
-  await expect(page.locator('[data-invoice-id="inv-in-1"]')).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-in-2"]')).toContainText("Onay Bekliyor");
-  await expect(page.locator('[data-invoice-id="inv-in-mut"]')).toHaveCount(0);
+  await expect(page.locator('main [data-invoice-id="inv-in-1"]')).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-in-2"]')).toContainText("Onay Bekliyor");
+  await expect(page.locator('main [data-invoice-id="inv-in-mut"]')).toHaveCount(0);
   // Giden paneli bu sekmede HİÇ basılmaz.
   await expect(page.getByTestId("fat-outgoing-table")).toHaveCount(0);
   await expectNoLoadingText(page);

@@ -43,13 +43,15 @@ test("gunluk kayit gir ekrani (bos gun) gorsel", async ({ page }) => {
   await page.goto(SITE_DIARY_URL);
   await expect(page.getByRole("heading", { level: 1, name: "Günlük Kayıt & Planlama" })).toBeVisible();
   // Kayıt açılmamış gün: satır iskeleti yok, dürüst boş durum basılır.
+  // S:0 gizli SSR kopyası riski (React 19 streaming, bkz. streaming-duplicate-guard.spec.ts):
+  // locator'lar `main` kapsamına daraltılır, yoksa strict-mode iki öğe bulabilir.
   await expect(
-    page.getByText("İş kalemi satırları, gün için kayıt açıldığında", { exact: false }),
+    page.locator("main").getByText("İş kalemi satırları, gün için kayıt açıldığında", { exact: false }),
   ).toBeVisible();
   // Sağ panel GERÇEK veriyle doldu (yükleme durumu dondurulmasın).
-  await expect(page.locator(".diary-recent__list")).toContainText("16 Temmuz");
+  await expect(page.locator("main .diary-recent__list")).toContainText("16 Temmuz");
   // Gömülü planlama bloğu (day-summary) geldi.
-  await expect(page.locator(".diary-plan")).toBeVisible();
+  await expect(page.locator("main .diary-plan")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);
@@ -63,9 +65,9 @@ test("gunluk kayit gir ekrani (dolu taslak) gorsel", async ({ page }) => {
   await page.goto(SITE_DIARY_URL);
   await expect(page.getByRole("heading", { level: 1, name: "Günlük Kayıt & Planlama" })).toBeVisible();
   // d-2 (16 Temmuz, taslak): başlık alanları + satır miktarı dolu.
-  await expect(page.locator(".diary__status-row")).toContainText("Taslak");
-  await expect(page.getByLabel("03.002 bugün yapılan miktar")).toHaveValue("180.000");
-  await expect(page.locator(".diary-lines__total-amount")).toContainText("₺ 26.100");
+  await expect(page.locator("main .diary__status-row")).toContainText("Taslak");
+  await expect(page.locator("main").getByLabel("03.002 bugün yapılan miktar")).toHaveValue("180.000");
+  await expect(page.locator("main .diary-lines__total-amount")).toContainText("₺ 26.100");
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);

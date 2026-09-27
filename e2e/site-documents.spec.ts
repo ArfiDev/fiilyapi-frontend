@@ -32,6 +32,7 @@ test("şantiye belgeleri: klasör paneli, kart ızgarası ve Son Eklenenler bas�
   await page.clock.setFixedTime(new Date(FIXED_NOW));
   await login(page);
   await page.goto(DOCUMENTS_URL);
+  const content = page.locator("main");
 
   // ŞB 85 — başlık bloğu
   await expect(
@@ -43,7 +44,7 @@ test("şantiye belgeleri: klasör paneli, kart ızgarası ve Son Eklenenler bas�
     "aria-selected",
     "true",
   );
-  await expect(page.getByText("Bu bölüm yakında")).toHaveCount(0);
+  await expect(content.getByText("Bu bölüm yakında")).toHaveCount(0);
 
   // ŞB 37-69 — klasör paneli: kök + şantiye klasörleri
   const panel = page.getByRole("navigation", { name: "Belge klasörleri" });
@@ -103,12 +104,13 @@ test("klasör seçimi ve arama URL durumuna yazılır, ızgarayı süzer", async
   await page.clock.setFixedTime(new Date(FIXED_NOW));
   await login(page);
   await page.goto(DOCUMENTS_URL);
+  const content = page.locator("main");
 
   // Klasör seçimi (ŞB 45-68) → ?folder=; locator klasör paneline kapsamlanır
   const panel = page.getByRole("navigation", { name: "Belge klasörleri" });
   await panel.getByRole("link", { name: /İzin & Ruhsat/ }).first().click();
   await expect(page).toHaveURL(/\?folder=df-s1-4/);
-  await expect(page.getByText("İzin & Ruhsat", { exact: true }).first()).toBeVisible();
+  await expect(content.getByText("İzin & Ruhsat", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /Yapı_Ruhsatı_2025\.pdf/ }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /Puantaj_Tem2026\.xlsx/ })).toHaveCount(0);
 
@@ -121,7 +123,7 @@ test("klasör seçimi ve arama URL durumuna yazılır, ızgarayı süzer", async
 
   // Eşleşme yoksa boş-durum metni (uydurma satır YOK)
   await page.getByRole("searchbox", { name: "Belge ara" }).fill("boyleBirBelgeYok");
-  await expect(page.getByText("Aramanızla eşleşen belge bulunamadı.")).toBeVisible();
+  await expect(content.getByText("Aramanızla eşleşen belge bulunamadı.")).toBeVisible();
 });
 
 test("indirme: kart tıklaması ve 'İndir' düğmesi dosyayı indirir", async ({ page }) => {
@@ -153,11 +155,12 @@ test("basılmayanlar: belge silme / klasör düzenleme / versiyon yüzeyi ekrand
   await page.clock.setFixedTime(new Date(FIXED_NOW));
   await login(page);
   await page.goto(DOCUMENTS_URL);
+  const content = page.locator("main");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Belgeler");
 
   await expect(page.getByRole("button", { name: /^sil$/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /yeniden adlandır/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /klasörü sil/i })).toHaveCount(0);
-  await expect(page.getByText(/versiyon/i)).toHaveCount(0);
-  await expect(page.getByText(/onay bekliyor/i)).toHaveCount(0);
+  await expect(content.getByText(/versiyon/i)).toHaveCount(0);
+  await expect(content.getByText(/onay bekliyor/i)).toHaveCount(0);
 });

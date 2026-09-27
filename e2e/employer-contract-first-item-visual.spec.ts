@@ -142,12 +142,12 @@ async function gotoLoadedEmptyContract(page: Page) {
   // YÜKLENDİ (c) kalem listesi — boş-durum metni `groups` TANIMLIYKEN ve
   // uzunluğu 0'ken basılır; yönlendirme metni ayrıca `isLoading`/`isError`
   // dallarının ikisini de eler.
-  await expect(page.getByText("Bu sözleşmede henüz iş kalemi yok")).toBeVisible();
+  await expect(page.locator("main").getByText("Bu sözleşmede henüz iş kalemi yok")).toBeVisible();
   await expect(page.getByTestId("ecd-add-item-reason")).toContainText(
     "ilk pozu eklerken grubu da oluşturabilirsiniz",
   );
   // Hiçbir dal yükleme hâlinde donmadı.
-  await expect(page.getByText(LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main").getByText(LOADING_TEXT)).toHaveCount(0);
 }
 
 // ---------------------------------------------------------------------------

@@ -31,7 +31,7 @@ test("TSD: rota ComingSoon'dan çıktı; başlık + VKN + zincir basılır", asy
   await login(page);
   await page.goto(`/sozlesmeler/taseron/${CONTRACT_ID}`);
 
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Aydın Elektrik Taah.");
 
   // VKN sözleşme şemasında YOK — `GET /subcontractors` listesinden süzülür.
@@ -80,7 +80,7 @@ test("TSD: hakediş geçmişi + önseçimli oluşturma bağlantıları", async (
     `/hakedisler/taseron/yeni?contract=${CONTRACT_ID}`,
   );
 
-  await expect(page.getByText("Hakediş Geçmişi")).toBeVisible();
+  await expect(page.locator("main").getByText("Hakediş Geçmişi")).toBeVisible();
   await expect(page.getByRole("link", { name: "Detay" }).first()).toHaveAttribute(
     "href",
     /\/hakedisler\/taseron\//,
@@ -109,7 +109,7 @@ test("TSD: devre-dışı PDF yerinde durur; '+ Poz Ekle' ARTIK diyalog açar", a
   await page.goto(`/sozlesmeler/taseron/${CONTRACT_ID}`);
 
   await expect(page.getByTestId("tsd-pdf-disabled")).toBeDisabled();
-  await expect(page.getByText(/Dışa aktarma ucu henüz açılmadı/)).toBeVisible();
+  await expect(page.locator("main").getByText(/Dışa aktarma ucu henüz açılmadı/)).toBeVisible();
 
   // F-BLG T2a: form mockup'ı geldi, buton devre-dışı gerekçesinden kurtuldu.
   // Testid `tsd-add-item-disabled` → `tsd-add-item`. "Aktif" iddiası TEK

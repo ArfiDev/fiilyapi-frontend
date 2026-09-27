@@ -111,7 +111,7 @@ test("p-2 yazma akışı: müşteri→ünite→bedel→Plan Oluştur (Σ=bedel T
   await expect(page.getByRole("heading", { name: "Yeni Satış Kaydı", level: 1 })).toBeVisible();
 
   // Belgeler kartı PENDING: gerçek yükleme yüzeyi yok.
-  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  await expect(page.locator('main input[type="file"]')).toHaveCount(0);
 
   // Proje + ünite (GERÇEK sunucudan) → maliyet ve kâr TELDEN türetilir.
   await page.getByTestId("satis-form-proje").selectOption(WRITE_PROJECT);
@@ -147,7 +147,7 @@ test("p-2 yazma akışı: müşteri→ünite→bedel→Plan Oluştur (Σ=bedel T
   expect(salePostBodies[0].unit_id).toBe(WRITE_UNIT);
 
   // Plan satırını düzenle → kaydetmede PUT DEĞİŞTİRME (tam plan gider).
-  await page.getByLabel("1. taksit ödeme şekli").selectOption("cash");
+  await page.locator("main").getByLabel("1. taksit ödeme şekli").selectOption("cash");
   await page.getByTestId("satis-form-plan-uyari").waitFor();
   await page.getByTestId("satis-form-kaydet").click();
 

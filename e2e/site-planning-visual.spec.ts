@@ -41,10 +41,11 @@ async function login(page: Page) {
  * kapsamlanır ve/veya `.first()` alır.
  */
 async function expectGridLoaded(page: Page) {
+  const content = page.locator("main");
   await expect(
-    page.locator(".plan-card--grid .plan-week-nav__label").first(),
+    content.locator(".plan-card--grid .plan-week-nav__label").first(),
   ).toHaveText("3 – 9 Ağustos 2026");
-  await expect(page.locator(".plan-card--grid").first().locator(".plan-grid__row")).not.toHaveCount(
+  await expect(content.locator(".plan-card--grid").first().locator(".plan-grid__row")).not.toHaveCount(
     0,
   );
 }
@@ -52,6 +53,7 @@ async function expectGridLoaded(page: Page) {
 test("planlama izgarasi (dolu) gorsel", async ({ page }) => {
   await login(page);
   await page.goto(PLANNING_URL);
+  const content = page.locator("main");
   await expect(
     page.getByRole("heading", { level: 1, name: "Planlama — A-Blok Şantiyesi" }),
   ).toBeVisible();
@@ -60,17 +62,17 @@ test("planlama izgarasi (dolu) gorsel", async ({ page }) => {
   // Fikstür altı renk etiketinin HEPSİNİ kullanır — kadraj çip paletinin
   // tamamını taşır (blue/green/yellow/purple/gray/red).
   for (const tag of ["blue", "green", "yellow", "purple", "gray", "red"]) {
-    await expect(page.locator(`.plan-cell__chip--${tag}`).first(), tag).toBeVisible();
+    await expect(content.locator(`.plan-cell__chip--${tag}`).first(), tag).toBeVisible();
   }
   // Alt sıra: pending Malzeme Planı kartı + dört hedef.
   // ⚠️ Metin locator'ı da akış-SSR çift kopyasına AÇIKTIR (sınıf locator'ları
   // gibi) — `.first()` olmadan strict-mode ihlali verir. Yalnız Linux CI'da.
   await expect(
-    page.getByText("Haftalık malzeme ihtiyacı hesaplanmıyor", { exact: false }).first(),
+    content.getByText("Haftalık malzeme ihtiyacı hesaplanmıyor", { exact: false }).first(),
   ).toBeVisible();
   // Kapsamsız `.plan-goals__row` sayımı akış-SSR çift kopyasında İKİYE KATLANIR
   // (bkz. expectGridLoaded notu) — kart kapsamı + `.first()` zorunludur.
-  await expect(page.locator(".plan-goals").first().locator(".plan-goals__row")).toHaveCount(4);
+  await expect(content.locator(".plan-goals").first().locator(".plan-goals__row")).toHaveCount(4);
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);
@@ -115,12 +117,13 @@ test("planlama izgarasi (bos) gorsel", async ({ page }) => {
 
   await login(page);
   await page.goto(PLANNING_URL);
+  const content = page.locator("main");
   // Boş-durum metinleri de akış-SSR'da İKİ kopyaya çözülür → `.first()` şart
   // (baseline turu 31312395932'de fiilen patladı, macOS'ta hiç görülmedi).
-  await expect(page.getByText("Bu hafta için plan satırı eklenmemiş.").first()).toBeVisible();
-  await expect(page.getByText("Bu hafta için hedef girilmemiş.").first()).toBeVisible();
+  await expect(content.getByText("Bu hafta için plan satırı eklenmemiş.").first()).toBeVisible();
+  await expect(content.getByText("Bu hafta için hedef girilmemiş.").first()).toBeVisible();
   // Sprint yokken "Aktif Sprint:" etiketi HİÇ basılmaz.
-  await expect(page.locator(".plan-week-nav__sprint")).toHaveCount(0);
+  await expect(content.locator(".plan-week-nav__sprint")).toHaveCount(0);
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);
@@ -154,10 +157,11 @@ test("planlama hucre popover'i gorsel", async ({ page }) => {
 test("planlama haftalik hedefler karti gorsel", async ({ page }) => {
   await login(page);
   await page.goto(PLANNING_URL);
+  const content = page.locator("main");
   await expectGridLoaded(page);
 
   // Kart kadrajı: dört `PlanGoalStatus` rozetinin HEPSİ tek ekrandadır.
-  const goalsCard = page.locator("section[aria-labelledby='plan-goals-title']").first();
+  const goalsCard = content.locator("section[aria-labelledby='plan-goals-title']").first();
   await expect(goalsCard.locator(".plan-goals__row")).toHaveCount(4);
   for (const status of ["completed", "in_progress", "waiting", "service_pending"]) {
     await expect(goalsCard.locator(`.plan-goals__status--${status}`), status).toBeVisible();

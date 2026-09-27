@@ -32,7 +32,7 @@ test("sozlesmeler isveren sekmesi gorsel", async ({ page }) => {
   await expect(page.getByTestId("szl-progress").first()).toBeVisible();
   // S2 kararının iki yüzü de kadrajda: devre-dışı buton + görünür gerekçe.
   await expect(page.getByTestId("szl-new-contract-disabled")).toBeDisabled();
-  await expect(page.getByText("İşveren sözleşmesi proje formunda kurulur.")).toBeVisible();
+  await expect(page.locator("main").getByText("İşveren sözleşmesi proje formunda kurulur.")).toBeVisible();
 
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("sozlesmeler-isveren.png", { fullPage: true });

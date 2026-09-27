@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prepareFrame } from "./visual-scroll";
-import { login, openViaSidebar, tabByName } from "./workspace-tabs-helpers";
+import { login, openViaSidebar, tabByName, tabsList } from "./workspace-tabs-helpers";
 
 /**
  * SEKME-F1.5 · çalışma sekmeleri şeridi — GÖRSEL kareler (emir §3).
@@ -47,6 +47,12 @@ test.describe("çalışma sekmeleri — 1440", () => {
   });
 
   test("10 sekme sona kaydırılmış (panel sticky, aktif görünür)", async ({ page }) => {
+    // Şerit `scroll-behavior: smooth` — `prefers-reduced-motion: reduce`
+    // altında `auto`ya düşer (bkz. `WorkspaceTabsStrip.tsx` tepe yorumu).
+    // Sekmeler açılmadan ÖNCE kurulur: aktif sekme her `openViaSidebar`da
+    // `scrollIntoView` ile kaydırılıyor, animasyonun anlık olması gerekli.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
     const modules = [
       "Onay Kutusu",
       "FİİL AI",
@@ -61,8 +67,33 @@ test.describe("çalışma sekmeleri — 1440", () => {
     for (const label of modules) await openViaSidebar(page, label);
     await expect(tabByName(page, "Planlama Paneli")).toHaveAttribute("aria-selected", "true");
 
-    await prepareFrame(page);
-    await expect(page).toHaveScreenshot("workspace-tabs-10-tabs-scrolled.png", { fullPage: true });
+    // Üretimdeki `WorkspaceTabsStrip` aktif sekme değiştiğinde zaten
+    // `scrollIntoView` çağırır (bkz. `active?.scrollIntoView?.(...)`) — burada
+    // AYNI çağrı tekrarlanır ki kadraj hazırlığından (aşağıda) ÖNCE, ölçülebilir
+    // bir "sona kaydırılmış" durum kurulmuş olsun.
+    await page
+      .locator(".workspace-tab--active")
+      .evaluate((el) => el.scrollIntoView({ block: "nearest", inline: "nearest" }));
+
+    const list = tabsList(page);
+    await expect.poll(() => list.evaluate((el) => Math.round(el.scrollLeft) > 0)).toBe(true);
+    await expect(page.locator(".workspace-tabs")).toHaveClass(/workspace-tabs--fade-left/);
+
+    // CEO kararı "d" (2026-09-28): kanon DEĞİŞMEDİ — `prepareFrame` yine
+    // `toHaveScreenshot`tan hemen önceki satır (`visual-frame-guard.test.ts`
+    // bunu değişmeden doğrular). Yalnız BU çağrı `preserveScrollLeft` ile
+    // şeridin (`.workspace-tabs__list`) yatay kaydırmasını korur — dikey
+    // sıfırlama ve imleç parkı her zamanki gibi çalışır (bkz. `visual-scroll.ts`).
+    await prepareFrame(page, { preserveScrollLeft: [".workspace-tabs__list"] });
+
+    // fullPage YOK, bilinçli sapma (CEO K5, ölçüldü): `fullPage: true` kadrajı
+    // şeridin `scrollLeft`ini SIFIRLIYOR (bu turda gözlemlendi) ve bu karenin
+    // ANLAMI olan "şerit sona kaydırılmış" durumunu bozuyor — depodaki genel
+    // "tam sayfa" kanonundan (bu dosyanın başlık yorumu) bu tek kare için
+    // BİLİNÇLİ sapılır.
+    await expect(page).toHaveScreenshot("workspace-tabs-10-tabs-scrolled.png", {
+      fullPage: false,
+    });
   });
 
   test("sağ tık menüsü açık", async ({ page }) => {

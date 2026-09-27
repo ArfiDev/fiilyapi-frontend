@@ -22,24 +22,54 @@ import { expect, type Page } from "@playwright/test";
  * İKİ EKSENDE sıfırlar. Bekleme DURUM tabanlıdır (`expect.poll`) — sabit
  * `waitForTimeout` YASAK. Kaydırılmayan sayfalarda etkisizdir (no-op), o
  * yüzden kadrajı olan her spec güvenle çağırabilir.
+ *
+ * `preserveScrollLeft` (SEKME-F1.7c, CEO kararı "d" — 2026-09-28): kanon
+ * DEĞİŞMEDİ ("prepareFrame, toHaveScreenshot'tan hemen önceki satırdır",
+ * bkz. `src/test-guards/visual-frame-guard.test.ts`) — bunun yerine BU
+ * fonksiyon isteğe bağlı bir kaçış kapısı aldı. Seçenek verilmezse (varsayılan
+ * `[]`) davranış BİREBİR ÖNCEKİYLE AYNI: her satırın hem `scrollLeft` hem
+ * `scrollTop`u sıfırlanır. Seçenek verilirse yalnız o seçicilere uyan
+ * öğelerin YATAY kaydırması (`scrollLeft`) KORUNUR — DİKEY sıfırlama
+ * (`scrollTop`) ve imleç parkı bu öğeler için de AYNEN çalışır (yalnız
+ * `scrollLeft` istisna). Amaç: "sona kaydırılmış" gibi kasıtlı yatay kaydırma
+ * taşıyan TEK bir kare, `prepareFrame`in kalan HER garantisini (dikey sıfırlama,
+ * imleç parkı, diğer TÜM kapların sıfırlanması) korurken kadraja taşınabilsin.
  */
-export async function settleScrollTop(page: Page) {
-  await page.evaluate(() => {
+export interface PrepareFrameOptions {
+  /**
+   * Bu CSS seçicilerine uyan öğelerin `scrollLeft`i sıfırlanmaz. Diğer HER
+   * öğe (ve bu öğelerin `scrollTop`u) her zamanki gibi sıfırlanır.
+   */
+  preserveScrollLeft?: readonly string[];
+}
+
+export async function settleScrollTop(page: Page, options?: PrepareFrameOptions) {
+  const preserveSelectors = options?.preserveScrollLeft ?? [];
+  await page.evaluate((selectors) => {
     window.scrollTo(0, 0);
+    const preserved = new Set<Element>();
+    for (const selector of selectors) {
+      for (const el of document.querySelectorAll(selector)) preserved.add(el);
+    }
     for (const node of document.querySelectorAll("*")) {
-      if (node.scrollLeft !== 0) node.scrollLeft = 0;
+      if (!preserved.has(node) && node.scrollLeft !== 0) node.scrollLeft = 0;
       if (node.scrollTop !== 0) node.scrollTop = 0;
     }
-  });
+  }, preserveSelectors);
   await expect
     .poll(() =>
-      page.evaluate(() => {
+      page.evaluate((selectors) => {
+        const preserved = new Set<Element>();
+        for (const selector of selectors) {
+          for (const el of document.querySelectorAll(selector)) preserved.add(el);
+        }
         const offsets = [Math.round(window.scrollX), Math.round(window.scrollY)];
         for (const node of document.querySelectorAll("*")) {
-          offsets.push(node.scrollLeft, node.scrollTop);
+          if (!preserved.has(node)) offsets.push(node.scrollLeft);
+          offsets.push(node.scrollTop);
         }
         return offsets.filter((offset) => offset !== 0).length;
-      }),
+      }, preserveSelectors),
     )
     .toBe(0);
 }
@@ -85,8 +115,8 @@ function cursorPark(page: Page): { x: number; y: number } {
  *
  * Görsel spec'ler yerel `page.mouse.move(...)` YAZMAZ; bu yardımcıyı çağırır.
  */
-export async function prepareFrame(page: Page) {
-  await settleScrollTop(page);
+export async function prepareFrame(page: Page, options?: PrepareFrameOptions) {
+  await settleScrollTop(page, options);
   const park = cursorPark(page);
   await page.mouse.move(park.x, park.y);
 }

@@ -87,7 +87,7 @@ test("durum süzgeci İSTEMCİDE çalışır: sunucuya YENİ istek atılmaz", as
   const initialCount = salesRequests.length;
   expect(initialCount).toBeGreaterThan(0);
 
-  await page.getByLabel("Durum filtresi").selectOption("reservation");
+  await page.locator("main").getByLabel("Durum filtresi").selectOption("reservation");
 
   // Süzgeç uygulandı: yalnız rezervasyon satırı kaldı.
   await expect(page.getByTestId("satis-row-sl-3")).toBeVisible();
@@ -115,7 +115,7 @@ test("TOPLAM satırının kaynağı süzgeçle DEĞİŞİR (sunucu totals ↔ g�
   await expect(total).toContainText("TOPLAM (3 satış)");
   await expect(page.getByTestId("satis-toplam-notu")).toHaveCount(0);
 
-  await page.getByLabel("Durum filtresi").selectOption("reservation");
+  await page.locator("main").getByLabel("Durum filtresi").selectOption("reservation");
 
   // Tek rezervasyon satışı: sl-3 · 1.850.000 (kuruş-hassas türev).
   await expect(total).toContainText("TOPLAM (1 satış)");
@@ -168,7 +168,7 @@ test("proje seçimi URL'de taşınır ve listeyi değiştirir", async ({ page })
   await waitForSalesScreen(page);
 
   // `p-2`de satış fikstürü yoktur → boş durum basılır (mockup örnekleri DEĞİL).
-  await page.getByLabel("Proje seçimi").selectOption({ label: "Villa B" });
+  await page.locator("main").getByLabel("Proje seçimi").selectOption({ label: "Villa B" });
   await expect(page).toHaveURL(/proje=p-2/);
   await expect(page.getByTestId("satis-bos-durum")).toContainText("henüz satış kaydı yok");
   await expect(page.getByTestId("satis-row-sl-1")).toHaveCount(0);

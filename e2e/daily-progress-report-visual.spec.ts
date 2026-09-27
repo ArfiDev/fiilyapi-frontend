@@ -39,7 +39,7 @@ async function openDailyReport(page: Page, date?: string) {
   await login(page);
   const url = date === undefined ? GIR_URL : `${GIR_URL}?tarih=${date}`;
   await page.goto(url);
-  await expect(page.locator(".ev-daily-toolbar")).toBeVisible();
+  await expect(page.locator("main").locator(".ev-daily-toolbar")).toBeVisible();
 }
 
 // ---------------------------------------------------------------------------
@@ -50,13 +50,13 @@ async function openDailyReport(page: Page, date?: string) {
 test("gunluk ilerleme raporu taslak gorsel", async ({ page }) => {
   await openDailyReport(page);
 
-  await expect(page.getByText("Taslak", { exact: true })).toBeVisible();
+  await expect(page.locator("main").getByText("Taslak", { exact: true })).toBeVisible();
   // F3.6b lider denetimi (madde 15) — tarih biçimi "gg.aa" + "ve" bağlacı (yıl yok, virgül yok).
-  await expect(page.locator(".ev-daily-missing-band")).toContainText("21.09 ve 23.09 günlükleri gönderilmedi");
-  await expect(page.locator(".ev-daily-missing-band__link")).toBeVisible();
+  await expect(page.locator("main").locator(".ev-daily-missing-band")).toContainText("21.09 ve 23.09 günlükleri gönderilmedi");
+  await expect(page.locator("main").locator(".ev-daily-missing-band__link")).toBeVisible();
   const approveButton = page.getByRole("button", { name: "Onayla ve kilitle" });
   await expect(approveButton).toBeDisabled();
-  await expect(page.locator(".ev-daily-toolbar__gate-reason")).toBeVisible();
+  await expect(page.locator("main").locator(".ev-daily-toolbar__gate-reason")).toBeVisible();
   await expect(page.getByText("1 · Disiplin KPI")).toBeVisible();
   await expect(page.getByText("2 · 7 günlük trend · Genel kümülatif")).toBeVisible();
   await expect(page.getByText("3 · Miktar tablosu")).toBeVisible();

@@ -30,7 +30,7 @@ test("hakedişler listesi ekrani gorsel", async ({ page }) => {
   // durumunu dondurur — durum rozeti yerine bu daha kararlı bir çapa
   // (rozet veri gelmeden de "Taslak" ile basılabilir).
   await expect(page.getByTestId("pp-kpi-subtitle")).toBeVisible();
-  await expect(page.getByText("Kat 6–8 döşeme")).toBeVisible();
+  await expect(page.locator("main").getByText("Kat 6–8 döşeme")).toBeVisible();
 
   // İKİNCİ BAĞIMSIZ VERİ KAYNAĞI (F-PRJTAB T6 · F-İK dersi): proje süzgeci
   // hakediş listesinden AYRI bir sorgudan (`useProjects` → GET /projects)
@@ -51,7 +51,7 @@ test("hakedişler listesi ekrani gorsel", async ({ page }) => {
   // Süzgeçsiz giriş: `project_id` URL'de yok → "Tüm Projeler" seçili basılır.
   await expect(projectFilter).toHaveValue("");
   // Hiçbir yüzey yükleme metnini basmıyor.
-  await expect(page.getByText("Yükleniyor…")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Yükleniyor…")).toHaveCount(0);
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);

@@ -46,7 +46,7 @@ test("satinalma talepler listesi gorsel", async ({ page }) => {
   await expect(page.getByTestId("sat-status-SAT-2026-0006")).toHaveText("Reddedildi");
   // (d) fikstür sabitlemesi İŞLEDİ: yalnız tohum talepleri kadrajda
   //     (yazma e2e'sinin `p-2` talebi sızarsa satır sayısı oynardı).
-  await expect(page.locator(".sat-row")).toHaveCount(6);
+  await expect(page.locator("main .sat-row")).toHaveCount(6);
   // (e) kırpılma bandı KAPALI (`items.length === total`) — sabitleme `total`ı
   //     bozmuş olsaydı bant açılır ve kare kayardı.
   await expect(page.getByTestId("sat-truncation-notice")).toHaveCount(0);

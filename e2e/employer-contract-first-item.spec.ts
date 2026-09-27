@@ -33,7 +33,7 @@ test("grupsuz sözleşmede '+ Poz Ekle' KİLİTLİ DEĞİL — form yeni grup ki
   await page.goto(EMPTY_CONTRACT);
 
   // Sözleşmede hiç grup yok: tablo boş, yönlendirme metni EYLEM anlatır.
-  await expect(page.getByText("Bu sözleşmede henüz iş kalemi yok")).toBeVisible();
+  await expect(page.locator("main").getByText("Bu sözleşmede henüz iş kalemi yok")).toBeVisible();
   await expect(page.getByTestId("ecd-add-item-reason")).toContainText(
     "ilk pozu eklerken grubu da oluşturabilirsiniz",
   );
@@ -104,7 +104,7 @@ test("ilk poz eklenir: grup ÖNCE yaratılır, kalemin `group_id`si grup YANITIN
 
   // Diyalog kapandı ve poz listede — iki adım da GERÇEKTEN yazdı.
   await expect(dialog).toBeHidden();
-  await expect(page.getByText(GROUP_NAME)).toBeVisible();
+  await expect(page.locator("main").getByText(GROUP_NAME)).toBeVisible();
   await expect(page.getByRole("cell", { name: "03.099", exact: true })).toBeVisible();
 
   // SIRA: grup ucu kalem ucundan ÖNCE çağrıldı (ters sıra da iki çağrıdır).

@@ -63,11 +63,11 @@ async function expectGridLoaded(page: Page) {
   await expect(
     page.getByRole("heading", { level: 1, name: "A-Blok Şantiyesi — Puantaj" }).first(),
   ).toBeVisible();
-  await expect(page.locator(".ts-week-table").first().locator("tbody tr")).not.toHaveCount(0);
+  await expect(page.locator("main").locator(".ts-week-table").first().locator("tbody tr")).not.toHaveCount(0);
 }
 
 function grid(page: Page) {
-  return page.locator(".ts-week-table").first();
+  return page.locator("main").locator(".ts-week-table").first();
 }
 
 /** Kilit bandının metni (ilk cümle kalın + sabit ipucu) — BİREBİR. */
@@ -81,13 +81,14 @@ test("puantaj kismen kilitli hafta tek rapor gorsel", async ({ page }) => {
   await login(page);
   await pinRoster(page);
   await page.goto(weekUrl(42));
+  const content = page.locator("main");
   await expectGridLoaded(page);
 
-  await expect(page.locator(".ts-week-nav__index").first()).toHaveText("42. Hafta");
+  await expect(content.locator(".ts-week-nav__index").first()).toHaveText("42. Hafta");
   await expectBanner(page, "Pzt 12 – Per 15 Eki 15.10.2026 raporuyla kilitli.");
   // M1 — dört kilitli kolon başlığı + legend'in son öğesi.
   await expect(grid(page).locator(".ts-week-table__day-head--locked")).toHaveCount(4);
-  await expect(page.getByText("Kilitli gün (salt okunur)").first()).toBeVisible();
+  await expect(content.getByText("Kilitli gün (salt okunur)").first()).toBeVisible();
   // Kilitli gün salt okunur tetikleyici, kilitsiz gün saat kutusu.
   await expect(grid(page).getByRole("button", { name: "Mehmet Kılıç · 14 Eki puantajı (kilitli)" })).toBeVisible();
   await expect(grid(page).getByLabel("Mehmet Kılıç · 16 Eki saati")).toBeEditable();
@@ -197,6 +198,7 @@ test("puantaj kilit 409 hata bandi gorsel", async ({ page }) => {
   await pinRoster(page);
   await hideLocksUntilSave(page);
   await page.goto(weekUrl(45));
+  const content = page.locator("main");
   await expectGridLoaded(page);
   await expect(page.getByRole("status", { name: "Kilitli günler" })).toHaveCount(0);
 
@@ -208,7 +210,7 @@ test("puantaj kilit 409 hata bandi gorsel", async ({ page }) => {
   }
   await page.getByRole("button", { name: "Haftayı Kaydet" }).first().click();
 
-  const conflict = page.locator(".ts-lock-conflict").first();
+  const conflict = content.locator(".ts-lock-conflict").first();
   await expect(conflict.locator(".ts-lock-conflict__title")).toHaveText(
     "Bu gün kilitlendi; değişiklik kaydedilmedi.",
   );

@@ -45,7 +45,16 @@ function usesPrepareFrame(content: string): boolean {
   return content.includes("prepareFrame(page)");
 }
 
-const PREPARE_FRAME_CALL = "await prepareFrame(page);";
+// SEKME-F1.7c: preserveScrollLeft yalnız şerit iç kaydırmasını korur, CEO K5 / (d).
+//
+// DAR GENİŞLETME: tam metin eşleşmesi yerine SIKI bir desen — yalnız İKİ biçim
+// kabul edilir: çıplak `prepareFrame(page);` VEYA `preserveScrollLeft` ile
+// `prepareFrame(page, { preserveScrollLeft: [...] });`. Başka seçenek adı,
+// serbest argüman veya ekstra boşluk/biçim KABUL EDİLMEZ — bekçi `prepareFrame`e
+// keyfi bir şey geçirilmesini de yakalamaya devam eder. Kanonun kendisi
+// ("hemen önce" kuralı) DEĞİŞMEDİ, yalnız TANINAN çağrı biçimi genişledi.
+const PREPARE_FRAME_CALL_RE =
+  /^await prepareFrame\(page(?:, \{ preserveScrollLeft: \[[^\]]*\] \})?\);$/;
 const SCREENSHOT_CALL_RE = /^await expect\(.+\)\.toHaveScreenshot\(/;
 
 interface Violation {
@@ -77,7 +86,7 @@ function findViolations(file: string, content: string): Violation[] {
     }
 
     const precedingLine = j >= 0 ? lines[j].trim() : "";
-    if (precedingLine !== PREPARE_FRAME_CALL) {
+    if (!PREPARE_FRAME_CALL_RE.test(precedingLine)) {
       violations.push({ file, line: i + 1, precedingLine });
     }
   }
@@ -111,6 +120,64 @@ describe("gorsel kadraj kanonu — prepareFrame HER zaman toHaveScreenshot'tan h
       .join("\n");
 
     expect(allViolations, message).toEqual([]);
+  });
+});
+
+// SEKME-F1.7c: preserveScrollLeft yalnız şerit iç kaydırmasını korur, CEO K5 / (d).
+//
+// `preserveScrollLeft` bir KAÇIŞ KAPISI — kaçış kapıları GEREKÇESİZ çoğalırsa
+// kanon sessizce erir (bkz. `escape-hatch-inventory-guard.test.ts` emsali).
+// Bu yüzden her kullanım GEREKÇELİ bir izin listesi girdisiyle EŞLEŞMEK
+// ZORUNDADIR: listede olmayan dosyada kullanım KIRMIZI, listede olup artık
+// KULLANMAYAN dosya da KIRMIZI (bayat/unutulmuş giriş — "sessiz muafiyet yok"
+// ilkesi, bkz. dosyanın ilerisindeki "muafiyet gerekcesiz yazilmaz" deseni).
+const PRESERVE_SCROLL_LEFT_ALLOWLIST: Record<string, string> = {
+  "workspace-tabs-visual.spec.ts":
+    "fullPage şerit scrollLeft'ini sıfırlıyor; kaydırılmış kare için şerit korunur (CEO K5/(d))",
+  "visual-scroll.spec.ts":
+    "prepareFrame'in preserveScrollLeft davranışını doğrudan sınayan birim testi — hiçbir toHaveScreenshot çağrısı YOK, kare bekçisi kapsamı dışında",
+};
+
+const PRESERVE_SCROLL_LEFT_RE = /preserveScrollLeft\s*:/;
+
+function usesPreserveScrollLeft(content: string): boolean {
+  return PRESERVE_SCROLL_LEFT_RE.test(content);
+}
+
+describe("preserveScrollLeft kaçış kapısı — yalnız gerekçeli izin listesindeki dosyalarda", () => {
+  const specFiles = readdirSync(e2eDir).filter(isVisualSpecFile);
+
+  it("izin listesinde OLMAYAN bir dosya preserveScrollLeft kullanmaz", () => {
+    const unlisted: string[] = [];
+
+    for (const fileName of specFiles) {
+      const content = readFileSync(path.join(e2eDir, fileName), "utf8");
+      if (usesPreserveScrollLeft(content) && !(fileName in PRESERVE_SCROLL_LEFT_ALLOWLIST)) {
+        unlisted.push(fileName);
+      }
+    }
+
+    const message = unlisted
+      .map((f) => `${f} — preserveScrollLeft KULLANIYOR ama izin listesinde YOK (gerekçesiz)`)
+      .join("\n");
+
+    expect(unlisted, message).toEqual([]);
+  });
+
+  it("izin listesindeki HER giriş hâlâ preserveScrollLeft kullanıyor (bayat giriş yok)", () => {
+    const stale: string[] = [];
+
+    for (const fileName of Object.keys(PRESERVE_SCROLL_LEFT_ALLOWLIST)) {
+      const fullPath = path.join(e2eDir, fileName);
+      const content = existsSync(fullPath) ? readFileSync(fullPath, "utf8") : "";
+      if (!usesPreserveScrollLeft(content)) stale.push(fileName);
+    }
+
+    const message = stale
+      .map((f) => `${f} — izin listesinde ama artık preserveScrollLeft KULLANMIYOR (bayat giris)`)
+      .join("\n");
+
+    expect(stale, message).toEqual([]);
   });
 });
 

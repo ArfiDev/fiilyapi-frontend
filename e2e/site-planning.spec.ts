@@ -59,7 +59,7 @@ async function login(page: Page) {
  * metinler drill sidebar'da da geçiyor ve sayfa genelinde çoklu eşleşir.
  */
 function gridCard(page: Page) {
-  return page.locator(".plan-card--grid").first();
+  return page.locator("main").locator(".plan-card--grid").first();
 }
 
 /**
@@ -83,12 +83,12 @@ function sprintLabel(page: Page) {
  * hem `toHaveCount` sayımlarını hem de içine kapsamlanan tıklamaları korur.
  */
 function goalsCard(page: Page) {
-  return page.locator(".plan-goals").first();
+  return page.locator("main").locator(".plan-goals").first();
 }
 
 /** Kaydetme durum şeridi — aynı çift-kopya riski. */
 function saveStatus(page: Page) {
-  return page.locator(".plan-save-status").first();
+  return page.locator("main").locator(".plan-save-status").first();
 }
 
 /** Ekip grubu — ızgara kartına kapsamlanır (sayfada tek kopya garantisi yok). */
@@ -113,6 +113,7 @@ test.describe("planlama ızgarası (SALT-OKUR, s-1)", () => {
   test("ızgara, gruplar, hücreler, hedefler ve aktif sprint basılır", async ({ page }) => {
     await login(page);
     await page.goto(READ_ONLY_URL);
+    const content = page.locator("main");
 
     await expect(
       page.getByRole("heading", { level: 1, name: "Planlama — A-Blok Şantiyesi" }),
@@ -149,12 +150,13 @@ test.describe("planlama ızgarası (SALT-OKUR, s-1)", () => {
     ).toHaveValue("service_pending");
 
     // Malzeme Planı kartı PENDING — mockup'ın sahte satırları BASILMAZ.
-    await expect(page.getByText("Haftalık malzeme ihtiyacı hesaplanmıyor", { exact: false })).toBeVisible();
+    await expect(content.getByText("Haftalık malzeme ihtiyacı hesaplanmıyor", { exact: false })).toBeVisible();
   });
 
   test("‹ / › haftayı URL'de taşır ve ızgarayı tazeler", async ({ page }) => {
     await login(page);
     await page.goto(READ_ONLY_URL);
+    const content = page.locator("main");
     await expect(weekLabel(page)).toHaveText("3 – 9 Ağustos 2026");
 
     await page.getByRole("button", { name: "Sonraki hafta" }).click();
@@ -164,7 +166,7 @@ test.describe("planlama ızgarası (SALT-OKUR, s-1)", () => {
     await expect(rowLead(page, "Kalıpçı Ekibi (14)")).toBeVisible();
     await expect(gridCard(page).getByText("6. kat kalıp kurulumu")).toHaveCount(0);
     // Hedefler de hafta kapsamlıdır → boş durum metni.
-    await expect(page.getByText("Bu hafta için hedef girilmemiş.")).toBeVisible();
+    await expect(content.getByText("Bu hafta için hedef girilmemiş.")).toBeVisible();
 
     await page.getByRole("button", { name: "Önceki hafta" }).click();
     await expect(page).toHaveURL(new RegExp(`week=${FIXTURE_WEEK}$`));

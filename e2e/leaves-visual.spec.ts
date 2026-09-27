@@ -130,7 +130,7 @@ async function expectSummaryLoaded(page: Page) {
   await expect(page.getByTestId("iz-carried-per-2")).toHaveText("6");
   await expect(page.getByTestId("iz-balances-empty")).toHaveCount(0);
   await expect(page.getByTestId("iz-balances-error")).toHaveCount(0);
-  await expect(page.getByText(BALANCES_LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main").getByText(BALANCES_LOADING_TEXT)).toHaveCount(0);
   // 📅 `page.clock` KANITI: yıl seçici dondurulmuş takvimden 2026'ya düştü —
   // fikstür yılı budur ve bakiye satırları ancak bu yılda gelir.
   await expect(page.getByTestId("iz-year-select")).toHaveValue("2026");
@@ -153,7 +153,7 @@ async function expectPendingLoaded(page: Page) {
   await expect(page.getByTestId("iz-pending-row-lv-w2")).toHaveCount(0);
   await expect(page.getByTestId("iz-pending-empty")).toHaveCount(0);
   await expect(page.getByTestId("iz-pending-error")).toHaveCount(0);
-  await expect(page.getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main").getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
   // Karar akışı BAĞLI (T4) — "henüz bağlanmadı" bandı kadraja giremez.
   await expect(page.getByTestId("iz-decision-reason")).toHaveCount(0);
   await expect(page.getByTestId("iz-decision-error")).toHaveCount(0);
@@ -235,7 +235,7 @@ test("izin yonetimi (bos) gorsel", async ({ page }) => {
   await expect(page.getByTestId("iz-pending-empty")).toHaveText("Onay bekleyen izin talebi yok.");
   await expect(page.getByTestId("iz-pending-row-lv-1")).toHaveCount(0);
   await expect(page.getByTestId("iz-pending-error")).toHaveCount(0);
-  await expect(page.getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main").getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
   // ⚠️ KPI "Bekleyen Talep 7" ile tablo "(0)" ÇELİŞMEZ, iki AYRI uçtandır ve
   // ekran bunu bilerek böyle basar (K5 gerekçesi) — kare de öyle kalır.
 

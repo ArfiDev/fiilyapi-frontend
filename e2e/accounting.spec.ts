@@ -319,7 +319,7 @@ test.describe("hesap planı ekranı (SALT-OKUR)", () => {
     // rozet bilgi taşımayan bir süs olurdu.
     await expect(page.getByTestId("hp-contra-254")).toHaveCount(0);
     // Bütün listede TEK rozet vardır.
-    await expect(page.getByLabel("Kontra hesap")).toHaveCount(1);
+    await expect(page.locator("main").getByLabel("Kontra hesap")).toHaveCount(1);
   });
 
   test("arama SUNUCUYA gider; eşleşmeyen satırlar tablodan düşer", async ({ page }) => {

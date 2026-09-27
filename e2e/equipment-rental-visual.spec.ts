@@ -85,9 +85,9 @@ test("makine kira hakedisi listesi gorsel", async ({ page }) => {
   await expect(page.getByTestId("makine-kira-loaded-sites")).toBeAttached();
   // Süzgeç TAM OLARAK salt-okur faturayı bırakır: satır sayısı sabittir,
   // yani kare yazma testlerinin sırasından BAĞIMSIZDIR.
-  await expect(page.locator("[data-rental-invoice-id]")).toHaveCount(1);
-  await expect(page.locator('[data-rental-invoice-id="rental-2"]')).toBeVisible();
-  await expect(page.getByText(LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main [data-rental-invoice-id]")).toHaveCount(1);
+  await expect(page.locator('main [data-rental-invoice-id="rental-2"]')).toBeVisible();
+  await expect(page.locator("main").getByText(LOADING_TEXT)).toHaveCount(0);
 
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("makine-kira-listesi.png", { fullPage: true });

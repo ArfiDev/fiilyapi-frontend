@@ -62,7 +62,7 @@ test("taseron sozlesme secim adimi ekrani gorsel", async ({ page }) => {
   // İçerik yüklendi: sözleşme seçici basılı olmadan ekran görüntüsü alınırsa
   // baseline yükleme durumunu dondurur. TB2 takip: geçiş dönemi kalıcı bilgi
   // notu (Alert) kaldırıldı — U1 liste ucu geldiğinden sınır artık YOK.
-  await expect(page.getByLabel("Taşeron Sözleşmesi")).toBeVisible();
+  await expect(page.locator("main").getByLabel("Taşeron Sözleşmesi")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);
@@ -85,9 +85,9 @@ test("taseron hakedis olustur formu ekrani gorsel", async ({ page }) => {
   // NET ÖDENECEK satırı basılı olmadan ekran görüntüsü alınırsa baseline
   // yükleme durumunu dondurur (create kipinde tfoot henüz "—" basar —
   // brief §Kaydetme yolu, ilk kaydetmeye kadar `calculation` yok).
-  await expect(page.getByText("Pano Montajı")).toBeVisible();
+  await expect(page.locator("main").getByText("Pano Montajı")).toBeVisible();
   await expect(page.getByTestId("thf-coefficient-band")).toBeVisible();
-  await expect(page.getByText("NET ÖDENECEK")).toBeVisible();
+  await expect(page.locator("main").getByText("NET ÖDENECEK")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);

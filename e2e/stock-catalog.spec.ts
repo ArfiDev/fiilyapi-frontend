@@ -71,6 +71,7 @@ test("katalog rozetleri SUNUCUDAN basılır; eşiksiz kalemin durumu '—'", asy
 test("durum segmenti ve arama SUNUCU süzgecine gider (istemci süzmesi YOK)", async ({ page }) => {
   await login(page);
   await page.goto(STOCK_URL);
+  const content = page.locator("main");
   await expect(page.getByTestId("stok-row-SNK-0108")).toBeVisible();
 
   const criticalRequest = page.waitForRequest(
@@ -91,7 +92,7 @@ test("durum segmenti ve arama SUNUCU süzgecine gider (istemci süzmesi YOK)", a
   const searchRequest = page.waitForRequest(
     (request) => request.url().includes("/stock/summary") && request.url().includes("q=Kablo"),
   );
-  await page.getByLabel("Malzeme ara").fill("Kablo");
+  await content.getByLabel("Malzeme ara").fill("Kablo");
   await searchRequest;
   await expect(page).toHaveURL(/q=Kablo/);
   await expect(page.getByTestId("stok-row-ELK-0334")).toBeVisible();
@@ -101,8 +102,9 @@ test("durum segmenti ve arama SUNUCU süzgecine gider (istemci süzmesi YOK)", a
 test("kategori süzgeci şema enum'unu gönderir ('Boya-Kaplama' seçeneği YOK)", async ({ page }) => {
   await login(page);
   await page.goto(STOCK_URL);
+  const content = page.locator("main");
 
-  const select = page.getByLabel("Kategori filtresi");
+  const select = content.getByLabel("Kategori filtresi");
   await expect(select.getByRole("option", { name: "Boya-Kaplama" })).toHaveCount(0);
 
   const request = page.waitForRequest(

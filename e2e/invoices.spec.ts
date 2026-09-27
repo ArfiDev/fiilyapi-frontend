@@ -50,7 +50,7 @@ test("kabuk sidebar'ındaki 'Fatura Yönetimi' gerçek ekranı açar (ComingSoon
 
   await expect(page).toHaveURL(/\/faturalar$/);
   await expect(page.getByRole("heading", { level: 1, name: "Fatura Yönetimi" })).toBeVisible();
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
   await expect(page.getByTestId("fat-kpis")).toBeVisible();
 });
 
@@ -76,11 +76,11 @@ test("giden tablo AY penceresine süzülür — önceki ayın taslağı listede 
   await openInvoices(page);
 
   // Başlık ayı yazar (FY:90) ve liste GERÇEKTEN o aya süzülür.
-  await expect(page.getByText("Giden Faturalar — Temmuz 2026")).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-out-1"]')).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-out-2"]')).toBeVisible();
+  await expect(page.locator("main").getByText("Giden Faturalar — Temmuz 2026")).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-out-1"]')).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-out-2"]')).toBeVisible();
   // 🔴 BEKÇİ: 2026-06 tarihli taslak Temmuz penceresine GİRMEZ.
-  await expect(page.locator('[data-invoice-id="inv-out-old"]')).toHaveCount(0);
+  await expect(page.locator('main [data-invoice-id="inv-out-old"]')).toHaveCount(0);
 });
 
 test("🔴 K1: 'Vadeli' AYRI DURUM DEĞİLDİR — vadesi olan `sent` öyle rozetlenir", async ({
@@ -89,13 +89,13 @@ test("🔴 K1: 'Vadeli' AYRI DURUM DEĞİLDİR — vadesi olan `sent` öyle roze
   await openInvoices(page);
 
   // inv-out-1: status=sent + due_date DOLU → "Vadeli"
-  await expect(page.locator('[data-invoice-id="inv-out-1"]')).toContainText("Vadeli");
+  await expect(page.locator('main [data-invoice-id="inv-out-1"]')).toContainText("Vadeli");
   // inv-out-2: status=collected → "Tahsil Edildi"
-  await expect(page.locator('[data-invoice-id="inv-out-2"]')).toContainText("Tahsil Edildi");
-  await expect(page.locator('[data-invoice-id="inv-out-2"]')).not.toContainText("Vadeli");
+  await expect(page.locator('main [data-invoice-id="inv-out-2"]')).toContainText("Tahsil Edildi");
+  await expect(page.locator('main [data-invoice-id="inv-out-2"]')).not.toContainText("Vadeli");
 
   // Matrah/KDV/Toplam sunucudan, `₺` SEMBOLSÜZ (FY:115-117).
-  const row = page.locator('[data-invoice-id="inv-out-1"]');
+  const row = page.locator('main [data-invoice-id="inv-out-1"]');
   await expect(row).toContainText("2.631.420");
   await expect(row).toContainText("526.284");
   await expect(row).toContainText("3.157.704");
@@ -116,7 +116,7 @@ test("'Vadeli' süzgeci sunucuya `sent` gönderir ve bunu GÖRÜNÜR biçimde s�
     "“Vadeli” ayrı bir durum değildir",
   );
   // Tahsil edilmiş fatura süzgeç dışında kalır.
-  await expect(page.locator('[data-invoice-id="inv-out-2"]')).toHaveCount(0);
+  await expect(page.locator('main [data-invoice-id="inv-out-2"]')).toHaveCount(0);
 });
 
 test("arama kutusu `q`yu SUNUCUYA gönderir (istemcide süzme YOK)", async ({ page }) => {
@@ -129,8 +129,8 @@ test("arama kutusu `q`yu SUNUCUYA gönderir (istemcide süzme YOK)", async ({ pa
   await page.getByTestId("fat-search").press("Enter");
   await request;
 
-  await expect(page.locator('[data-invoice-id="inv-out-2"]')).toBeVisible();
-  await expect(page.locator('[data-invoice-id="inv-out-1"]')).toHaveCount(0);
+  await expect(page.locator('main [data-invoice-id="inv-out-2"]')).toBeVisible();
+  await expect(page.locator('main [data-invoice-id="inv-out-1"]')).toHaveCount(0);
 });
 
 test("GİB yüzeyleri ve iki sekme DEVRE DIŞIdır, gerekçeleri GÖRÜNÜR", async ({ page }) => {
@@ -160,17 +160,17 @@ test("kaynak çipi: rotası OLAN hakediş bağlantıdır, olmayan sipariş solgu
   await openInvoices(page);
 
   // inv-out-1 → progress_payment_id = pp-1
-  const link = page.locator('[data-invoice-id="inv-out-1"]').getByRole("link", {
+  const link = page.locator('main [data-invoice-id="inv-out-1"]').getByRole("link", {
     name: /İşveren Hakedişi/,
   });
   await expect(link).toHaveAttribute("href", "/hakedisler/pp-1");
 
   // inv-in-2 → purchase_order_id: rota YOK ⇒ bağlantı UYDURULMAZ.
-  const chip = page.locator('[data-invoice-id="inv-in-2"]').getByText("Satınalma Siparişi");
+  const chip = page.locator('main [data-invoice-id="inv-in-2"]').getByText("Satınalma Siparişi");
   await expect(chip).toBeVisible();
   await expect(chip).toHaveAttribute("title", "Sipariş detay ekranı henüz yazılmadı.");
   await expect(
-    page.locator('[data-invoice-id="inv-in-2"]').getByRole("link", { name: /Satınalma/ }),
+    page.locator('main [data-invoice-id="inv-in-2"]').getByRole("link", { name: /Satınalma/ }),
   ).toHaveCount(0);
 });
 
@@ -180,11 +180,11 @@ test("gelen fatura listeden ONAYLANIR (gerçek uç) ve onay bekleyenlerden düş
   await openInvoices(page);
 
   // 🔒 Yalnız BU test `inv-in-mut`u oynatır (tohum satırlara DOKUNULMAZ).
-  const row = page.locator('[data-invoice-id="inv-in-mut"]');
+  const row = page.locator('main [data-invoice-id="inv-in-mut"]');
   await expect(row).toContainText("Onay Bekliyor");
   await row.getByTestId("fat-incoming-approve").click();
 
-  await expect(page.locator('[data-invoice-id="inv-in-mut"]')).toHaveCount(0);
+  await expect(page.locator('main [data-invoice-id="inv-in-mut"]')).toHaveCount(0);
   await expect(page.getByTestId("fat-approve-error")).toHaveCount(0);
 });
 

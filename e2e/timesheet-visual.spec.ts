@@ -48,27 +48,29 @@ async function login(page: Page) {
  * `getByText` strict-mode ihlali verir (F-PL T5'te YALNIZ Linux CI'da patladı).
  */
 async function expectGridLoaded(page: Page) {
-  await expect(page.locator(".ts-week-table").first().locator("tbody tr")).not.toHaveCount(0);
+  const content = page.locator("main");
+  await expect(content.locator(".ts-week-table").first().locator("tbody tr")).not.toHaveCount(0);
   // Saat kutuları basıldı: hücre şekli gerçekten SAAT (kod rozeti değil).
-  await expect(page.locator(".ts-week-table .ts-hin").first()).toBeVisible();
+  await expect(content.locator(".ts-week-table .ts-hin").first()).toBeVisible();
 }
 
 test("genel puantaj (E5) haftalik izgara gorsel", async ({ page }) => {
   await login(page);
   await pinRoster(page);
   await page.goto(GENERAL_URL);
+  const content = page.locator("main");
   await expect(page.getByRole("heading", { level: 1, name: "Puantaj" }).first()).toBeVisible();
   await expectGridLoaded(page);
 
   // E5'in KENDİ parçaları kadrajdadır: hafta şeridi, KPI kartları, ay şeridi,
   // meslek/tür/taşeron süzgeçleri ve "Gösterilen N / M" sayacı.
-  await expect(page.locator(".ts-week-nav__index").first()).toHaveText("32. Hafta");
-  await expect(page.locator(".ts-kpi")).toHaveCount(6);
-  await expect(page.locator(".ts-month-week").first()).toBeVisible();
-  await expect(page.getByLabel("Meslek").first()).toBeEnabled();
-  await expect(page.locator(".ts-shown").first()).toBeVisible();
+  await expect(content.locator(".ts-week-nav__index").first()).toHaveText("32. Hafta");
+  await expect(content.locator(".ts-kpi")).toHaveCount(6);
+  await expect(content.locator(".ts-month-week").first()).toBeVisible();
+  await expect(content.getByLabel("Meslek").first()).toBeEnabled();
+  await expect(content.locator(".ts-shown").first()).toBeVisible();
   // Şantiye seçici çözüldü — "Yükleniyor…" durumu baseline'a girmesin.
-  await expect(page.getByLabel("Şantiye").first()).toBeEnabled();
+  await expect(content.getByLabel("Şantiye").first()).toBeEnabled();
   // 🔴 E5'te Excel YOKTUR (ŞP'de vardır) — kadraj bu ayrımı da kilitler.
   await expect(page.getByRole("button", { name: "Excel" })).toHaveCount(0);
 
@@ -81,6 +83,7 @@ test("santiye puantaji (SP) haftalik izgara gorsel", async ({ page }) => {
   await login(page);
   await pinRoster(page);
   await page.goto(SITE_URL);
+  const content = page.locator("main");
   await expect(
     page.getByRole("heading", { level: 1, name: "A-Blok Şantiyesi — Puantaj" }).first(),
   ).toBeVisible();
@@ -88,23 +91,23 @@ test("santiye puantaji (SP) haftalik izgara gorsel", async ({ page }) => {
 
   // ŞP'nin KORUNAN farkları kadrajda: bölüm süzgeci, özet şeridi, Tür rozeti,
   // Excel. (Onaylı sapmanın görsel kanıtı: yetenek KALDIRILMADI.)
-  await expect(page.getByLabel("Bölüm").first()).toBeEnabled();
-  await expect(page.locator(".ts-summary__title").first()).toHaveText("Tüm Bölümler");
-  await expect(page.locator(".ts-source").first()).toBeVisible();
+  await expect(content.getByLabel("Bölüm").first()).toBeEnabled();
+  await expect(content.locator(".ts-summary__title").first()).toHaveText("Tüm Bölümler");
+  await expect(content.locator(".ts-source").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Excel" }).first()).toBeEnabled();
   // ŞP mockup'ında OLMAYAN satır süzgeçleri UYDURULMAZ.
-  await expect(page.getByLabel("Meslek")).toHaveCount(0);
+  await expect(content.getByLabel("Meslek")).toHaveCount(0);
 
   // Hücre paletinin ÜÇ tonu + iki kod rozeti kadrajda — baseline paleti tam alsın.
   for (const modifier of ["full", "short", "overtime", "off"]) {
     await expect(
-      page.locator(`.ts-week-table .ts-hin--${modifier}`).first(),
+      content.locator(`.ts-week-table .ts-hin--${modifier}`).first(),
       modifier,
     ).toBeVisible();
   }
   for (const modifier of ["leave", "temporary-duty"]) {
     await expect(
-      page.locator(`.ts-week-table .ts-tag--${modifier}`).first(),
+      content.locator(`.ts-week-table .ts-tag--${modifier}`).first(),
       modifier,
     ).toBeVisible();
   }

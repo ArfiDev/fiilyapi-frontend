@@ -44,7 +44,7 @@ test("teklif karsilastirma gorsel", async ({ page }) => {
   //     birim fiyatı en düşük teklif (`q-2`) nakliyesi hariç olduğu için
   //     rozeti ALMAZ — rozet tek karttadır.
   await expect(page.getByTestId("tek-best-q-1")).toBeVisible();
-  await expect(page.locator(".tek-card__badge--best")).toHaveCount(1);
+  await expect(page.locator("main .tek-card__badge--best")).toHaveCount(1);
   await expect(page.getByTestId("tek-shipping-q-2")).toContainText("Hariç");
   // (d) karşılaştırma özeti hesaplandı ("—" yer tutucusu değil).
   await expect(page.getByTestId("tek-summary-lowest")).not.toHaveText("—");

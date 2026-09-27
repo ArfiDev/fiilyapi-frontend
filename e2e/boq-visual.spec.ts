@@ -25,8 +25,8 @@ test("is kalemleri (BOQ) ekrani gorsel", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "İş Kalemleri (BOQ)" })).toBeVisible();
   // Tablo yüklendi: son grubun son kalemi ve GENEL TOPLAM basılı olmadan
   // ekran görüntüsü alınırsa baseline yükleme durumunu dondurur.
-  await expect(page.getByText("İç Sıva (Çimento+Alçı)")).toBeVisible();
-  await expect(page.getByText("12.399.900")).toBeVisible();
+  await expect(page.locator("main").getByText("İç Sıva (Çimento+Alçı)")).toBeVisible();
+  await expect(page.locator("main").getByText("12.399.900")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);

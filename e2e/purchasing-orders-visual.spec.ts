@@ -66,7 +66,7 @@ test("satinalma siparisler listesi gorsel", async ({ page }) => {
   await expect(page.getByTestId("sip-delivery-SP-2026-0003")).toHaveClass(/sip-delivery--overdue/);
   await expect(page.getByTestId("sip-delivery-SP-2026-0002")).toHaveClass(/sip-delivery--neutral/);
   // (e) fikstür sabitlemesi İŞLEDİ: yalnız tohum siparişleri kadrajda.
-  await expect(page.locator(".sip-row")).toHaveCount(3);
+  await expect(page.locator("main .sip-row")).toHaveCount(3);
   await expect(page.getByTestId("sip-truncation-notice")).toHaveCount(0);
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.

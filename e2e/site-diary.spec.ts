@@ -41,6 +41,7 @@ test("günlük kayıt: mod anahtarı, son kayıtlar ve gün seçimi (SALT-OKUR)"
   await login(page);
 
   await page.goto(SITE_DIARY_URL);
+  const content = page.locator("main");
   await expect(page.getByRole("heading", { level: 1, name: "Günlük Kayıt & Planlama" })).toBeVisible();
 
   // Mod anahtarı (GK164-168): "Kayıt Gir" aktif; "Planlama" ve "Hakediş Özeti"
@@ -53,29 +54,29 @@ test("günlük kayıt: mod anahtarı, son kayıtlar ve gün seçimi (SALT-OKUR)"
   );
 
   // Son Kayıtlar (GK356-386) — Temmuz fikstürleri, türetilmiş rozetlerle.
-  const recent = page.locator(".diary-recent__list");
+  const recent = content.locator(".diary-recent__list");
   await expect(recent.getByText("16 Temmuz")).toBeVisible();
   await expect(recent.getByText("15 Temmuz")).toBeVisible();
   await expect(recent.getByText("Yağışlı")).toBeVisible();
 
   // 20 Temmuz'da kayıt YOK → satır iskeleti uydurulmaz, dürüst boş durum.
   await expect(
-    page.getByText("İş kalemi satırları, gün için kayıt açıldığında", { exact: false }),
+    content.getByText("İş kalemi satırları, gün için kayıt açıldığında", { exact: false }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Kaydet & Gönder" })).toBeDisabled();
 
   // Satıra tıklayınca O GÜNÜN kaydı açılır (GK359) — 16 Temmuz taslak kaydı.
   await recent.getByText("16 Temmuz").click();
-  await expect(page.locator(".diary__status-row")).toContainText("Taslak");
+  await expect(content.locator(".diary__status-row")).toContainText("Taslak");
   // Satırlar sunucudan geldi: İç Sıva pozunda kaydın miktarı görünür.
-  await expect(page.getByLabel("03.002 bugün yapılan miktar")).toHaveValue("180.000");
+  await expect(content.getByLabel("03.002 bugün yapılan miktar")).toHaveValue("180.000");
   // Kümülatif ve ₺ sütunları YANITTAN gelir — ekran çarpma yapmaz.
-  await expect(page.locator(".diary-lines__total-amount")).toContainText("₺ 26.100");
+  await expect(content.locator(".diary-lines__total-amount")).toContainText("₺ 26.100");
 
   // Gönderilmiş kayıt SALT-OKUNURDUR: 15 Temmuz'a geçince yazma yüzeyi kapanır.
   await recent.getByText("15 Temmuz").click();
-  await expect(page.getByText("Gönderilmiş kayıt salt-okunurdur.", { exact: false })).toBeVisible();
-  await expect(page.getByLabel("02.001 bugün yapılan miktar")).toBeDisabled();
+  await expect(content.getByText("Gönderilmiş kayıt salt-okunurdur.", { exact: false })).toBeVisible();
+  await expect(content.getByLabel("02.001 bugün yapılan miktar")).toBeDisabled();
   await expect(page.getByRole("button", { name: "Taslak Kaydet" })).toHaveCount(0);
   // Mock oturum `permissions` taşımadığı için bilinmezlik kuralı geçerli →
   // admin eşiği açık, "Yeniden Aç" basılır.
@@ -90,14 +91,15 @@ test("günlük kayıt: taslak aç → miktar gir → Taslak Kaydet → Kaydet & 
   await login(page);
 
   await page.goto(SITE_DIARY_URL);
+  const content = page.locator("main");
   await expect(page.getByRole("heading", { level: 1, name: "Günlük Kayıt & Planlama" })).toBeVisible();
-  await expect(page.getByLabel("Tarih")).toHaveValue("10.09.2026");
-  await expect(page.locator(".diary-recent__list")).toContainText("Bu ayda henüz günlük kayıt yok.");
+  await expect(content.getByLabel("Tarih")).toHaveValue("10.09.2026");
+  await expect(content.locator(".diary-recent__list")).toContainText("Bu ayda henüz günlük kayıt yok.");
 
   // 1) Kayıt yokken "Taslak Kaydet" kaydı AÇAR; satır iskeleti sunucudan gelir.
   await page.getByRole("button", { name: "Taslak Kaydet" }).click();
-  await expect(page.locator(".diary__status-row")).toContainText("Taslak");
-  const quantity = page.getByLabel("01.001 bugün yapılan miktar");
+  await expect(content.locator(".diary__status-row")).toContainText("Taslak");
+  const quantity = content.getByLabel("01.001 bugün yapılan miktar");
   await expect(quantity).toBeVisible();
   await expect(quantity).toHaveValue("");
 
@@ -143,15 +145,16 @@ test("günlük kayıt: aynı güne ikinci kayıt 409 → Türkçe mesaj + mevcut
   });
 
   await page.goto(SITE_DIARY_URL);
+  const content = page.locator("main");
   await expect(page.getByRole("heading", { level: 1, name: "Günlük Kayıt & Planlama" })).toBeVisible();
 
   await page.getByRole("button", { name: "Taslak Kaydet" }).click();
 
-  const error = page.locator(".diary__error");
+  const error = content.locator(".diary__error");
   await expect(error).toContainText("Bu güne ait günlük kayıt zaten var.");
   // Yönlendirme: kullanıcı çıkmazda bırakılmaz, mevcut kaydı açabilir.
   await page.getByRole("button", { name: "Var olan kaydı aç" }).click();
-  await expect(page.locator(".diary__error")).toHaveCount(0);
+  await expect(content.locator(".diary__error")).toHaveCount(0);
 });
 
 test("hakediş özeti: mod geçişi, ay gezinmesi ve poz bazlı birikim tablosu", async ({ page }) => {
@@ -159,6 +162,7 @@ test("hakediş özeti: mod geçişi, ay gezinmesi ve poz bazlı birikim tablosu"
   await login(page);
 
   await page.goto(SITE_DIARY_URL);
+  const content = page.locator("main");
   await page.getByRole("link", { name: "Hakediş Özeti" }).click();
   await expect(page).toHaveURL(/\/gunluk-kayit\/ozet$/);
   await expect(
@@ -166,12 +170,12 @@ test("hakediş özeti: mod geçişi, ay gezinmesi ve poz bazlı birikim tablosu"
   ).toBeVisible();
 
   // Varsayılan dönem = içinde bulunulan ay (sabitlenmiş saat → Temmuz 2026).
-  const monthLabel = page.locator(".diary-month-nav__label");
+  const monthLabel = content.locator(".diary-month-nav__label");
   await expect(monthLabel).toHaveText("Temmuz 2026");
 
   // Tablo YALNIZ `submitted` günlerden beslenir: d-1 gönderilmiş (bi-3/bi-4/
   // bi-5), d-2 taslak olduğu için İç Sıva satırı GÖRÜNMEZ.
-  const table = page.locator(".diary-summary-table");
+  const table = content.locator(".diary-summary-table");
   await expect(table.getByText("C25/30 Beton (Döşeme)")).toBeVisible();
   await expect(table.getByText("Demir Donatı (Ø8-Ø20)")).toBeVisible();
   await expect(table.getByText("İç Sıva (Çimento+Alçı)")).toHaveCount(0);
@@ -179,7 +183,7 @@ test("hakediş özeti: mod geçişi, ay gezinmesi ve poz bazlı birikim tablosu"
   // Ay gezinmesi (HÖ90/92): Haziran'da gönderilmiş gün yok → dürüst boş durum.
   await page.getByRole("button", { name: "Önceki ay" }).click();
   await expect(monthLabel).toHaveText("Haziran 2026");
-  await expect(page.getByText("Bu ay gönderilmiş günlük kayıt yok", { exact: false })).toBeVisible();
+  await expect(content.getByText("Bu ay gönderilmiş günlük kayıt yok", { exact: false })).toBeVisible();
 
   // Geri dönüşte tablo yeniden dolar.
   await page.getByRole("button", { name: "Sonraki ay" }).click();

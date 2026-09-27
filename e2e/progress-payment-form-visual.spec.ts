@@ -57,7 +57,7 @@ test("isveren hakedis olustur formu ekrani gorsel", async ({ page }) => {
   // İçerik yüklendi: pivot tablonun son satırı (Kalıp İşleri grubu) ve
   // Fiyat Farkı bandı basılı olmadan ekran görüntüsü alınırsa baseline
   // yükleme durumunu dondurur.
-  await expect(page.getByText("Döşeme Kalıbı")).toBeVisible();
+  await expect(page.locator("main").getByText("Döşeme Kalıbı")).toBeVisible();
   await expect(page.getByTestId("pp-form-ff-band")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.

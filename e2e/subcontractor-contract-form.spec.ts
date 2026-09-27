@@ -32,7 +32,7 @@ test("FSO: SZL'deki '+ Yeni Sözleşme' formu açar, beş kart basılır", async
 
   await expect(page).toHaveURL(/\/sozlesmeler\/taseron\/yeni$/);
   await expect(page.getByRole("heading", { name: "Yeni Taşeron Sözleşmesi" })).toBeVisible();
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
 
   for (const title of [
     "🔗 Proje Bağlantısı",
@@ -41,7 +41,7 @@ test("FSO: SZL'deki '+ Yeni Sözleşme' formu açar, beş kart basılır", async
     "⭐ Poz Listesi & Taşeron Fiyatları",
     "📎 Sözleşme Belgeleri",
   ]) {
-    await expect(page.getByText(title, { exact: true })).toBeVisible();
+    await expect(page.locator("main").getByText(title, { exact: true })).toBeVisible();
   }
 });
 
@@ -53,7 +53,7 @@ test("FSO: proje seçilince işveren sözleşme no'su salt-okunur dolar", async 
   await expect(page.getByRole("button", { name: "İşveren Sözleşmesinden Yükle" })).toBeDisabled();
   await expect(page.getByTestId("fso-employer-contract")).toHaveText("—");
 
-  await page.getByLabel("Proje", { exact: true }).selectOption({ index: 1 });
+  await page.locator("main").getByLabel("Proje", { exact: true }).selectOption({ index: 1 });
   await expect(page.getByTestId("fso-employer-contract")).not.toHaveText("—");
 });
 
@@ -62,7 +62,7 @@ test("FSO: taşeron seçilince VKN/yetkili/telefon/e-posta salt-okunur dolar", a
   await page.goto("/sozlesmeler/taseron/yeni");
 
   await expect(page.getByTestId("fso-tax-number")).toHaveText("—");
-  await page.getByLabel("Taşeron Firma", { exact: true }).selectOption({ index: 1 });
+  await page.locator("main").getByLabel("Taşeron Firma", { exact: true }).selectOption({ index: 1 });
   await expect(page.getByTestId("fso-tax-number")).not.toHaveText("—");
 });
 
@@ -70,18 +70,21 @@ test("FSO: belge kutuları SİLİNMEZ, altısı da devre dışı + gerekçelidir
   await login(page);
   await page.goto("/sozlesmeler/taseron/yeni");
 
-  const boxes = page.locator(".pf-doc[aria-disabled='true']");
+  const boxes = page.locator("main .pf-doc[aria-disabled='true']");
   // Altı belge kutusu + ortak "sürükle" satırı.
   await expect(boxes).toHaveCount(7);
-  await expect(page.getByText("İmzalı Sözleşme", { exact: true })).toBeVisible();
-  await expect(page.getByText("Birim Fiyat Analizi", { exact: true })).toBeVisible();
+  await expect(page.locator("main").getByText("İmzalı Sözleşme", { exact: true })).toBeVisible();
+  await expect(page.locator("main").getByText("Birim Fiyat Analizi", { exact: true })).toBeVisible();
 });
 
 test("FSO: eksik formda 'Sözleşmeyi Oluştur' kaydetmez, hata gösterir", async ({ page }) => {
   await login(page);
   await page.goto("/sozlesmeler/taseron/yeni");
 
-  await page.locator(".pf-actions").getByRole("button", { name: "Sözleşmeyi Oluştur" }).click();
+  await page
+    .locator("main .pf-actions")
+    .getByRole("button", { name: "Sözleşmeyi Oluştur" })
+    .click();
 
   await expect(page.getByTestId("fso-form-error")).toBeVisible();
   // Kaydedilmedi → hâlâ formdayız.

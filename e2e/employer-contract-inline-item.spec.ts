@@ -88,7 +88,7 @@ test("poz miktarı hücrede düzenlenir ve odak çıkışında KISMİ PATCH uça
   const writes = await captureWrites(page);
   await gotoLoadedItems(page);
 
-  const quantity = page.getByLabel("03.001 miktar");
+  const quantity = page.locator("main").getByLabel("03.001 miktar");
   await expect(quantity).toBeEditable();
   await quantity.fill("3300");
   await quantity.blur();
@@ -104,7 +104,7 @@ test("birim fiyat hücresi ayrı PATCH'lenir; miktar gövdeye karışmaz", async
   const writes = await captureWrites(page);
   await gotoLoadedItems(page);
 
-  const price = page.getByLabel("03.002 birim fiyatı");
+  const price = page.locator("main").getByLabel("03.002 birim fiyatı");
   await price.fill("2250.50");
   await price.blur();
 
@@ -121,7 +121,7 @@ test("miktar SIFIR: istek HİÇ UÇMAZ, sebep görünür basılır, hücre eski 
   const writes = await captureWrites(page);
   await gotoLoadedItems(page);
 
-  const quantity = page.getByLabel("03.001 miktar");
+  const quantity = page.locator("main").getByLabel("03.001 miktar");
   await quantity.fill("0");
   await quantity.blur();
 
@@ -136,7 +136,7 @@ test("negatif birim fiyat: istek HİÇ UÇMAZ", async ({ page }) => {
   const writes = await captureWrites(page);
   await gotoLoadedItems(page);
 
-  const price = page.getByLabel("03.002 birim fiyatı");
+  const price = page.locator("main").getByLabel("03.002 birim fiyatı");
   await price.fill("-1");
   await price.blur();
 
@@ -157,11 +157,11 @@ test("satır-içi ekleme: taslak satır TABLONUN İÇİNDE açılır (modal AÇI
   await expect(page.getByTestId("ecd-new-row")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await page.getByLabel("Yeni poz no").fill("03.900");
-  await page.getByLabel("Yeni poz adı").fill("Satır-içi eklenen poz");
-  await page.getByLabel("Yeni poz birimi").selectOption("m³");
-  await page.getByLabel("Yeni poz birim fiyatı").fill("1750");
-  await page.getByLabel("Yeni poz miktarı").fill("42.5");
+  await page.locator("main").getByLabel("Yeni poz no").fill("03.900");
+  await page.locator("main").getByLabel("Yeni poz adı").fill("Satır-içi eklenen poz");
+  await page.locator("main").getByLabel("Yeni poz birimi").selectOption("m³");
+  await page.locator("main").getByLabel("Yeni poz birim fiyatı").fill("1750");
+  await page.locator("main").getByLabel("Yeni poz miktarı").fill("42.5");
   await page.getByTestId("ecd-new-row-submit").click();
 
   await expect.poll(() => writes.length).toBe(1);
@@ -181,11 +181,11 @@ test("satır-içi ekleme: miktarı SIFIR olan taslak POST EDİLMEZ", async ({ pa
   await gotoLoadedItems(page);
 
   await page.getByTestId("ecd-add-row-cg-1").click();
-  await page.getByLabel("Yeni poz no").fill("03.901");
-  await page.getByLabel("Yeni poz adı").fill("Sıfır miktarlı poz");
-  await page.getByLabel("Yeni poz birimi").selectOption("m³");
-  await page.getByLabel("Yeni poz birim fiyatı").fill("100");
-  await page.getByLabel("Yeni poz miktarı").fill("0");
+  await page.locator("main").getByLabel("Yeni poz no").fill("03.901");
+  await page.locator("main").getByLabel("Yeni poz adı").fill("Sıfır miktarlı poz");
+  await page.locator("main").getByLabel("Yeni poz birimi").selectOption("m³");
+  await page.locator("main").getByLabel("Yeni poz birim fiyatı").fill("100");
+  await page.locator("main").getByLabel("Yeni poz miktarı").fill("0");
   await page.getByTestId("ecd-new-row-submit").click();
 
   await expect(page.getByTestId("ecd-items-error")).toHaveText(

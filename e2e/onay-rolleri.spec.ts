@@ -24,7 +24,7 @@ test("ayarlar menusundeki 'Onay Rolleri ve Eşik' gercek ekrani acar", async ({ 
   await expect(page).toHaveURL(new RegExp(`${APPROVAL_ROLES_URL}$`));
   await expect(page.getByRole("heading", { level: 1, name: "Onay Rolleri ve Eşik" })).toBeVisible();
   // 🔴 Bu dilimin ÖZÜ: menüsü olmayan ekran kullanıcıya görünmez.
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
 });
 
 test("rolu OLMAYAN kullanici da satir alir — atama ucu onlari dondurmez", async ({ page }) => {

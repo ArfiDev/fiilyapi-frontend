@@ -41,7 +41,7 @@ test("proje detay: bilinmeyen kayıtta yeniden deneme ağa çıkar (2 istek), k�
   const requests = countRequestsTo(page, "/api/backend/projects/yok-boyle-bir-proje");
 
   await page.goto("/projeler/yok-boyle-bir-proje");
-  await expect(page.getByText("Proje yüklenemedi")).toBeVisible();
+  await expect(page.locator("main").getByText("Proje yüklenemedi")).toBeVisible();
 
   // Yeniden deneme penceresi (retry: 1, üstel gecikme) geçsin.
   await page.waitForTimeout(2000);
@@ -55,7 +55,7 @@ test("şantiye detay: bilinmeyen kayıtta yeniden deneme ağa çıkar (2 istek),
   const requests = countRequestsTo(page, "/api/backend/sites/yok-boyle-bir-santiye");
 
   await page.goto("/projeler/p-1/santiyeler/yok-boyle-bir-santiye");
-  await expect(page.getByText("Şantiye yüklenemedi")).toBeVisible();
+  await expect(page.locator("main").getByText("Şantiye yüklenemedi")).toBeVisible();
 
   await page.waitForTimeout(2000);
   expect(requests.count()).toBe(2);
