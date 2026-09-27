@@ -97,6 +97,56 @@ export function asPercentOrNull<T extends string | null | undefined>(
 export const SCALE_NAME_EXCEPTIONS = ["progress_pct", "rate"] as const;
 type ScaleNameException = (typeof SCALE_NAME_EXCEPTIONS)[number];
 
+/**
+ * FAZ 2b · `progress_pct` istisnasının maliyet ÖLÇÜMÜ (TYPE-F1 emir madde 8):
+ * ad düzeyinde DeepScale bu alanı KALICI OLARAK ayıramaz (yukarıdaki not) ama
+ * ŞEMA düzeyinde — tek tek her takma ad için — ucuza marka'lanabilir. Ölçüldü
+ * (`scale-table.ts`teki TÜM `progress_pct` satırları tarandı): ALTI şemada
+ * (`ProjectListItem`, `DashboardProjectCard`, `ProjectDetailResponse`,
+ * `SubcontractorCostRow`, `ProgressPaymentSummary`, `ContractListItem`)
+ * `progress_pct` GERÇEKTEN düz `string | null` (`ContractListItem`de
+ * OPSİYONEL anahtar) PERCENT'tir (zarf DEĞİL) — yedinci bir takma ad
+ * (`ProjectResponse`, aynı `ProjectListItem` şemasını sarar) dahil TOPLAM 7
+ * alias satırı dokunuldu (`models.ts`, `useProjects.ts`,
+ * `useDashboardSummary.ts`, `useProjectCosts.ts`, `useProgressPayments.ts`,
+ * `useContracts.ts`, `dashboard/ProjectCard.tsx`, `dashboard/ProjectGrid.tsx`).
+ * Maliyet UCUZ: `Omit<DeepScale<T>, "progress_pct"> & {progress_pct: Percent
+ * | null}` sarmalayıcısı (opsiyonel anahtarlı `ContractListItem` için ayrı
+ * `WithPlainProgressPctOptional` varyantı) — davranış/metin DEĞİŞMEZ, yalnız
+ * önceden markasız giden değer artık derleyici düzeyinde korunur.
+ *
+ * 🔴 KALAN KORUMASIZ: bu altı şemanın LİSTE/nested kullanımları (ör.
+ * `ProjectListResponse.items[]`, `DashboardSummary.projects[]`,
+ * `ProjectCostsResponse.breakdown.subcontractors[]`,
+ * `ContractListResponse.items[]`) bu sarmalayıcıya GİRMEZ — dizinin öge tipi
+ * ayrı bir DeepScale uygulamasıdır ve isim istisnası orada da geçerlidir;
+ * yalnız DÜZ tekil takma adlar elle düzeltildi (maliyet/fayda: bu nested
+ * yollarda doğrudan `.progress_pct` OKUYAN üretim kodu ÖLÇÜLMEDİ —
+ * bulunursa aynı sarmalayıcı orada da ucuzdur). Diğer `MetricPlaceholder`
+ * zarflı şemalar (`BoqItemResponse`/`SiteCard`/`SectionResponse`/
+ * `SiteDetailResponse`/`SectionDetailResponse`) bu sarmalayıcıya HİÇ
+ * GİRMEZ — onlarda `.value` iç alanı ayrı bir sorun (bkz.
+ * `ProgressCell`/`asPercent` kaçışları, "MetricPlaceholder jenerik zarf"
+ * sınıfı, `escape-hatch-inventory-guard.test.ts`), zarfın KENDİSİ
+ * `progress_pct` değil `value` adını taşıdığı için bu tipin kapsamı dışında.
+ */
+export type WithPlainProgressPct<T extends { progress_pct: string | null }> = Omit<
+  T,
+  "progress_pct"
+> & { progress_pct: Percent | null };
+
+/**
+ * `WithPlainProgressPct`in İSTEĞE BAĞLI alan sürümü — `ContractListItem`de
+ * `progress_pct` openapi'de `progress_pct?:` (anahtar OPSİYONEL) olarak
+ * üretilir, diğer beş şemadaki gibi ZORUNLU değil. Ayrı tip: zorunlu sürümün
+ * kısıtını gevşetmek beş şemadaki garantiyi de gevşetirdi (anahtar HER ZAMAN
+ * var olma garantisi kaybolurdu) — iki ayrı sözleşme, iki ayrı yardımcı tip.
+ */
+export type WithPlainProgressPctOptional<T extends { progress_pct?: string | null }> = Omit<
+  T,
+  "progress_pct"
+> & { progress_pct?: Percent | null };
+
 type TableRow = ScaleTableLiteral[number];
 
 /** Tablodan türetilen, `scale: "fraction"` taşıyan alan adları (istisnalar hariç). */
@@ -104,6 +154,45 @@ export type FractionFieldName = Exclude<Extract<TableRow, { scale: "fraction" }>
 
 /** Tablodan türetilen, `scale: "percent"` taşıyan alan adları (istisnalar hariç). */
 export type PercentFieldName = Exclude<Extract<TableRow, { scale: "percent" }>["field"], ScaleNameException>;
+
+/**
+ * FAZ 2d (TYPE-F1 madde 1/2) · `MetricPlaceholder` ZARFI taşıyan, iç `.value`
+ * ölçüsü `innerScale: "percent"` olarak işaretli alan adları (bkz.
+ * `scale-table.ts`). 8 farklı ad, 13 şema satırı (7'si CEO'nun önceden
+ * ölçtüğü + 6'sı bu fazda EKLENEN — bkz. `scale-table.ts` başlık notu).
+ * `progress_pct` burada da geçer: `SCALE_NAME_EXCEPTIONS` yalnız DÜZ
+ * `string` çakışmasını dışlar, zarf tespiti (`BrandMetricValue`in yapısal
+ * testi) ayrı bir mekanizmadır — aynı ad iki bağlamda da güvenle çalışır.
+ */
+export type PercentEnvelopeFieldName = Extract<
+  TableRow,
+  { scale: "not-scale"; innerScale: "percent" }
+>["field"];
+
+/**
+ * `MetricPlaceholder` — backend `schema.d.ts` üretimiyle BİREBİR yapısal
+ * biçim (`available: boolean`, opsiyonel `value`/`pending_module`), `.value`
+ * tipi `V` ile jenerik. TEK KAYNAK burasıdır: `placeholder-cell.ts`teki
+ * `MetricEnvelope<V>` bunu yeniden ihraç eder (FAZ 2d, TYPE-F1 madde 1).
+ * Varsayılan `V = string | number`, schema'nın markasız hâliyle (`value?:
+ * string | null`) uyumlu — `BrandMetricValue`in yapısal testinde de bu
+ * varsayılan kullanılır (bkz. altta).
+ */
+export interface MetricPlaceholder<V extends string | number = string | number> {
+  available: boolean;
+  pending_module?: string | null;
+  value?: V | null;
+}
+
+/**
+ * Zarfın `.value` alanını `V` ile marka'lar; zarf biçimine uymayan bir tip
+ * (ör. `null`, opsiyonel alan birleşiminin `null` kolu) DOKUNULMADAN geçer —
+ * dağıtıcı (distributive) koşullu tip sayesinde `MetricPlaceholder | null`
+ * gibi birleşimler doğru işlenir.
+ */
+export type BrandMetricValue<T, V extends string> = T extends MetricPlaceholder
+  ? Omit<T, "value"> & { value?: V | null }
+  : T;
 
 /** `X` tam olarak `string` ya da `string | null` ise `B` (uygun null varyantıyla) döner, aksi hâlde `X` değişmez. */
 type BrandIfPlainString<X, B> = [X] extends [string]
@@ -133,6 +222,8 @@ export type DeepScale<T, D extends number = 6> = D extends 0
             ? BrandIfPlainString<T[K], Fraction>
             : K extends PercentFieldName
               ? BrandIfPlainString<T[K], Percent>
-              : DeepScale<T[K], Prev[D]>;
+              : K extends PercentEnvelopeFieldName
+                ? BrandMetricValue<T[K], Percent>
+                : DeepScale<T[K], Prev[D]>;
         }
       : T;

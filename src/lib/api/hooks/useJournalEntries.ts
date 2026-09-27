@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MU1 T2 · fiş BAŞLIĞI listesi (`/journal-entries`). Defterle (`/journal`)
 // KARIŞTIRILMAZ: defter SATIR bazlıdır ve `draft` fişleri HİÇ göstermez.
-export type JournalEntryListResponse = components["schemas"]["JournalEntryListResponse"];
-export type JournalEntryResponse = components["schemas"]["JournalEntryResponse"];
-export type JournalEntryDetailResponse = components["schemas"]["JournalEntryDetailResponse"];
+export type JournalEntryListResponse = DeepScale<components["schemas"]["JournalEntryListResponse"]>;
+export type JournalEntryResponse = DeepScale<components["schemas"]["JournalEntryResponse"]>;
+export type JournalEntryDetailResponse = DeepScale<components["schemas"]["JournalEntryDetailResponse"]>;
 export type JournalEntryStatus = components["schemas"]["JournalEntryStatus"];
 
 export const JOURNAL_ENTRIES_QUERY_KEY = "journal-entries";

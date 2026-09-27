@@ -1,4 +1,5 @@
 import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules";
+import type { MetricPlaceholder } from "@/lib/api/scale";
 
 /**
  * K-ZARF — yer tutucu zarfın ÜÇ hâlini tek yerden okur (F-ILRUI).
@@ -26,11 +27,10 @@ import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules
  *     `pending_module="timesheet"` döner). Bu yüzden dolu/boş ayrımını
  *     `pending_module`dan yapmak sayaçlarda KESİNLİKLE yanlıştır.
  */
-export interface MetricEnvelope {
-  available: boolean;
-  value?: string | number | null;
-  pending_module?: PendingModuleKey;
-}
+// TEK KAYNAK: `@/lib/api/scale`teki `MetricPlaceholder<V>` (FAZ 2d, TYPE-F1
+// madde 1) — DeepScale'in ürettiği tiplerle birebir aynı şekli paylaşsın diye
+// burada YENİDEN TANIMLANMAZ, yeniden ihraç edilir.
+export type MetricEnvelope<V extends string | number = string | number> = MetricPlaceholder<V>;
 
 export interface CountEnvelope {
   available: boolean;
@@ -54,9 +54,9 @@ function pendingCell(pendingModule: PendingModuleKey): PlaceholderCell {
  * `MetricPlaceholder` okuması. Zarf `undefined` olabilir: KPI şeritleri yük
  * gelmeden de basılır ve o anda ipucu metni UYDURULMAZ.
  */
-export function metricCell(
-  metric: MetricEnvelope | undefined,
-  format: (value: string | number) => string,
+export function metricCell<V extends string | number>(
+  metric: MetricEnvelope<V> | undefined,
+  format: (value: V) => string,
 ): PlaceholderCell {
   const value = metric?.value;
   // `!= null` DEĞİL, açık iki karşılaştırma: `0` ve `"0"` GERÇEK cevaplardır ve

@@ -1,5 +1,7 @@
 import { Field, Input } from "@/components/ui";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { toDecimalString } from "@/lib/decimal";
+import { asPercent } from "@/lib/api/scale";
 import { profitMargin, type BudgetLines } from "./derive";
 
 export interface BudgetValues {
@@ -91,7 +93,12 @@ export function BudgetCard({
             {marginPct === null ? "—" : formatCurrency(profit)}
           </span>
           {marginPct !== null && (
-            <span className="pf-margin__pct">{formatPercent(marginPct)}</span>
+            // KAÇIŞ: profitMargin() testte kesinlikle (toBeCloseTo) doğrulanan
+            // number döndürür; formatPercent sınırında Decimal kanonuyla
+            // stringe çevriliyor.
+            <span className="pf-margin__pct">
+              {formatPercent(asPercent(toDecimalString(marginPct) ?? "0"))}
+            </span>
           )}
         </div>
       </div>

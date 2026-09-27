@@ -3,10 +3,11 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import { PROJECTS_QUERY_KEY, type ProjectDetail } from "./useProjects";
+import type { DeepScale } from "@/lib/api/scale";
 
 // NOT: Plan "ProjectCreateRequest" adini varsayiyordu; gercek semada istek govdesi
 // "ProjectCreate" (bkz. src/lib/api/schema.d.ts). Gercek adi kullaniyoruz.
-export type ProjectCreateRequest = components["schemas"]["ProjectCreate"];
+export type ProjectCreateRequest = DeepScale<components["schemas"]["ProjectCreate"]>;
 
 // Task F4 — spec §3.3: "code" bos birakilirsa sunucu otomatik uretir (§3.5),
 // ama bu yalniz alan HIC GONDERILMEZSE calisir — bos string "" gonderilirse

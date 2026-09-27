@@ -1,6 +1,7 @@
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatPercent } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
+import type { Percent } from "@/lib/api/scale";
 import type { ProgressPaymentListItem } from "@/lib/api/hooks/useProgressPayments";
 
 import { computeProgressPaymentsTotals } from "./totals";
@@ -16,7 +17,7 @@ import "./progress-payments-totals.css";
 export interface ProgressPaymentsTotalsSummary {
   paymentCount: number;
   /** null gelebilir (sözleşme bedeli eksik) — o zaman yüzde BASILMAZ. */
-  progressPct: string | null;
+  progressPct: Percent | null;
 }
 
 export interface ProgressPaymentsTotalsStripProps {
@@ -53,7 +54,7 @@ export interface ProgressPaymentsTotalsSubcontractor {
   /** "Onay Bekleyen" KPI'ına eklenecek taşeron payı. */
   pendingApprovalCount: number;
   /** `computeGrossMargin` çıktısı — `null` ise marj BASILMAZ (pending). */
-  marginPct: string | null;
+  marginPct: Percent | null;
 }
 
 interface RealCard {

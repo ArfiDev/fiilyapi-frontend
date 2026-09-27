@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-BOR T2 · `/bordro` (Aylık Bordro) ekranının İKİ okuma ucu. Yorumlardaki
@@ -15,13 +16,13 @@ import type { components } from "@/lib/api/schema";
  * ucu `year`/`month` sorgu parametresi ALMAZ — yalnız `period_id` ile
  * çağrılır; bu yüzden gezginin adımladığı dizin liste ucundan gelir.
  */
-export type PayrollPeriodListResponse = components["schemas"]["PayrollPeriodListResponse"];
-export type PayrollPeriodListRow = components["schemas"]["PayrollPeriodListRow"];
+export type PayrollPeriodListResponse = DeepScale<components["schemas"]["PayrollPeriodListResponse"]>;
+export type PayrollPeriodListRow = DeepScale<components["schemas"]["PayrollPeriodListRow"]>;
 export type PayrollPeriodDetailResponse =
-  components["schemas"]["PayrollPeriodDetailResponse"];
-export type PayrollSectionResponse = components["schemas"]["PayrollSectionResponse"];
-export type PayrollLineResponse = components["schemas"]["PayrollLineResponse"];
-export type PayrollSummaryResponse = components["schemas"]["PayrollSummaryResponse"];
+  DeepScale<components["schemas"]["PayrollPeriodDetailResponse"]>;
+export type PayrollSectionResponse = DeepScale<components["schemas"]["PayrollSectionResponse"]>;
+export type PayrollLineResponse = DeepScale<components["schemas"]["PayrollLineResponse"]>;
+export type PayrollSummaryResponse = DeepScale<components["schemas"]["PayrollSummaryResponse"]>;
 export type PayrollLineStatus = components["schemas"]["PayrollLineStatus"];
 export type PayrollPeriodStatus = components["schemas"]["PayrollPeriodStatus"];
 export type WorkerSource = components["schemas"]["WorkerSource"];

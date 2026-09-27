@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-HZ T2 · Hazine (E9:69-85) — banka/kasa kartı şeridinin TEK kaynağı.
 // `useEquipment.ts` deseniyle AYNI: tipler `pnpm gen:api` çıktısından takma ad
 // olarak alınır, elle arayüz yazılmaz.
-export type BankAccountListResponse = components["schemas"]["BankAccountListResponse"];
-export type BankAccountResponse = components["schemas"]["BankAccountResponse"];
+export type BankAccountListResponse = DeepScale<components["schemas"]["BankAccountListResponse"]>;
+export type BankAccountResponse = DeepScale<components["schemas"]["BankAccountResponse"]>;
 export type BankAccountType = components["schemas"]["BankAccountType"];
 
 export const BANK_ACCOUNTS_QUERY_KEY = "bank-accounts";

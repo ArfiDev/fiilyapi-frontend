@@ -2,10 +2,11 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MK T4 · M3 "Son Kayıtlar" bloğunun (247-298) kaynağı.
-export type WorkLogListResponse = components["schemas"]["WorkLogListResponse"];
-export type WorkLogResponse = components["schemas"]["WorkLogResponse"];
+export type WorkLogListResponse = DeepScale<components["schemas"]["WorkLogListResponse"]>;
+export type WorkLogResponse = DeepScale<components["schemas"]["WorkLogResponse"]>;
 export type WorkLogType = components["schemas"]["WorkLogType"];
 
 export const EQUIPMENT_WORK_LOGS_QUERY_KEY = "equipment-work-logs";

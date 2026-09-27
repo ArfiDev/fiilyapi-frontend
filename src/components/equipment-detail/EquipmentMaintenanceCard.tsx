@@ -104,7 +104,7 @@ export function EquipmentMaintenanceCard({
           <div className="makine-det__bar-head">
             <span className="makine-det__bar-label">Bakım Periyodu Kullanımı</span>
             <span className="makine-det__bar-value" data-testid="makine-det-usage-pct">
-              {formatPercent(maintenance.usage_pct as string)}
+              {formatPercent(maintenance.usage_pct)}
             </span>
           </div>
           <div

@@ -10,15 +10,16 @@ import {
   type RentalInvoiceResponse,
 } from "./useEquipmentRentalInvoices";
 import { EQUIPMENT_DETAIL_SCREEN_QUERY_KEY } from "./useEquipmentDetailScreen";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-KIRA T-A · yazma/aksiyon uçları (`useSubcontractorProgressPaymentMutations`
 // deseniyle AYNI). Sekiz kapsanan operasyondan ALTISI burada; `POST …/reload` ve
 // `DELETE …/rental-invoice-lines/{id}` mockup'ta ÇİZİLMEMİŞTİR ve K2 gereği bu
 // dilimde BASILMAZ — hook'ları da yazılmaz (çağıranı olmayan hook, ekranda
 // olmayan bir yeteneği varmış gibi gösterir).
-export type RentalInvoiceCreate = components["schemas"]["RentalInvoiceCreate"];
-export type RentalInvoiceUpdate = components["schemas"]["RentalInvoiceUpdate"];
-export type RentalInvoiceLineUpdate = components["schemas"]["RentalInvoiceLineUpdate"];
+export type RentalInvoiceCreate = DeepScale<components["schemas"]["RentalInvoiceCreate"]>;
+export type RentalInvoiceUpdate = DeepScale<components["schemas"]["RentalInvoiceUpdate"]>;
+export type RentalInvoiceLineUpdate = DeepScale<components["schemas"]["RentalInvoiceLineUpdate"]>;
 
 /**
  * Ortak geçersiz kılma: liste (filtre varyantları dahil, prefix eşleşme) +

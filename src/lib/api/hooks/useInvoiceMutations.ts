@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/r
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 import { INVOICES_QUERY_KEY, INVOICE_SUMMARY_QUERY_KEY } from "./useInvoices";
 import {
@@ -11,9 +12,9 @@ import {
   type PaymentResponse,
 } from "./useInvoiceDetail";
 
-export type InvoiceCreateRequest = components["schemas"]["InvoiceCreate"];
-export type InvoiceLineCreate = components["schemas"]["InvoiceLineCreate"];
-export type PaymentCreateRequest = components["schemas"]["PaymentCreate"];
+export type InvoiceCreateRequest = DeepScale<components["schemas"]["InvoiceCreate"]>;
+export type InvoiceLineCreate = DeepScale<components["schemas"]["InvoiceLineCreate"]>;
+export type PaymentCreateRequest = DeepScale<components["schemas"]["PaymentCreate"]>;
 
 /** Durum damgalayan dört ucun ortak adı — `useInvoiceAction` bunu alır. */
 export type InvoiceActionKind = "send" | "approve" | "dispute" | "mark-collected";

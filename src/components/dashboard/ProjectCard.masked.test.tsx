@@ -4,8 +4,9 @@ import { render, screen } from "@testing-library/react";
 import { ProjectCard } from "./ProjectCard";
 import { EMPTY_CELL } from "@/lib/format";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
-type Project = components["schemas"]["DashboardProjectCard"];
+type Project = DeepScale<components["schemas"]["DashboardProjectCard"]>;
 
 /**
  * KAPSAM MASKESİ — gösterge panelinin proje kartı.

@@ -4,25 +4,26 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { isScopePending } from "@/lib/api/pending-scope";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-TH T1 · Taşeron Hakedişi ekranları — okuma sorguları. `useProgressPayments.ts`
 // deseniyle AYNI (isimlendirme/hata-unwrap yardımcıları). Tipler `pnpm gen:api`
 // çıktısından takma ad olarak alınır; elle arayüz yazmak yasak.
 export type SubcontractorProgressPaymentListResponse =
-  components["schemas"]["SubcontractorProgressPaymentListResponse"];
+  DeepScale<components["schemas"]["SubcontractorProgressPaymentListResponse"]>;
 export type SubcontractorProgressPaymentListItem =
-  components["schemas"]["SubcontractorProgressPaymentListItem"];
+  DeepScale<components["schemas"]["SubcontractorProgressPaymentListItem"]>;
 export type SubcontractorProgressPaymentDetail =
-  components["schemas"]["SubcontractorProgressPaymentDetail"];
+  DeepScale<components["schemas"]["SubcontractorProgressPaymentDetail"]>;
 export type SubcontractorProgressPaymentLineRead =
-  components["schemas"]["SubcontractorProgressPaymentLineRead"];
+  DeepScale<components["schemas"]["SubcontractorProgressPaymentLineRead"]>;
 export type SubcontractorProgressPaymentSummary =
-  components["schemas"]["SubcontractorProgressPaymentSummary"];
+  DeepScale<components["schemas"]["SubcontractorProgressPaymentSummary"]>;
 export type SubcontractorPaymentStatus = components["schemas"]["SubcontractorPaymentStatus"];
-export type SubcontractorContractDetail = components["schemas"]["SubcontractorContractDetail"];
-export type SubcontractorContractListItem = components["schemas"]["SubcontractorContractListItem"];
+export type SubcontractorContractDetail = DeepScale<components["schemas"]["SubcontractorContractDetail"]>;
+export type SubcontractorContractListItem = DeepScale<components["schemas"]["SubcontractorContractListItem"]>;
 export type SubcontractorContractListResponse =
-  components["schemas"]["SubcontractorContractListResponse"];
+  DeepScale<components["schemas"]["SubcontractorContractListResponse"]>;
 
 // Liste ve özet uçlarının ORTAK filtre alanları (openapi.json GET
 // /subcontractor-progress-payments + .../summary query parametreleri).

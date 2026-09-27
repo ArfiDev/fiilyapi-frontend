@@ -5,6 +5,7 @@ import type { components } from "@/lib/api/schema";
 import { SALES_QUERY_KEY, SALE_QUERY_KEY, type UnitSaleResponse } from "./useSales";
 import { SALES_SUMMARY_QUERY_KEY } from "./useSalesSummary";
 import { SALE_INSTALLMENTS_QUERY_KEY, type SalePlanResponse } from "./useSaleInstallments";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-P8 T1 · Satış YAZMA yüzeyi — bu dilimde ÜÇ mutasyon vardır:
 // satış oluşturma (DS formu), plan üretimi (`generate-plan`) ve plan
@@ -23,9 +24,9 @@ import { SALE_INSTALLMENTS_QUERY_KEY, type SalePlanResponse } from "./useSaleIns
 // (default `false`) ve `has_mortgage` (default `false`) — gövdeyi kuran kod
 // ikisini de AÇIKÇA vermelidir; "varsayılanı var, göndermesem de olur"
 // varsayımı `tsc` hatasıdır.
-export type UnitSaleCreate = components["schemas"]["UnitSaleCreate"];
-export type SaleInstallmentsSave = components["schemas"]["SaleInstallmentsSave"];
-export type SaleInstallmentInput = components["schemas"]["SaleInstallmentInput"];
+export type UnitSaleCreate = DeepScale<components["schemas"]["UnitSaleCreate"]>;
+export type SaleInstallmentsSave = DeepScale<components["schemas"]["SaleInstallmentsSave"]>;
+export type SaleInstallmentInput = DeepScale<components["schemas"]["SaleInstallmentInput"]>;
 
 /**
  * Bir satış yazıldığında ya da planı değiştiğinde SUNUCU TÜREVİ taşıyan her şey

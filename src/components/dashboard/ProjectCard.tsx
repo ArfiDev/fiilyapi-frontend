@@ -3,8 +3,9 @@ import { formatCompactCurrency, formatPercent } from "@/lib/format";
 import { maskeli } from "@/lib/masked";
 
 import "./dashboard.css";
+import type { DeepScale, WithPlainProgressPct } from "@/lib/api/scale";
 
-type Project = components["schemas"]["DashboardProjectCard"];
+type Project = WithPlainProgressPct<DeepScale<components["schemas"]["DashboardProjectCard"]>>;
 
 // Mockup Ekran 1'de yalnizca Aktif/Beklemede var; Tamamlandi rozeti
 // "Ekran 4 - Projeler.dc.html" satir 273'ten alindi (spec §3.4).

@@ -2,19 +2,20 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // PUAN-SAAT · Puantajin OKUMA sorgulari.
 // Tipler `pnpm gen:api` ciktisindan takma ad olarak alinir; elle arayuz yazmak
 // yasak (`useSitePlan.ts` deseni).
-export type TimesheetMatrix = components["schemas"]["TimesheetMatrix"];
-export type TimesheetMatrixRow = components["schemas"]["TimesheetMatrixRow"];
-export type TimesheetCell = components["schemas"]["TimesheetCell"];
-export type TimesheetDayTotal = components["schemas"]["TimesheetDayTotal"];
+export type TimesheetMatrix = DeepScale<components["schemas"]["TimesheetMatrix"]>;
+export type TimesheetMatrixRow = DeepScale<components["schemas"]["TimesheetMatrixRow"]>;
+export type TimesheetCell = DeepScale<components["schemas"]["TimesheetCell"]>;
+export type TimesheetDayTotal = DeepScale<components["schemas"]["TimesheetDayTotal"]>;
 export type TimesheetCode = components["schemas"]["TimesheetCode"];
-export type TimesheetWeek = components["schemas"]["TimesheetWeek"];
-export type TimesheetWeekRow = components["schemas"]["TimesheetWeekRow"];
-export type TimesheetWeekSummary = components["schemas"]["TimesheetWeekSummary"];
-export type TimesheetRowTotals = components["schemas"]["TimesheetRowTotals"];
+export type TimesheetWeek = DeepScale<components["schemas"]["TimesheetWeek"]>;
+export type TimesheetWeekRow = DeepScale<components["schemas"]["TimesheetWeekRow"]>;
+export type TimesheetWeekSummary = DeepScale<components["schemas"]["TimesheetWeekSummary"]>;
+export type TimesheetRowTotals = DeepScale<components["schemas"]["TimesheetRowTotals"]>;
 
 export const TIMESHEET_QUERY_KEY = "timesheet";
 export const TIMESHEET_WEEK_QUERY_KEY = "timesheet-week";

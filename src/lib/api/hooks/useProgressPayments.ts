@@ -4,17 +4,21 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { isScopePending } from "@/lib/api/pending-scope";
+import type { DeepScale, WithPlainProgressPct } from "@/lib/api/scale";
 
 // P7 · İşveren Hakedişi ekranları — okuma sorguları. Tipler `pnpm gen:api`
 // çıktısından takma ad olarak alınır; elle arayüz yazmak yasak.
-export type ProgressPaymentListResponse = components["schemas"]["ProgressPaymentListResponse"];
-export type ProgressPaymentListItem = components["schemas"]["ProgressPaymentListItem"];
-export type ProgressPaymentDetail = components["schemas"]["ProgressPaymentDetail"];
+export type ProgressPaymentListResponse = DeepScale<components["schemas"]["ProgressPaymentListResponse"]>;
+export type ProgressPaymentListItem = DeepScale<components["schemas"]["ProgressPaymentListItem"]>;
+export type ProgressPaymentDetail = DeepScale<components["schemas"]["ProgressPaymentDetail"]>;
 // P7 T5 eklemesi: `ProgressPaymentDetail.lines[]`in eleman tipi zaten
 // üretilmişti ama takma ad olarak dışa aktarılmamıştı — hakediş formunun
 // pivot modülü (`pivot.ts`) mevcut satırları önceden doldururken kullanır.
-export type ProgressPaymentLineDetail = components["schemas"]["ProgressPaymentLineDetail"];
-export type ProgressPaymentSummary = components["schemas"]["ProgressPaymentSummary"];
+export type ProgressPaymentLineDetail = DeepScale<components["schemas"]["ProgressPaymentLineDetail"]>;
+// 🔴 `progress_pct` madde 8 istisnası (bkz. `scale.ts` `WithPlainProgressPct`).
+export type ProgressPaymentSummary = WithPlainProgressPct<
+  DeepScale<components["schemas"]["ProgressPaymentSummary"]>
+>;
 export type ProgressPaymentStatus = components["schemas"]["ProgressPaymentStatus"];
 
 // `useProjects` deseniyle ayni (ProjectListFilter): backend'in kabul ettigi

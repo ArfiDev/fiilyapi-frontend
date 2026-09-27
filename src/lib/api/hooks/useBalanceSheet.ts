@@ -2,13 +2,14 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MT T2 · BL:42-88 bilanço kartları. Tipler `pnpm gen:api` çıktısından TAKMA
 // AD olarak alınır — elle arayüz yazmak yasak (`useTrialBalance.ts` kanonu).
-export type BalanceSheetResponse = components["schemas"]["BalanceSheetResponse"];
-export type BalanceSheetSide = components["schemas"]["BalanceSheetSide"];
-export type BalanceSheetSection = components["schemas"]["BalanceSheetSection"];
-export type BalanceSheetLine = components["schemas"]["BalanceSheetLine"];
+export type BalanceSheetResponse = DeepScale<components["schemas"]["BalanceSheetResponse"]>;
+export type BalanceSheetSide = DeepScale<components["schemas"]["BalanceSheetSide"]>;
+export type BalanceSheetSection = DeepScale<components["schemas"]["BalanceSheetSection"]>;
+export type BalanceSheetLine = DeepScale<components["schemas"]["BalanceSheetLine"]>;
 
 export const BALANCE_SHEET_QUERY_KEY = "balance-sheet";
 

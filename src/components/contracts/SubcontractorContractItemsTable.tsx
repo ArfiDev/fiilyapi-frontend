@@ -5,6 +5,8 @@ import { useState } from "react";
 import { Button, Input } from "@/components/ui";
 import { cx } from "@/lib/cx";
 import { formatAmount, formatCurrencyPrecise, formatPercent, formatQuantity } from "@/lib/format";
+import { toDecimalString } from "@/lib/decimal";
+import { asPercent } from "@/lib/api/scale";
 import type { SubcontractorContractItemResponse } from "@/lib/api/hooks/useSubcontractorContractMutations";
 import { decimalInputValue, groupContractItems } from "@/components/subcontractor-contract-form/item-rows";
 import { FSO_TEXT } from "@/components/subcontractor-contract-form/constants";
@@ -306,7 +308,10 @@ function ItemGroup({
                       `tsd-progress__pct--${tsdProgressTone(pct)}`,
                     )}
                   >
-                    {formatPercent(pct)}
+                    {/* KAÇIŞ: pct hem width/tone (number) hem gösterim (Percent) için
+                        çift kullanılıyor (buildItemProgressPct); oranı yalnız
+                        formatPercent sınırında Decimal kanonuyla stringe çeviriyoruz. */}
+                    {formatPercent(asPercent(toDecimalString(pct) ?? "0"))}
                   </div>
                 </>
               )}

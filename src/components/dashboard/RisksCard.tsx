@@ -2,6 +2,7 @@ import type { components } from "@/lib/api/schema";
 
 import { CardEmptyState } from "./CardEmptyState";
 import "./dashboard.css";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * RISK-1 · "Risk & Uyarılar" kartı — zarf `ListPlaceholder`tan
@@ -23,8 +24,8 @@ import "./dashboard.css";
  * aşıldı", yeşil). Kart aslında ŞİDDET ETİKETLİ BİR UYARI AKIŞIDIR. Yeşil
  * satırı kırmızı gibi basmak kullanıcıya olmayan bir sorun bildirirdi.
  */
-type RiskAlerts = components["schemas"]["RiskAlertsPlaceholder"];
-type RiskAlert = components["schemas"]["RiskAlert"];
+type RiskAlerts = DeepScale<components["schemas"]["RiskAlertsPlaceholder"]>;
+type RiskAlert = DeepScale<components["schemas"]["RiskAlert"]>;
 type RiskSeverity = components["schemas"]["RiskSeverity"];
 
 /**

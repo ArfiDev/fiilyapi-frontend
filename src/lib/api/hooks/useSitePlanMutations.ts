@@ -8,19 +8,20 @@ import {
   type SitePlanWeek,
 } from "./useSitePlan";
 import { SITE_PLAN_DAY_SUMMARY_QUERY_KEY } from "./useSitePlanDaySummary";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-PL T1 · Şantiye Planlama — dort DEGISTIRME (replace) ucu.
 // ⚠️ Sema adlari `…Save` / `…Input` diye ayrisir; takma adlar `pnpm gen:api`
 // ciktisindan BIREBIR alinir, "duz ad vardir" varsayilmaz.
-export type SitePlanRowsSave = components["schemas"]["SitePlanRowsSave"];
-export type SitePlanRowInput = components["schemas"]["SitePlanRowInput"];
-export type SitePlanRowsResult = components["schemas"]["SitePlanRowsResult"];
-export type SitePlanRowSaved = components["schemas"]["SitePlanRowSaved"];
-export type SitePlanCellsSave = components["schemas"]["SitePlanCellsSave"];
-export type SitePlanCellInput = components["schemas"]["SitePlanCellInput"];
-export type SitePlanGoalsSave = components["schemas"]["SitePlanGoalsSave"];
-export type SitePlanGoalInput = components["schemas"]["SitePlanGoalInput"];
-export type SitePlanSprintSave = components["schemas"]["SitePlanSprintSave"];
+export type SitePlanRowsSave = DeepScale<components["schemas"]["SitePlanRowsSave"]>;
+export type SitePlanRowInput = DeepScale<components["schemas"]["SitePlanRowInput"]>;
+export type SitePlanRowsResult = DeepScale<components["schemas"]["SitePlanRowsResult"]>;
+export type SitePlanRowSaved = DeepScale<components["schemas"]["SitePlanRowSaved"]>;
+export type SitePlanCellsSave = DeepScale<components["schemas"]["SitePlanCellsSave"]>;
+export type SitePlanCellInput = DeepScale<components["schemas"]["SitePlanCellInput"]>;
+export type SitePlanGoalsSave = DeepScale<components["schemas"]["SitePlanGoalsSave"]>;
+export type SitePlanGoalInput = DeepScale<components["schemas"]["SitePlanGoalInput"]>;
+export type SitePlanSprintSave = DeepScale<components["schemas"]["SitePlanSprintSave"]>;
 
 /**
  * Her yazmadan sonra SANTIYENIN tum hafta varyantlari tazelenir (prefix

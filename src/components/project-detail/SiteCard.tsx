@@ -257,6 +257,7 @@ export function SiteCard({ projectKey, site, projectType }: SiteCardProps) {
 
           <div className="site-card__kpi">
             {site.progress_pct.available && site.progress_pct.value !== null && site.progress_pct.value !== undefined ? (
+              // FAZ 2d: `.value` artık Percent marka'lı — kaçış YOK.
               <div className="site-card__kpi-value site-card__kpi-value--progress">
                 {formatPercent(site.progress_pct.value)}
               </div>

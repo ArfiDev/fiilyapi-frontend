@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SD T1 · GK'nin gomulu planlama blogu (SALT-OKUNUR turev, PL spec S2):
 // `GET /sites/{site_id}/plan/day-summary`. Planlama EKRANI ayri dilimdir
 // (F-PL); burada yalnizca "onumuzdeki N gun" penceresi okunur.
-export type SitePlanDaySummary = components["schemas"]["SitePlanDaySummary"];
-export type SitePlanDaySummaryRange = components["schemas"]["SitePlanDaySummaryRange"];
+export type SitePlanDaySummary = DeepScale<components["schemas"]["SitePlanDaySummary"]>;
+export type SitePlanDaySummaryRange = DeepScale<components["schemas"]["SitePlanDaySummaryRange"]>;
 
 export const SITE_PLAN_DAY_SUMMARY_QUERY_KEY = "site-plan-day-summary";
 

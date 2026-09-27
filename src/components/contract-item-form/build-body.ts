@@ -13,10 +13,11 @@
 import type { components } from "@/lib/api/schema";
 
 import type { ContractItemFormValues, EmployerItemFormValues } from "./validate";
+import type { DeepScale } from "@/lib/api/scale";
 
 export type SubcontractorItemCreateBody =
-  components["schemas"]["SubcontractorContractItemCreate"];
-export type EmployerItemCreateBody = components["schemas"]["EmployerContractItemCreate"];
+  DeepScale<components["schemas"]["SubcontractorContractItemCreate"]>;
+export type EmployerItemCreateBody = DeepScale<components["schemas"]["EmployerContractItemCreate"]>;
 
 /**
  * Yeni satırın varsayılan sırası: mevcut en büyük `sort_order` + 1.

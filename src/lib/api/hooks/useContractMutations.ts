@@ -10,6 +10,7 @@ import {
   EMPLOYER_CONTRACT_ITEMS_QUERY_KEY,
   type ContractDistributionResponse,
 } from "./useContract";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-P5 T1 · POZ dağılımı KAYDETME (`PUT /projects/{id}/contract/distribution`).
 //
@@ -45,9 +46,9 @@ export function useSaveContractDistribution(
 }
 
 export type EmployerContractGroupCreateRequest =
-  components["schemas"]["EmployerContractGroupCreate"];
+  DeepScale<components["schemas"]["EmployerContractGroupCreate"]>;
 export type EmployerContractGroupResponse =
-  components["schemas"]["EmployerContractGroupResponse"];
+  DeepScale<components["schemas"]["EmployerContractGroupResponse"]>;
 
 /**
  * F-POZGRUP · İşveren sözleşmesine POZ GRUBU açma
@@ -84,9 +85,9 @@ export function useCreateEmployerContractGroup(
 }
 
 export type EmployerContractItemCreateRequest =
-  components["schemas"]["EmployerContractItemCreate"];
+  DeepScale<components["schemas"]["EmployerContractItemCreate"]>;
 export type EmployerContractItemResponse =
-  components["schemas"]["EmployerContractItemResponse"];
+  DeepScale<components["schemas"]["EmployerContractItemResponse"]>;
 
 /**
  * F-BLG T2a · İşveren sözleşmesine elle poz ekleme
@@ -120,7 +121,7 @@ export function useCreateEmployerContractItem(
 }
 
 export type EmployerContractItemUpdateRequest =
-  components["schemas"]["EmployerContractItemUpdate"];
+  DeepScale<components["schemas"]["EmployerContractItemUpdate"]>;
 
 export interface EmployerContractItemUpdateVars {
   itemId: string;

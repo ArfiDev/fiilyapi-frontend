@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-PT T1 · Puantaj — personel liste sorgusu. `useSiteDiary.ts` /
 // `useEmployers.ts` deseniyle AYNI: tipler `pnpm gen:api` ciktisindan takma ad
 // olarak alinir, elle arayuz yazmak yasak.
-export type PersonnelListResponse = components["schemas"]["PersonnelListResponse"];
-export type PersonnelListItem = components["schemas"]["PersonnelResponse"];
+export type PersonnelListResponse = DeepScale<components["schemas"]["PersonnelListResponse"]>;
+export type PersonnelListItem = DeepScale<components["schemas"]["PersonnelResponse"]>;
 export type WorkerSource = components["schemas"]["WorkerSource"];
 
 export const PERSONNEL_QUERY_KEY = "personnel";

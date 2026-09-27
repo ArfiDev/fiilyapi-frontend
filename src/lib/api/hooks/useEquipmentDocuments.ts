@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-BLG T2b · Ekipman belgesi formunun İKİ okuma kaynağı.
 //
@@ -9,11 +10,11 @@ import type { components } from "@/lib/api/schema";
 // takma ad olarak alınır, elle arayüz yazmak yasak.
 
 export type EquipmentDocumentTypeListResponse =
-  components["schemas"]["EquipmentDocumentTypeListResponse"];
+  DeepScale<components["schemas"]["EquipmentDocumentTypeListResponse"]>;
 export type EquipmentDocumentTypeResponse =
-  components["schemas"]["EquipmentDocumentTypeResponse"];
+  DeepScale<components["schemas"]["EquipmentDocumentTypeResponse"]>;
 export type EquipmentDocumentListResponse =
-  components["schemas"]["EquipmentDocumentListResponse"];
+  DeepScale<components["schemas"]["EquipmentDocumentListResponse"]>;
 
 export const EQUIPMENT_DOCUMENT_TYPES_QUERY_KEY = "equipment-document-types";
 export const EQUIPMENT_DOCUMENTS_QUERY_KEY = "equipment-documents";

@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Satınalma — tedarikçi kart ızgarası (TED 41-122) ve teklif
 // diyaloğunun tedarikçi seçicisi aynı uçtan beslenir.
-export type SupplierListResponse = components["schemas"]["SupplierListResponse"];
-export type SupplierCard = components["schemas"]["SupplierCard"];
-export type SupplierResponse = components["schemas"]["SupplierResponse"];
+export type SupplierListResponse = DeepScale<components["schemas"]["SupplierListResponse"]>;
+export type SupplierCard = DeepScale<components["schemas"]["SupplierCard"]>;
+export type SupplierResponse = DeepScale<components["schemas"]["SupplierResponse"]>;
 export type PaymentTerms = components["schemas"]["PaymentTerms"];
 
 export const SUPPLIERS_QUERY_KEY = "suppliers";

@@ -2,13 +2,14 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MT2 T2 · E11:87-147 gelir tablosu. Tipler `pnpm gen:api` çıktısından
 // TAKMA AD olarak alınır — elle arayüz yazmak yasak (`useBalanceSheet.ts`
 // kanonu; elle yazılan bir arayüz uç değiştiğinde SESSİZCE bayatlar).
-export type IncomeStatementResponse = components["schemas"]["IncomeStatementResponse"];
-export type IncomeStatementSection = components["schemas"]["IncomeStatementSection"];
-export type IncomeStatementLine = components["schemas"]["IncomeStatementLine"];
+export type IncomeStatementResponse = DeepScale<components["schemas"]["IncomeStatementResponse"]>;
+export type IncomeStatementSection = DeepScale<components["schemas"]["IncomeStatementSection"]>;
+export type IncomeStatementLine = DeepScale<components["schemas"]["IncomeStatementLine"]>;
 
 export const INCOME_STATEMENT_QUERY_KEY = "income-statement";
 

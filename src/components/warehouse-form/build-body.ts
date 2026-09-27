@@ -9,8 +9,9 @@
  */
 
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type WarehouseCreate = components["schemas"]["WarehouseCreate"];
+export type WarehouseCreate = DeepScale<components["schemas"]["WarehouseCreate"]>;
 
 export function buildWarehouseBody(name: string, siteId: string): WarehouseCreate {
   const trimmedSiteId = siteId.trim();

@@ -1,4 +1,5 @@
 import { divideDecimalStrings, multiplyDecimalStrings, toDecimalString } from "@/lib/decimal";
+import type { Percent } from "@/lib/api/scale";
 
 const LOCALE = "tr-TR";
 
@@ -109,7 +110,7 @@ export function formatCurrencyTight(value: Maskeli): string {
 }
 
 /** Ilerleme yuzdesi: "%42,5" · "%75" */
-export function formatPercent(value: Maskeli): string {
+export function formatPercent(value: Percent | null | undefined): string {
   if (maskeli(value)) return EMPTY_CELL;
   return `%${short(toNumber(value))}`;
 }

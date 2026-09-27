@@ -69,7 +69,10 @@ function ProgressCell({ progress }: { progress: SiteDetail["progress_pct"] }) {
     <div className="site-hero__kpi" data-testid="site-hero-kpi-progress">
       <div className="site-hero__kpi-label">Fiziksel İlerleme</div>
       {isReal ? (
-        <div className="site-hero__kpi-value">{formatPercent(progress.value as string)}</div>
+        // FAZ 2d: `.value` artık DeepScale'in `innerScale: "percent"`
+        // eşlemesiyle `Percent` marka'lı geliyor (bkz. `scale-table.ts`
+        // SiteDetailResponse.progress_pct) — kaçış YOK.
+        <div className="site-hero__kpi-value">{formatPercent(progress.value ?? "0")}</div>
       ) : (
         <PlaceholderValue pendingModule={progress.pending_module} />
       )}

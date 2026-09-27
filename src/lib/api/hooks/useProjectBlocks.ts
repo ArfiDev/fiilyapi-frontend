@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-UNIT1 T2 · UE 65 "Blok" seçicisinin kaynağı `GET /projects/{project_id}/blocks`.
 // Uç açıklaması bu çağıranı ADIYLA sayar: *"Blok seciciler (unite formu, toplu
@@ -19,8 +20,8 @@ import type { components } from "@/lib/api/schema";
 // (openapi'de yalnız `project_id` path parametresi var), ama `BlockResponse`
 // her satırda `site_id` + `site_name` taşır — UE 64'ün daralttığı liste bu
 // alandan süzülür, ikinci bir istek AÇILMAZ.
-export type BlockListResponse = components["schemas"]["BlockListResponse"];
-export type BlockResponse = components["schemas"]["BlockResponse"];
+export type BlockListResponse = DeepScale<components["schemas"]["BlockListResponse"]>;
+export type BlockResponse = DeepScale<components["schemas"]["BlockResponse"]>;
 
 export const PROJECT_BLOCKS_QUERY_KEY = "project-blocks";
 

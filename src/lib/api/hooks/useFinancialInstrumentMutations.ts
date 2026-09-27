@@ -8,8 +8,9 @@ import {
   FINANCIAL_INSTRUMENT_SUMMARY_QUERY_KEY,
   type FinancialInstrumentResponse,
 } from "./useFinancialInstruments";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type FinancialInstrumentCreate = components["schemas"]["FinancialInstrumentCreate"];
+export type FinancialInstrumentCreate = DeepScale<components["schemas"]["FinancialInstrumentCreate"]>;
 
 /**
  * F-CEK · `POST /financial-instruments` — E10:65 **+ Çek Ekle**.

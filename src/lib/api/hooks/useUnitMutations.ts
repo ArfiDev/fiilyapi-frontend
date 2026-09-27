@@ -6,6 +6,7 @@ import type { components } from "@/lib/api/schema";
 import { PROJECT_BLOCKS_QUERY_KEY, type BlockResponse } from "./useProjectBlocks";
 import { PROJECT_UNITS_QUERY_KEY, type UnitResponse } from "./useProjectUnits";
 import { SALES_SUMMARY_QUERY_KEY } from "./useSalesSummary";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-UNIT1 T2 · `units` modülünün YAZMA yüzeyi — bu dilimde İKİ mutasyon vardır:
@@ -30,8 +31,8 @@ import { SALES_SUMMARY_QUERY_KEY } from "./useSalesSummary";
  * (`UnitCreate`) şemada varsayılanlıdır ama `openapi-typescript` çıktısında
  * ZORUNLU görünür; gövdeyi kuran `build-body.ts` üçünü de AÇIKÇA verir.
  */
-export type BlockCreate = components["schemas"]["BlockCreate"];
-export type UnitCreate = components["schemas"]["UnitCreate"];
+export type BlockCreate = DeepScale<components["schemas"]["BlockCreate"]>;
+export type UnitCreate = DeepScale<components["schemas"]["UnitCreate"]>;
 
 /**
  * Blok ya da ünite yazıldığında SUNUCU TÜREVİ taşıyan her şey bayatlar: blok

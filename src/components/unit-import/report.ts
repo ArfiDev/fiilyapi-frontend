@@ -26,12 +26,13 @@ import {
   IMPORT_NOTHING_IMPORTABLE_MESSAGE,
   IMPORT_SUMMARY_INCONSISTENT_MESSAGE,
 } from "./constants";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type UnitImportRowReport = components["schemas"]["UnitImportRowReport"];
+export type UnitImportRowReport = DeepScale<components["schemas"]["UnitImportRowReport"]>;
 export type UnitImportRowStatus = components["schemas"]["UnitImportRowStatus"];
-export type UnitImportSummary = components["schemas"]["UnitImportSummary"];
-export type UnitImportValidation = components["schemas"]["UnitImportValidation"];
-export type UnitImportResult = components["schemas"]["UnitImportResult"];
+export type UnitImportSummary = DeepScale<components["schemas"]["UnitImportSummary"]>;
+export type UnitImportValidation = DeepScale<components["schemas"]["UnitImportValidation"]>;
+export type UnitImportResult = DeepScale<components["schemas"]["UnitImportResult"]>;
 
 /** EI 110-112 — üç düğme. "Tümü" süzgeçsiz hâldir. */
 export type ImportRowFilter = "all" | "error" | "warning";

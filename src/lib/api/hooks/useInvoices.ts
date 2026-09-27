@@ -2,14 +2,15 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-FAT2 T2 · Fatura Yönetimi (FY) liste + KPI okumaları.
 // Tipler `pnpm gen:api` çıktısından takma ad olarak alınır — elle arayüz
 // yazmak yasak (`useEquipment.ts` / `useBankAccounts.ts` deseni).
-export type InvoiceListResponse = components["schemas"]["InvoiceListResponse"];
-export type InvoiceResponse = components["schemas"]["InvoiceResponse"];
-export type InvoiceSummaryResponse = components["schemas"]["InvoiceSummaryResponse"];
-export type InvoiceSummaryMetric = components["schemas"]["InvoiceSummaryMetric"];
+export type InvoiceListResponse = DeepScale<components["schemas"]["InvoiceListResponse"]>;
+export type InvoiceResponse = DeepScale<components["schemas"]["InvoiceResponse"]>;
+export type InvoiceSummaryResponse = DeepScale<components["schemas"]["InvoiceSummaryResponse"]>;
+export type InvoiceSummaryMetric = DeepScale<components["schemas"]["InvoiceSummaryMetric"]>;
 export type InvoiceDirection = components["schemas"]["InvoiceDirection"];
 export type InvoiceStatus = components["schemas"]["InvoiceStatus"];
 export type InvoiceDocumentType = components["schemas"]["InvoiceDocumentType"];

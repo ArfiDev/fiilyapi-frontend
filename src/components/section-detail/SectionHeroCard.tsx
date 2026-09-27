@@ -70,7 +70,9 @@ function ProgressCell({ progress }: { progress: SectionDetailResponse["progress_
     <div className="section-hero__kpi" data-testid="section-hero-kpi-progress">
       <div className="section-hero__kpi-label">Fiziksel İlerleme</div>
       {isReal ? (
-        <div className="section-hero__kpi-value">{formatPercent(progress.value as string)}</div>
+        // FAZ 2d: `.value` artık Percent marka'lı (bkz. SiteHeroBar
+        // ProgressCell yorumu) — kaçış YOK.
+        <div className="section-hero__kpi-value">{formatPercent(progress.value ?? "0")}</div>
       ) : (
         <PlaceholderValue pendingModule={progress.pending_module} />
       )}

@@ -9,6 +9,7 @@ import {
   type PayrollLineResponse,
 } from "./usePayroll";
 import { PAYROLL_SGK_SUMMARY_QUERY_KEY } from "./usePayrollSgk";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-BOR T2 · `/bordro` ekranının ÜÇ yazma ucu (BY:56 · BY:142-147 · BY:303).
@@ -23,14 +24,14 @@ import { PAYROLL_SGK_SUMMARY_QUERY_KEY } from "./usePayrollSgk";
  * (kayıt no 158 — `useSubmitPayrollSgk` zaten üçünü BİRDEN tazeliyordu, bu
  * asimetriyi kapatır).
  */
-export type PayrollLineUpdate = components["schemas"]["PayrollLineUpdate"];
+export type PayrollLineUpdate = DeepScale<components["schemas"]["PayrollLineUpdate"]>;
 export type PayrollPeriodApproveResult =
-  components["schemas"]["PayrollPeriodApproveResult"];
-export type PayrollPeriodPayResult = components["schemas"]["PayrollPeriodPayResult"];
-export type PayrollPeriodCreate = components["schemas"]["PayrollPeriodCreate"];
+  DeepScale<components["schemas"]["PayrollPeriodApproveResult"]>;
+export type PayrollPeriodPayResult = DeepScale<components["schemas"]["PayrollPeriodPayResult"]>;
+export type PayrollPeriodCreate = DeepScale<components["schemas"]["PayrollPeriodCreate"]>;
 export type PayrollPeriodDetailResponse =
-  components["schemas"]["PayrollPeriodDetailResponse"];
-export type PayrollComputeResult = components["schemas"]["PayrollComputeResult"];
+  DeepScale<components["schemas"]["PayrollPeriodDetailResponse"]>;
+export type PayrollComputeResult = DeepScale<components["schemas"]["PayrollComputeResult"]>;
 
 function usePayrollInvalidator(): () => void {
   const queryClient = useQueryClient();

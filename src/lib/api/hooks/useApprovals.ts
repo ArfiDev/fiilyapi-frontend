@@ -11,6 +11,7 @@ import {
   SUBCONTRACTOR_PROGRESS_PAYMENTS_QUERY_KEY,
   SUBCONTRACTOR_PROGRESS_PAYMENT_QUERY_KEY,
 } from "./useSubcontractorProgressPayments";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-OK T5 · Onay Kutusu (`/onay-kutusu`) veri katmanı — OK-1A'nın açtığı
 // `GET /approvals` + `GET /approvals/settings` OKUMA uçları ve üç evrak
@@ -18,12 +19,12 @@ import {
 //
 // Tipler `pnpm gen:api` çıktısından takma ad olarak alınır; elle arayüz yazmak
 // yasaktır (`useFinancialInstruments.ts` deseni).
-export type ApprovalInboxResponse = components["schemas"]["ApprovalInboxResponse"];
-export type ApprovalInboxItem = components["schemas"]["ApprovalInboxItem"];
-export type ApprovalStepRead = components["schemas"]["ApprovalStepRead"];
+export type ApprovalInboxResponse = DeepScale<components["schemas"]["ApprovalInboxResponse"]>;
+export type ApprovalInboxItem = DeepScale<components["schemas"]["ApprovalInboxItem"]>;
+export type ApprovalStepRead = DeepScale<components["schemas"]["ApprovalStepRead"]>;
 export type ApprovalRole = components["schemas"]["ApprovalRole"];
 export type ApprovalDocumentType = components["schemas"]["ApprovalDocumentType"];
-export type ApprovalSettingsRead = components["schemas"]["ApprovalSettingsRead"];
+export type ApprovalSettingsRead = DeepScale<components["schemas"]["ApprovalSettingsRead"]>;
 
 export const APPROVALS_QUERY_KEY = "approvals";
 export const APPROVAL_SETTINGS_QUERY_KEY = "approval-settings";
@@ -217,9 +218,9 @@ export function useRejectApprovalItem(): UseMutationResult<void, Error, Approval
  * F-OKROL · Onay Rolleri ve Eşik YÖNETİM uçları (`Ayarlar - Onay Rolleri`)  *
  * ------------------------------------------------------------------------ */
 
-export type ApprovalRoleAssignmentRead = components["schemas"]["ApprovalRoleAssignmentRead"];
+export type ApprovalRoleAssignmentRead = DeepScale<components["schemas"]["ApprovalRoleAssignmentRead"]>;
 export type ApprovalRoleAssignmentListResponse =
-  components["schemas"]["ApprovalRoleAssignmentListResponse"];
+  DeepScale<components["schemas"]["ApprovalRoleAssignmentListResponse"]>;
 
 export const APPROVAL_ROLE_ASSIGNMENTS_QUERY_KEY = "approval-role-assignments";
 

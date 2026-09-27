@@ -2,9 +2,10 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MK T2 · Makine & Ekipman — M1'in KPI şeridinin TEK kaynağı.
-export type EquipmentSummaryResponse = components["schemas"]["EquipmentSummaryResponse"];
+export type EquipmentSummaryResponse = DeepScale<components["schemas"]["EquipmentSummaryResponse"]>;
 
 export const EQUIPMENT_SUMMARY_QUERY_KEY = "equipment-summary";
 

@@ -1,4 +1,5 @@
 import { formatAmount, formatCurrencyPrecise, formatPercent } from "@/lib/format";
+import type { Percent } from "@/lib/api/scale";
 
 // F-TH T3 · İşveren `PaymentCalculationCard`in tfoot/kart mantığı BURAYA
 // çıkarıldı (brief §Belirsizlik çözümü 2 — "ikinci bir toplam mantığı
@@ -18,9 +19,9 @@ export interface PaymentCalculationAmounts {
 }
 
 export interface PaymentCalculationPercents {
-  vat_pct: string;
-  advance_pct: string;
-  retainage_pct: string;
+  vat_pct: Percent;
+  advance_pct: Percent;
+  retainage_pct: Percent;
 }
 
 export interface PaymentCalculationLabels {

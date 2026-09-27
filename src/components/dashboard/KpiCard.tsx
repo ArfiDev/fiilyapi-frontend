@@ -3,11 +3,12 @@ import { formatCompactCurrency } from "@/lib/format";
 
 import { CardEmptyState } from "./CardEmptyState";
 import "./dashboard.css";
+import type { DeepScale } from "@/lib/api/scale";
 
 // NOT: DASH-1 devri (backend 859ebfb) ile panelin kendi MetricPlaceholder kopyasi
 // silinip kanonik projects zarfi re-export edildi; iki nitelenmis sema tek
 // "MetricPlaceholder" adinda birlesti.
-type MetricPlaceholder = components["schemas"]["MetricPlaceholder"];
+type MetricPlaceholder = DeepScale<components["schemas"]["MetricPlaceholder"]>;
 
 export function KpiCard({
   label,

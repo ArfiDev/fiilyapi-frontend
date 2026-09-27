@@ -8,14 +8,15 @@ import {
   SITE_DIARY_SUMMARY_QUERY_KEY,
   type SiteDiaryEntryDetail,
 } from "./useSiteDiary";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SD T1 · Şantiye Günlüğü — yazma/durum uclari. Tipler `pnpm gen:api`
 // ciktisindan takma ad olarak alinir; elle arayuz yazmak yasak.
-export type SiteDiaryEntryCreate = components["schemas"]["SiteDiaryEntryCreate"];
-export type SiteDiaryEntryUpdate = components["schemas"]["SiteDiaryEntryUpdate"];
-export type SiteDiaryLinesSave = components["schemas"]["SiteDiaryLinesSave"];
-export type SiteDiaryLineInput = components["schemas"]["SiteDiaryLineInput"];
-export type SiteDiaryWorkerCountInput = components["schemas"]["SiteDiaryWorkerCountInput"];
+export type SiteDiaryEntryCreate = DeepScale<components["schemas"]["SiteDiaryEntryCreate"]>;
+export type SiteDiaryEntryUpdate = DeepScale<components["schemas"]["SiteDiaryEntryUpdate"]>;
+export type SiteDiaryLinesSave = DeepScale<components["schemas"]["SiteDiaryLinesSave"]>;
+export type SiteDiaryLineInput = DeepScale<components["schemas"]["SiteDiaryLineInput"]>;
+export type SiteDiaryWorkerCountInput = DeepScale<components["schemas"]["SiteDiaryWorkerCountInput"]>;
 
 /**
  * Tum yazma/durum hook'lari sonrasi ortak gecersiz kilma

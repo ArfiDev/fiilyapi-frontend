@@ -2,13 +2,14 @@ import { guardedFetch } from "@/lib/api/app-build";
 import { BackendError } from "@/lib/api/unwrap";
 import { downloadAttachment } from "@/lib/api/download";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-BC T1 · Belge Arşivi — ŞEMADA olan ama `openapi-fetch` ile geçilemeyen iki
 // uç: multipart yükleme (`POST /documents`) ve ikili indirme
 // (`GET /documents/{id}/download`). `boq-client.ts`/`timesheet-client.ts`
 // kanonu BİREBİR izlenir; yeni desen icat EDİLMEZ.
 
-export type DocumentRead = components["schemas"]["DocumentRead"];
+export type DocumentRead = DeepScale<components["schemas"]["DocumentRead"]>;
 
 const DOCUMENTS_PATH = "/api/backend/documents";
 

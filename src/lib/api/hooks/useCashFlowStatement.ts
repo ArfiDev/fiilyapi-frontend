@@ -2,14 +2,15 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MT T3 · NA:65-140 nakit akış tablosu + aylık nakit grafiği. Tipler
 // `pnpm gen:api` çıktısından TAKMA AD olarak alınır — elle arayüz yazmak
 // yasak (`useBalanceSheet.ts` kanonu).
-export type CashFlowStatementResponse = components["schemas"]["CashFlowStatementResponse"];
-export type CashFlowStatementSection = components["schemas"]["CashFlowStatementSection"];
-export type CashFlowStatementLine = components["schemas"]["CashFlowStatementLine"];
-export type MonthlyCashPoint = components["schemas"]["MonthlyCashPoint"];
+export type CashFlowStatementResponse = DeepScale<components["schemas"]["CashFlowStatementResponse"]>;
+export type CashFlowStatementSection = DeepScale<components["schemas"]["CashFlowStatementSection"]>;
+export type CashFlowStatementLine = DeepScale<components["schemas"]["CashFlowStatementLine"]>;
+export type MonthlyCashPoint = DeepScale<components["schemas"]["MonthlyCashPoint"]>;
 
 export const CASH_FLOW_STATEMENT_QUERY_KEY = "cash-flow-statement";
 

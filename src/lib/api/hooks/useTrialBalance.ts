@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MU2 T2 · MZ:59-173 mizan tablosu. Tipler `pnpm gen:api` çıktısından TAKMA
 // AD olarak alınır — elle arayüz yazmak yasak (`useJournalSummary.ts` kanonu).
-export type TrialBalanceResponse = components["schemas"]["TrialBalanceResponse"];
-export type TrialBalanceRow = components["schemas"]["TrialBalanceRow"];
-export type TrialBalanceTotals = components["schemas"]["TrialBalanceTotals"];
+export type TrialBalanceResponse = DeepScale<components["schemas"]["TrialBalanceResponse"]>;
+export type TrialBalanceRow = DeepScale<components["schemas"]["TrialBalanceRow"]>;
+export type TrialBalanceTotals = DeepScale<components["schemas"]["TrialBalanceTotals"]>;
 
 export const TRIAL_BALANCE_QUERY_KEY = "trial-balance";
 

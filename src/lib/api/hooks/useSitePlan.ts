@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-PL T1 · Şantiye Planlama — haftalik izgaranin OKUMA sorgusu.
 // `useSiteDiary.ts` deseniyle AYNI: tipler `pnpm gen:api` ciktisindan takma ad
@@ -9,13 +10,13 @@ import type { components } from "@/lib/api/schema";
 //
 // NOT: GK'nin gomulu planlama blogu (`plan/day-summary`) AYRI hook'tadir
 // (`useSitePlanDaySummary.ts`) — o kayan pencere, bu haftalik izgaradir.
-export type SitePlanWeek = components["schemas"]["SitePlanWeek"];
-export type SitePlanDay = components["schemas"]["SitePlanDay"];
-export type SitePlanGroup = components["schemas"]["SitePlanGroup"];
-export type SitePlanRowRead = components["schemas"]["SitePlanRowRead"];
-export type SitePlanCellRead = components["schemas"]["SitePlanCellRead"];
-export type SitePlanGoalRead = components["schemas"]["SitePlanGoalRead"];
-export type SitePlanSprintRead = components["schemas"]["SitePlanSprintRead"];
+export type SitePlanWeek = DeepScale<components["schemas"]["SitePlanWeek"]>;
+export type SitePlanDay = DeepScale<components["schemas"]["SitePlanDay"]>;
+export type SitePlanGroup = DeepScale<components["schemas"]["SitePlanGroup"]>;
+export type SitePlanRowRead = DeepScale<components["schemas"]["SitePlanRowRead"]>;
+export type SitePlanCellRead = DeepScale<components["schemas"]["SitePlanCellRead"]>;
+export type SitePlanGoalRead = DeepScale<components["schemas"]["SitePlanGoalRead"]>;
+export type SitePlanSprintRead = DeepScale<components["schemas"]["SitePlanSprintRead"]>;
 export type PlanResourceKind = components["schemas"]["PlanResourceKind"];
 export type PlanCellTag = components["schemas"]["PlanCellTag"];
 export type PlanGoalStatus = components["schemas"]["PlanGoalStatus"];

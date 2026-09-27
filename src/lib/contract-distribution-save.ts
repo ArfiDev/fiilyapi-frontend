@@ -1,7 +1,8 @@
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type ContractDistributionSave = components["schemas"]["ContractDistributionSave"];
-export type ContractAllocationInput = components["schemas"]["ContractAllocationInput"];
+export type ContractDistributionSave = DeepScale<components["schemas"]["ContractDistributionSave"]>;
+export type ContractAllocationInput = DeepScale<components["schemas"]["ContractAllocationInput"]>;
 
 /**
  * F-P5 · POZ dağılımı kaydetme gövdesi — **BİRLEŞTİRME (merge) semantiği**.

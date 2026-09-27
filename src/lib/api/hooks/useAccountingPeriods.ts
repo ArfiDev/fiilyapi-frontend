@@ -2,11 +2,12 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-DKAP T2 · DK:57-92 dönem tablosu. Tipler `pnpm gen:api` çıktısından TAKMA
 // AD olarak alınır — elle arayüz yazmak yasak (`useJournalSummary.ts` kanonu).
-export type AccountingPeriodListItem = components["schemas"]["AccountingPeriodListItem"];
-export type AccountingPeriodResponse = components["schemas"]["AccountingPeriodResponse"];
+export type AccountingPeriodListItem = DeepScale<components["schemas"]["AccountingPeriodListItem"]>;
+export type AccountingPeriodResponse = DeepScale<components["schemas"]["AccountingPeriodResponse"]>;
 export type AccountingPeriodStatus = components["schemas"]["AccountingPeriodStatus"];
 
 export const ACCOUNTING_PERIODS_QUERY_KEY = "accounting-periods";

@@ -2,8 +2,9 @@ import type { components } from "@/lib/api/schema";
 
 import { ProjectCard } from "./ProjectCard";
 import "./dashboard.css";
+import type { DeepScale, WithPlainProgressPct } from "@/lib/api/scale";
 
-type Project = components["schemas"]["DashboardProjectCard"];
+type Project = WithPlainProgressPct<DeepScale<components["schemas"]["DashboardProjectCard"]>>;
 
 export function ProjectGrid({ projects }: { projects: Project[] }) {
   if (projects.length === 0) {

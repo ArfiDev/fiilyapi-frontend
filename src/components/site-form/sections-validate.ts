@@ -1,6 +1,7 @@
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type SectionInput = components["schemas"]["SiteSectionInput"];
+export type SectionInput = DeepScale<components["schemas"]["SiteSectionInput"]>;
 
 /**
  * Bölüm tablosunun İSTEMCİ satır modeli (spec §6.1).

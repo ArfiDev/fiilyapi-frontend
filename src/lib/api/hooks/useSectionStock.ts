@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // STOK-BOLUM · Bölüm Detay › "Malzeme" sekmesi — `GET /sections/{section_id}/stock`.
 //
@@ -21,9 +22,9 @@ import type { components } from "@/lib/api/schema";
 // 🔴 SARF TOPLAMI `issued_quantity`DİR. İkisi tek toplama indirgenirse
 // `+10 alım` ile `−4 sarf` birbirini götürür ve ekran 4 birimin harcandığını
 // HİÇ söyleyemez. Ekran ikisini AYRI basar.
-export type SectionStockResponse = components["schemas"]["SectionStockResponse"];
-export type SectionStockRow = components["schemas"]["SectionStockRow"];
-export type SectionStockKpis = components["schemas"]["SectionStockKpis"];
+export type SectionStockResponse = DeepScale<components["schemas"]["SectionStockResponse"]>;
+export type SectionStockRow = DeepScale<components["schemas"]["SectionStockRow"]>;
+export type SectionStockKpis = DeepScale<components["schemas"]["SectionStockKpis"]>;
 
 export const SECTION_STOCK_QUERY_KEY = "section-stock";
 

@@ -5,6 +5,7 @@ import { cx } from "@/lib/cx";
 import type { ProjectListItem } from "@/lib/api/hooks/useProjects";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleHint, pendingModuleLabel } from "@/lib/pending-modules";
+import type { MetricPlaceholder } from "@/lib/api/scale";
 
 import { ShareBar } from "./ShareBar";
 import "./projects.css";
@@ -16,6 +17,12 @@ type Project = ProjectListItem;
 // duz `project.spent`/`project.sales`/`project.profit` varsaymisti — bunlar yerine
 // `project.contracting.spent`, `project.investment.sold_amount` vb. kullanildi).
 type Metric = NonNullable<Project["contracting"]>["spent"];
+// FAZ 2d (TYPE-F1 madde 1/3) — `physical_progress` (ContractingCard) artık
+// DeepScale'in `innerScale: "percent"` eşlemesiyle `.value: Percent | null`
+// taşıyor; `financial_progress`/`construction_progress`/`sales_ratio`/`margin`
+// AYNI şekle sahip (hepsi ham `components["schemas"]["MetricPlaceholder"]`den
+// türer, `Omit`+marka birebir aynı yapıyı üretir) — TEK takma ad yeterli.
+type PercentMetric = NonNullable<Project["contracting"]>["physical_progress"];
 
 const TYPE_LABELS: Record<Project["project_type"], string> = {
   taahhut: "TAAHHÜT",
@@ -52,7 +59,7 @@ const PROGRESS_LABELS: Record<Project["project_type"], string> = {
 // olarak `0`, tohum satirlarinda ise hicbir ekranin duzeltemeyecegi donmus bir
 // sayi. Yani alan bir FOSIL; kullanicinin canlida "Fiziksel İlerleme %0"
 // gormesinin sebebi tam olarak buydu. Cubuk tip basina AYRI zarflardan okur.
-function progressMetric(project: Project): Metric | undefined {
+function progressMetric(project: Project): PercentMetric | undefined {
   if (project.project_type === "taahhut") return project.contracting?.physical_progress;
   if (project.project_type === "kat_karsiligi") return project.land_share?.construction_progress;
   return project.investment?.sales_ratio;
@@ -63,7 +70,10 @@ function progressMetric(project: Project): Metric | undefined {
 // `pendingModuleLabel(null)` bu hâlde `FALLBACK_LABEL` ("İlgili modülle birlikte
 // gelir") doner ki bu bir YALAN olur. `pendingModuleLabel`i degistirmek yerine
 // CAGRI YERINDE dallaniyoruz: anahtar yoksa gerekce HIC verilmez (undefined).
-function pendingReason(metric: Metric | undefined | null): string | undefined {
+// Jenerik: hem para (`Metric`) hem yüzde (`PercentMetric`) zarfları için AYNI
+// fonksiyon yeterli — yalnız `pending_module` okunuyor, `.value`in tipi
+// önemsiz (FAZ 2d, `MetricPlaceholder` varsayılan `V` ile).
+function pendingReason(metric: MetricPlaceholder | undefined | null): string | undefined {
   return metric?.pending_module ? pendingModuleLabel(metric.pending_module) : undefined;
 }
 
@@ -113,7 +123,7 @@ function ProgressRow({
   variant,
 }: {
   label: string;
-  metric: Metric | undefined | null;
+  metric: PercentMetric | undefined | null;
   variant: ProgressVariant;
 }) {
   const value = realValue(metric);
@@ -172,7 +182,12 @@ function KpiCell({ label, children }: { label: string; children: ReactNode }) {
 // Zarfin TEK okuma noktasi: dallanma alan TIPINE degil `available` BAYRAGINA
 // bakar (P10 sozlesmesi). Bayrak dolu ama deger yoksa yine bos durum sayilir —
 // "—" basmak, bos hucre birakmaktan durusttur.
-function realValue(metric: Metric | undefined | null): string | null {
+// Jenerik (FAZ 2d): para (`Metric`, `.value: string|number|null`) ve yüzde
+// (`PercentMetric`, `.value: Percent|null`) zarfları AYNI fonksiyonla okunur;
+// dönüş tipi çağıranın verdiği zarfın `V`sini KORUR (kaçış YOK).
+function realValue<V extends string | number>(
+  metric: MetricPlaceholder<V> | undefined | null,
+): V | null {
   if (!metric?.available) return null;
   return metric.value ?? null;
 }
@@ -250,7 +265,7 @@ function LandCostValue({ value }: { value: string | null | undefined }) {
 // sayaclarina baglidir ve bu dilimin kapsami disindadir.
 // `MetricValue` ile ayni dallanma: `available` BAYRAGI + deger; bos zarfta cip
 // SILINMEZ, "—" + gerekce basar.
-function MarginChip({ metric }: { metric: Metric | undefined }) {
+function MarginChip({ metric }: { metric: PercentMetric | undefined }) {
   const value = realValue(metric);
   return (
     <div className="prj-card__footer">

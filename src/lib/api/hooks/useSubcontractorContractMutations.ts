@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/r
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 import {
   SUBCONTRACTOR_CONTRACT_QUERY_KEY,
@@ -20,17 +21,17 @@ import {
 // liste öğesi `contract_no`/`work_category`/`status`/`site_id` taşır, bunların
 // hepsi bu uçlarla değişebilir.
 export type SubcontractorContractCreateRequest =
-  components["schemas"]["SubcontractorContractCreate"];
+  DeepScale<components["schemas"]["SubcontractorContractCreate"]>;
 export type SubcontractorContractUpdateRequest =
-  components["schemas"]["SubcontractorContractUpdate"];
+  DeepScale<components["schemas"]["SubcontractorContractUpdate"]>;
 export type SubcontractorContractItemCreateRequest =
-  components["schemas"]["SubcontractorContractItemCreate"];
+  DeepScale<components["schemas"]["SubcontractorContractItemCreate"]>;
 export type SubcontractorContractItemUpdateRequest =
-  components["schemas"]["SubcontractorContractItemUpdate"];
+  DeepScale<components["schemas"]["SubcontractorContractItemUpdate"]>;
 export type SubcontractorContractItemResponse =
-  components["schemas"]["SubcontractorContractItemResponse"];
+  DeepScale<components["schemas"]["SubcontractorContractItemResponse"]>;
 export type SubcontractorContractItemsLoadResponse =
-  components["schemas"]["SubcontractorContractItemsLoadResponse"];
+  DeepScale<components["schemas"]["SubcontractorContractItemsLoadResponse"]>;
 
 /** Detay + liste anahtarlarını birlikte tazeler (kural tek yerde). */
 function useContractInvalidator(): (contractId: string) => void {

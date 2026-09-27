@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SD T1 · "Günlükten Doldur" (spec §4) — hakediş formlarinin ONERI uclari.
 // SD Seçenek B'nin UI ayagi: uc yalnizca ONERIR, kalicilastirmaz; kullanici
 // duzeltebilir ve kayit normal `PUT …/lines` ile yapilir.
-export type EmployerDiarySuggestion = components["schemas"]["EmployerDiarySuggestion"];
-export type SubcontractorDiarySuggestion = components["schemas"]["SubcontractorDiarySuggestion"];
+export type EmployerDiarySuggestion = DeepScale<components["schemas"]["EmployerDiarySuggestion"]>;
+export type SubcontractorDiarySuggestion = DeepScale<components["schemas"]["SubcontractorDiarySuggestion"]>;
 
 export const EMPLOYER_DIARY_SUGGESTION_QUERY_KEY = "employer-diary-suggestion";
 export const SUBCONTRACTOR_DIARY_SUGGESTION_QUERY_KEY = "subcontractor-diary-suggestion";

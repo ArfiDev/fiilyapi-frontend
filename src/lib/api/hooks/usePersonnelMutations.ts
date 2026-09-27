@@ -4,9 +4,10 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import { PERSONNEL_QUERY_KEY, type PersonnelListItem } from "./usePersonnel";
 import { PERSONNEL_DETAIL_QUERY_KEY } from "./usePersonnelDetail";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type PersonnelCreateRequest = components["schemas"]["PersonnelCreate"];
-export type PersonnelUpdateRequest = components["schemas"]["PersonnelUpdate"];
+export type PersonnelCreateRequest = DeepScale<components["schemas"]["PersonnelCreate"]>;
+export type PersonnelUpdateRequest = DeepScale<components["schemas"]["PersonnelUpdate"]>;
 
 /**
  * Personel olusturma (`POST /personnel`) — `useCreateEmployer` deseniyle AYNI:

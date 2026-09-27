@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-IZN T3 · `/personel/izinler` (İzin Yönetimi) ekranının İKİ okuma ucu.
@@ -14,11 +15,11 @@ import type { components } from "@/lib/api/schema";
  * (46-50 · 122-170) özet ucundan, onay bekleyen talep tablosu (54-113) ise
  * sayfalanabilir liste ucundan gelir. Özet gövdesinde talep SATIRLARI YOKTUR.
  */
-export type HrLeavesSummaryResponse = components["schemas"]["HrLeavesSummaryResponse"];
-export type LeaveBalanceResponse = components["schemas"]["LeaveBalanceResponse"];
-export type LeaveRequestResponse = components["schemas"]["LeaveRequestResponse"];
-export type LeaveRequestListResponse = components["schemas"]["LeaveRequestListResponse"];
-export type LeaveTypeResponse = components["schemas"]["LeaveTypeResponse"];
+export type HrLeavesSummaryResponse = DeepScale<components["schemas"]["HrLeavesSummaryResponse"]>;
+export type LeaveBalanceResponse = DeepScale<components["schemas"]["LeaveBalanceResponse"]>;
+export type LeaveRequestResponse = DeepScale<components["schemas"]["LeaveRequestResponse"]>;
+export type LeaveRequestListResponse = DeepScale<components["schemas"]["LeaveRequestListResponse"]>;
+export type LeaveTypeResponse = DeepScale<components["schemas"]["LeaveTypeResponse"]>;
 
 export const HR_LEAVES_SUMMARY_QUERY_KEY = "hr-leaves-summary";
 export const LEAVE_REQUESTS_QUERY_KEY = "leave-requests";

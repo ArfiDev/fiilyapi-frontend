@@ -2,16 +2,17 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-FAT2 T2 · Fatura detayının (FGI/FGE) okuma sorguları.
-export type InvoiceDetailResponse = components["schemas"]["InvoiceDetailResponse"];
-export type InvoiceLineResponse = components["schemas"]["InvoiceLineResponse"];
-export type PaymentListResponse = components["schemas"]["PaymentListResponse"];
-export type PaymentResponse = components["schemas"]["PaymentResponse"];
+export type InvoiceDetailResponse = DeepScale<components["schemas"]["InvoiceDetailResponse"]>;
+export type InvoiceLineResponse = DeepScale<components["schemas"]["InvoiceLineResponse"]>;
+export type PaymentListResponse = DeepScale<components["schemas"]["PaymentListResponse"]>;
+export type PaymentResponse = DeepScale<components["schemas"]["PaymentResponse"]>;
 export type PaymentMethodKind = components["schemas"]["PaymentMethodKind"];
 export type RentalInvoiceDetailResponse =
-  components["schemas"]["RentalInvoiceDetailResponse"];
-export type RentalInvoiceLineResponse = components["schemas"]["RentalInvoiceLineResponse"];
+  DeepScale<components["schemas"]["RentalInvoiceDetailResponse"]>;
+export type RentalInvoiceLineResponse = DeepScale<components["schemas"]["RentalInvoiceLineResponse"]>;
 export type VarianceStatus = components["schemas"]["VarianceStatus"];
 
 export const INVOICE_DETAIL_QUERY_KEY = "invoice-detail";

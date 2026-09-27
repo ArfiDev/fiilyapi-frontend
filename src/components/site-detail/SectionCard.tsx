@@ -6,11 +6,12 @@ import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules"
 import { SECTION_STATUS_CLASS_SUFFIX, SECTION_STATUS_LABELS } from "@/lib/section-labels";
 import type { components } from "@/lib/api/schema";
 import { routes, routeKeyOf } from "@/lib/routes";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type SectionResponse = components["schemas"]["SectionResponse"];
+export type SectionResponse = DeepScale<components["schemas"]["SectionResponse"]>;
 type SectionStatus = SectionResponse["status"];
-type CountPlaceholder = components["schemas"]["CountPlaceholder"];
-type MetricPlaceholder = components["schemas"]["MetricPlaceholder"];
+type CountPlaceholder = DeepScale<components["schemas"]["CountPlaceholder"]>;
+type MetricPlaceholder = DeepScale<components["schemas"]["MetricPlaceholder"]>;
 
 // Yer tutucu "gercek deger tasiyor mu?" — `available` TEK BASINA yetmez:
 // available: true + deger null gelirse hucre bos kalirdi (kod inceleme
@@ -261,7 +262,8 @@ function ProgressMetricCell({
             progressClass,
           )}
         >
-          {formatPercent(progress.value ?? 0)}
+          {/* FAZ 2d: `.value` artık Percent marka'lı — kaçış YOK. */}
+          {formatPercent(progress.value ?? "0")}
         </div>
       ) : (
         <PlaceholderValue

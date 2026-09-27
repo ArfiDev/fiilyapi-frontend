@@ -22,6 +22,8 @@ import { useProject } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERIOD_MONTHS, formatPercent, formatQuantity } from "@/lib/format";
+import { toDecimalString } from "@/lib/decimal";
+import { asPercent } from "@/lib/api/scale";
 
 import { DiaryFillFeedback } from "./DiaryFillFeedback";
 import { PaymentCalculationCard } from "./PaymentCalculationCard";
@@ -600,6 +602,8 @@ function parsePeriodYear(raw: string): number | null {
 
 function coefficientPercentLabel(coefficient: string): string {
   const value = Number(coefficient);
-  if (!Number.isFinite(value)) return formatPercent(0);
-  return formatPercent((value - 1) * 100);
+  // KAÇIŞ: yalnız gösterim amaçlı türetilmiş katsayı yüzdesi (yorum yukarıda);
+  // formatPercent sınırında Decimal kanonuyla stringe çevriliyor.
+  if (!Number.isFinite(value)) return formatPercent(asPercent("0"));
+  return formatPercent(asPercent(toDecimalString((value - 1) * 100) ?? "0"));
 }

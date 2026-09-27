@@ -37,9 +37,10 @@ import { normalizeDecimalInput, parseCountInput } from "@/lib/decimal";
 import { resolveEndFloor, parseFloorValue, type FloorRange } from "./floor-range";
 import type { BulkUnitFormValues } from "./form-state";
 import { hasFilledSlot, type BulkSlotValues } from "./slots";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type UnitBulkCreate = components["schemas"]["UnitBulkCreate"];
-export type UnitBulkSlot = components["schemas"]["UnitBulkSlot"];
+export type UnitBulkCreate = DeepScale<components["schemas"]["UnitBulkCreate"]>;
+export type UnitBulkSlot = DeepScale<components["schemas"]["UnitBulkSlot"]>;
 
 /**
  * TU'da kutusu olmayan `prefix` için tek kaynak (şema varsayılanı). Mockup'ın

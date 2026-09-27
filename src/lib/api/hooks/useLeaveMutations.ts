@@ -8,6 +8,7 @@ import {
   LEAVE_REQUESTS_QUERY_KEY,
   type LeaveRequestResponse,
 } from "./useLeaves";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-IZN T4 · İzin YAZMA yüzeyi — ÜÇ mutasyon: talep açma, onay, red.
@@ -21,8 +22,8 @@ import {
  * Yalnız listeyi tazelemek KPI şeridini ve bakiye tablosunu bayat bırakırdı —
  * onaylanan izin `used`/`remaining` sayılarını da oynatır.
  */
-export type LeaveRequestCreate = components["schemas"]["LeaveRequestCreate"];
-export type LeaveRejectRequest = components["schemas"]["LeaveRejectRequest"];
+export type LeaveRequestCreate = DeepScale<components["schemas"]["LeaveRequestCreate"]>;
+export type LeaveRejectRequest = DeepScale<components["schemas"]["LeaveRejectRequest"]>;
 
 function useLeaveInvalidator(): () => void {
   const queryClient = useQueryClient();

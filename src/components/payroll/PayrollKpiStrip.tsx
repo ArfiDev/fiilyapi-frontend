@@ -1,6 +1,7 @@
 import { BankIcon, WalletIcon } from "@/components/ui/icons";
 import type { PayrollSummaryResponse } from "@/lib/api/hooks/usePayroll";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import type { Percent } from "@/lib/api/scale";
 
 import {
   EMPTY_VALUE,
@@ -73,7 +74,7 @@ export function PayrollKpiStrip({ summary }: PayrollKpiStripProps) {
 }
 
 /** BY:79/87 — "35 çalışan · %71,5". Yüzde yoksa yalnız sayı basılır. */
-function countWithPct(count: number, pct: string | null): string {
+function countWithPct(count: number, pct: Percent | null): string {
   const people = `${count} ${KPI_PERSON_UNIT}`;
   if (pct === null) return people;
   return `${people} · ${formatPercent(pct)}`;

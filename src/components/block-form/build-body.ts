@@ -31,8 +31,9 @@ import type { components } from "@/lib/api/schema";
 import { normalizeDecimalInput, parseCountInput } from "@/lib/decimal";
 
 import type { BlockFormValues, BlockTouched } from "./form-state";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type BlockCreate = components["schemas"]["BlockCreate"];
+export type BlockCreate = DeepScale<components["schemas"]["BlockCreate"]>;
 
 /** Mockup'ta kutusu olmayan `sort_order` için tek kaynak (şema varsayılanı). */
 export const BLOCK_DEFAULT_SORT_ORDER = 0;
