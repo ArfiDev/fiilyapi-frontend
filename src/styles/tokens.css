@@ -93,6 +93,11 @@
      sınıfı kanon: 1.5px çerçeve, 9px/12px iç boşluk. Uygulamadaki TÜM form
      kontrolleri (input, select, textarea, arama kutusu) bu token'ları kullanır
      ki hiçbiri diğerinden farklı görünmesin. */
+  /* 1,5px mockup'tan gelen bir TASARIM token'ıdır. Tam piksele oturmayan
+     kenarlık koşular arasında ≤1 renk farkı üretebilir (F-SUBPX-4:
+     poz-ekle-isveren-yeni-grup, x=327) — bu KABUL EDİLMİŞ, eşik altı bir
+     gürültüdür. Değiştirmek bir TASARIM KARARIdır; "kararsız kare" avında
+     buraya tekrar KAZILMASIN. */
   --border-width-form: 1.5px;
   --space-form-y: 9px; /* dikey iç boşluk */
   --space-form-x: var(--space-3); /* yatay iç boşluk = 12px */
