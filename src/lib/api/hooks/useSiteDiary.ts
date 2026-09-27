@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SD T1 · Şantiye Günlüğü — okuma sorgulari. `useProgressPayments.ts` /
 // `useSubcontractorProgressPayments.ts` deseniyle AYNI: tipler `pnpm gen:api`
@@ -13,7 +14,9 @@ export type SiteDiaryLineRead = components["schemas"]["SiteDiaryLineRead"];
 export type SiteDiaryWorkerCountRead = components["schemas"]["SiteDiaryWorkerCountRead"];
 /** PLN-F2.1b · G12 — kendi ekip, puantajdan TÜRETİLİR (salt okunur; kayıt yanıtı). */
 export type OwnCrewFromTimesheet = components["schemas"]["OwnCrewFromTimesheet"];
-export type SiteDiarySummary = components["schemas"]["SiteDiarySummary"];
+// TYPE-F1 SPIKE EK (2026-09-27): DeepScale — `completion_ratio` (fraction)
+// otomatik marka'lanır (FIX-F1 Kusur 2 mutantının derleyici karşılığını ölçmek için).
+export type SiteDiarySummary = DeepScale<components["schemas"]["SiteDiarySummary"]>;
 export type SiteDiarySummaryItem = components["schemas"]["SiteDiarySummaryItem"];
 export type DiaryStatus = components["schemas"]["DiaryStatus"];
 export type Weather = components["schemas"]["Weather"];

@@ -8,6 +8,7 @@ import { StatusMark } from "../kit/StatusMark";
 import { EMPTY_CELL, formatDateDots, formatDecimal } from "@/lib/format";
 import { formatPercent01, formatPf, formatVariancePoints, type VarianceStatus } from "@/lib/earned-value";
 import type { EvPanelReport } from "@/lib/api/models";
+import type { Fraction } from "@/lib/api/scale";
 
 import { pfBandDescription, progressBarWidth, varianceTone, type PfBandRange } from "./panel-kpi-format";
 import "./panel-kpi.css";
@@ -31,7 +32,7 @@ export interface PanelKpiRowProps {
 }
 
 const mhr = (v: string | null) => (v === null ? EMPTY_CELL : formatDecimal(v, 0));
-const pct = (v: string | null) => (v === null ? EMPTY_CELL : formatPercent01(v));
+const pct = (v: Fraction | null) => (v === null ? EMPTY_CELL : formatPercent01(v));
 
 /**
  * PLN-F3.3 · 🔴 6 KPI TEK SATIR (S25) — Panel:147-183. Kartlar dar ekranda

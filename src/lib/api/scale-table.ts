@@ -1,4 +1,8 @@
 // AUTO-GENERATED — TEST-F2 Ajan B (2026-09-26)
+// TYPE-F1 FAZ 1 (CEO kararı, 2026-09-27): bu tablo artık `scale.ts`teki
+// YUMUŞAK `DeepScale`in ad-tabanlı eşlemesinin TEK kaynağıdır — bedel notu
+// (marka opsiyonel, çakışan adlar `SCALE_NAME_EXCEPTIONS`te) `scale.ts`
+// başındadır, buraya kopyalanmadı.
 // Kaynak: backend muhendisi tablosu + opus curutmesi (3 YANLIS + 18 KISMEN duzeltildi),
 // lider CEO eklerini (zarf notlari) uyguladi, TEST-F2/B mock kosusu 7 satira
 // percentBelowOneOk bayragi ekledi (kanit: gercek backend degerleri kucuk yuzde,
@@ -25,7 +29,12 @@ export interface ScaleRow {
   flags?: readonly ScaleFlag[];
 }
 
-export const SCALE_TABLE: readonly ScaleRow[] = [
+// TYPE-F1 SPIKE: literal (`as const`) form — DeepScale bunun ÜZERİNDEN alan
+// adı birleşimlerini türetir. `SCALE_TABLE` (aşağıda) TEST-F2 bekçilerinin
+// beklediği geniş `readonly ScaleRow[]` tipini KORUR (literal tip orada
+// `kanit === "TODO-BACKEND"` gibi imkânsız karşılaştırmaları YANLIŞLIKLA
+// derleme hatasına çevirirdi).
+const SCALE_TABLE_LITERAL = [
   { schema: "AiMessageRead", field: "duration_ms", scale: "not-scale", kanit: "app/modules/ai/router.py:321", not: "süre (ms); 'rate/oran' değil, isim eşleşmesi yanlış." },
   { schema: "BoqItemResponse", field: "progress_pct", scale: "not-scale", kanit: "boq/progress.py:53-60 weighted_pct = quantize(num/den*100), üst sınır yok; boq/service.py:94,129; boq/schemas.py:98; projects/schemas.py:83-116 MetricPlaceholder{available,value,pending_module}; çakışma dosyası progress_pct not-scale listesi", not: "para ağırlıklı oran (Σgerçekleşen×fiyat/Σtaban×fiyat×100); üst sınır yok, aşım >100 mümkün (fractionAboveOneOk eşdeğeri percent tarafında). ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
   { schema: "BoqTotals", field: "grand_progress_pct", scale: "not-scale", kanit: "boq/service.py:205-221; boq/progress.py:53-60,201-213; boq/schemas.py:191", not: "BoqItemResponse.progress_pct ile AYNI motor (progress.py), grup satırlarından yeniden toplanmaz. ZARF: .value ölçüsü percent (0–100, >100 olabilir; boq/progress.py:53-60) — bu bekçinin DIŞINDA, TYPE-F1 kuyruğunda." },
@@ -228,5 +237,11 @@ export const SCALE_TABLE: readonly ScaleRow[] = [
   { schema: "VatTaxableRow", field: "rate", scale: "percent", kanit: "app/modules/invoicing/models.py:457 (CHECK vat_rate BETWEEN 0 AND 100) — VatTaxableRow.rate = line.vat_rate (accounting/vat_return.py:240)" },
   { schema: "WorkSummaryRow", field: "usage_pct", scale: "percent", kanit: "equipment/consumption.py:50,155-167 (quantize_ratio(hours/cap×100), min/max yok); FE equipment-work/EquipmentWorkSummaryTable.tsx:126 formatPercent (tutarlı)", flags: ["percentAbove100Ok"] },
   { schema: "WorkSummaryTotals", field: "usage_pct_avg", scale: "percent", kanit: "equipment/service/work_summary.py:127-136 + consumption.py:155-167; FE EquipmentWorkSummaryTable.tsx:181 formatPercent", flags: ["percentAbove100Ok"] },
-];
+] as const satisfies readonly ScaleRow[];
+
+/** DeepScale (bkz. `scale.ts`) için literal satır tipi — alan adı birleşimleri buradan türer. */
+export type ScaleTableLiteral = typeof SCALE_TABLE_LITERAL;
+
+/** TEST-F2 bekçilerinin/tüketicilerin kullandığı geniş (widened) tablo. */
+export const SCALE_TABLE: readonly ScaleRow[] = SCALE_TABLE_LITERAL;
 

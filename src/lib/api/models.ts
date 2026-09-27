@@ -1,4 +1,5 @@
 import type { components, paths } from "./schema";
+import type { DeepScale } from "./scale";
 
 export type UserResponse = components["schemas"]["UserResponse"];
 export type UserListResponse = components["schemas"]["UserListResponse"];
@@ -39,16 +40,16 @@ type EvSchema = components["schemas"];
 export type EvDisciplineRead = EvSchema["DisciplineRead"];
 export type EvDisciplineCreate = EvSchema["DisciplineCreate"];
 export type EvDisciplineUpdate = EvSchema["DisciplineUpdate"];
-export type EvCatalogItemRead = EvSchema["CatalogItemRead"];
+export type EvCatalogItemRead = DeepScale<EvSchema["CatalogItemRead"]>;
 export type EvCatalogItemCreate = EvSchema["CatalogItemCreate"];
 export type EvCatalogItemUpdate = EvSchema["CatalogItemUpdate"];
 export type EvSettingsRead = EvSchema["SettingsRead"];
 export type EvSettingsSave = EvSchema["SettingsSave"];
-export type EvBudgetView = EvSchema["BudgetView"];
+export type EvBudgetView = DeepScale<EvSchema["BudgetView"]>;
 export type EvRevisionOut = EvSchema["RevisionOut"];
 export type EvRevisionDiffOut = EvSchema["RevisionDiffOut"];
 export type EvScheduleOut = EvSchema["ScheduleOut"];
-export type EvPreviewOut = EvSchema["PreviewOut"];
+export type EvPreviewOut = DeepScale<EvSchema["PreviewOut"]>;
 export type EvSuggestionsOut = EvSchema["SuggestionsOut"];
 export type EvFillOut = EvSchema["FillOut"];
 
@@ -76,10 +77,12 @@ export type EvUnlockBody = EvSchema["UnlockBody"];
 export type EvCodeNode = EvSchema["CodeNodeOut"];
 
 // PLN-F3.1 · Raporlar (Panel/GİR/QURR) — backend B3 `earned_value` rapor uçları.
-export type EvPanelReport = EvSchema["PanelReport"];
-export type EvDailyReport = EvSchema["DailyReport"];
-export type EvQurrReport = EvSchema["QurrReport"];
-export type EvQurrRow = EvSchema["QurrRow"];
+// TYPE-F1 SPIKE: DeepScale — `fraction`/`percent` adları otomatik marka'lanır
+// (progressBarWidth/formatPercent01 çağrı yerinin akışını ölçmek için).
+export type EvPanelReport = DeepScale<EvSchema["PanelReport"]>;
+export type EvDailyReport = DeepScale<EvSchema["DailyReport"]>;
+export type EvQurrReport = DeepScale<EvSchema["QurrReport"]>;
+export type EvQurrRow = DeepScale<EvSchema["QurrRow"]>;
 export type EvQurrTotal = EvSchema["QurrTotal"];
 export type EvCompositeCard = EvSchema["CompositeCard"];
 export type EvWarning = EvSchema["WarningOut"];
@@ -87,7 +90,7 @@ export type EvPfBandsOut = EvSchema["PfBandsOut"];
 /** "red"|"amber"|"green"|"high" — istemci `PfBand` bunun üstüne "none" ekler. */
 export type EvApiPfBand = EvSchema["PfBand"];
 export type EvApprovalResult = EvSchema["ApprovalResult"];
-export type EvQtyTreeRow = EvSchema["QtyTreeRow"];
+export type EvQtyTreeRow = DeepScale<EvSchema["QtyTreeRow"]>;
 export type EvKpiPf = EvSchema["KpiPf"];
 /** Şema kayıtlı değeri `"own" | "subcon"`dur (sözleşme taslağındaki `"subcontractor"` DEĞİL). */
 export type EvContractorType = EvSchema["ContractorType"];

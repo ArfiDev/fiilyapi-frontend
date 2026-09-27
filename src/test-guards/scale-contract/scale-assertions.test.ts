@@ -5,7 +5,7 @@
 // Lider güncellemesi: bayrağa göre sınırlar (fraction 0..1/±5, percent 0..100/±10000).
 import { describe, it, expect } from "vitest";
 import { checkScaleRow } from "./scale-assertions";
-import type { ScaleFlag, ScaleRow } from "./scale-table";
+import type { ScaleFlag, ScaleRow } from "@/lib/api/scale-table";
 
 function row(overrides: Partial<ScaleRow> & { flags?: readonly ScaleFlag[] }): ScaleRow {
   return { schema: "S", field: "f", scale: "fraction", kanit: "test", ...overrides };

@@ -5,6 +5,7 @@
  * AYNI gerekçe — görsel geometri, iş kararı DEĞİL).
  */
 import { compareDecimalStrings, formatPf, toPoints, type PfBand } from "@/lib/earned-value";
+import type { Fraction } from "@/lib/api/scale";
 
 /**
  * Kazanılmış/Bütçe çubuğunun genişliği (%), 0–100 KIRPILIR.
@@ -15,7 +16,7 @@ import { compareDecimalStrings, formatPf, toPoints, type PfBand } from "@/lib/ea
  * kesirden yüzdeye çevrilir; kırpma/karşılaştırma Decimal string üzerinde
  * (`compareDecimalStrings`), `Number` YALNIZ son CSS genişliği için.
  */
-export function progressBarWidth(pct: string | null): number {
+export function progressBarWidth(pct: Fraction | null): number {
   const points = toPoints(pct);
   if (points === null) return 0;
   const clampedLow = compareDecimalStrings(points, "0") < 0 ? "0" : points;

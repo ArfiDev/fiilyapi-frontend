@@ -5,7 +5,7 @@
 // basabilir) — karşılaştırma bir ARALIK kontrolü olduğu için `Number(...)`
 // burada kabul edilir (kesinlik kaybı önemsiz, yalnız kaba ölçek hatası
 // yakalanır — ör. ×100 hatası 0.75 → 75).
-import type { Scale, ScaleFlag, ScaleRow } from "./scale-table";
+import type { Scale, ScaleFlag, ScaleRow } from "@/lib/api/scale-table";
 
 export interface ScaleViolation {
   schema: string;
