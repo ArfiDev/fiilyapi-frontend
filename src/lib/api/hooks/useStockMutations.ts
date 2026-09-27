@@ -7,6 +7,7 @@ import { STOCK_SUMMARY_QUERY_KEY } from "./useStockSummary";
 import { SECTION_STOCK_QUERY_KEY } from "./useSectionStock";
 import { SITE_STOCK_QUERY_KEY } from "./useSiteStock";
 import { WAREHOUSES_QUERY_KEY, type WarehouseResponse } from "./useWarehouses";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-ST T1 · Stok & Depo YAZMA yüzeyi — bu dilimde ÜÇ mutasyon vardır:
 // stok hareketi (SG formu), malzeme kartı ekleme (E3 "+ Malzeme Ekle"),
@@ -27,13 +28,13 @@ import { WAREHOUSES_QUERY_KEY, type WarehouseResponse } from "./useWarehouses";
 // `StockItemCreate.is_active` = true) `openapi-typescript` çıktısında
 // ZORUNLU görünür. Yani gövdeyi kurarken bu iki alan AÇIKÇA verilmelidir —
 // "varsayılanı var, göndermesem de olur" varsayımı `tsc` hatasıdır.
-export type StockEntryCreate = components["schemas"]["StockEntryCreate"];
-export type StockEntryLineCreate = components["schemas"]["StockEntryLineCreate"];
-export type StockEntryResponse = components["schemas"]["StockEntryResponse"];
+export type StockEntryCreate = DeepScale<components["schemas"]["StockEntryCreate"]>;
+export type StockEntryLineCreate = DeepScale<components["schemas"]["StockEntryLineCreate"]>;
+export type StockEntryResponse = DeepScale<components["schemas"]["StockEntryResponse"]>;
 export type StockEntryType = components["schemas"]["StockEntryType"];
 export type StockQuality = components["schemas"]["StockQuality"];
-export type StockItemCreate = components["schemas"]["StockItemCreate"];
-export type WarehouseCreate = components["schemas"]["WarehouseCreate"];
+export type StockItemCreate = DeepScale<components["schemas"]["StockItemCreate"]>;
+export type WarehouseCreate = DeepScale<components["schemas"]["WarehouseCreate"]>;
 
 /**
  * Bir hareket yazıldığında BAKİYE ve DURUM taşıyan HER şey bayatlar: E3 özeti,

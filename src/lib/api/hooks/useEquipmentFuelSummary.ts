@@ -8,7 +8,7 @@ import type { DeepScale } from "@/lib/api/scale";
 // özetinden beslenir — çalışma özetinde böyle bir alan YOKTUR. Mockup öğesi
 // silinmediği için (F-TH kalıcı kuralı) bu uç burada bağlanır; M4 ekranı
 // (T5) AYNI hook'u yeniden kullanır, ikinci kopya yazılmaz.
-export type FuelSummaryResponse = components["schemas"]["FuelSummaryResponse"];
+export type FuelSummaryResponse = DeepScale<components["schemas"]["FuelSummaryResponse"]>;
 export type FuelSummaryRow = DeepScale<components["schemas"]["FuelSummaryRow"]>;
 
 export const EQUIPMENT_FUEL_SUMMARY_QUERY_KEY = "equipment-fuel-summary";

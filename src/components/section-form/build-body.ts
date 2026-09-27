@@ -1,9 +1,10 @@
 import type { SectionCreateRequest } from "@/lib/api/hooks/useSectionMutations";
 import type { components } from "@/lib/api/schema";
 import type { SectionFormValues } from "./form-state";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type SectionMilestone = components["schemas"]["SectionMilestoneResponse"];
-type SectionMilestoneInput = components["schemas"]["SectionMilestoneInput"];
+export type SectionMilestone = DeepScale<components["schemas"]["SectionMilestoneResponse"]>;
+type SectionMilestoneInput = DeepScale<components["schemas"]["SectionMilestoneInput"]>;
 
 /** Boş/boşluk metin → `null` (site-form/build-body.ts deseniyle aynı). */
 export function textOrNull(value: string): string | null {

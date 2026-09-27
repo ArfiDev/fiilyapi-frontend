@@ -6,14 +6,14 @@ import type { DeepScale } from "@/lib/api/scale";
 
 // Ekran 13 · Is Kalemleri (BOQ) — spec §6.2. Tipler `pnpm gen:api` ciktisindan
 // takma ad olarak alinir; elle arayuz yazmak yasak.
-export type BoqListResponse = components["schemas"]["BoqListResponse"];
+export type BoqListResponse = DeepScale<components["schemas"]["BoqListResponse"]>;
 export type BoqTotals = DeepScale<components["schemas"]["BoqTotals"]>;
-export type BoqGroup = components["schemas"]["BoqGroupResponse"];
+export type BoqGroup = DeepScale<components["schemas"]["BoqGroupResponse"]>;
 export type BoqItem = DeepScale<components["schemas"]["BoqItemResponse"]>;
-export type BoqGroupCreate = components["schemas"]["BoqGroupCreate"];
-export type BoqGroupUpdate = components["schemas"]["BoqGroupUpdate"];
-export type BoqItemCreate = components["schemas"]["BoqItemCreate"];
-export type BoqItemUpdate = components["schemas"]["BoqItemUpdate"];
+export type BoqGroupCreate = DeepScale<components["schemas"]["BoqGroupCreate"]>;
+export type BoqGroupUpdate = DeepScale<components["schemas"]["BoqGroupUpdate"]>;
+export type BoqItemCreate = DeepScale<components["schemas"]["BoqItemCreate"]>;
+export type BoqItemUpdate = DeepScale<components["schemas"]["BoqItemUpdate"]>;
 
 export const BOQ_QUERY_KEY = "boq";
 

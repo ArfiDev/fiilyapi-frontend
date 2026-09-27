@@ -40,7 +40,7 @@ import { hasFilledSlot, type BulkSlotValues } from "./slots";
 import type { DeepScale } from "@/lib/api/scale";
 
 export type UnitBulkCreate = DeepScale<components["schemas"]["UnitBulkCreate"]>;
-export type UnitBulkSlot = components["schemas"]["UnitBulkSlot"];
+export type UnitBulkSlot = DeepScale<components["schemas"]["UnitBulkSlot"]>;
 
 /**
  * TU'da kutusu olmayan `prefix` için tek kaynak (şema varsayılanı). Mockup'ın

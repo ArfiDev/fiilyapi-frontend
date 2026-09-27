@@ -25,8 +25,8 @@ import type { DeepScale } from "@/lib/api/scale";
 // ikisini de AÇIKÇA vermelidir; "varsayılanı var, göndermesem de olur"
 // varsayımı `tsc` hatasıdır.
 export type UnitSaleCreate = DeepScale<components["schemas"]["UnitSaleCreate"]>;
-export type SaleInstallmentsSave = components["schemas"]["SaleInstallmentsSave"];
-export type SaleInstallmentInput = components["schemas"]["SaleInstallmentInput"];
+export type SaleInstallmentsSave = DeepScale<components["schemas"]["SaleInstallmentsSave"]>;
+export type SaleInstallmentInput = DeepScale<components["schemas"]["SaleInstallmentInput"]>;
 
 /**
  * Bir satış yazıldığında ya da planı değiştiğinde SUNUCU TÜREVİ taşıyan her şey

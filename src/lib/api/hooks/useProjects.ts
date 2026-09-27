@@ -7,7 +7,7 @@ import type { DeepScale } from "@/lib/api/scale";
 
 // NOT: Plan "ProjectResponse" adini varsayiyordu; gercek semada oge tipi
 // "ProjectListItem" (bkz. src/lib/api/schema.d.ts). Gercek adi kullaniyoruz.
-export type ProjectListResponse = components["schemas"]["ProjectListResponse"];
+export type ProjectListResponse = DeepScale<components["schemas"]["ProjectListResponse"]>;
 export type ProjectListItem = DeepScale<components["schemas"]["ProjectListItem"]>;
 export type ProjectDetail = DeepScale<components["schemas"]["ProjectDetailResponse"]>;
 export type ProjectCounts = ProjectListResponse["counts"];

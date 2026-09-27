@@ -3,14 +3,15 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import { STOCK_ITEMS_QUERY_KEY, type StockCategory, type StockStatus } from "./useStockItems";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-ST T1 · Stok & Depo — E3 genel ekranının TEK okuma kaynağı: katalog
 // tablosu (künye + bakiye + durum + depo kırılımı) ve KPI şeridi aynı yanıtta
 // gelir. `useSiteDiary.ts`/`usePersonnel.ts` deseniyle aynı.
-export type StockSummaryResponse = components["schemas"]["StockSummaryResponse"];
-export type StockSummaryRow = components["schemas"]["StockSummaryRow"];
-export type StockSummaryKpis = components["schemas"]["StockSummaryKpis"];
-export type StockWarehouseBalance = components["schemas"]["StockWarehouseBalance"];
+export type StockSummaryResponse = DeepScale<components["schemas"]["StockSummaryResponse"]>;
+export type StockSummaryRow = DeepScale<components["schemas"]["StockSummaryRow"]>;
+export type StockSummaryKpis = DeepScale<components["schemas"]["StockSummaryKpis"]>;
+export type StockWarehouseBalance = DeepScale<components["schemas"]["StockWarehouseBalance"]>;
 
 export const STOCK_SUMMARY_QUERY_KEY = "stock-summary";
 

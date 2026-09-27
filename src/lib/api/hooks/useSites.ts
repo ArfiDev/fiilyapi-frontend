@@ -6,7 +6,7 @@ import type { DeepScale } from "@/lib/api/scale";
 
 // Task 5 — Proje Detay › Şantiyeler listesi (spec §4.3). Tip adı "SiteCard" bilesen
 // adiyla catisir, bu yuzden "SiteListItem" olarak takma ad verildi.
-export type SiteListResponse = components["schemas"]["SiteListResponse"];
+export type SiteListResponse = DeepScale<components["schemas"]["SiteListResponse"]>;
 export type SiteListItem = DeepScale<components["schemas"]["SiteCard"]>;
 // Task 8 — Şantiye Detay tekil kaynağı (spec §5). Bileşen adıyla çakışmasın
 // diye "SiteDetail" (SiteCard deseniyle aynı) takma adı verildi.

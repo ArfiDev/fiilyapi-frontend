@@ -20,9 +20,9 @@ import type { DeepScale } from "@/lib/api/scale";
 // yüzden `buildListTruncation` korkuluğu burada UYGULANMAZ (kırpılma kavramı
 // tanımsız). `GET /subcontractor-contracts` (U1) ile KARIŞTIRILMAMALIDIR: o uç
 // TB3'ten beri sayfalıdır.
-export type ContractListResponse = components["schemas"]["ContractListResponse"];
+export type ContractListResponse = DeepScale<components["schemas"]["ContractListResponse"]>;
 export type ContractListItem = DeepScale<components["schemas"]["ContractListItem"]>;
-export type ContractSummary = components["schemas"]["ContractSummary"];
+export type ContractSummary = DeepScale<components["schemas"]["ContractSummary"]>;
 export type ContractStatus = components["schemas"]["ContractStatus"];
 export type ContractType = "employer" | "subcontractor";
 

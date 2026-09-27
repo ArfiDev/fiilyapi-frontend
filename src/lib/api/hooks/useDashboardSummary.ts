@@ -5,7 +5,7 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import type { DeepScale } from "@/lib/api/scale";
 
-export type DashboardSummary = components["schemas"]["DashboardSummaryResponse"];
+export type DashboardSummary = DeepScale<components["schemas"]["DashboardSummaryResponse"]>;
 export type DashboardProjectCard = DeepScale<components["schemas"]["DashboardProjectCard"]>;
 
 export const DASHBOARD_SUMMARY_QUERY_KEY = "dashboard-summary";

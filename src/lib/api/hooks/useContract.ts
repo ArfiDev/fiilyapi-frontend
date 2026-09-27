@@ -10,17 +10,17 @@ import type { DeepScale } from "@/lib/api/scale";
 // SARMIYOR (brief §Belirsizlik çözümü 1) — `useBoq.ts` deseniyle burada
 // eklendi. Tipler `pnpm gen:api` çıktısından takma ad olarak alınır; elle
 // arayüz yazmak yasak.
-export type ContractDistributionResponse = components["schemas"]["ContractDistributionResponse"];
-export type ContractDistributionGroup = components["schemas"]["ContractDistributionGroup"];
-export type ContractDistributionItem = components["schemas"]["ContractDistributionItem"];
-export type ContractDistributionSite = components["schemas"]["ContractDistributionSite"];
+export type ContractDistributionResponse = DeepScale<components["schemas"]["ContractDistributionResponse"]>;
+export type ContractDistributionGroup = DeepScale<components["schemas"]["ContractDistributionGroup"]>;
+export type ContractDistributionItem = DeepScale<components["schemas"]["ContractDistributionItem"]>;
+export type ContractDistributionSite = DeepScale<components["schemas"]["ContractDistributionSite"]>;
 export type ContractDistributionAllocation =
-  components["schemas"]["ContractDistributionAllocation"];
+  DeepScale<components["schemas"]["ContractDistributionAllocation"]>;
 // F-P5 T4 · POZ 168-187 şantiye kota özeti kartlarının satır tipi.
 export type ContractDistributionSiteSummary =
-  components["schemas"]["ContractDistributionSiteSummary"];
+  DeepScale<components["schemas"]["ContractDistributionSiteSummary"]>;
 export type ContractDistributionSiteItem =
-  components["schemas"]["ContractDistributionSiteItem"];
+  DeepScale<components["schemas"]["ContractDistributionSiteItem"]>;
 export type EmployerContractDetail = DeepScale<components["schemas"]["EmployerContractDetail"]>;
 
 // F-P5 T1 · E14 "İş Kalemleri" sekmesi — gruplar + kalemler
@@ -28,9 +28,9 @@ export type EmployerContractDetail = DeepScale<components["schemas"]["EmployerCo
 // `useContract.ts`e YAPILDI çünkü uç aynı aileden (`/projects/{id}/contract*`,
 // `projectId` anahtarlı, aynı boş-id kapısı).
 export type EmployerContractItemsResponse =
-  components["schemas"]["EmployerContractItemsResponse"];
-export type EmployerContractGroupItems = components["schemas"]["EmployerContractGroupItems"];
-export type EmployerContractItemResponse = components["schemas"]["EmployerContractItemResponse"];
+  DeepScale<components["schemas"]["EmployerContractItemsResponse"]>;
+export type EmployerContractGroupItems = DeepScale<components["schemas"]["EmployerContractGroupItems"]>;
+export type EmployerContractItemResponse = DeepScale<components["schemas"]["EmployerContractItemResponse"]>;
 
 export const CONTRACT_DISTRIBUTION_QUERY_KEY = "contract-distribution";
 export const EMPLOYER_CONTRACT_QUERY_KEY = "employer-contract";

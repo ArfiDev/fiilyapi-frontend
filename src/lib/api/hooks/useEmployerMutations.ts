@@ -3,8 +3,9 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import { EMPLOYERS_QUERY_KEY, type EmployerListItem } from "./useEmployers";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type EmployerCreateRequest = components["schemas"]["EmployerCreate"];
+export type EmployerCreateRequest = DeepScale<components["schemas"]["EmployerCreate"]>;
 
 // Task F4 — Yeni Proje formunun "İşveren ekle" akışı (spec §3.2). useCreateProject
 // deseniyle ayni: govde aynen backend'e gecirilir. 409 (ayni VKN) burada

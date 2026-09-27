@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Satınalma — TEK ekranının teklif kartları (TEK 53-116) +
 // karşılaştırma özeti (119-127).
-export type PurchaseQuoteListResponse = components["schemas"]["PurchaseQuoteListResponse"];
-export type PurchaseQuoteCard = components["schemas"]["PurchaseQuoteCard"];
-export type PurchaseQuoteResponse = components["schemas"]["PurchaseQuoteResponse"];
+export type PurchaseQuoteListResponse = DeepScale<components["schemas"]["PurchaseQuoteListResponse"]>;
+export type PurchaseQuoteCard = DeepScale<components["schemas"]["PurchaseQuoteCard"]>;
+export type PurchaseQuoteResponse = DeepScale<components["schemas"]["PurchaseQuoteResponse"]>;
 
 export const QUOTES_QUERY_KEY = "purchase-quotes";
 

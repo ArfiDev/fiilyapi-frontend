@@ -2,10 +2,11 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-HZ T2 · Hazine (E9:109-125) — yaklaşan ödemeler kartının TEK kaynağı.
-export type UpcomingPaymentsResponse = components["schemas"]["UpcomingPaymentsResponse"];
-export type UpcomingPaymentItem = components["schemas"]["UpcomingPaymentItem"];
+export type UpcomingPaymentsResponse = DeepScale<components["schemas"]["UpcomingPaymentsResponse"]>;
+export type UpcomingPaymentItem = DeepScale<components["schemas"]["UpcomingPaymentItem"]>;
 export type UpcomingSourceType = components["schemas"]["UpcomingSourceType"];
 
 export const UPCOMING_PAYMENTS_QUERY_KEY = "treasury-upcoming-payments";

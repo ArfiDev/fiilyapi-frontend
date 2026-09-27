@@ -2,15 +2,16 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Satınalma — talep listesi (SAT tablosu) + talep detayı (TEK
 // ekranının özet şeridi ve FST'nin okuması). `useStockSummary.ts` /
 // `useSales.ts` deseniyle aynı: tipler `pnpm gen:api` çıktısından takma ad
 // olarak alınır, elle arayüz yazmak yasak.
-export type PurchaseRequestListResponse = components["schemas"]["PurchaseRequestListResponse"];
-export type PurchaseRequestListRow = components["schemas"]["PurchaseRequestListRow"];
-export type PurchaseRequestResponse = components["schemas"]["PurchaseRequestResponse"];
-export type PurchaseRequestLineResponse = components["schemas"]["PurchaseRequestLineResponse"];
+export type PurchaseRequestListResponse = DeepScale<components["schemas"]["PurchaseRequestListResponse"]>;
+export type PurchaseRequestListRow = DeepScale<components["schemas"]["PurchaseRequestListRow"]>;
+export type PurchaseRequestResponse = DeepScale<components["schemas"]["PurchaseRequestResponse"]>;
+export type PurchaseRequestLineResponse = DeepScale<components["schemas"]["PurchaseRequestLineResponse"]>;
 export type PurchaseRequestStatus = components["schemas"]["PurchaseRequestStatus"];
 export type PurchasePriority = components["schemas"]["PurchasePriority"];
 

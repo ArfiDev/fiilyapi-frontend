@@ -2,9 +2,10 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Satınalma — KPI şeridinin TEK kaynağı (SAT 69-86 + SIP 38-43).
-export type PurchasingSummaryResponse = components["schemas"]["PurchasingSummaryResponse"];
+export type PurchasingSummaryResponse = DeepScale<components["schemas"]["PurchasingSummaryResponse"]>;
 
 export const PURCHASING_SUMMARY_QUERY_KEY = "purchasing-summary";
 

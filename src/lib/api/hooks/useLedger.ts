@@ -2,10 +2,11 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MU1 T2 · E8:101-106 yevmiye defteri (SATIR bazlı, fiş bazlı DEĞİL).
-export type LedgerResponse = components["schemas"]["LedgerResponse"];
-export type LedgerRow = components["schemas"]["LedgerRow"];
+export type LedgerResponse = DeepScale<components["schemas"]["LedgerResponse"]>;
+export type LedgerRow = DeepScale<components["schemas"]["LedgerRow"]>;
 export type JournalEntryStatus = components["schemas"]["JournalEntryStatus"];
 
 export const LEDGER_QUERY_KEY = "journal-ledger";

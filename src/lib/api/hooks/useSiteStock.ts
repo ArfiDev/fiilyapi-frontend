@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-ST T1 · Şantiye Stok sekmesi (ŞS) — `GET /sites/{site_id}/stock`.
 //
@@ -10,9 +11,9 @@ import type { components } from "@/lib/api/schema";
 //
 // `balance` YALNIZ o şantiyenin depolarını kapsar; merkez depo (`site_id IS
 // NULL`) hiçbir şantiyenin bakiyesine girmez (backend spec §3).
-export type SiteStockResponse = components["schemas"]["SiteStockResponse"];
-export type SiteStockRow = components["schemas"]["SiteStockRow"];
-export type SiteStockKpis = components["schemas"]["SiteStockKpis"];
+export type SiteStockResponse = DeepScale<components["schemas"]["SiteStockResponse"]>;
+export type SiteStockRow = DeepScale<components["schemas"]["SiteStockRow"]>;
+export type SiteStockKpis = DeepScale<components["schemas"]["SiteStockKpis"]>;
 
 export const SITE_STOCK_QUERY_KEY = "site-stock";
 

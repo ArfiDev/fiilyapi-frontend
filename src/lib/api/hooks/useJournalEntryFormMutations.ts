@@ -5,6 +5,7 @@ import type { components } from "@/lib/api/schema";
 
 import { invalidateAccountingScope } from "./accounting-invalidate";
 import { type JournalEntryDetailResponse } from "./useJournalEntries";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-MU1 T4 · Yevmiye fişi FORM uçları (oluştur · başlık düzelt · satırları
@@ -20,9 +21,9 @@ import { type JournalEntryDetailResponse } from "./useJournalEntries";
  * `invalidateAccountingScope`u koşar (defter · KPI · fiş listesi · hesap planı).
  */
 
-export type JournalEntryCreate = components["schemas"]["JournalEntryCreate"];
-export type JournalEntryUpdate = components["schemas"]["JournalEntryUpdate"];
-export type JournalLineInput = components["schemas"]["JournalLineInput"];
+export type JournalEntryCreate = DeepScale<components["schemas"]["JournalEntryCreate"]>;
+export type JournalEntryUpdate = DeepScale<components["schemas"]["JournalEntryUpdate"]>;
+export type JournalLineInput = DeepScale<components["schemas"]["JournalLineInput"]>;
 
 /** `PATCH`/`PUT` iki parça ister; mutation TEK değişken alır, ikisi bir zarfta gider. */
 export interface JournalEntryUpdateVariables {

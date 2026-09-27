@@ -6,9 +6,9 @@ import type { DeepScale } from "@/lib/api/scale";
 
 // F-MU2 T3 · KDV:53-143 beyanname ekranı. Tipler `pnpm gen:api` çıktısından
 // TAKMA AD olarak alınır — elle arayüz yazmak yasak (`useJournalSummary.ts`).
-export type VatReturnResponse = components["schemas"]["VatReturnResponse"];
+export type VatReturnResponse = DeepScale<components["schemas"]["VatReturnResponse"]>;
 export type VatTaxableRow = DeepScale<components["schemas"]["VatTaxableRow"]>;
-export type VatDeductionRow = components["schemas"]["VatDeductionRow"];
+export type VatDeductionRow = DeepScale<components["schemas"]["VatDeductionRow"]>;
 
 export const VAT_RETURN_QUERY_KEY = "vat-return";
 

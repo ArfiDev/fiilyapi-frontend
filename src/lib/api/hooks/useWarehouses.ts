@@ -2,11 +2,12 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-ST T1 · Depo listesi (`GET /warehouses`). Stok giriş formunun (SG) depo
 // alanı ve "+ Depo Ekle" diyalogu bu listeyi tüketir.
-export type WarehouseListResponse = components["schemas"]["WarehouseListResponse"];
-export type WarehouseResponse = components["schemas"]["WarehouseResponse"];
+export type WarehouseListResponse = DeepScale<components["schemas"]["WarehouseListResponse"]>;
+export type WarehouseResponse = DeepScale<components["schemas"]["WarehouseResponse"]>;
 
 export const WAREHOUSES_QUERY_KEY = "warehouses";
 

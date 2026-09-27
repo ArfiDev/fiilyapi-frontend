@@ -8,12 +8,13 @@ import {
   PROGRESS_PAYMENT_SUMMARY_QUERY_KEY,
   type ProgressPaymentDetail,
 } from "./useProgressPayments";
+import type { DeepScale } from "@/lib/api/scale";
 
 // P7 · İşveren Hakedişi ekranları — yazma/aksiyon uçları. Tipler `pnpm gen:api`
 // çıktısından takma ad olarak alınır; elle arayüz yazmak yasak.
-export type ProgressPaymentCreate = components["schemas"]["ProgressPaymentCreate"];
-export type ProgressPaymentUpdate = components["schemas"]["ProgressPaymentUpdate"];
-export type ProgressPaymentLinesSave = components["schemas"]["ProgressPaymentLinesSave"];
+export type ProgressPaymentCreate = DeepScale<components["schemas"]["ProgressPaymentCreate"]>;
+export type ProgressPaymentUpdate = DeepScale<components["schemas"]["ProgressPaymentUpdate"]>;
+export type ProgressPaymentLinesSave = DeepScale<components["schemas"]["ProgressPaymentLinesSave"]>;
 // P7 T5 eklemesi: `ProgressPaymentLineInput` şemada zaten üretilmişti
 // (`ProgressPaymentCreate.lines[]` / `ProgressPaymentLinesSave.lines[]`
 // içinde kullanılıyordu) ama takma ad olarak DIŞA AKTARILMAMIŞTI — hakediş
@@ -23,8 +24,8 @@ export type ProgressPaymentLinesSave = components["schemas"]["ProgressPaymentLin
 // ayırıp üretiyor (`ProgressPaymentLineInput-Input` / `-Output`); düz ad kalktı.
 // Burada İSTEK gövdesi üretildiği için `-Input` varyantı kullanılır.
 export type ProgressPaymentLineInput = components["schemas"]["ProgressPaymentLineInput-Input"];
-export type RejectBody = components["schemas"]["RejectBody"];
-export type RefreshPricesResponse = components["schemas"]["RefreshPricesResponse"];
+export type RejectBody = DeepScale<components["schemas"]["RejectBody"]>;
+export type RefreshPricesResponse = DeepScale<components["schemas"]["RefreshPricesResponse"]>;
 
 // Tum yazma/aksiyon hook'lari sonrasi ortak gecersiz kilma: liste (filtre
 // varyantlari dahil, prefix eslesme), tekil detay ve — govde `project_id`

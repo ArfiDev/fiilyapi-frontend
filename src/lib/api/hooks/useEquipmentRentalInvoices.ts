@@ -7,7 +7,7 @@ import type { DeepScale } from "@/lib/api/scale";
 // F-KIRA T-A · M5 (`Makine - Kira Hakedişi.dc.html`) okuma uçları.
 // Tipler `pnpm gen:api` çıktısından TAKMA AD olarak alınır; elle arayüz yazmak
 // yasak (F-TH T1 kanonu) — sunucu şeması değişirse derleme kırılır.
-export type RentalInvoiceListResponse = components["schemas"]["RentalInvoiceListResponse"];
+export type RentalInvoiceListResponse = DeepScale<components["schemas"]["RentalInvoiceListResponse"]>;
 export type RentalInvoiceResponse = DeepScale<components["schemas"]["RentalInvoiceResponse"]>;
 export type RentalInvoiceDetailResponse = DeepScale<components["schemas"]["RentalInvoiceDetailResponse"]>;
 export type RentalInvoiceLineResponse = DeepScale<components["schemas"]["RentalInvoiceLineResponse"]>;
@@ -16,9 +16,9 @@ export type RentalInvoiceStatus = components["schemas"]["RentalInvoiceStatus"];
 export type RentalLineKind = components["schemas"]["RentalLineKind"];
 export type VarianceStatus = components["schemas"]["VarianceStatus"];
 export type EquipmentRatePeriod = components["schemas"]["EquipmentRatePeriod"];
-export type RentalSiteDistributionEntry = components["schemas"]["RentalSiteDistributionEntry"];
+export type RentalSiteDistributionEntry = DeepScale<components["schemas"]["RentalSiteDistributionEntry"]>;
 export type RentalSiteDistributionEquipment =
-  components["schemas"]["RentalSiteDistributionEquipment"];
+  DeepScale<components["schemas"]["RentalSiteDistributionEquipment"]>;
 
 export const EQUIPMENT_RENTAL_INVOICES_QUERY_KEY = "equipment-rental-invoices";
 export const EQUIPMENT_RENTAL_INVOICE_QUERY_KEY = "equipment-rental-invoice";

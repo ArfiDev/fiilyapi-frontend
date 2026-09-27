@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-ST T1 · Stok & Depo — malzeme KARTI (katalog künyesi) sorgusu.
 // `usePersonnel.ts` deseniyle AYNI: tipler `pnpm gen:api` çıktısından takma ad
@@ -11,8 +12,8 @@ import type { components } from "@/lib/api/schema";
 // türevdir ve `StockItemResponse`da bilerek yoktur). E3 katalog TABLOSU bu
 // hook'la DEĞİL `useStockSummary` ile çizilir; burası kart seçicileri
 // (SG kalem satırı) ve künye listeleri içindir.
-export type StockItemListResponse = components["schemas"]["StockItemListResponse"];
-export type StockItemResponse = components["schemas"]["StockItemResponse"];
+export type StockItemListResponse = DeepScale<components["schemas"]["StockItemListResponse"]>;
+export type StockItemResponse = DeepScale<components["schemas"]["StockItemResponse"]>;
 export type StockCategory = components["schemas"]["StockCategory"];
 export type StockStatus = components["schemas"]["StockStatus"];
 

@@ -1,9 +1,10 @@
 import type { components } from "@/lib/api/schema";
 import type { WorkerSource } from "./constants";
 import type { PersonnelFormValues } from "./form-state";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type PersonnelCreateBody = components["schemas"]["PersonnelCreate"];
-export type PersonnelUpdateBody = components["schemas"]["PersonnelUpdate"];
+export type PersonnelCreateBody = DeepScale<components["schemas"]["PersonnelCreate"]>;
+export type PersonnelUpdateBody = DeepScale<components["schemas"]["PersonnelUpdate"]>;
 
 /**
  * Gönderilebilir form değerleri: `source` ARTIK boş olamaz.

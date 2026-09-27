@@ -1,5 +1,6 @@
 import type { components } from "@/lib/api/schema";
 import type { SiteStatusOption } from "./constants";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * Depo & tesis kutucuklarının backend anahtarları (spec §4.5). İki grup
@@ -18,7 +19,7 @@ export const FACILITY_KEYS = [
   // `satisfies` şemaya bağlar: yeniden adlandırılan/kaldırılan bir anahtar
   // burada derleme hatası verir. Yeni anahtar eklenmesini `buildFacilities`
   // yakalar (orada sekizi de tek tek yazılıdır).
-] as const satisfies readonly (keyof components["schemas"]["SiteFacilitiesInput"])[];
+] as const satisfies readonly (keyof DeepScale<components["schemas"]["SiteFacilitiesInput"]>)[];
 
 export type FacilityKey = (typeof FACILITY_KEYS)[number];
 export type FacilityValues = Record<FacilityKey, boolean>;
@@ -92,7 +93,7 @@ export function emptySiteFormValues(): SiteFormValues {
  */
 export function buildFacilities(
   values: FacilityValues,
-): components["schemas"]["SiteFacilitiesInput"] {
+): DeepScale<components["schemas"]["SiteFacilitiesInput"]> {
   // Anahtarlar TEK TEK yazılır, `Object.fromEntries` + `as` ile DEĞİL:
   // üretilmiş şemaya yeni bir tesis anahtarı eklendiğinde `as` sessizce
   // yutardı ve alan gövdeden düşerdi. Bu hâliyle `pnpm typecheck` kırılır.

@@ -24,10 +24,11 @@ import {
 // kopya yazmak "aynı formül iki yerde YAŞAMAZ" kuralını çiğnerdi.
 import { decimalInputValue } from "@/components/subcontractor-contract-form/item-rows";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 export { decimalInputValue };
 
-export type EmployerItemUpdateBody = components["schemas"]["EmployerContractItemUpdate"];
+export type EmployerItemUpdateBody = DeepScale<components["schemas"]["EmployerContractItemUpdate"]>;
 
 /** Hücrede düzenlenebilen iki alan (E14 kolonları 80 ve 81). */
 export type InlineCellField = "quantity" | "unitPrice";

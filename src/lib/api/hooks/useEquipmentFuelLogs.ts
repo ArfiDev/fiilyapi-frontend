@@ -2,10 +2,11 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MK T5 · M4 "Günlük Yakıt Kayıtları" tablosunun (105-158) kaynağı.
-export type FuelLogListResponse = components["schemas"]["FuelLogListResponse"];
-export type FuelLogResponse = components["schemas"]["FuelLogResponse"];
+export type FuelLogListResponse = DeepScale<components["schemas"]["FuelLogListResponse"]>;
+export type FuelLogResponse = DeepScale<components["schemas"]["FuelLogResponse"]>;
 
 export const EQUIPMENT_FUEL_LOGS_QUERY_KEY = "equipment-fuel-logs";
 

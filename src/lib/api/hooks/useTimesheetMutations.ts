@@ -8,10 +8,11 @@ import {
   type TimesheetWeek,
   type TimesheetWeekParams,
 } from "./useTimesheet";
+import type { DeepScale } from "@/lib/api/scale";
 
 // PUAN-SAAT · Puantaj kaydetme ucu (HAFTALIK).
-export type TimesheetWeekSave = components["schemas"]["TimesheetWeekSave"];
-export type TimesheetCellInput = components["schemas"]["TimesheetCellInput"];
+export type TimesheetWeekSave = DeepScale<components["schemas"]["TimesheetWeekSave"]>;
+export type TimesheetCellInput = DeepScale<components["schemas"]["TimesheetCellInput"]>;
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * ⚠️⚠️  KAPSAM KURALI — BU DILIMIN EN KRITIK TUZAGI  ⚠️⚠️

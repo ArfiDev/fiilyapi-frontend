@@ -25,13 +25,13 @@ export type SubcontractorContractCreateRequest =
 export type SubcontractorContractUpdateRequest =
   DeepScale<components["schemas"]["SubcontractorContractUpdate"]>;
 export type SubcontractorContractItemCreateRequest =
-  components["schemas"]["SubcontractorContractItemCreate"];
+  DeepScale<components["schemas"]["SubcontractorContractItemCreate"]>;
 export type SubcontractorContractItemUpdateRequest =
-  components["schemas"]["SubcontractorContractItemUpdate"];
+  DeepScale<components["schemas"]["SubcontractorContractItemUpdate"]>;
 export type SubcontractorContractItemResponse =
-  components["schemas"]["SubcontractorContractItemResponse"];
+  DeepScale<components["schemas"]["SubcontractorContractItemResponse"]>;
 export type SubcontractorContractItemsLoadResponse =
-  components["schemas"]["SubcontractorContractItemsLoadResponse"];
+  DeepScale<components["schemas"]["SubcontractorContractItemsLoadResponse"]>;
 
 /** Detay + liste anahtarlarını birlikte tazeler (kural tek yerde). */
 function useContractInvalidator(): (contractId: string) => void {

@@ -32,8 +32,8 @@ import type { DeepScale } from "@/lib/api/scale";
  *     ekran bunu "bir kısmı yazıldı" diye göstermemeli.
  */
 export type UnitBulkCreate = DeepScale<components["schemas"]["UnitBulkCreate"]>;
-export type UnitBulkPreview = components["schemas"]["UnitBulkPreview"];
-export type UnitBulkPreviewRow = components["schemas"]["UnitBulkPreviewRow"];
+export type UnitBulkPreview = DeepScale<components["schemas"]["UnitBulkPreview"]>;
+export type UnitBulkPreviewRow = DeepScale<components["schemas"]["UnitBulkPreviewRow"]>;
 
 /** İki ucun da girdisi AYNIDIR: proje PATH'te, gövde `UnitBulkCreate`. */
 export interface BulkUnitVariables {

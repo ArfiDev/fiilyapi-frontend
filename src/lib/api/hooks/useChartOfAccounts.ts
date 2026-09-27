@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MU1 T2 · hesap planı katalogu. PAYLAŞILAN hook: E8'in hesap süzgeci
 // (T2) ve Hesap Planı ekranı (T3) AYNI kaynağı kullanır — ikinci bir kopya
 // yazılırsa iki ekran aynı katalog için farklı sorgu üretirdi.
-export type ChartAccountListResponse = components["schemas"]["ChartAccountListResponse"];
-export type ChartAccountResponse = components["schemas"]["ChartAccountResponse"];
+export type ChartAccountListResponse = DeepScale<components["schemas"]["ChartAccountListResponse"]>;
+export type ChartAccountResponse = DeepScale<components["schemas"]["ChartAccountResponse"]>;
 export type ChartAccountType = components["schemas"]["ChartAccountType"];
 
 export const CHART_OF_ACCOUNTS_QUERY_KEY = "chart-of-accounts";

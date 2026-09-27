@@ -14,7 +14,7 @@ import {
 
 export type InvoiceCreateRequest = DeepScale<components["schemas"]["InvoiceCreate"]>;
 export type InvoiceLineCreate = DeepScale<components["schemas"]["InvoiceLineCreate"]>;
-export type PaymentCreateRequest = components["schemas"]["PaymentCreate"];
+export type PaymentCreateRequest = DeepScale<components["schemas"]["PaymentCreate"]>;
 
 /** Durum damgalayan dört ucun ortak adı — `useInvoiceAction` bunu alır. */
 export type InvoiceActionKind = "send" | "approve" | "dispute" | "mark-collected";

@@ -2,6 +2,7 @@ import { guardedFetch } from "@/lib/api/app-build";
 import { BackendError } from "@/lib/api/unwrap";
 import { downloadAttachment } from "@/lib/api/download";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-UNIT2 T2b · EI ("Excel'den Ünite İçe Aktarma") — ŞEMADA olan ama
 // `openapi-fetch` ile geçilemeyen ÜÇ uç: iki multipart yükleme
@@ -21,8 +22,8 @@ import type { components } from "@/lib/api/schema";
 // (`application/vnd.openxmlformats-…sheet`) döner; bu `TEXTUAL_CONTENT_TYPES`
 // listesinde YOKTUR → ikili sayılır ve gövde ham geçer.
 
-export type UnitImportValidation = components["schemas"]["UnitImportValidation"];
-export type UnitImportResult = components["schemas"]["UnitImportResult"];
+export type UnitImportValidation = DeepScale<components["schemas"]["UnitImportValidation"]>;
+export type UnitImportResult = DeepScale<components["schemas"]["UnitImportResult"]>;
 
 const PROJECTS_PATH = "/api/backend/projects";
 

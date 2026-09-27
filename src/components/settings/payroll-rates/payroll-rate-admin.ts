@@ -7,7 +7,7 @@ export type WorkerSource = components["schemas"]["WorkerSource"];
 export type IncomeKind = components["schemas"]["IncomeKind"];
 export type PayrollRateResponse = DeepScale<components["schemas"]["PayrollRateResponse"]>;
 export type PayrollTaxBracketResponse = DeepScale<components["schemas"]["PayrollTaxBracketResponse"]>;
-export type PayrollPeriodListRow = components["schemas"]["PayrollPeriodListRow"];
+export type PayrollPeriodListRow = DeepScale<components["schemas"]["PayrollPeriodListRow"]>;
 
 /* ------------------------------------------------------------ personel tipi */
 

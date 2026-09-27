@@ -24,7 +24,7 @@ import type { DeepScale } from "@/lib/api/scale";
  * başlıkları kendilerini açıkça `/bordro` ekranına bağlar.
  */
 export type PayrollSgkSummaryResponse = DeepScale<components["schemas"]["PayrollSgkSummaryResponse"]>;
-export type PayrollSgkSubmitResult = components["schemas"]["PayrollSgkSubmitResult"];
+export type PayrollSgkSubmitResult = DeepScale<components["schemas"]["PayrollSgkSubmitResult"]>;
 
 export const PAYROLL_SGK_SUMMARY_QUERY_KEY = "payroll-sgk-summary";
 

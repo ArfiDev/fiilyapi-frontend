@@ -22,9 +22,10 @@
  */
 
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 type ImportBody =
-  components["schemas"]["Body_import_units_endpoint_projects__project_id__units_import_post"];
+  DeepScale<components["schemas"]["Body_import_units_endpoint_projects__project_id__units_import_post"]>;
 
 /** Gövdenin `file` DIŞINDAKİ alanları. */
 export type ImportFormFields = Omit<ImportBody, "file">;

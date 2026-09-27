@@ -6,14 +6,14 @@ import type { DeepScale } from "@/lib/api/scale";
 
 // F-P8 T1 · Satış Yönetimi (SY) KPI şeridinin + "Yaklaşan Tahsilatlar"
 // kartının TEK kaynağı: `GET /projects/{project_id}/sales/summary`.
-export type SalesSummaryResponse = components["schemas"]["SalesSummaryResponse"];
-export type SoldKpi = components["schemas"]["SoldKpi"];
-export type ReservedKpi = components["schemas"]["ReservedKpi"];
-export type AvailableUnitsKpi = components["schemas"]["AvailableUnitsKpi"];
+export type SalesSummaryResponse = DeepScale<components["schemas"]["SalesSummaryResponse"]>;
+export type SoldKpi = DeepScale<components["schemas"]["SoldKpi"]>;
+export type ReservedKpi = DeepScale<components["schemas"]["ReservedKpi"]>;
+export type AvailableUnitsKpi = DeepScale<components["schemas"]["AvailableUnitsKpi"]>;
 export type CollectionKpi = DeepScale<components["schemas"]["CollectionKpi"]>;
-export type OverdueKpi = components["schemas"]["OverdueKpi"];
-export type UpcomingCollection = components["schemas"]["UpcomingCollection"];
-export type ExpiredReservation = components["schemas"]["ExpiredReservation"];
+export type OverdueKpi = DeepScale<components["schemas"]["OverdueKpi"]>;
+export type UpcomingCollection = DeepScale<components["schemas"]["UpcomingCollection"]>;
+export type ExpiredReservation = DeepScale<components["schemas"]["ExpiredReservation"]>;
 
 export const SALES_SUMMARY_QUERY_KEY = "sales-summary";
 

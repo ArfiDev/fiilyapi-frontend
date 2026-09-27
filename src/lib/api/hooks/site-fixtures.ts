@@ -10,7 +10,7 @@ import type { DeepScale } from "@/lib/api/scale";
  * (`{ ...SITE_CONTRACT_DEFAULTS, ...fixture }`). Yalnız testlerde kullanılır —
  * uygulama kodu bu modülü import etmez.
  */
-export const EMPTY_SITE_FACILITIES: components["schemas"]["SiteFacilities"] = {
+export const EMPTY_SITE_FACILITIES: DeepScale<components["schemas"]["SiteFacilities"]> = {
   closed_warehouse: false,
   open_storage: false,
   cold_storage: false,

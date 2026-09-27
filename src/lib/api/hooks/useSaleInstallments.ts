@@ -2,11 +2,12 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-P8 T1 · DS (Daire Satışı) formundaki ödeme planı tablosu —
 // `GET /sales/{sale_id}/installments`.
-export type SalePlanResponse = components["schemas"]["SalePlanResponse"];
-export type SaleInstallmentResponse = components["schemas"]["SaleInstallmentResponse"];
+export type SalePlanResponse = DeepScale<components["schemas"]["SalePlanResponse"]>;
+export type SaleInstallmentResponse = DeepScale<components["schemas"]["SaleInstallmentResponse"]>;
 export type InstallmentPaymentMethod = components["schemas"]["InstallmentPaymentMethod"];
 
 export const SALE_INSTALLMENTS_QUERY_KEY = "sale-installments";

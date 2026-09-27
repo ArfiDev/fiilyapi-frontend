@@ -5,10 +5,11 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { BOQ_QUERY_KEY } from "./useBoq";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type BoqItemAllocation = components["schemas"]["BoqItemAllocation"];
-export type BoqItemAllocationInput = components["schemas"]["BoqItemAllocationInput"];
-export type BoqItemAllocationsResponse = components["schemas"]["BoqItemAllocationsResponse"];
+export type BoqItemAllocation = DeepScale<components["schemas"]["BoqItemAllocation"]>;
+export type BoqItemAllocationInput = DeepScale<components["schemas"]["BoqItemAllocationInput"]>;
+export type BoqItemAllocationsResponse = DeepScale<components["schemas"]["BoqItemAllocationsResponse"]>;
 
 /**
  * 🔴 BOQ-SEC K4 — POZUN BÜTÜN BÖLÜM PAYLARINI TEK ÇAĞRIDA OKUR.

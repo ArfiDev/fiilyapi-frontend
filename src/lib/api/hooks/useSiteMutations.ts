@@ -6,8 +6,8 @@ import { SITES_QUERY_KEY, SITE_QUERY_KEY } from "./useSites";
 import { PROJECT_QUERY_KEY } from "./useProjects";
 import type { DeepScale } from "@/lib/api/scale";
 
-export type SiteCreateRequest = components["schemas"]["SiteCreate"];
-export type SiteUpdateRequest = components["schemas"]["SiteUpdate"];
+export type SiteCreateRequest = DeepScale<components["schemas"]["SiteCreate"]>;
+export type SiteUpdateRequest = DeepScale<components["schemas"]["SiteUpdate"]>;
 export type SiteUpdateResponse = DeepScale<components["schemas"]["SiteDetailResponse"]>;
 
 /**

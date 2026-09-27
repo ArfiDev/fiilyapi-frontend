@@ -4,6 +4,7 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { SUPPLIERS_QUERY_KEY } from "./useSuppliers";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Tedarikçi yazma uçları — TED "+ Tedarikçi Ekle" türetilmiş
 // minimal diyaloğu (spec K5, ONAYLI SAPMA) ve kart üzerinden pasifleştirme.
@@ -12,9 +13,9 @@ import { SUPPLIERS_QUERY_KEY } from "./useSuppliers";
 // ⚠️ `DELETE /suppliers/{id}` UCU YOKTUR (SA kararı: tedarikçi mali ize
 // bağlıdır, silinmez — pasifleştirilir). Kart üzerinde "Sil" basılmaz;
 // buraya bir silme hook'u eklemek = review bulgusu.
-export type SupplierCreate = components["schemas"]["SupplierCreate"];
-export type SupplierUpdate = components["schemas"]["SupplierUpdate"];
-export type SupplierResponse = components["schemas"]["SupplierResponse"];
+export type SupplierCreate = DeepScale<components["schemas"]["SupplierCreate"]>;
+export type SupplierUpdate = DeepScale<components["schemas"]["SupplierUpdate"]>;
+export type SupplierResponse = DeepScale<components["schemas"]["SupplierResponse"]>;
 
 /**
  * `POST /suppliers` — zorunlu alanlar `name` ve `payment_terms`tır

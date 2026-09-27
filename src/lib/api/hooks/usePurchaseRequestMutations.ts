@@ -8,6 +8,7 @@ import {
   PURCHASE_REQUEST_QUERY_KEY,
 } from "./usePurchaseRequests";
 import { PURCHASING_SUMMARY_QUERY_KEY } from "./usePurchasingSummary";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Talep yazma yüzeyi — FST'nin "Taslak Kaydet" + "Onaya Gönder"
 // düğmeleri (spec §1) buradan beslenir.
@@ -23,10 +24,10 @@ import { PURCHASING_SUMMARY_QUERY_KEY } from "./usePurchasingSummary";
 //
 // ⚠️ `DELETE /purchase-requests/{id}` de basılmaz: SAT tablosunda silme
 // düğmesi yoktur (`can_delete` alanı yanıtta durur ama ekranı yoktur).
-export type PurchaseRequestCreate = components["schemas"]["PurchaseRequestCreate"];
-export type PurchaseRequestUpdate = components["schemas"]["PurchaseRequestUpdate"];
-export type PurchaseRequestLineCreate = components["schemas"]["PurchaseRequestLineCreate"];
-export type PurchaseRequestResponse = components["schemas"]["PurchaseRequestResponse"];
+export type PurchaseRequestCreate = DeepScale<components["schemas"]["PurchaseRequestCreate"]>;
+export type PurchaseRequestUpdate = DeepScale<components["schemas"]["PurchaseRequestUpdate"]>;
+export type PurchaseRequestLineCreate = DeepScale<components["schemas"]["PurchaseRequestLineCreate"]>;
+export type PurchaseRequestResponse = DeepScale<components["schemas"]["PurchaseRequestResponse"]>;
 
 /**
  * Bir talep yazıldığında/durumu değiştiğinde BAYATLAYAN üç şey vardır: SAT

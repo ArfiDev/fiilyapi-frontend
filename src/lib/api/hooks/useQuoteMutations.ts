@@ -10,12 +10,13 @@ import {
 } from "./usePurchaseRequests";
 import { PURCHASE_ORDERS_QUERY_KEY } from "./usePurchaseOrders";
 import { PURCHASING_SUMMARY_QUERY_KEY } from "./usePurchasingSummary";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Teklif yazma yüzeyi — TEK ekranının teklif GİRİŞİ türetilmiş
 // diyaloğu (spec K5, ONAYLI SAPMA) + "Sipariş Ver"/"Seç" düğmesi.
-export type PurchaseQuoteCreate = components["schemas"]["PurchaseQuoteCreate"];
-export type PurchaseQuoteUpdate = components["schemas"]["PurchaseQuoteUpdate"];
-export type PurchaseOrderResponse = components["schemas"]["PurchaseOrderResponse"];
+export type PurchaseQuoteCreate = DeepScale<components["schemas"]["PurchaseQuoteCreate"]>;
+export type PurchaseQuoteUpdate = DeepScale<components["schemas"]["PurchaseQuoteUpdate"]>;
+export type PurchaseOrderResponse = DeepScale<components["schemas"]["PurchaseOrderResponse"]>;
 
 /**
  * Teklif YAZILDIĞINDA bayatlayan iki şey: o talebin teklif listesi (kartlar +

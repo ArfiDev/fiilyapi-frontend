@@ -7,10 +7,10 @@ import type { DeepScale } from "@/lib/api/scale";
 // F-MK T4 · M3 (Çalışma Kaydı) — ekranın ANA veri kaynağı. Tipler `pnpm
 // gen:api` çıktısından takma ad olarak alınır, elle arayüz YAZILMAZ
 // (`useEquipmentSummary.ts` deseni).
-export type WorkSummaryResponse = components["schemas"]["WorkSummaryResponse"];
+export type WorkSummaryResponse = DeepScale<components["schemas"]["WorkSummaryResponse"]>;
 export type WorkSummaryRow = DeepScale<components["schemas"]["WorkSummaryRow"]>;
 export type WorkSummaryTotals = DeepScale<components["schemas"]["WorkSummaryTotals"]>;
-export type WorkSummaryWeek = components["schemas"]["WorkSummaryWeek"];
+export type WorkSummaryWeek = DeepScale<components["schemas"]["WorkSummaryWeek"]>;
 
 export const EQUIPMENT_WORK_SUMMARY_QUERY_KEY = "equipment-work-summary";
 

@@ -5,8 +5,9 @@ import type { components } from "@/lib/api/schema";
 import { CardEmptyState } from "./CardEmptyState";
 import "./dashboard.css";
 import { routes } from "@/lib/routes";
+import type { DeepScale } from "@/lib/api/scale";
 
-type Placeholder = components["schemas"]["PendingApprovalsPlaceholder"];
+type Placeholder = DeepScale<components["schemas"]["PendingApprovalsPlaceholder"]>;
 
 export function PendingApprovalsCard({ data }: { data: Placeholder }) {
   // items semada opsiyonel (backend bos listede alani atlayabilir).

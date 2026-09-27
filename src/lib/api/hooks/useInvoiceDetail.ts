@@ -7,8 +7,8 @@ import type { DeepScale } from "@/lib/api/scale";
 // F-FAT2 T2 · Fatura detayının (FGI/FGE) okuma sorguları.
 export type InvoiceDetailResponse = DeepScale<components["schemas"]["InvoiceDetailResponse"]>;
 export type InvoiceLineResponse = DeepScale<components["schemas"]["InvoiceLineResponse"]>;
-export type PaymentListResponse = components["schemas"]["PaymentListResponse"];
-export type PaymentResponse = components["schemas"]["PaymentResponse"];
+export type PaymentListResponse = DeepScale<components["schemas"]["PaymentListResponse"]>;
+export type PaymentResponse = DeepScale<components["schemas"]["PaymentResponse"]>;
 export type PaymentMethodKind = components["schemas"]["PaymentMethodKind"];
 export type RentalInvoiceDetailResponse =
   DeepScale<components["schemas"]["RentalInvoiceDetailResponse"]>;

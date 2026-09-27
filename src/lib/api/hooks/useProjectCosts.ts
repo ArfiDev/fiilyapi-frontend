@@ -28,11 +28,11 @@ import type { DeepScale } from "@/lib/api/scale";
  * `false` olabilir ve o hâlde HAM BASILMAZ — çağıran `pendingModuleLabel` ile
  * görünür gerekçe basar (spec §4A).
  */
-export type ProjectCostsResponse = components["schemas"]["ProjectCostsResponse"];
-export type ProjectCostBreakdown = components["schemas"]["ProjectCostBreakdown"];
+export type ProjectCostsResponse = DeepScale<components["schemas"]["ProjectCostsResponse"]>;
+export type ProjectCostBreakdown = DeepScale<components["schemas"]["ProjectCostBreakdown"]>;
 export type ProjectProfitProjection = DeepScale<components["schemas"]["ProjectProfitProjection"]>;
 export type SubcontractorCostRow = DeepScale<components["schemas"]["SubcontractorCostRow"]>;
-export type SubcontractorCostSummary = components["schemas"]["SubcontractorCostSummary"];
+export type SubcontractorCostSummary = DeepScale<components["schemas"]["SubcontractorCostSummary"]>;
 
 export const PROJECT_COSTS_QUERY_KEY = "project-costs";
 

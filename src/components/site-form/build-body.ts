@@ -2,8 +2,9 @@ import type { components } from "@/lib/api/schema";
 import { OUTSOURCED_SAFETY_OFFICER } from "./constants";
 import { buildFacilities, type SiteFormValues } from "./form-state";
 import { collectSectionInputs, type SectionRow } from "./sections-validate";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type SiteCreateBody = components["schemas"]["SiteCreate"];
+export type SiteCreateBody = DeepScale<components["schemas"]["SiteCreate"]>;
 
 /** Boş/boşluk metin → `null` (spec §9.3). */
 export function textOrNull(value: string): string | null {

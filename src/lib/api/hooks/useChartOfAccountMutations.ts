@@ -5,9 +5,10 @@ import type { components } from "@/lib/api/schema";
 
 import { invalidateAccountingScope } from "./accounting-invalidate";
 import type { ChartAccountResponse } from "./useChartOfAccounts";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type ChartAccountCreate = components["schemas"]["ChartAccountCreate"];
-export type ChartAccountUpdate = components["schemas"]["ChartAccountUpdate"];
+export type ChartAccountCreate = DeepScale<components["schemas"]["ChartAccountCreate"]>;
+export type ChartAccountUpdate = DeepScale<components["schemas"]["ChartAccountUpdate"]>;
 
 /** `PATCH` iki parça ister; mutation TEK değişken alır, ikisi bir zarfta gider. */
 export interface ChartAccountUpdateVariables {

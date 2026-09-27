@@ -27,12 +27,12 @@ import type { DeepScale } from "@/lib/api/scale";
  * YASAK (`useApprovals.ts` kanonu).
  */
 export type PayrollRateResponse = DeepScale<components["schemas"]["PayrollRateResponse"]>;
-export type PayrollRateListResponse = components["schemas"]["PayrollRateListResponse"];
+export type PayrollRateListResponse = DeepScale<components["schemas"]["PayrollRateListResponse"]>;
 export type PayrollRateUpdate = DeepScale<components["schemas"]["PayrollRateUpdate"]>;
 export type PayrollTaxBracketResponse = DeepScale<components["schemas"]["PayrollTaxBracketResponse"]>;
 export type PayrollTaxBracketListResponse =
-  components["schemas"]["PayrollTaxBracketListResponse"];
-export type PayrollTaxBracketSetUpdate = components["schemas"]["PayrollTaxBracketSetUpdate"];
+  DeepScale<components["schemas"]["PayrollTaxBracketListResponse"]>;
+export type PayrollTaxBracketSetUpdate = DeepScale<components["schemas"]["PayrollTaxBracketSetUpdate"]>;
 export type WorkerSource = components["schemas"]["WorkerSource"];
 export type IncomeKind = components["schemas"]["IncomeKind"];
 

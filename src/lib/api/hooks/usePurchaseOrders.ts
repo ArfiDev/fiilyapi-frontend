@@ -2,10 +2,11 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-SA T1 · Satınalma — sipariş listesi (SIP 45-125).
-export type PurchaseOrderListResponse = components["schemas"]["PurchaseOrderListResponse"];
-export type PurchaseOrderResponse = components["schemas"]["PurchaseOrderResponse"];
+export type PurchaseOrderListResponse = DeepScale<components["schemas"]["PurchaseOrderListResponse"]>;
+export type PurchaseOrderResponse = DeepScale<components["schemas"]["PurchaseOrderResponse"]>;
 export type PurchaseOrderStatus = components["schemas"]["PurchaseOrderStatus"];
 
 export const PURCHASE_ORDERS_QUERY_KEY = "purchase-orders";

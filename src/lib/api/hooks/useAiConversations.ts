@@ -26,9 +26,9 @@ import type { DeepScale } from "@/lib/api/scale";
  * backend'de (`WHERE user_id = :actor`) ve istemci onu İKAME ETMEZ — burada
  * hiçbir süzgeç yoktur, olmamalıdır.
  */
-export type AiConversationRead = components["schemas"]["AiConversationRead"];
-export type AiConversationListResponse = components["schemas"]["AiConversationListResponse"];
-export type AiConversationDetail = components["schemas"]["AiConversationDetail"];
+export type AiConversationRead = DeepScale<components["schemas"]["AiConversationRead"]>;
+export type AiConversationListResponse = DeepScale<components["schemas"]["AiConversationListResponse"]>;
+export type AiConversationDetail = DeepScale<components["schemas"]["AiConversationDetail"]>;
 export type AiMessageRead = DeepScale<components["schemas"]["AiMessageRead"]>;
 
 export const AI_CONVERSATIONS_QUERY_KEY = "ai-conversations";

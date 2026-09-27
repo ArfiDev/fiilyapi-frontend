@@ -4,6 +4,7 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { SUBCONTRACTORS_QUERY_KEY } from "./useSubcontractors";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-P5 T1 · Taşeron FİRMA yazma uçları — TL ("+ Taşeron Ekle" modalı) ve FSO
 // ("+ Yeni Taşeron Ekle") aynı modalı paylaşır, o modal da bu hook'ları.
@@ -13,9 +14,9 @@ import { SUBCONTRACTORS_QUERY_KEY } from "./useSubcontractors";
 // ⚠️ openapi'de `GET /subcontractors/{subcontractor_id}` YOKTUR (yalnız
 // `PATCH` ve `DELETE`). Tek bir taşeronun detayı ancak LİSTE ucundan süzülerek
 // elde edilir — T7 (TSD başlık kartındaki VKN) bunu bilmelidir.
-export type SubcontractorCreateRequest = components["schemas"]["SubcontractorCreate"];
-export type SubcontractorUpdateRequest = components["schemas"]["SubcontractorUpdate"];
-export type SubcontractorResponse = components["schemas"]["SubcontractorResponse"];
+export type SubcontractorCreateRequest = DeepScale<components["schemas"]["SubcontractorCreate"]>;
+export type SubcontractorUpdateRequest = DeepScale<components["schemas"]["SubcontractorUpdate"]>;
+export type SubcontractorResponse = DeepScale<components["schemas"]["SubcontractorResponse"]>;
 
 export function useCreateSubcontractor(): UseMutationResult<
   SubcontractorResponse,

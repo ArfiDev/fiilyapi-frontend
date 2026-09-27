@@ -31,7 +31,7 @@ import type { DeepScale } from "@/lib/api/scale";
  * (`UnitCreate`) şemada varsayılanlıdır ama `openapi-typescript` çıktısında
  * ZORUNLU görünür; gövdeyi kuran `build-body.ts` üçünü de AÇIKÇA verir.
  */
-export type BlockCreate = components["schemas"]["BlockCreate"];
+export type BlockCreate = DeepScale<components["schemas"]["BlockCreate"]>;
 export type UnitCreate = DeepScale<components["schemas"]["UnitCreate"]>;
 
 /**

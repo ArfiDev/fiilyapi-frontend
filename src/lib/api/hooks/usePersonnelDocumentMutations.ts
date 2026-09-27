@@ -8,6 +8,7 @@ import {
   PERSONNEL_DOCUMENTS_QUERY_KEY,
   type PersonnelDocumentResponse,
 } from "./useHrDocuments";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-BLG T2c · `POST /personnel/{personnel_id}/documents` — personel belge
@@ -24,7 +25,7 @@ import {
  * Başarıda İKİ liste tazelenir: personelin belge listesi (PD kartı) ve İK
  * belge özeti (BT ekranı + bu formun tip kataloğu aynı uçtan besleniyor).
  */
-export type PersonnelDocumentCreate = components["schemas"]["PersonnelDocumentCreate"];
+export type PersonnelDocumentCreate = DeepScale<components["schemas"]["PersonnelDocumentCreate"]>;
 
 export function useCreatePersonnelDocument(
   personnelId: string,
@@ -45,7 +46,7 @@ export function useCreatePersonnelDocument(
   });
 }
 
-export type PersonnelDocumentUpdate = components["schemas"]["PersonnelDocumentUpdate"];
+export type PersonnelDocumentUpdate = DeepScale<components["schemas"]["PersonnelDocumentUpdate"]>;
 
 /**
  * `PATCH /personnel/documents/{document_id}` — yanlış girilen künyeyi DÜZELTİR

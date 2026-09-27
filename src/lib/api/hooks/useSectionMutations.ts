@@ -5,9 +5,10 @@ import type { components } from "@/lib/api/schema";
 import { SITE_QUERY_KEY } from "./useSites";
 import { SITE_SECTIONS_QUERY_KEY } from "./useSiteSections";
 import { SECTION_QUERY_KEY, type SectionDetailResponse } from "./useSection";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type SectionCreateRequest = components["schemas"]["SectionCreate"];
-export type SectionUpdateRequest = components["schemas"]["SectionUpdate"];
+export type SectionCreateRequest = DeepScale<components["schemas"]["SectionCreate"]>;
+export type SectionUpdateRequest = DeepScale<components["schemas"]["SectionUpdate"]>;
 
 // Task 10 — SectionFormModal'in olusturma ucu (T3'te tam sayfa form bu hook'u
 // devralacak, SectionFormModal EMEKLI edilecek — bkz. _global-constraints.md).

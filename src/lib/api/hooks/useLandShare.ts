@@ -30,12 +30,12 @@ import type { DeepScale } from "@/lib/api/scale";
  */
 export type LandShareSummaryResponse = DeepScale<components["schemas"]["LandShareSummaryResponse"]>;
 export type LandShareContract = DeepScale<components["schemas"]["LandShareContract"]>;
-export type LandShareCountBalance = components["schemas"]["LandShareCountBalance"];
+export type LandShareCountBalance = DeepScale<components["schemas"]["LandShareCountBalance"]>;
 export type LandShareValueBalance = DeepScale<components["schemas"]["LandShareValueBalance"]>;
 export type LandShareShareholderRow = DeepScale<components["schemas"]["LandShareShareholderRow"]>;
-export type LandShareUnitListResponse = components["schemas"]["LandShareUnitListResponse"];
+export type LandShareUnitListResponse = DeepScale<components["schemas"]["LandShareUnitListResponse"]>;
 export type UnitOwnerSideFilter = components["schemas"]["UnitOwnerSideFilter"];
-export type UnitAllocationRequest = components["schemas"]["UnitAllocationRequest"];
+export type UnitAllocationRequest = DeepScale<components["schemas"]["UnitAllocationRequest"]>;
 
 export const LAND_SHARE_SUMMARY_QUERY_KEY = "land-share-summary";
 export const LAND_SHARE_UNITS_QUERY_KEY = "land-share-units";

@@ -2,10 +2,11 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MU1 T2 · E8:79-88 KPI şeridi. Tipler `pnpm gen:api` çıktısından takma ad
 // olarak alınır — elle arayüz yazmak yasak (`useBoq.ts` deseni).
-export type JournalSummaryResponse = components["schemas"]["JournalSummaryResponse"];
+export type JournalSummaryResponse = DeepScale<components["schemas"]["JournalSummaryResponse"]>;
 
 export const JOURNAL_SUMMARY_QUERY_KEY = "journal-summary";
 

@@ -3,6 +3,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-TKV T1 — Proje Takvimi (Gantt) portföy ucu: `GET /projects/timeline` (P11).
@@ -17,10 +18,10 @@ import type { components } from "@/lib/api/schema";
  *
  * BFF kökü `projects` zaten izinlidir (`route.ts:12`) — yeni kök gerekmez.
  */
-export type ProjectTimelineResponse = components["schemas"]["ProjectTimelineResponse"];
-export type TimelineProject = components["schemas"]["TimelineProject"];
-export type TimelineSection = components["schemas"]["TimelineSection"];
-export type TimelineMilestone = components["schemas"]["TimelineMilestone"];
+export type ProjectTimelineResponse = DeepScale<components["schemas"]["ProjectTimelineResponse"]>;
+export type TimelineProject = DeepScale<components["schemas"]["TimelineProject"]>;
+export type TimelineSection = DeepScale<components["schemas"]["TimelineSection"]>;
+export type TimelineMilestone = DeepScale<components["schemas"]["TimelineMilestone"]>;
 
 export const PROJECT_TIMELINE_QUERY_KEY = "project-timeline";
 

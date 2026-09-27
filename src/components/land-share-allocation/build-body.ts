@@ -28,7 +28,7 @@ import type { components } from "@/lib/api/schema";
 import { effectiveAllocation, type AllocationState, type LandShareUnitRow } from "./allocation-state";
 import type { DeepScale } from "@/lib/api/scale";
 
-export type UnitAllocationRequest = components["schemas"]["UnitAllocationRequest"];
+export type UnitAllocationRequest = DeepScale<components["schemas"]["UnitAllocationRequest"]>;
 export type UnitAllocationItem = DeepScale<components["schemas"]["UnitAllocationItem"]>;
 
 /** Sunucudaki hâl ile ekrandaki hâl AYNI mı? */

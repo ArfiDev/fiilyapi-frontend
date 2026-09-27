@@ -16,12 +16,12 @@ import type { DeepScale } from "@/lib/api/scale";
  * ucu `year`/`month` sorgu parametresi ALMAZ — yalnız `period_id` ile
  * çağrılır; bu yüzden gezginin adımladığı dizin liste ucundan gelir.
  */
-export type PayrollPeriodListResponse = components["schemas"]["PayrollPeriodListResponse"];
-export type PayrollPeriodListRow = components["schemas"]["PayrollPeriodListRow"];
+export type PayrollPeriodListResponse = DeepScale<components["schemas"]["PayrollPeriodListResponse"]>;
+export type PayrollPeriodListRow = DeepScale<components["schemas"]["PayrollPeriodListRow"]>;
 export type PayrollPeriodDetailResponse =
-  components["schemas"]["PayrollPeriodDetailResponse"];
-export type PayrollSectionResponse = components["schemas"]["PayrollSectionResponse"];
-export type PayrollLineResponse = components["schemas"]["PayrollLineResponse"];
+  DeepScale<components["schemas"]["PayrollPeriodDetailResponse"]>;
+export type PayrollSectionResponse = DeepScale<components["schemas"]["PayrollSectionResponse"]>;
+export type PayrollLineResponse = DeepScale<components["schemas"]["PayrollLineResponse"]>;
 export type PayrollSummaryResponse = DeepScale<components["schemas"]["PayrollSummaryResponse"]>;
 export type PayrollLineStatus = components["schemas"]["PayrollLineStatus"];
 export type PayrollPeriodStatus = components["schemas"]["PayrollPeriodStatus"];

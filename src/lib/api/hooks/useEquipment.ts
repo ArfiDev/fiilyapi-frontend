@@ -7,7 +7,7 @@ import type { DeepScale } from "@/lib/api/scale";
 // F-MK T2 · Makine & Ekipman — ekipman liste sorgusu. `useStockItems.ts` /
 // `usePersonnel.ts` deseniyle AYNI: tipler `pnpm gen:api` çıktısından takma ad
 // olarak alınır, elle arayüz yazılmaz.
-export type EquipmentListResponse = components["schemas"]["EquipmentListResponse"];
+export type EquipmentListResponse = DeepScale<components["schemas"]["EquipmentListResponse"]>;
 export type EquipmentResponse = DeepScale<components["schemas"]["EquipmentResponse"]>;
 export type EquipmentCategory = components["schemas"]["EquipmentCategory"];
 export type EquipmentStatus = components["schemas"]["EquipmentStatus"];

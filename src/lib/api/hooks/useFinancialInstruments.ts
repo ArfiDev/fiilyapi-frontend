@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-FIN · Çek & Senet (E10) OKUMA uçları — `GET /financial-instruments` ve
 // `GET /financial-instruments/summary`.
@@ -9,12 +10,12 @@ import type { components } from "@/lib/api/schema";
 // Tipler `pnpm gen:api` çıktısından takma ad olarak alınır; elle arayüz yazmak
 // yasaktır (`useInvoices.ts` / `useBankAccounts.ts` deseni).
 export type FinancialInstrumentListResponse =
-  components["schemas"]["FinancialInstrumentListResponse"];
-export type FinancialInstrumentResponse = components["schemas"]["FinancialInstrumentResponse"];
+  DeepScale<components["schemas"]["FinancialInstrumentListResponse"]>;
+export type FinancialInstrumentResponse = DeepScale<components["schemas"]["FinancialInstrumentResponse"]>;
 export type FinancialInstrumentSummaryResponse =
-  components["schemas"]["FinancialInstrumentSummaryResponse"];
+  DeepScale<components["schemas"]["FinancialInstrumentSummaryResponse"]>;
 export type FinancialInstrumentSummaryCard =
-  components["schemas"]["FinancialInstrumentSummaryCard"];
+  DeepScale<components["schemas"]["FinancialInstrumentSummaryCard"]>;
 export type FinancialInstrumentDirection = components["schemas"]["FinancialInstrumentDirection"];
 export type FinancialInstrumentKind = components["schemas"]["FinancialInstrumentKind"];
 export type FinancialInstrumentStatus = components["schemas"]["FinancialInstrumentStatus"];

@@ -3,6 +3,7 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import { CUSTOMERS_QUERY_KEY, type CustomerResponse } from "./useCustomers";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-P8 T1 · Satış ekranlarının müşteri YAZMA yüzeyi — bu dilimde TEK mutasyon
 // vardır: DS formundaki "yeni müşteri" (`POST /customers`).
@@ -11,7 +12,7 @@ import { CUSTOMERS_QUERY_KEY, type CustomerResponse } from "./useCustomers";
 // (backend'de de yok). `PATCH /customers/{id}` uç olarak vardır ama bu dilimde
 // EKRANA BAĞLANMAZ — müşteri düzenleme yüzeyi mockup'ta çizilmemiştir. Buraya
 // bir güncelleme/silme hook'u eklemek = review bulgusu.
-export type CustomerCreate = components["schemas"]["CustomerCreate"];
+export type CustomerCreate = DeepScale<components["schemas"]["CustomerCreate"]>;
 
 /**
  * Yeni müşteri (`POST /customers`, DS mockup'ındaki "yeni müşteri" akışı).

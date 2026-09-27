@@ -2,12 +2,13 @@ import { guardedFetch } from "@/lib/api/app-build";
 import { BackendError } from "@/lib/api/unwrap";
 import { downloadAttachment } from "@/lib/api/download";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-BLG T2b · Ekipman belgesi yükleme — ŞEMADA olan ama `openapi-fetch` ile
 // geçilemeyen multipart uç (`POST /equipment/{equipment_id}/documents`).
 // `documents-client.ts` kanonu BİREBİR izlenir; yeni desen icat EDİLMEZ.
 
-export type EquipmentDocumentResponse = components["schemas"]["EquipmentDocumentResponse"];
+export type EquipmentDocumentResponse = DeepScale<components["schemas"]["EquipmentDocumentResponse"]>;
 
 const EQUIPMENT_PATH = "/api/backend/equipment";
 

@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-BC T1 · Belge Arşivi — klasör paneli okuma sorgusu. `useSitePlan.ts`
 // deseniyle AYNI: tipler `pnpm gen:api` çıktısından takma ad olarak alınır,
 // elle arayüz yazmak yasak.
-export type DocumentFolderListResponse = components["schemas"]["DocumentFolderListResponse"];
-export type DocumentFolderRead = components["schemas"]["DocumentFolderRead"];
+export type DocumentFolderListResponse = DeepScale<components["schemas"]["DocumentFolderListResponse"]>;
+export type DocumentFolderRead = DeepScale<components["schemas"]["DocumentFolderRead"]>;
 
 export const DOCUMENT_FOLDERS_QUERY_KEY = "document-folders";
 

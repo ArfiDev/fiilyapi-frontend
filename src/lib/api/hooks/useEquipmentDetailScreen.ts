@@ -44,9 +44,9 @@ import type { DeepScale } from "@/lib/api/scale";
  * `as_of` sunucu damgasıdır ve yanıtta AÇIKÇA döner; ekran "bu ay"ı ondan
  * türetir, istemci saatinden DEĞİL (F-P10 kanonu + tarih determinizmi).
  */
-export type EquipmentDetailScreenResponse = components["schemas"]["EquipmentDetailResponse"];
+export type EquipmentDetailScreenResponse = DeepScale<components["schemas"]["EquipmentDetailResponse"]>;
 export type EquipmentMaintenanceBlock = DeepScale<components["schemas"]["EquipmentMaintenanceBlock"]>;
-export type EquipmentRentalTotals = components["schemas"]["EquipmentRentalTotals"];
+export type EquipmentRentalTotals = DeepScale<components["schemas"]["EquipmentRentalTotals"]>;
 
 export const EQUIPMENT_DETAIL_SCREEN_QUERY_KEY = "equipment-detail-screen";
 

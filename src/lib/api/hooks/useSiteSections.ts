@@ -12,7 +12,7 @@ import type { DeepScale } from "@/lib/api/scale";
 // `useSites`/`useSection` deseniyle aynı: tipler `pnpm gen:api` çıktısından
 // takma ad olarak alınır, elle arayüz yazılmaz. BFF kökü `sites` — zaten
 // izinlidir (`/sites/{site_id}/sections`), yeni kök eklenmez.
-export type SectionListResponse = components["schemas"]["SectionListResponse"];
+export type SectionListResponse = DeepScale<components["schemas"]["SectionListResponse"]>;
 export type SectionListItem = DeepScale<components["schemas"]["SectionResponse"]>;
 
 export const SITE_SECTIONS_QUERY_KEY = "site-sections";

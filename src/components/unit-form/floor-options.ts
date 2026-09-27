@@ -24,13 +24,14 @@
  */
 
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * Türev için gereken EN DAR blok yüzeyi. `BlockResponse`un tamamını istemek
  * bu saf modülü gereksizce ağ tipine bağlardı; testler üç alanla kurulur.
  */
 export type BlockFloorSource = Pick<
-  components["schemas"]["BlockResponse"],
+  DeepScale<components["schemas"]["BlockResponse"]>,
   "floor_count" | "basement_floor_count" | "roof_type"
 >;
 

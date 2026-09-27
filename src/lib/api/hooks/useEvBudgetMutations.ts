@@ -20,11 +20,11 @@ import {
 // revizyon listesi, Gantt, önizleme ve fark da tazelenir.
 
 export type EvLeafPatch = DeepScale<components["schemas"]["LeafPatch"]>;
-export type EvItemPatch = components["schemas"]["ItemPatch"];
-export type EvGroupDisciplinePair = components["schemas"]["GroupDisciplinePair"];
-export type EvDistributionPair = components["schemas"]["DistributionPair"];
-export type EvWindowIn = components["schemas"]["WindowIn"];
-export type EvFreezeBody = components["schemas"]["FreezeBody"];
+export type EvItemPatch = DeepScale<components["schemas"]["ItemPatch"]>;
+export type EvGroupDisciplinePair = DeepScale<components["schemas"]["GroupDisciplinePair"]>;
+export type EvDistributionPair = DeepScale<components["schemas"]["DistributionPair"]>;
+export type EvWindowIn = DeepScale<components["schemas"]["WindowIn"]>;
+export type EvFreezeBody = DeepScale<components["schemas"]["FreezeBody"]>;
 
 const DERIVED_KEYS = [
   EV_BUDGET_REVISIONS_KEY,

@@ -15,11 +15,11 @@ import type { DeepScale } from "@/lib/api/scale";
  * (46-50 · 122-170) özet ucundan, onay bekleyen talep tablosu (54-113) ise
  * sayfalanabilir liste ucundan gelir. Özet gövdesinde talep SATIRLARI YOKTUR.
  */
-export type HrLeavesSummaryResponse = components["schemas"]["HrLeavesSummaryResponse"];
+export type HrLeavesSummaryResponse = DeepScale<components["schemas"]["HrLeavesSummaryResponse"]>;
 export type LeaveBalanceResponse = DeepScale<components["schemas"]["LeaveBalanceResponse"]>;
-export type LeaveRequestResponse = components["schemas"]["LeaveRequestResponse"];
-export type LeaveRequestListResponse = components["schemas"]["LeaveRequestListResponse"];
-export type LeaveTypeResponse = components["schemas"]["LeaveTypeResponse"];
+export type LeaveRequestResponse = DeepScale<components["schemas"]["LeaveRequestResponse"]>;
+export type LeaveRequestListResponse = DeepScale<components["schemas"]["LeaveRequestListResponse"]>;
+export type LeaveTypeResponse = DeepScale<components["schemas"]["LeaveTypeResponse"]>;
 
 export const HR_LEAVES_SUMMARY_QUERY_KEY = "hr-leaves-summary";
 export const LEAVE_REQUESTS_QUERY_KEY = "leave-requests";

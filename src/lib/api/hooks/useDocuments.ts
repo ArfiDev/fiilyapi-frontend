@@ -2,10 +2,11 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-BC T1 · Belge Arşivi — belge listesi okuma sorgusu.
-export type DocumentListResponse = components["schemas"]["DocumentListResponse"];
-export type DocumentRead = components["schemas"]["DocumentRead"];
+export type DocumentListResponse = DeepScale<components["schemas"]["DocumentListResponse"]>;
+export type DocumentRead = DeepScale<components["schemas"]["DocumentRead"]>;
 
 export const DOCUMENTS_QUERY_KEY = "documents";
 

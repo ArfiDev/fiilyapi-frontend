@@ -5,6 +5,7 @@ import { uploadDocument, type DocumentUploadInput } from "@/lib/api/documents-cl
 import type { components } from "@/lib/api/schema";
 import { DOCUMENTS_QUERY_KEY, type DocumentRead } from "./useDocuments";
 import { DOCUMENT_FOLDERS_QUERY_KEY, type DocumentFolderRead } from "./useDocumentFolders";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-BC T1 · Belge Arşivi YAZMA yüzeyi — YALNIZ İKİ mutasyon vardır:
 // belge yükleme ve klasör oluşturma.
@@ -15,7 +16,7 @@ import { DOCUMENT_FOLDERS_QUERY_KEY, type DocumentFolderRead } from "./useDocume
 // Uçlar backend'de durur (API'den kullanılabilir), BFF kökü de tanımlıdır;
 // eksik olan bilerek eksiktir. Buraya bir silme hook'u eklemek = review bulgusu.
 
-export type DocumentFolderCreate = components["schemas"]["DocumentFolderCreate"];
+export type DocumentFolderCreate = DeepScale<components["schemas"]["DocumentFolderCreate"]>;
 
 /**
  * Belge yükleme (`POST /documents`, multipart).

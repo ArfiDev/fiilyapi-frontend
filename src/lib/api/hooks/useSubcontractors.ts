@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-PT T4 · Personel formunun "Bağlı Taşeron" seçicisi (mockup satır 95).
 // Mockup'taki üç SABİT taşeron adı ("Akın İnşaat" vb.) örnek veridir —
@@ -14,8 +15,8 @@ import type { components } from "@/lib/api/schema";
 // ⚠️ Bu uçta sayfalama YOKTUR (`SubcontractorListResponse` yalnız `items`
 // taşır) — `total`/`limit` kırpılma kavramı burada anlamsızdır.
 
-export type SubcontractorListResponse = components["schemas"]["SubcontractorListResponse"];
-export type SubcontractorListItem = components["schemas"]["SubcontractorResponse"];
+export type SubcontractorListResponse = DeepScale<components["schemas"]["SubcontractorListResponse"]>;
+export type SubcontractorListItem = DeepScale<components["schemas"]["SubcontractorResponse"]>;
 
 export const SUBCONTRACTORS_QUERY_KEY = "subcontractors";
 

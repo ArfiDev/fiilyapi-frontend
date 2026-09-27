@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-İK T2 · `GET /hr/documents/summary` — İK belge takibinin TEK özet ucu
@@ -14,11 +15,11 @@ import type { components } from "@/lib/api/schema";
  * ⚠️ Sayılar BELGE sayısıdır (`missing` hariç — o personel sayısıdır). Personel
  * ekranı bu sayılardan "N personel" cümlesi TÜRETMEZ (şef kararı).
  */
-export type HrDocumentsSummaryResponse = components["schemas"]["HrDocumentsSummaryResponse"];
-export type HrDocumentTypeBreakdown = components["schemas"]["HrDocumentTypeBreakdown"];
+export type HrDocumentsSummaryResponse = DeepScale<components["schemas"]["HrDocumentsSummaryResponse"]>;
+export type HrDocumentTypeBreakdown = DeepScale<components["schemas"]["HrDocumentTypeBreakdown"]>;
 /** F-İK T5 · BT'nin iki listesinin satır tipleri (79-133 · 137-153). */
-export type HrExpiredDocument = components["schemas"]["HrExpiredDocument"];
-export type HrExpiringDocument = components["schemas"]["HrExpiringDocument"];
+export type HrExpiredDocument = DeepScale<components["schemas"]["HrExpiredDocument"]>;
+export type HrExpiringDocument = DeepScale<components["schemas"]["HrExpiringDocument"]>;
 
 export const HR_DOCUMENTS_SUMMARY_QUERY_KEY = "hr-documents-summary";
 
@@ -43,7 +44,7 @@ export function useHrDocumentsSummary(): UseQueryResult<HrDocumentsSummaryRespon
  * backend'de VARDIR ama belge ekleme FORMUNUN mockup'ı yoktur (WORKFLOW §3)
  * — mutasyon hook'u bilerek YAZILMAMIŞTIR.
  */
-export type PersonnelDocumentResponse = components["schemas"]["PersonnelDocumentResponse"];
+export type PersonnelDocumentResponse = DeepScale<components["schemas"]["PersonnelDocumentResponse"]>;
 
 export const PERSONNEL_DOCUMENTS_QUERY_KEY = "personnel-documents";
 

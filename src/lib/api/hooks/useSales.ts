@@ -7,9 +7,9 @@ import type { DeepScale } from "@/lib/api/scale";
 // F-P8 T1 · Satış Yönetimi (SY) — satış listesi (`GET /projects/{id}/sales`).
 // Tipler `pnpm gen:api` çıktısından takma ad olarak alınır; elle arayüz yazmak
 // yasak.
-export type UnitSaleListResponse = components["schemas"]["UnitSaleListResponse"];
+export type UnitSaleListResponse = DeepScale<components["schemas"]["UnitSaleListResponse"]>;
 export type UnitSaleResponse = DeepScale<components["schemas"]["UnitSaleResponse"]>;
-export type UnitSaleTotals = components["schemas"]["UnitSaleTotals"];
+export type UnitSaleTotals = DeepScale<components["schemas"]["UnitSaleTotals"]>;
 export type UnitSaleStatus = components["schemas"]["UnitSaleStatus"];
 export type SaleType = components["schemas"]["SaleType"];
 export type PaymentPlanType = components["schemas"]["PaymentPlanType"];
