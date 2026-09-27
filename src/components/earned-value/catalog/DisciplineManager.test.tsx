@@ -133,7 +133,7 @@ describe("liste modalı (M6 · Disiplin Yönetimi:147-221)", () => {
 });
 
 describe("Disiplin Ekle / Düzenle formu (M6:227-304)", () => {
-  it("palet 5 renkle başlar (Bütçe:523); yeni disiplinin rengi sırayla başa döner", async () => {
+  it("palet 10 renkle başlar (KAT-F1b · ilk 5 Bütçe:523); yeni disiplinin rengi sırayla başa döner", async () => {
     const user = userEvent.setup();
     const dialog = await openManager();
     await user.click(within(dialog).getByRole("button", { name: "+ Yeni disiplin" }));
@@ -142,15 +142,22 @@ describe("Disiplin Ekle / Düzenle formu (M6:227-304)", () => {
     const palette = within(form).getByRole("group", { name: "Grafik rengi" });
     const swatches = within(palette).getAllByRole("button");
     // M6:314-320 — her dairenin altında ya "sıradaki" ya da bu rengi kullanan disiplinin kodu.
+    // KAT-F1b (b) sırası: #2563eb, #dc2626, #64748b, #7c3aed, #0f766e, #16a34a, #d97706, #93c5fd, #cbd5e1, #e2e8f0.
+    // 5 yeni renk (#dc2626, #7c3aed, #0f766e, #16a34a, #d97706) hiçbiri kullanımda değil.
     expect(swatches.map((b) => b.textContent)).toEqual([
       "#2563ebKAB",
-      "#93c5fdDUV",
+      "#dc2626",
       "#64748b",
-      "#cbd5e1sıradaki",
+      "#7c3aedsıradaki",
+      "#0f766e",
+      "#16a34a",
+      "#d97706",
+      "#93c5fdDUV",
+      "#cbd5e1",
       "#e2e8f0INC",
     ]);
-    // 3 disiplin var → 4. renk (#cbd5e1) önerilir
-    expect(within(palette).getByRole("button", { name: "#cbd5e1 sıradaki" })).toHaveAttribute("aria-pressed", "true");
+    // 3 disiplin var → indeks 3'teki renk (#7c3aed) önerilir
+    expect(within(palette).getByRole("button", { name: "#7c3aed sıradaki" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("düzenlemede: kendi rengi 'sıradaki' etiketiyle işaretlenmez, BAŞKA disiplinin kullandığı renk kodla etiketlenir", async () => {
@@ -173,7 +180,7 @@ describe("Disiplin Ekle / Düzenle formu (M6:227-304)", () => {
     const dialog = await openManager();
     await user.click(within(dialog).getByRole("button", { name: "+ Yeni disiplin" }));
     expect(
-      screen.getByText("Sıradaki palet rengi önceden seçildi (4. disiplin) · 6. disiplinde palet başa döner"),
+      screen.getByText("Sıradaki palet rengi önceden seçildi (4. disiplin) · 11. disiplinde palet başa döner"),
     ).toBeInTheDocument();
   });
 

@@ -37,7 +37,7 @@ export function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
-/** 6.+ disiplinde palet başa döner (KARARLAR-BEKLEYEN §11.b). */
+/** 11.+ disiplinde palet başa döner (KAT-F1b · KARARLAR.md 2026-09-27, palet 5→10). */
 export function suggestedPaletteColor(existingCount: number): string {
   return DISCIPLINE_PALETTE[existingCount % DISCIPLINE_PALETTE.length];
 }
@@ -82,7 +82,7 @@ export function paletteEntries(
 /** M6:351 — colHint oluşturma/düzenlemeye göre ayrılır. */
 export function disciplineColHint(existingCount: number, isEdit: boolean): string {
   if (isEdit) return "Panel ve raporlardaki grafiklerde bu renk kullanılır";
-  return `Sıradaki palet rengi önceden seçildi (${existingCount + 1}. disiplin) · 6. disiplinde palet başa döner`;
+  return `Sıradaki palet rengi önceden seçildi (${existingCount + 1}. disiplin) · 11. disiplinde palet başa döner`;
 }
 
 export function disciplineFormFromRead(discipline: EvDisciplineRead): DisciplineFormState {
