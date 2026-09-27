@@ -136,9 +136,28 @@
   width: fit-content;
   margin-bottom: 20px;
 }
+/*
+ * F-SUBPX-4 (ajan B, ÇALIŞMA ZAMANI ölçüldü) · gövde satır aralığı
+ * `--leading-normal` (1.5) × 13px yazı boyu = 19.5px — TAM SAYI DEĞİL.
+ * Bu, DOM'da yukarıdan aşağı taranan İLK kesirli-yükseklik elemanıydı
+ * (`.site-detail-tabs` kökü: top=80 height=43.5 · `.site-detail-tabs__tab`:
+ * height=33.5), zincirle aşağı yayılıyordu (`.ts__head` top=143.5 ·
+ * `.ts-info` top=216.5 · `.ts.ts--site` kök height=1428.5 — F-SUBPX-3'ün
+ * `.ts-info` KENDİ satır aralığını 20px'e oturttuğu düzeltmeden SONRA bile
+ * .5 kesri BU şeritten miras kaldığı için sürüyordu).
+ *
+ * `--leading-normal` TOKEN'ı `tokens.css:64`te tanımlı ve gövde (`body`)
+ * dahil onlarca yerde kullanılıyor — oranı DEĞİŞTİRMEK kapsamı bu görevin
+ * çok ötesine taşır; DOKUNULMADI. Burada yalnız BU TEK KURALIN kendi satır
+ * aralığı, aynı görsel ORANI (13 × 1.5 = 19.5) en yakın TAM PİKSELE
+ * (20px, +0,5px ≈ %2,5 fark, algılanamaz) SABİTLENDİ — F-SUBPX-3'ün
+ * `.ts-info` emsaliyle (aynı dosya, satır ~560) AYNI YÖNTEM: paylaşılan
+ * ORANA dokunma, TEK kuralın SONUCUNU tam piksele oturt.
+ */
 .site-detail-tabs__tab {
   padding: 7px 16px;
   font-size: 13px;
+  line-height: 20px;
   color: var(--color-text-muted);
   border-radius: var(--radius-7);
   text-decoration: none;

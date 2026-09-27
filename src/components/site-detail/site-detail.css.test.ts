@@ -33,4 +33,14 @@ describe("site-detail.css — focus-visible kural metni var mı (regresyon korum
   it("bölüm kartı eylem butonu :focus-visible ile tasarlanmış odak halkası tanımlar (--focus-ring)", () => {
     expect(css).toMatch(/\.section-card__action-btn:focus-visible\s*{[^}]*--focus-ring/);
   });
+
+  // F-SUBPX-4 (ajan B): `.site-detail-tabs__tab` gövdenin `--leading-normal`
+  // (1.5) satır aralığını miras alırsa 13px × 1.5 = 19.5px (kesirli) verir ve
+  // bu, şantiye kabuğunun sekme şeridini kullanan TÜM sayfalarda (ts.ts--site
+  // kökü dahil) aşağı doğru kesirli-yükseklik zinciri başlatır (çalışma
+  // zamanında ölçüldü). Kuralın kendi `line-height: 20px` bildirimi
+  // stylesheet'ten yanlışlıkla silinirse bu test kırılır.
+  it("şantiye sekmesi kendi satır aralığını tam piksele sabitler (line-height: 20px)", () => {
+    expect(css).toMatch(/\.site-detail-tabs__tab\s*{[^}]*line-height:\s*20px/);
+  });
 });

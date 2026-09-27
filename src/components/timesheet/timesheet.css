@@ -586,9 +586,20 @@
   flex-direction: column;
   align-items: center;
 }
-/* E5 90 */
+/*
+ * F-SUBPX-4 (ajan B, ÇALIŞMA ZAMANI ölçüldü) · aday #2b — dosyanın kendi
+ * F-SUBPX kanonu (satır 164-177) "metinler gövdenin 1.5 mirasını DEĞİL
+ * `--leading-timesheet-*` tam px satır aralığını taşır" der, ama bu kural
+ * (tablo DIŞINDaki hafta gezinme etiketi) o kanonu UYGULAMIYORDU: 13px ×
+ * gövde `--leading-normal` (1.5) = 19.5px kesir üretiyor, `.ts-week-nav`
+ * kutusunun kendisi (height=44.5) ve altındaki `.ts-month-weeks` (top=419.5)
+ * dahil TÜM sonraki zinciri kesirli yapıyordu. Aynı 13px için dosyada zaten
+ * denenmiş/onaylı token (`--leading-timesheet-body: 19px`, tablo
+ * hücrelerinde kullanılıyor) buraya da uygulandı — yeni sayı İCAT EDİLMEDİ.
+ */
 .ts-week-nav__range {
   font-size: var(--text-body);
+  line-height: var(--leading-timesheet-body);
   font-weight: var(--weight-semibold);
   color: var(--color-text);
   white-space: nowrap;
@@ -641,9 +652,16 @@
   margin-bottom: var(--space-4);
   flex-wrap: wrap;
 }
+/*
+ * F-SUBPX-4 (ajan B, ÇALIŞMA ZAMANI ölçüldü) · aday #2b — 11px × gövde
+ * `--leading-normal` (1.5) = 16.5px kesir (top=454.75, height=16.5). Dosyada
+ * zaten aynı 11px için var olan `--leading-timesheet-head: 16px` (kolon
+ * başlığı/ayak etiketi) uygulandı — yeni sayı İCAT EDİLMEDİ.
+ */
 /* E5 137 */
 .ts-month-weeks__title {
   font-size: var(--text-small);
+  line-height: var(--leading-timesheet-head);
   font-weight: var(--weight-semibold);
   color: var(--color-text-muted);
   text-transform: uppercase;

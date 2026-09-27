@@ -140,3 +140,36 @@ describe("timesheet.css — .ts-info satır aralığı tam piksel (F-SUBPX-3)", 
     expect(body).not.toMatch(/line-height:\s*var\(--leading-loose\)/);
   });
 });
+
+/**
+ * F-SUBPX-4 (ajan B, ÇALIŞMA ZAMANI ölçüldü) · aday #2b — `.ts-week-nav__range`
+ * (13px) ve `.ts-month-weeks__title` (11px) gövdenin `--leading-normal` (1.5)
+ * mirasını taşıyordu: 13×1.5=19.5px · 11×1.5=16.5px — İKİSİ DE TAM SAYI DEĞİL.
+ * Bu, `.ts-week-nav` kutusunun kendisini (height 44.5) ve altındaki
+ * `.ts-month-weeks`'in TEPESİNİ (top 419.5) kesirli yapıyordu — aday #2
+ * (`site-detail-tabs`) zincirini düzelttikten SONRA bile puantaj sayfasında
+ * kalan İKİNCİ bağımsız kesir kaynağıydı (`puantaj-kilitli-hucre-popover`
+ * karesi, x 252/1407 · y 275–499 bandı). Dosyanın kendi F-SUBPX kanonu
+ * (satır 164 civarı) için zaten var olan tam-piksel tokenlar kullanıldı
+ * (`--leading-timesheet-body: 19px` 13px için · `--leading-timesheet-head:
+ * 16px` 11px için) — yeni sayı İCAT EDİLMEDİ, `--leading-normal` DOKUNULMADI.
+ *
+ * ⚠️ SINIR: `.ts-month-weeks__title` ve `.ts-month-weeks__total` KENDİ
+ * yükseklikleri artık tam piksel ama TEPE'leri hâlâ .5'te kalabilir — bu,
+ * `.ts-month-weeks`in `align-items: center` ile FARKLI yükseklikteki
+ * kardeşleri (liste kutusu 61px'e karşı başlık 16px / toplam rozeti 52px,
+ * fark TEK sayı) ortalarken ürettiği bağımsız bir flex-ortalama artefaktıdır
+ * — line-height YÖNTEMİYLE düzelmez (kutu boyutu değişikliği gerekir, bu
+ * TASARIM kararı kapsam dışı bırakıldı, DUR/RAPOR edildi).
+ */
+describe("timesheet.css — hafta gezinme + ay-hafta başlığı satır aralığı tam piksel (F-SUBPX-4 aday 2b)", () => {
+  it(".ts-week-nav__range 13px için tam-piksel token taşır (--leading-timesheet-body)", () => {
+    const body = ruleBody(".ts-week-nav__range");
+    expect(body).toMatch(/line-height:\s*var\(--leading-timesheet-body\)\s*;/);
+  });
+
+  it(".ts-month-weeks__title 11px için tam-piksel token taşır (--leading-timesheet-head)", () => {
+    const body = ruleBody(".ts-month-weeks__title");
+    expect(body).toMatch(/line-height:\s*var\(--leading-timesheet-head\)\s*;/);
+  });
+});

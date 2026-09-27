@@ -19,6 +19,33 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
 }
+/*
+ * F-SUBPX-4 (lider denetimi, ÇALIŞMA ZAMANI ölçüldü) · `.modal-overlay`
+ * (`display:flex; align-items:center`) `.modal`ı DİKEYDE ortalar; ortalanmış
+ * `top = (kapsayıcı_yükseklik − modal_yükseklik) / 2`dir. Görsel takım TÜM
+ * ekranları SABİT `900px` yükseklikte test eder (`e2e/*-visual-helpers.ts`
+ * `VISUAL_VIEWPORT`); `900` ÇİFT. İçeriği `85vh` sınırına ULAŞAN (taşan) her
+ * diyalog `900*0.85=765` — TEK sayı — yüksekliğe SABİTLENİR ve `(900-765)/2
+ * =67.5` — KESİRLİ — üretir (ÇALIŞMA ZAMANI ölçüldü: `belge-ekle-formu` VE
+ * `poz-ekle-isveren-yeni-grup` ikisinde de `.modal top=67.5 height=765`).
+ * Kesir `align-items:center`in KENDİSİNDEN DEĞİL, sınırlayan `max-height`
+ * SONUCUNUN (765, TEK) kapsayıcıya (900, ÇİFT) göre PARİTE UYUMSUZLUĞUNDAN
+ * gelir — `align-items` DEĞİŞMEDİ (paylaşılan ortalama davranışına
+ * dokunulmadı), yalnız `max-height`in SONUCU en yakın ÇİFT PİKSELE (764,
+ * −1px ≈ %0,1 fark, algılanamaz) aşağı yuvarlandı ki fark ÇİFT kalsın ve
+ * bölüm TAM SAYI (68) versin. İçeriği `85vh`e ULAŞMAYAN (kısa) diyaloglar bu
+ * sınırdan hiç ETKİLENMEZ — kendi doğal (`auto`) yüksekliği neyse o kalır;
+ * yalnız TAŞAN/`overflow-y:auto` devreye giren diyaloglar pikselini
+ * DEĞİŞTİRİR. Geri düşüş `@supports` STATİK sorgusuyla — F-SUBPX-3 emsali
+ * (`contracts.css` `.szl-progress__fill`): art arda iki çıplak bildirim
+ * YAZILMAZ (ölçülmüş IACVT tuzağı — `round()`u tanımayan tarayıcıda
+ * ikinci bildirim `auto`ya döner, diyalog GÖRÜNMEZ olur).
+ */
+@supports (max-height: round(down, 1px, 1px)) {
+  .modal {
+    max-height: round(down, 85vh, 2px);
+  }
+}
 
 .modal__head {
   display: flex;
