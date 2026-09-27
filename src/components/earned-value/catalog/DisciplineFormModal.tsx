@@ -36,8 +36,9 @@ interface DisciplineFormModalProps {
 
 /**
  * M6:227-304 — "Disiplin Ekle / Düzenle". Kod kullanımdayken de düzenlenir
- * (§3.10 F0-7). Renk seçimi 5'li paletten (§11.b); düzenlenen kaydın rengi
- * palet dışındaysa (eski veri) seçenek olarak korunur, kaybolmaz.
+ * (§3.10 F0-7). Renk seçimi 10'lu paletten (KAT-F1b · 5→10, KARARLAR.md
+ * 2026-09-27); düzenlenen kaydın rengi palet dışındaysa (eski veri) seçenek
+ * olarak korunur, kaybolmaz.
  */
 export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: DisciplineFormModalProps) {
   const create = useCreateEvDiscipline();

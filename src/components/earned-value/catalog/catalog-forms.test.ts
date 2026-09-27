@@ -89,11 +89,34 @@ describe("iş tipi formu", () => {
 describe("disiplin formu", () => {
   const list = [KAB, DUV, INC];
 
-  it("palet 5 renk (Bütçe:523); öneri disiplin sayısına göre başa döner", () => {
-    expect(DISCIPLINE_PALETTE).toHaveLength(5);
+  it("palet 10 renk (KAT-F1b · ilk 5 Bütçe:523, son 5 kullanıcı onaylı genişleme); öneri disiplin sayısına göre başa döner", () => {
+    expect(DISCIPLINE_PALETTE).toHaveLength(10);
     expect(suggestedPaletteColor(3)).toBe(DISCIPLINE_PALETTE[3]);
-    expect(suggestedPaletteColor(5)).toBe(DISCIPLINE_PALETTE[0]);
-    expect(suggestedPaletteColor(6)).toBe(DISCIPLINE_PALETTE[1]);
+    // 6.-10. disiplinler yeni (6.-10.) renkleri önerir.
+    expect(suggestedPaletteColor(5)).toBe(DISCIPLINE_PALETTE[5]);
+    expect(suggestedPaletteColor(9)).toBe(DISCIPLINE_PALETTE[9]);
+    // 11. disiplinde palet başa döner (belgelenmiş tekrar davranışı).
+    expect(suggestedPaletteColor(10)).toBe(DISCIPLINE_PALETTE[0]);
+    expect(suggestedPaletteColor(11)).toBe(DISCIPLINE_PALETTE[1]);
+  });
+
+  it("bekçi: 10 renk SIRAYLA sabit (kullanıcı kararı KAT-F1b (b), 2026-09-27: 7 belirgin ton öne, 3 açık ton sona) — sıra/değer değişirse KIRMIZI", () => {
+    expect(DISCIPLINE_PALETTE).toEqual([
+      "#2563eb",
+      "#dc2626",
+      "#64748b",
+      "#7c3aed",
+      "#0f766e",
+      "#16a34a",
+      "#d97706",
+      "#93c5fd",
+      "#cbd5e1",
+      "#e2e8f0",
+    ]);
+  });
+
+  it("bekçi: 10 renk hepsi benzersiz — biri silinirse/eşleşirse KIRMIZI", () => {
+    expect(new Set(DISCIPLINE_PALETTE).size).toBe(10);
   });
 
   it("kod tekrarı yalnız BAŞKA kayıtla karşılaştırılır (düzenlenen hariç)", () => {
@@ -123,13 +146,19 @@ describe("disiplin formu", () => {
   });
 
   it("paletteEntries: oluşturmada sıradaki renk etiketlenir, kullanılan diğerleri kodla (M6:314-320)", () => {
-    // KAB #2563eb · DUV #93c5fd · INC #e2e8f0 kullanımda; existing.length=3 → sıradaki #cbd5e1.
+    // KAB #2563eb · DUV #93c5fd · INC #e2e8f0 kullanımda; existing.length=3 → sıradaki DISCIPLINE_PALETTE[3]=#7c3aed
+    // (KAT-F1b (b) sırası: #2563eb, #dc2626, #64748b, #7c3aed, #0f766e, #16a34a, #d97706, #93c5fd, #cbd5e1, #e2e8f0).
     const entries = paletteEntries(DISCIPLINE_PALETTE, list, null);
     expect(entries).toEqual([
       { color: "#2563eb", label: "KAB", isNext: false },
-      { color: "#93c5fd", label: "DUV", isNext: false },
+      { color: "#dc2626", label: "", isNext: false },
       { color: "#64748b", label: "", isNext: false },
-      { color: "#cbd5e1", label: "sıradaki", isNext: true },
+      { color: "#7c3aed", label: "sıradaki", isNext: true },
+      { color: "#0f766e", label: "", isNext: false },
+      { color: "#16a34a", label: "", isNext: false },
+      { color: "#d97706", label: "", isNext: false },
+      { color: "#93c5fd", label: "DUV", isNext: false },
+      { color: "#cbd5e1", label: "", isNext: false },
       { color: "#e2e8f0", label: "INC", isNext: false },
     ]);
   });
@@ -142,7 +171,7 @@ describe("disiplin formu", () => {
   });
 
   it("disciplineColHint: oluşturmada sıra numarası + döngü notu, düzenlemede sabit metin (M6:351)", () => {
-    expect(disciplineColHint(3, false)).toBe("Sıradaki palet rengi önceden seçildi (4. disiplin) · 6. disiplinde palet başa döner");
+    expect(disciplineColHint(3, false)).toBe("Sıradaki palet rengi önceden seçildi (4. disiplin) · 11. disiplinde palet başa döner");
     expect(disciplineColHint(3, true)).toBe("Panel ve raporlardaki grafiklerde bu renk kullanılır");
   });
 });
