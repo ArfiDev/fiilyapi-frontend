@@ -203,5 +203,5 @@ export async function expectNoPlanning(page: Page) {
 
 /** Kırıntı: son parça (bağlantı DEĞİL) + "Günlük Kayıt" parçasının bölüm sekmesine bağı. */
 export function crumbItems(page: Page): Locator {
-  return page.getByTestId("topbar-crumbs").locator("li");
+  return page.getByTestId("page-crumbs").locator("li");
 }

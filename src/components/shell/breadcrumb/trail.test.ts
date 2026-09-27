@@ -261,7 +261,7 @@ describe("href üretimi — URL-1", () => {
   });
 
   it("kırıntı `router.back()`/`history.back()` KULLANMAZ (K2)", () => {
-    for (const file of ["trail.ts", "TopbarBreadcrumb.tsx", "useCrumbNames.ts"]) {
+    for (const file of ["trail.ts", "PageBreadcrumb.tsx", "useCrumbNames.ts"]) {
       const code = stripComments(read(file));
       expect(code, file).not.toMatch(/router\.back|history\.back|useRouter/);
     }

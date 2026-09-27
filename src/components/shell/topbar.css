@@ -38,12 +38,13 @@
   flex-shrink: 0;
 }
 .topbar-actions {
-  /* `margin-left: auto` KORUNDU. Kırıntı `flex: 1` aldığı için bugün etkisi
-     YOKTUR (boşluk zaten kırıntıya gidiyor); kaldırmak, kırıntının hiç
-     basılmadığı bir gelecekte (ör. kabuk dışı bir yüzey) eylemleri sola
-     kaydırırdı. İki hâli de ölçüldü: bugünkü kadrajlarda fark 0 piksel.
-     `flex-shrink: 0` mockup satır 41'in birebir karşılığıdır — uzun bir proje
-     adı zil/avatarı ezemez. */
+  /* SEKME-F1.2: kırıntı topbar'dan içeriğe indi, `topbar-logo` ile
+     `topbar-actions` artık `.topbar`in TEK iki çocuğu. `margin-left: auto`
+     KORUNDU — kırıntı zamanında `flex:1` aldığı için o gün etkisi YOKTU
+     (boşluk zaten kırıntıya gidiyordu), bugün ise eylemleri sağda tutan
+     TEK mekanizma bu; ölçüldü, ekstra bir `topbar-slot` yer tutucusuna
+     GEREK YOK. `flex-shrink: 0` mockup satır 41'in birebir karşılığıdır —
+     ileride buraya gelecek çalışma sekmesi şeridi zil/avatarı ezemez. */
   margin-left: auto;
   flex-shrink: 0;
   display: flex;
@@ -76,109 +77,6 @@
   font-weight: 700;
 }
 
-/* ─── Yol göstergesi (kırıntı) + geri tuşu · F-KIRINTI ────────────────────
-   Kanon: `projedesign/Şantiye - Günlük Kayıt.dc.html` 33-41 — kırıntı 52px'lik
-   üst çubuğun İÇİNDE, logo ile eylemler ARASINDA yaşar. Ölçülen şerit:
-   `padding:0 16px; gap:5px; height:100%; font-size:12px; flex:1;
-   overflow:hidden`; bağlantı `#2563eb`, ayraç `#e2e8f0`, son parça `600 /
-   #1e293b` ve BAĞLANTI DEĞİL.
-
-   🔴 `.pf-breadcrumb` (styles/form-shell.css) YENİDEN KULLANILMADI. İki
-   ÖLÇÜLMÜŞ sebep var, ikisi de tercih değil:
-   1. `form-shell.css` GLOBAL DEĞİLDİR — yalnız yedi form bileşeni onu import
-      eder (`grep -rn "form-shell.css" src`). Üst çubuk HER rotada basılır;
-      `.pf-breadcrumb`a bağlanmak, kırıntıyı form dışındaki ~80 ekranda
-      STİLSİZ bırakırdı. (CSS'te eksik sınıf sessizdir: ne konsol ne test.)
-   2. Kanon zaten AYRIŞIYOR: mockup'ın üst çubuk kırıntısında bağlantılar
-      `#2563eb` (marka mavisi), form kabuğununkiler `--color-text-muted`.
-      Aynı sınıfı paylaşmak birini değiştirince ötekini sessizce oynatırdı.
-   Paylaşılan şey SINIF değil TOKEN'dır: 12px/5px/ayraç/600 aynı token'lardan
-   okunur, yani iki yüzey birlikte kayar ama birbirini ezmez. */
-.topbar-crumbs {
-  flex: 1;
-  /* `min-width: 0` olmadan flex öğesi içeriğinden küçülemez ve uzun bir proje
-     adı eylemleri (zil + avatar) çubuğun DIŞINA iterdi. */
-  min-width: 0;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--space-form-label-gap); /* 5px (mockup 34) */
-  padding: 0 var(--space-4); /* 16px (mockup 34) */
-  font-size: var(--text-xs); /* 12px (mockup 34) */
-  /* Mockup taşmayı KESER (`overflow:hidden`, satır 34). Dar pencerede kırıntı
-     sağdan kırpılır; eylemler asla kaybolmaz. Bu bir tasarım kararıdır. */
-  overflow: hidden;
-}
-/* Ürünün kendi `←` deyimi (`← Mali Tablolar`, `← Sözleşmeler`, … on ikiden
-   fazla ekran). Yeni bir glif İCAT EDİLMEDİ: U+2190 `fonts.css` kapsamında
-   olduğu ÖLÇÜLMÜŞ tek ok karakteridir (bkz. BalanceSheetView docstring'i).
-   Hedefin ADI hemen sağdaki kırıntı parçasında zaten yazılı olduğu için tuşun
-   metni tekrarlanmaz; ad `aria-label`/`title`ta yaşar. */
-.topbar-crumbs__back {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm); /* 14px — 12px'te ok gövdesi okunmuyor */
-  line-height: 1;
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-.topbar-crumbs__back:hover {
-  background: var(--color-nav-active-bg);
-  color: var(--color-primary);
-}
-.topbar-crumbs__back:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-.topbar-crumbs__list {
-  display: flex;
-  align-items: center;
-  gap: var(--space-form-label-gap);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  overflow: hidden;
-}
-.topbar-crumbs__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-form-label-gap);
-  min-width: 0;
-}
-.topbar-crumbs__link {
-  color: var(--color-primary);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.topbar-crumbs__link:hover {
-  text-decoration: underline;
-}
-.topbar-crumbs__sep {
-  color: var(--color-border);
-  flex-shrink: 0;
-}
-.topbar-crumbs__current {
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-  white-space: nowrap;
-  /* SON parça kırpılır: kaybolacak metin varsa o, en soldaki bağlam değil. */
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* Ad önbellekten gelene kadarki yer tutucu (K6). Ham UUID basmaz, sabit
-   genişlikte durur ve ad gelince yalnız KIRINTI ŞERİDİ içinde yeniden dizilir
-   — üst çubuk `position: fixed` olduğu için sayfa içeriği HİÇ kaymaz (CLS 0).
-   Animasyon YOK: görsel kareler (161 baseline) shimmer'ı kararsız yakalardı. */
-.topbar-crumbs__pending {
-  display: inline-block;
-  width: 88px;
-  height: 10px;
-  border-radius: var(--radius-sm);
-  background: var(--color-border);
-}
+/* SEKME-F1.2: kırıntının kendi kuralları (`.topbar-crumbs*`) buradan
+   `breadcrumb/page-breadcrumb.css`e (`.page-crumbs*`) TAŞINDI — kırıntı artık
+   `<main class="app-content">`in içinde basılıyor, üst çubukta DEĞİL. */

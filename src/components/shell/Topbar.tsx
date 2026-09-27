@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { BellIcon } from "@/components/ui/icons";
 import { initials } from "@/lib/shell/initials";
-import { TopbarBreadcrumb } from "./breadcrumb/TopbarBreadcrumb";
 import { useSession } from "./SessionProvider";
 import "./topbar.css";
 
@@ -25,11 +24,12 @@ export default function Topbar() {
         />
       </div>
 
-      {/* F-KIRINTI: mockup (`Şantiye - Günlük Kayıt.dc.html` 33-41) kırıntıyı
-          TAM BURAYA, logo bloğu ile eylemler arasına koyar. `DRILL-KALDIR`
-          dilimiyle karşılıksız kalan "şantiyeden projeye çıkış" gezinmesi
-          buradan geri gelir. */}
-      <TopbarBreadcrumb />
+      {/* F-KIRINTI → SEKME-F1.2: kırıntı burada YAŞAMAZ artık — KARARLAR §1.10
+          ile kabuk düzeyinde `<main class="app-content">`in üstüne indi
+          (`PageBreadcrumb`, `AppShell.tsx`). Bu boşluk ileride çalışma
+          sekmeleri şeridinin yuvası (ayrı görev, SEKME-F1); `topbar-actions`in
+          `margin-left:auto`su eylemleri sağda tutmaya YETİYOR, o yüzden burada
+          ayrı bir `<div className="topbar-slot" />` yer tutucusu YOK. */}
 
       <div className="topbar-actions">
         <button type="button" className="topbar-bell" aria-label="Bildirimler">

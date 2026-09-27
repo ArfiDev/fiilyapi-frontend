@@ -168,7 +168,7 @@ test("gunluk satirina tiklamak detaya goturur, kirinti 'Gunluk Kayit' sekmesine 
   await expect(page.getByRole("heading", { level: 1, name: "15.07.2026 Çarşamba" })).toBeVisible();
 
   // Kırıntı: "… / Günlük Kayıt / 15.07.2026" — "Günlük Kayıt" bölümün SEKMESİNE bağlanır.
-  const crumbs = page.getByTestId("topbar-crumbs");
+  const crumbs = page.getByTestId("page-crumbs");
   await expect(crumbs.locator("li").last()).toHaveText(/15\.07\.2026$/);
   const diaryCrumb = crumbs.getByRole("link", { name: "Günlük Kayıt", exact: true });
   await expect(diaryCrumb).toHaveAttribute("href", "/projeler/p-1/santiyeler/s-1/bolumler/sec-1?sekme=gunluk-kayit");

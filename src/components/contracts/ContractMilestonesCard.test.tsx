@@ -92,7 +92,7 @@ const P2: TimelineProject = {
 const TIMELINE: ProjectTimelineResponse = { today: SERVER_TODAY, items: [P1, P2] };
 
 /**
- * 🔴 M5'in ÖLÇÜM ARACI (`TopbarBreadcrumb.test.tsx` kanonik deseni). `fetch`i
+ * 🔴 M5'in ÖLÇÜM ARACI (`PageBreadcrumb.test.tsx` kanonik deseni). `fetch`i
  * mock'lamak değil, ÇAĞRILDIĞINI SAYMAK önemlidir: mock'lanmış ama çağrılmış
  * bir fetch de "ikinci istek"tir.
  */

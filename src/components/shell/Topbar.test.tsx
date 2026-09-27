@@ -6,7 +6,8 @@ import Topbar from "./Topbar";
 vi.mock("./SessionProvider", () => ({
   useSession: () => ({ me: { full_name: "Ahmet Yılmaz", role_key: "patron", title: "Patron" }, isLoading: false }),
 }));
-// F-KIRINTI: üst çubuk artık yol göstergesi taşıyor, yani rotayı OKUYOR.
+// SEKME-F1.2: kırıntı topbar'dan KALKTI, Topbar artık rotayı OKUMUYOR; bu
+// mock yalnız `usePathname` başka bir yerden çağrılırsa (yanlışlıkla) patlamaz.
 vi.mock("next/navigation", () => ({
   usePathname: () => "/projeler/gunesken-konut",
 }));
@@ -29,18 +30,20 @@ describe("Topbar", () => {
     expect(screen.getByText("AY")).toBeInTheDocument();
   });
 
-  it("kirinti LOGO ile EYLEMLER arasinda durur (mockup 33-41)", () => {
-    // K1 — konum mockup'ın kendisidir; `flex` sırası DOM sırasıdır, yani
-    // kırıntıyı yanlış kardeşin yanına koymak sessizce farklı bir çubuk çizer.
+  it("SEKME-F1.2 — kırıntı artık TOPBAR'DA basılmaz, logo + eylemler tek çift kardeştir", () => {
+    // Mutasyon (M2): `<PageBreadcrumb />`u `Topbar.tsx`e geri koy → bu iddia
+    // kırmızı olur (üçüncü bir kardeş belirir / testid bulunur).
     const { container } = renderTopbar();
     const header = container.querySelector(".topbar");
     const order = [...(header?.children ?? [])].map((el) => el.className);
-    expect(order).toEqual(["topbar-logo", "topbar-crumbs", "topbar-actions"]);
+    expect(order).toEqual(["topbar-logo", "topbar-actions"]);
+    expect(screen.queryByTestId("page-crumbs")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Yol göstergesi" })).toBeNull();
   });
 
-  it("zil ve avatar kirintiyla birlikte yasar (52px seridi bozulmaz)", () => {
+  it("zil ve avatar kirinti OLMADAN da 52px seridi bozulmaz", () => {
     renderTopbar();
     expect(screen.getByRole("button", { name: "Bildirimler" })).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Yol göstergesi" })).toBeInTheDocument();
+    expect(screen.getByText("AY")).toBeInTheDocument();
   });
 });

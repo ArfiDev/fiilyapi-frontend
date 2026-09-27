@@ -1,22 +1,40 @@
 "use client";
 
 /**
- * F-KIRINTI · üst çubuk yol göstergesi + geri tuşu.
+ * F-KIRINTI → SEKME-F1.2 · içerik alanı yol göstergesi + geri tuşu.
  *
- * Kanon `projedesign/Şantiye - Günlük Kayıt.dc.html` 33-41: kırıntı 52px'lik
- * üst çubuğun İÇİNDE, logo bloğu ile eylemler arasında durur ve son parçası
- * BAĞLANTI DEĞİLDİR (K3). Geri tuşu mockup'ta YOKTUR — kullanıcı onu açıkça
- * istedi, yani mockup'ın SESSİZ kaldığı bir yerdir; ürünün kendi `←` deyimi
- * (on ikiden fazla ekranda) üst çubuğa TAŞINDI, yeni tasarım icat edilmedi.
+ * KARARLAR §1.10: üst çubuktaki (topbar) yer ileride çalışma sekmelerine
+ * bırakıldı; kırıntı KABUK DÜZEYİNDE tek satıra indi ve artık
+ * `AppShell`in `<main className="app-content">` içinde, `StaleBuildBanner`in
+ * ALTINDA ve sayfa içeriğinden (`{children}`) ÖNCE basılır. Konum değişti,
+ * DAVRANIŞ değişmedi: K2/K3/K6/K7 kanonları ve geri tuşu (←) `trail.ts`ten
+ * AYNEN devralınır — bu dosya yalnız DOM'u kurar.
  *
- * Bu dosya yalnız DOM kurar; ne basılacağına `trail.ts` (saf), adların
- * nereden geleceğine `useCrumbNames.ts` (yalnız önbellek) karar verir.
+ * 🔴 Kırıntı TEK PARÇALIYSA (`/`, modül kökleri, ComingSoon) satır HİÇ
+ * BASILMAZ (null döner) — ekranların kendi başlık-üstü satırları (ör.
+ * Gösterge Paneli'nin "Sistem Yöneticisi Görünümü · 2 Aktif Proje" satırı)
+ * zaten var, boş bir kırıntı kutusu onların ÜSTÜNE gereksiz bir boşluk
+ * eklerdi.
+ *
+ * 🔴 `/ayarlar` altında BASILMAZ: Ayarlar kendi kırıntısını basar
+ * (`SettingsBreadcrumb`, SEKME-F1.2 ile o da içeriğe indi). İki kırıntı üst
+ * üste binmez diye burada, mimarinin en dar noktasında (tek bileşen, tek
+ * erken dönüş) dışlanıyor — `AppShell` ya da `route-tree.ts`e bir "ayarlar
+ * mı" bayrağı eklemek, kararı kırıntı DIŞINDAKİ bir dosyaya taşır ve
+ * `PageBreadcrumb`i tek başına okuyan biri neden basılmadığını göremez.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { isActivePath } from "@/lib/shell/isActive";
+import { routes } from "@/lib/routes";
 import { backTarget, buildTrail, routeKeysOf, type Crumb } from "./trail";
 import { useCrumbNames } from "./useCrumbNames";
+import "./page-breadcrumb.css";
+
+// 🔴 `internal-url-guard.test.ts` elle kurulmuş uygulama içi URL'e izin
+// vermez — önek de `routes.ts`ten TÜRER, ikinci bir kaynak açılmaz.
+const SETTINGS_PATH_PREFIX = routes.settings.root();
 
 function CrumbText({ crumb }: { crumb: Crumb }) {
   if (!crumb.pending) return <>{crumb.label}</>;
@@ -24,13 +42,13 @@ function CrumbText({ crumb }: { crumb: Crumb }) {
   // Yedek etiket ("Şantiye") ekran okuyucuya `sr-only` ile okunur; shimmer
   // yalnız görsel bir yer tutucudur.
   return (
-    <span className="topbar-crumbs__pending" data-testid="crumb-pending">
+    <span className="page-crumbs__pending" data-testid="crumb-pending">
       <span className="sr-only">{crumb.label}</span>
     </span>
   );
 }
 
-export function TopbarBreadcrumb() {
+export function PageBreadcrumb() {
   // `usePathname` App Router'da her zaman string döner; savunma yalnız
   // bileşenin router dışında (test/hikaye) render edilmesi içindir.
   const pathname = usePathname() ?? "/";
@@ -39,13 +57,21 @@ export function TopbarBreadcrumb() {
   const trail = buildTrail(pathname, names);
   const back = backTarget(trail);
 
+  // Ayarlar kendi kırıntısını basar (bkz. dosya başı gerekçe) — ikinci kırıntı
+  // YOK. `startsWith` DEĞİL `isActivePath`: önek ("/ayarlarX/...") "/ayarlar"
+  // ile başlar ama Ayarlar ALTINDA değildir (D6, SEKME-F1.2-FIX) — depo
+  // genelinde aktif eşleştirme burada da tek kaynaktan (`isActive.ts`) gelir.
+  if (isActivePath(pathname, SETTINGS_PATH_PREFIX)) return null;
+  // Tek parçalı kırıntı (kök, modül kökü, ComingSoon) HİÇ BASILMAZ.
+  if (trail.length === 1) return null;
+
   return (
-    <nav className="topbar-crumbs" aria-label="Yol göstergesi">
+    <nav className="page-crumbs" aria-label="Yol göstergesi">
       {back?.href !== undefined && (
         <Link
           href={back.href}
-          className="topbar-crumbs__back"
-          data-testid="topbar-back"
+          className="page-crumbs__back"
+          data-testid="page-back"
           // Hedefin adı hemen sağdaki kırıntıda yazılı; tuş onu tekrarlamaz
           // ama erişilebilir ad ve ipucu ONU söyler.
           aria-label={`${back.label} sayfasına dön`}
@@ -54,13 +80,13 @@ export function TopbarBreadcrumb() {
           <span aria-hidden="true">←</span>
         </Link>
       )}
-      <ol className="topbar-crumbs__list" data-testid="topbar-crumbs">
+      <ol className="page-crumbs__list" data-testid="page-crumbs">
         {trail.map((crumb, index) => {
           const isLast = index === trail.length - 1;
           return (
-            <li key={crumb.href ?? `crumb-${index}`} className="topbar-crumbs__item">
+            <li key={crumb.href ?? `crumb-${index}`} className="page-crumbs__item">
               {index > 0 && (
-                <span className="topbar-crumbs__sep" aria-hidden="true">
+                <span className="page-crumbs__sep" aria-hidden="true">
                   /
                 </span>
               )}
@@ -80,11 +106,11 @@ export function TopbarBreadcrumb() {
                 //
                 // Kararı değiştirmek K7'yi ve beş e2e bekçisini birden
                 // oynatır — bu dilimin kapsamı DEĞİL, yönetime rapor edildi.
-                <span className="topbar-crumbs__current">
+                <span className="page-crumbs__current">
                   <CrumbText crumb={crumb} />
                 </span>
               ) : (
-                <Link href={crumb.href} className="topbar-crumbs__link">
+                <Link href={crumb.href} className="page-crumbs__link">
                   <CrumbText crumb={crumb} />
                 </Link>
               )}
