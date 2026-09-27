@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Modal } from "@/components/settings/Modal";
 import { Button, Field, Input, Segmented } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
+import { cx } from "@/lib/cx";
 import { useCreateEvDiscipline, useUpdateEvDiscipline } from "@/lib/api/hooks/useEvDisciplines";
 import type { EvDisciplineRead } from "@/lib/api/models";
 
@@ -15,8 +16,10 @@ import {
   DISCIPLINE_NAME_MAX_LENGTH,
   buildDisciplineCreateBody,
   buildDisciplineUpdateBody,
+  disciplineColHint,
   disciplineFormFromRead,
   newDisciplineForm,
+  paletteEntries,
   validateDisciplineForm,
   type ContractorType,
   type DisciplineFormState,
@@ -51,6 +54,7 @@ export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: 
     discipline && !DISCIPLINE_PALETTE.includes(discipline.color)
       ? [...DISCIPLINE_PALETTE, discipline.color]
       : DISCIPLINE_PALETTE;
+  const entries = paletteEntries(palette, existing, discipline);
 
   function patch(changes: Partial<DisciplineFormState>) {
     setForm((current) => ({ ...current, ...changes }));
@@ -93,9 +97,24 @@ export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: 
       <div className="ev-cat-modal__body">
         <p className="ev-cat-modal__subtitle">Şirket listesi · bütün şantiyelerde ve katalogda ortak</p>
         {errorCount > 0 && (
-          <FormErrorBanner lead={`${errorCount} alan hatalı.`} text="Kaydetmeden önce işaretli alanları düzeltin." />
+          <FormErrorBanner
+            lead={`${errorCount} alan eksik ya da hatalı.`}
+            text="Kaydetmeden önce işaretli alanları düzeltin."
+          />
         )}
         {saveError && <FormErrorBanner text={backendErrorMessage(saveError)} />}
+
+        {discipline && (
+          <div className="ev-cat-use-box">
+            <p className="ev-cat-use-box__lead">
+              <span className="ev-cat-mono">{discipline.used_by_item_count}</span> iş tipinde ·{" "}
+              <span className="ev-cat-mono">{discipline.used_by_site_count}</span> şantiyede kullanılıyor
+            </p>
+            <p className="ev-cat-use-box__sub">
+              Kullanımdayken de kod ve ad düzenlenebilir; bağlı iş tipleri ve geçmiş raporlar yeni adla görünür.
+            </p>
+          </div>
+        )}
 
         <div className="ev-cat-form__code-row">
           <Field
@@ -133,25 +152,26 @@ export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: 
         <Field
           label="Grafik rengi"
           required
-          hint={
-            errors.color
-              ? undefined
-              : "Panel ve Adam-Saat Bütçesi grafiklerinde bu disiplinin rengi · aynı renk birden çok disipline verilebilir"
-          }
+          hint={errors.color ? undefined : disciplineColHint(existing.length, discipline !== null)}
           error={errors.color}
         >
           {(control) => (
             <div {...groupProps(control)} className="ev-cat-chips" role="group" aria-label="Grafik rengi">
-              {palette.map((hex) => (
+              {entries.map((entry) => (
                 <button
-                  key={hex}
+                  key={entry.color}
                   type="button"
                   className="ev-cat-chip ev-cat-chip--hex"
-                  aria-pressed={form.color === hex}
-                  onClick={() => patch({ color: hex })}
+                  aria-pressed={form.color === entry.color}
+                  onClick={() => patch({ color: entry.color })}
                 >
-                  <DisciplineSwatch color={hex} />
-                  {hex}
+                  <DisciplineSwatch color={entry.color} />
+                  {entry.color}
+                  {entry.label && (
+                    <span className={cx("ev-cat-chip__palette-label", entry.isNext && "ev-cat-chip__palette-label--next")}>
+                      {entry.label}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

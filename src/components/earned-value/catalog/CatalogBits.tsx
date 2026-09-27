@@ -5,7 +5,7 @@ import { diffBand, formatDiffPercent } from "./catalog-model";
 
 type ContractorType = EvCatalogItemRead["default_contractor_type"];
 
-const CONTRACTOR_LABEL: Record<ContractorType, string> = { own: "Kendi", subcon: "Taşeron" };
+export const CONTRACTOR_LABEL: Record<ContractorType, string> = { own: "Kendi", subcon: "Taşeron" };
 
 export const CONTRACTOR_OPTIONS: ReadonlyArray<{ value: ContractorType; label: string }> = [
   { value: "own", label: CONTRACTOR_LABEL.own },

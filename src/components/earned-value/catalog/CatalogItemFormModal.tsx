@@ -3,14 +3,16 @@
 import { useState } from "react";
 
 import { Modal } from "@/components/settings/Modal";
-import { Button, Field, Input, Segmented, Select, Textarea } from "@/components/ui";
+import { Alert, Button, Field, Input, Segmented, Select, Textarea } from "@/components/ui";
 import { cx } from "@/lib/cx";
 import { formatUnitRate } from "@/lib/earned-value";
+import { normalizeDecimalInput } from "@/lib/decimal";
 import { backendErrorMessage } from "@/lib/api/error-message";
+import { EMPTY_CELL, formatDateDots, toIstanbulDateOnly } from "@/lib/format";
 import { useCreateEvCatalogItem, useUpdateEvCatalogItem } from "@/lib/api/hooks/useEvCatalog";
 import type { EvCatalogItemRead, EvDisciplineRead } from "@/lib/api/models";
 
-import { CONTRACTOR_OPTIONS } from "./CatalogBits";
+import { CONTRACTOR_LABEL, CONTRACTOR_OPTIONS, DiffBadge } from "./CatalogBits";
 import { FormErrorBanner, groupProps } from "./FormErrorBanner";
 import {
   CATALOG_DESCRIPTION_MAX_LENGTH,
@@ -18,6 +20,8 @@ import {
   buildCatalogCreateBody,
   buildCatalogUpdateBody,
   catalogFormFromItem,
+  catalogOwnHint,
+  catalogRateChanged,
   emptyCatalogForm,
   unitOptions,
   validateCatalogForm,
@@ -78,6 +82,19 @@ export function CatalogItemFormModal({
   const errors = isSubmitted ? validateCatalogForm(form) : {};
   const errorCount = Object.keys(errors).length;
   const units = unitOptions(catalogUnits, form.uom);
+  const selectedDiscipline = disciplines.find((d) => d.id === form.disciplineId);
+  const ownHint = catalogOwnHint(
+    selectedDiscipline
+      ? {
+          code: selectedDiscipline.code,
+          defaultContractorLabel: CONTRACTOR_LABEL[selectedDiscipline.default_contractor_type],
+          defaultContractorType: selectedDiscipline.default_contractor_type,
+        }
+      : null,
+    form.own,
+  );
+  const rateHasChanged = mode.kind === "edit" && catalogRateChanged(mode.item, form);
+  const normalizedRate = normalizeDecimalInput(form.rate);
 
   function patch(changes: Partial<CatalogFormState>) {
     setForm((current) => ({ ...current, ...changes }));
@@ -124,14 +141,68 @@ export function CatalogItemFormModal({
       <div className="ev-cat-modal__body">
         <p className="ev-cat-modal__subtitle">Şirket kataloğu · bütün şantiyelerde öneri olarak görünür</p>
         {errorCount > 0 && (
-          <FormErrorBanner lead={`${errorCount} alan eksik.`} text="Kaydetmeden önce işaretli alanları doldurun." />
+          <FormErrorBanner
+            lead={`${errorCount} alan eksik ya da hatalı.`}
+            text="Kaydetmeden önce işaretli alanları düzeltin."
+          />
         )}
         {saveError && <FormErrorBanner text={backendErrorMessage(saveError)} />}
+
+        {mode.kind === "edit" && (
+          <div className="ev-cat-use-box">
+            <div className="ev-cat-use-grid">
+              <div className="ev-cat-use-col">
+                <span className="ev-cat-use-label">Standart son güncelleme</span>
+                <span className="ev-cat-use-value ev-cat-mono">
+                  {formatDateDots(toIstanbulDateOnly(mode.item.standard_updated_at))}
+                </span>
+              </div>
+              <div className="ev-cat-use-col">
+                <span className="ev-cat-use-label">Kullanım</span>
+                <span className="ev-cat-use-value">
+                  <span className="ev-cat-mono">{mode.item.used_by_site_count}</span> şantiyede kullanılıyor
+                </span>
+              </div>
+              <div className="ev-cat-use-col ev-cat-use-col--actual">
+                <span className="ev-cat-use-label">Gerçekleşen · {mode.item.actual.site_count} tamamlanan şantiye</span>
+                <div className="ev-cat-use-avg">
+                  <span>
+                    Ort. <b className="ev-cat-mono">{formatUnitRate(mode.item.actual.avg)}</b>
+                  </span>
+                  <DiffBadge ratio={mode.item.diff_pct} />
+                  <span className="ev-cat-use-muted">standarttan</span>
+                </div>
+                <span className="ev-cat-use-muted">
+                  en düşük{" "}
+                  <span className="ev-cat-mono">
+                    {mode.item.actual.min !== null ? formatUnitRate(mode.item.actual.min) : EMPTY_CELL}
+                  </span>{" "}
+                  · en yüksek{" "}
+                  <span className="ev-cat-mono">
+                    {mode.item.actual.max !== null ? formatUnitRate(mode.item.actual.max) : EMPTY_CELL}
+                  </span>{" "}
+                  a-s/{mode.item.uom}
+                </span>
+              </div>
+            </div>
+            {rateHasChanged && (
+              <Alert variant="warning" className="ev-cat-use-warn">
+                Standart oran <b className="ev-cat-mono">{formatUnitRate(mode.item.standard_unit_mhr)}</b> →{" "}
+                <b className="ev-cat-mono">{formatUnitRate(normalizedRate ?? form.rate)}</b>. Bu iş tipini kullanan{" "}
+                <b>{mode.item.used_by_site_count} şantiye</b> etkilenir: taslak bütçelerde yeni öneri olarak görünür;
+                dondurulmuş baseline&#39;lar değişmez.
+              </Alert>
+            )}
+          </div>
+        )}
 
         <Field
           label="İş tipi adı"
           required
-          hint={errors.name ? undefined : "Maks 120 karakter · aynı disiplinde tekil"}
+          labelAside={
+            <span className="ev-cat-count">{`${form.name.length}/${CATALOG_NAME_MAX_LENGTH}`}</span>
+          }
+          hint={errors.name ? undefined : "Aynı disiplinde tekil olmalı"}
           error={errors.name}
         >
           {(control) => (
@@ -148,23 +219,40 @@ export function CatalogItemFormModal({
         </Field>
 
         <div className="ev-cat-form__row">
-          <Field label="Disiplin" required error={errors.discipline}>
-            {(control) => (
-              <div {...groupProps(control)} className="ev-cat-chips" role="group" aria-label="Disiplin">
-                {disciplines.map((discipline) => (
-                  <button
-                    key={discipline.id}
-                    type="button"
-                    className="ev-cat-chip"
-                    aria-pressed={form.disciplineId === discipline.id}
-                    disabled={readOnly}
-                    onClick={() => chooseDiscipline(discipline)}
-                  >
-                    {discipline.name}
-                  </button>
-                ))}
-              </div>
-            )}
+          <Field
+            label="Disiplin"
+            required
+            error={disciplines.length > 0 ? errors.discipline : undefined}
+            hint={disciplines.length === 0 ? "Katalogda henüz disiplin yok · iş tipi bir disipline bağlı olmalı" : undefined}
+          >
+            {(control) =>
+              disciplines.length === 0 ? (
+                <div className="ev-cat-empty-disc">
+                  <span>Önce disiplin ekleyin</span>
+                </div>
+              ) : (
+                <div {...groupProps(control)} className="ev-cat-chips" role="group" aria-label="Disiplin">
+                  {disciplines.map((discipline) => (
+                    <button
+                      key={discipline.id}
+                      type="button"
+                      className="ev-cat-chip"
+                      aria-pressed={form.disciplineId === discipline.id}
+                      disabled={readOnly}
+                      onClick={() => chooseDiscipline(discipline)}
+                    >
+                      <span
+                        className="ev-cat-chip__dot"
+                        aria-hidden="true"
+                        style={{ backgroundColor: discipline.color }}
+                      />
+                      <span className="ev-cat-mono">{discipline.code}</span>
+                      <span>{discipline.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )
+            }
           </Field>
           <Field label="Birim" required>
             {(control) => (
@@ -209,7 +297,7 @@ export function CatalogItemFormModal({
               )}
             </Field>
           </div>
-          <Field label="Varsayılan yapan" hint="Bütçede kalem bazında değiştirilebilir">
+          <Field label="Varsayılan yapan" hint={ownHint}>
             {(control) => (
               <div {...groupProps(control)}>
                 <Segmented<ContractorType>
@@ -225,7 +313,12 @@ export function CatalogItemFormModal({
           </Field>
         </div>
 
-        <Field label="Açıklama">
+        <Field
+          label="Açıklama"
+          labelAside={
+            <span className="ev-cat-count">{`${form.description.length}/${CATALOG_DESCRIPTION_MAX_LENGTH}`}</span>
+          }
+        >
           {(control) => (
             <Textarea
               {...control}

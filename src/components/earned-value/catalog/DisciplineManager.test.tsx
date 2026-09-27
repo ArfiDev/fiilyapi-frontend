@@ -141,9 +141,77 @@ describe("Disiplin Ekle / Düzenle formu (M6:227-304)", () => {
 
     const palette = within(form).getByRole("group", { name: "Grafik rengi" });
     const swatches = within(palette).getAllByRole("button");
-    expect(swatches.map((b) => b.textContent)).toEqual(["#2563eb", "#93c5fd", "#64748b", "#cbd5e1", "#e2e8f0"]);
+    // M6:314-320 — her dairenin altında ya "sıradaki" ya da bu rengi kullanan disiplinin kodu.
+    expect(swatches.map((b) => b.textContent)).toEqual([
+      "#2563ebKAB",
+      "#93c5fdDUV",
+      "#64748b",
+      "#cbd5e1sıradaki",
+      "#e2e8f0INC",
+    ]);
     // 3 disiplin var → 4. renk (#cbd5e1) önerilir
-    expect(within(palette).getByRole("button", { name: "#cbd5e1" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(palette).getByRole("button", { name: "#cbd5e1 sıradaki" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("düzenlemede: kendi rengi 'sıradaki' etiketiyle işaretlenmez, BAŞKA disiplinin kullandığı renk kodla etiketlenir", async () => {
+    const user = userEvent.setup();
+    const dialog = await openManager();
+    await user.click(within(rowOf(dialog, "KAB")).getByRole("button", { name: "Düzenle" }));
+    const form = screen.getByRole("dialog", { name: "Disiplin Düzenle" });
+
+    const palette = within(form).getByRole("group", { name: "Grafik rengi" });
+    // KAB'ın kendi rengi (#2563eb) düzenlemede etiketsiz kalır (kendini işaretlemez).
+    expect(within(palette).getByRole("button", { name: "#2563eb" })).toBeInTheDocument();
+    // DUV'un kullandığı renk (#93c5fd) "DUV" etiketiyle görünür.
+    expect(within(palette).getByRole("button", { name: "#93c5fd DUV" })).toBeInTheDocument();
+    // Düzenlemede "sıradaki" etiketi hiç basılmaz.
+    expect(within(palette).queryByText("sıradaki")).not.toBeInTheDocument();
+  });
+
+  it("colHint oluşturmada 'sıradaki' cümlesini gösterir (M6:351)", async () => {
+    const user = userEvent.setup();
+    const dialog = await openManager();
+    await user.click(within(dialog).getByRole("button", { name: "+ Yeni disiplin" }));
+    expect(
+      screen.getByText("Sıradaki palet rengi önceden seçildi (4. disiplin) · 6. disiplinde palet başa döner"),
+    ).toBeInTheDocument();
+  });
+
+  it("colHint düzenlemede raporlar cümlesini gösterir (M6:351)", async () => {
+    const user = userEvent.setup();
+    const dialog = await openManager();
+    await user.click(within(rowOf(dialog, "KAB")).getByRole("button", { name: "Düzenle" }));
+    expect(screen.getByText("Panel ve raporlardaki grafiklerde bu renk kullanılır")).toBeInTheDocument();
+  });
+
+  it("düzenleme: kullanım kutusu iş tipi + şantiye sayısıyla görünür (M6:47-51)", async () => {
+    const user = userEvent.setup();
+    const dialog = await openManager();
+    await user.click(within(rowOf(dialog, "KAB")).getByRole("button", { name: "Düzenle" }));
+    const form = screen.getByRole("dialog", { name: "Disiplin Düzenle" });
+
+    expect(
+      within(form).getByText(
+        (_, element) => element?.tagName === "P" && element.textContent === "6 iş tipinde · 4 şantiyede kullanılıyor",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(form).getByText(
+        "Kullanımdayken de kod ve ad düzenlenebilir; bağlı iş tipleri ve geçmiş raporlar yeni adla görünür.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("oluşturma: kullanım kutusu YOK", async () => {
+    const user = userEvent.setup();
+    const dialog = await openManager();
+    await user.click(within(dialog).getByRole("button", { name: "+ Yeni disiplin" }));
+    const form = screen.getByRole("dialog", { name: "Disiplin Ekle" });
+    expect(
+      within(form).queryByText(
+        "Kullanımdayken de kod ve ad düzenlenebilir; bağlı iş tipleri ve geçmiş raporlar yeni adla görünür.",
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("kod tekrarı ve boş ad: '2 alan hatalı', POST yok", async () => {
@@ -155,7 +223,7 @@ describe("Disiplin Ekle / Düzenle formu (M6:227-304)", () => {
     await user.type(within(form).getByLabelText("Kod"), "kab");
     await user.click(within(form).getByRole("button", { name: "Kaydet" }));
 
-    expect(within(form).getByText("2 alan hatalı.")).toBeInTheDocument();
+    expect(within(form).getByText("2 alan eksik ya da hatalı.")).toBeInTheDocument();
     expect(within(form).getByText("Bu kod zaten var: Kaba İnşaat")).toBeInTheDocument();
     expect(within(form).getByText("Disiplin adı zorunlu")).toBeInTheDocument();
     expect(backendClient.POST).not.toHaveBeenCalled();

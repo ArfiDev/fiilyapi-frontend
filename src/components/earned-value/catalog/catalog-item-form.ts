@@ -6,7 +6,7 @@
  * Düzenlemede yalnız DEĞİŞEN alanlar PATCH edilir (backend kısmi günceller;
  * oran değişmezse `standard_updated_at` yenilenmez).
  */
-import { normalizeDecimalInput } from "@/lib/decimal";
+import { compareDecimalStrings, normalizeDecimalInput } from "@/lib/decimal";
 import type {
   EvCatalogItemCreate,
   EvCatalogItemRead,
@@ -74,7 +74,7 @@ export function catalogFormFromItem(item: EvCatalogItemRead): CatalogFormState {
   };
 }
 
-function rateError(raw: string): string | undefined {
+export function rateError(raw: string): string | undefined {
   const normalized = normalizeDecimalInput(raw);
   if (normalized === null || !(Number(normalized) > 0)) return "Standart oran zorunlu · 0'dan büyük olmalı";
   const [whole = "", fraction = ""] = normalized.replace(/^[-+]/, "").split(".");
@@ -129,4 +129,26 @@ export function buildCatalogUpdateBody(
 
 export function unitOptions(catalogUnits: readonly string[], current: string): string[] {
   return Array.from(new Set([...CATALOG_UNIT_OPTIONS, ...catalogUnits, current].filter(Boolean)));
+}
+
+/**
+ * KAT:120-122 `rateChanged` — yalnız GEÇERLİ (doğrulamadan geçen) ve
+ * orijinal standart orandan FARKLI bir değer uyarı bandını tetikler.
+ */
+export function catalogRateChanged(item: EvCatalogItemRead, form: CatalogFormState): boolean {
+  if (rateError(form.rate)) return false;
+  const normalized = normalizeDecimalInput(form.rate);
+  return normalized !== null && compareDecimalStrings(normalized, item.standard_unit_mhr) !== 0;
+}
+
+/** KAT:184 `tOwnHint` — seçili disiplinin varsayılanına göre dinamik ipucu. */
+export function catalogOwnHint(
+  selected: { code: string; defaultContractorLabel: string; defaultContractorType: ContractorType } | null,
+  formOwn: ContractorType,
+): string {
+  if (!selected) return "Disiplin seçilince varsayılanı gelir";
+  const changed = formOwn !== selected.defaultContractorType;
+  return `Varsayılan ${selected.code} disiplininden: ${selected.defaultContractorLabel}${
+    changed ? " · bu iş tipinde değiştirildi" : ""
+  }`;
 }

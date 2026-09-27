@@ -71,7 +71,7 @@ test("birim oran katalogu is tipi ekle dogrulama hatasi gorsel", async ({ page }
   await page.getByRole("button", { name: "+ Yeni iş tipi" }).click();
   const dialog = page.getByRole("dialog", { name: "İş Tipi Ekle" });
   await dialog.getByRole("button", { name: "Kaydet" }).click();
-  await expect(dialog).toContainText("alan eksik.");
+  await expect(dialog).toContainText("alan eksik ya da hatalı.");
 
   await prepareFrame(page);
   await expect(dialog).toHaveScreenshot("birim-oran-katalogu-is-tipi-ekle-hata.png");

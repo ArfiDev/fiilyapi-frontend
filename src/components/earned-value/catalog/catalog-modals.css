@@ -115,6 +115,101 @@
 /* M6:287 — segment 240px */
 .ev-cat-form__own-narrow { width: 240px; max-width: 100%; }
 
+/* M6:48-51 disiplin / KAT:113-118 iş tipi — düzenlemede kullanım/gerçekleşen kutusu */
+.ev-cat-use-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  background: var(--color-surface-2);
+  border: var(--border-width-form) solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+.ev-cat-use-box__lead {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.ev-cat-use-box__sub {
+  margin: 0;
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+}
+/* KAT:112 — 3 sütunlu kullanım/gerçekleşen kutusu */
+.ev-cat-use-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.6fr;
+  gap: 0;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) 0;
+}
+.ev-cat-use-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-right: 1px solid var(--color-border);
+}
+.ev-cat-use-col:last-child { border-right: none; }
+.ev-cat-use-label {
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.ev-cat-use-value {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.ev-cat-use-avg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-body);
+}
+.ev-cat-use-muted {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+}
+/* KAT:120-122 — oran değişti uyarı bandı; Alert bileşeni zaten token'lı */
+.ev-cat-use-warn { margin-top: 2px; }
+
+/* M6:70-72 — palet dairesi altı etiket ("sıradaki" ya da kullanan kod) */
+.ev-cat-chip__palette-label {
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.ev-cat-chip__palette-label--next {
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+}
+/* KAT:135 — disiplin çipinde renk noktası */
+.ev-cat-chip__dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
+}
+/* KAT:126,188 — ad/açıklama karakter sayacı (Field labelAside) */
+.ev-cat-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+/* KAT:150-156 — "disiplin yok" boş durumu */
+.ev-cat-empty-disc {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-body);
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border: 1.5px dashed var(--color-dashed-border);
+  border-radius: var(--radius-8);
+}
+
 /* M6:167-208 — disiplin listesi */
 .ev-cat-dlist {
   overflow: hidden;
