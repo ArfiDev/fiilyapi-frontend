@@ -29,7 +29,14 @@ test("'Stok' sekmesi gerçek ekranı açar (ComingSoon DEĞİL) ve TEK sekme akt
   await login(page);
   await page.goto("/projeler/p-1/santiyeler/s-1");
 
-  await page.getByRole("tab", { name: "Stok" }).click();
+  // SEKME-F1.4b: kabuk-düzeyi çalışma sekmeleri şeridi de `role="tab"`
+  // taşıyor (`aria-label="Çalışma sekmeleri"`) — bu ekranın KENDİ drill
+  // sekmeleri (`aria-label="Şantiye detay sekmeleri"`) locator'ı artık
+  // yalnız daralttıktan sonra tekil eşleşir (e2e düzeltmesi — ürün davranışı
+  // DEĞİŞMEDİ; iki şerit de kendi başına AYRI aktiflik taşıması BEKLENİR).
+  const siteTabs = page.getByRole("tablist", { name: "Şantiye detay sekmeleri" });
+
+  await siteTabs.getByRole("tab", { name: "Stok" }).click();
   await expect(page).toHaveURL(/\/santiyeler\/s-1\/stok$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "A-Blok Şantiyesi — Stok Durumu" }),
@@ -37,8 +44,8 @@ test("'Stok' sekmesi gerçek ekranı açar (ComingSoon DEĞİL) ve TEK sekme akt
   await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
 
   // Çift aktiflik olmaz: kök sekme ("Bölümler") ön ek eşleşmesiyle seçilmez.
-  await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1);
-  await expect(page.getByRole("tab", { name: "Stok" })).toHaveAttribute("aria-selected", "true");
+  await expect(siteTabs.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1);
+  await expect(siteTabs.getByRole("tab", { name: "Stok" })).toHaveAttribute("aria-selected", "true");
   // 🔴 DRILL-KALDIR (kullanıcı kararı 2026-08-29) — KULLANICININ BİLDİRDİĞİ
   // KUSURUN e2e BEKÇİSİ. Drill kenar çubuğu global kabuk sidebar'ıyla aynı
   // konumdaydı (`fixed; top:52px; left:0; z-index:90`) ve onu ÖRTÜYORDU:

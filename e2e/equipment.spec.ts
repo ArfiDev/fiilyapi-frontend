@@ -117,19 +117,26 @@ test("K1 — beş sekme; dört gerçek rota gezinir, TEK sekme devre-dışı + G
   await login(page);
   await page.goto(EQUIPMENT_URL);
 
-  await expect(page.getByRole("tab")).toHaveCount(5);
+  // SEKME-F1.4b: üst çubukta kabuk-düzeyi bir çalışma sekmeleri şeridi de
+  // `role="tab"` taşıyor (`aria-label="Çalışma sekmeleri"`) — sayfanın KENDİ
+  // sekmeleri (`aria-label="Makine & Ekipman sekmeleri"`) ile locator artık
+  // BİRLİKTE eşleşir. Bu testin iddiası her zaman EKRANIN kendi şeridi
+  // içindi; locator ona DARALTILDI (e2e düzeltmesi — ürün davranışı DEĞİŞMEDİ).
+  const localTabs = page.getByRole("tablist", { name: "Makine & Ekipman sekmeleri" });
+
+  await expect(localTabs.getByRole("tab")).toHaveCount(5);
   // 🔴 F-KIRA: "Kira Hakedişi" devre-dışıdan CANLIYA geçti → bağlantı sayısı
   // 2'den 3'e çıktı (aktif sekme kendi sayfasına bağlanmaz, "Bakım Takvimi"
   // hâlâ devre-dışı).
-  await expect(page.locator('a[role="tab"]')).toHaveCount(3);
+  await expect(localTabs.locator('a[role="tab"]')).toHaveCount(3);
 
   // 🔴 Bir yüzeyin ölüden canlıya geçtiğini GÖRSEL KAPI KANITLAMAZ (F-IZN
   // dersi): span→link geçişinin renk deltası pixelmatch eşiğinin altındadır.
   // Kanıt DOM'dan alınır.
-  const leaseTab = page.getByRole("tab", { name: "Kira Hakedişi" });
+  const leaseTab = localTabs.getByRole("tab", { name: "Kira Hakedişi" });
   await expect(leaseTab).toHaveAttribute("href", "/makine/kira");
 
-  const maintenanceTab = page.getByRole("tab", { name: "Bakım Takvimi" });
+  const maintenanceTab = localTabs.getByRole("tab", { name: "Bakım Takvimi" });
   await expect(maintenanceTab).toHaveAttribute("aria-disabled", "true");
 
   // Gerekçeler `title` ipucuna GÖMÜLÜ DEĞİL, ekranda okunur (F-TH kuralı).
@@ -148,17 +155,17 @@ test("K1 — beş sekme; dört gerçek rota gezinir, TEK sekme devre-dışı + G
   await expect(page).toHaveURL(/\/makine$/);
 
   // Gerçek rotalar gezinir.
-  await page.getByRole("tab", { name: "Çalışma Kaydı" }).click();
+  await localTabs.getByRole("tab", { name: "Çalışma Kaydı" }).click();
   await expect(page).toHaveURL(/\/makine\/calisma/);
   await expect(page.getByRole("heading", { level: 1, name: "Çalışma Kaydı" })).toBeVisible();
 
-  await page.getByRole("tab", { name: "Yakıt Takibi" }).click();
+  await localTabs.getByRole("tab", { name: "Yakıt Takibi" }).click();
   await expect(page).toHaveURL(/\/makine\/yakit/);
   await expect(page.getByRole("heading", { level: 1, name: "Yakıt Takibi" })).toBeVisible();
 
   // 🔴 F-KIRA: sekmenin GERÇEKTEN indiği yer ölçülür (rota çözümü VARSAYILMAZ —
   // `/makine/[id]` dinamik kardeşi sabit metni yutabilirdi, F-TKV dersi).
-  await page.getByRole("tab", { name: "Kira Hakedişi" }).click();
+  await localTabs.getByRole("tab", { name: "Kira Hakedişi" }).click();
   await expect(page).toHaveURL(/\/makine\/kira/);
   await expect(page.getByRole("heading", { level: 1, name: "Kira Hakedişi" })).toBeVisible();
 });
