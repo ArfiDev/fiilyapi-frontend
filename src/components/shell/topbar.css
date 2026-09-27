@@ -88,9 +88,168 @@
   font-weight: 700;
 }
 
-/* SEKME-F1.2: kırıntının kendi kuralları (`.topbar-crumbs*`) buradan
-   `breadcrumb/page-breadcrumb.css`e (`.page-crumbs*`) TAŞINDI — kırıntı artık
-   `<main class="app-content">`in içinde basılıyor, üst çubukta DEĞİL. */
+/* ─── Yol göstergesi (kırıntı) + geri tuşu · SEKME-F1.7a ──────────────────
+   KULLANICI KARARI: kırıntı `<main>`den ÜST ÇUBUĞA geri döner (SEKME-F1.2'nin
+   tam tersi). Görsel token'lar main'deki (5fc3a54) `.topbar-crumbs*`ten
+   AYNEN alınır (12px yazı, 5px boşluk, ayraç/bağlantı/son-parça renkleri,
+   600 ağırlık); YENİ olan tek şey GENİŞLİK sözleşmesi:
+
+   🔴 main'de kırıntı `flex: 1` alıyordu (sekme şeridi henüz yoktu). Şimdi
+   sekme şeridi (`.topbar-tabs`) KALAN alanı istiyor — ikisi `flex:1` olamaz.
+   Kırıntı bu yüzden ESNEMEZ (`flex-shrink: 0`) ve sabit bir üst sınır taşır.
+
+   🔴 İLK ÖLÇÜM (360px SABİT) ÇÜRÜTÜLDÜ — headless Chromium'la gerçek
+   uygulamada (v6 karesi, 768px/10 sekme) 360px'lik kırıntı + 220px logo +
+   ~140px eylemler sekme şeridine NEGATİF alan bırakıyordu, şerit TAMAMEN
+   kayboluyordu (tam olarak bu dilimin YASAKLADIĞI şey).
+
+   🔴 İKİNCİ ÖLÇÜM (220px SABİT) de ÇÜRÜTÜLDÜ (lider gözlemi + ölçüm) —
+   768px'i güvenli kılmak için seçilen sabit tavan 1440px gibi GENİŞ
+   ekranlarda da aynı 220px'e sıkışıyordu: dört seviyeli bir kırıntı
+   ("Projeler / Kule A / A-Blok Şantiyesi / Kat 6-10 Kaba İnşaat") "P. / I /
+   A.. / Kat 6-10 Kab..." gibi NEREDEYSE OKUNMAZ bir hâle düşüyordu — oysa
+   1440px'te sekme şeridine ayrılacak BOL boşluk vardı. Sabit bir piksel
+   değeri iki ucu (dar ekranda şeridi ezmemek / geniş ekranda okunaklı
+   kalmak) AYNI ANDA karşılayamaz; çözüm GENİŞLİĞE DUYARLI bir tavan:
+
+     max-width: clamp(220px, 34vw, 520px)
+
+   Ölçüm (viewport genişliği × 0.34, alt/üst sınırla kelepçeli):
+     390px  → clamp alt sınıra oturur:  220px (dar ekran zaten §mobil kuralıyla
+              listeyi tamamen gizliyor, bu değer yalnız medya sorgusu ÖNCESİ
+              geçiş anı için)
+     768px  → 768×0.34 ≈ 261px          (10 sekmede şerit YİNE kayıyor, en az
+              bir sekme görünür — 768'deki eski 220px kanıtı hâlâ geçerli:
+              261 < 248px güvenli tavan)
+     1440px → 1440×0.34 = 489.6px → 490px (dört seviyeli kırıntının SON İKİ
+              parçası — "A-Blok Şantiyesi / Kat 6-10 Kaba İnşaat" — tam
+              okunur; ölçüldü, v6b karesi)
+     1920px → clamp üst sınıra oturur: 520px (daha da geniş ekranda kırıntı
+              sonsuza kadar büyümez, sekme şeridi payını yemez)
+
+   Bu KABUL EDİLEN ödünleşim aynı kalır: sınırı aşan (beşinci seviye + çok
+   uzun ad) durumlarda `ellipsis`e düşer, tam ad `title` tooltip'inde ve geri
+   tuşunun `aria-label`ında okunur; sekme şeridinin alanı hiçbir genişlikte
+   SIFIRA İNMEZ (10 sekmede şerit kayar, kırıntı ASLA ezilmez — KARARLAR
+   §SEKME-F1.7a).
+
+   Öncekiler (`.topbar-crumbs__link`) SON parçadan (`__current`) ÖNCE
+   daralır (F1.2-FIX'in `flex-shrink` önceliği AYNEN taşındı) — her ikisi de
+   `ellipsis` ile kısalır, tam ad `title` özniteliğinde okunur
+   (`TopbarBreadcrumb.tsx`). Ayraç: `.topbar-logo`nun `border-right`iyle AYNI
+   dil — yeni renk/token İCAT EDİLMEDİ, sekme şeridinden görsel ayrım bu ince
+   dikey çizgiyle sağlanır. */
+.topbar-crumbs {
+  flex-shrink: 0;
+  max-width: clamp(220px, 34vw, 520px);
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-form-label-gap); /* 5px (mockup 34) */
+  padding: 0 var(--space-4); /* 16px (mockup 34) */
+  font-size: var(--text-xs); /* 12px (mockup 34) */
+  overflow: hidden;
+  border-right: 1px solid var(--color-border);
+}
+.topbar-crumbs__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm); /* 14px — 12px'te ok gövdesi okunmuyor */
+  line-height: 1;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.topbar-crumbs__back:hover {
+  background: var(--color-nav-active-bg);
+  color: var(--color-primary);
+}
+.topbar-crumbs__back:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.topbar-crumbs__list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-form-label-gap);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+.topbar-crumbs__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-form-label-gap);
+  min-width: 0;
+  /* D7 (F1.2-FIX, AYNEN taşındı) — önceki parçalar SON parçadan (kullanıcının
+     bulunduğu sayfa) önce daralır; K3'ün "son parça" vurgusuyla tutarlı. */
+  flex-shrink: 3;
+}
+.topbar-crumbs__item:last-child {
+  flex-shrink: 1;
+}
+.topbar-crumbs__link {
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar-crumbs__link:hover {
+  text-decoration: underline;
+}
+.topbar-crumbs__sep {
+  color: var(--color-border);
+  flex-shrink: 0;
+}
+.topbar-crumbs__current {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Ad önbellekten gelene kadarki yer tutucu (K6). */
+.topbar-crumbs__pending {
+  display: inline-block;
+  width: 88px;
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+}
+
+/* SEKME-F1.7a — Ayarlar altında topbar'da beliren "Çıkış Yap" (öneri A,
+   bkz. rapor v6 ekran görüntüleri "-a"/"-b"). `.settings-breadcrumb__logout`
+   (kalkan SettingsBreadcrumb) ile AYNI görsel dil: metin düğmesi, tehlike
+   rengi, sınır/zemin YOK. */
+.topbar-settings-exit {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.topbar-settings-exit:hover {
+  text-decoration: underline;
+}
+.topbar-settings-exit:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.topbar-settings-exit__error {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-danger);
+}
 
 /* SEKME-F1.4c — dar ekran (kullanıcı kararı): 768px altında logodaki "FİİL
    YAPI" yazısı gizlenir, yalnız sol baştaki F amblemi kalır. Ölçüm (Pillow,
@@ -110,7 +269,15 @@
    TAŞINIR ve `clip-path` görselin KENDİ 182px kutusundan yalnızca ilk 17px'i
    (amblem sağ kenarına KADAR) bırakır — sağdaki 14px boşluk "FİİL" yazısından
    bir kırıntı DEĞİL, `clip-path`in kestiği tamamen boş alandır. Konteynerin
-   `overflow: hidden`i dikey taşmayı (48,52px > 26px) kırpmaya devam eder. */
+   `overflow: hidden`i dikey taşmayı (48,52px > 26px) kırpmaya devam eder.
+
+   SEKME-F1.7a — AYNI kırılma noktasında kırıntı da daralır (öneri, kullanıcı
+   seçecek — bkz. rapor v6 ekran görüntüleri "tam kırıntı" / "yalnız ← üst"):
+   768px altında sekme şeridi ZATEN dar; kırıntının TAM listesi (birden çok
+   parça) şeride yer bırakmaz. Varsayılan öneri: yalnız geri tuşu (←) kalır,
+   parça listesi (`.topbar-crumbs__list`) gizlenir — hedefin adı geri
+   tuşunun `aria-label`/`title`ında ZATEN var, yalnız GÖRSEL OLARAK kaybolur
+   (ekran okuyucu yine "<ad> sayfasına dön" duyar). */
 @media (max-width: 767px) {
   .topbar-logo {
     width: 45px;
@@ -133,5 +300,12 @@
        itibaren "FİİL YAPI" yazısının TAMAMI kaybolur, yalnız yayın (emblem)
        kalır. */
     clip-path: inset(0 165px 0 0);
+  }
+  .topbar-crumbs {
+    max-width: none;
+    padding: 0 var(--space-2);
+  }
+  .topbar-crumbs__list {
+    display: none;
   }
 }

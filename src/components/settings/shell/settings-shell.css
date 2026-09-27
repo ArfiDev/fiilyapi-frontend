@@ -87,43 +87,10 @@
   color: var(--color-danger);
 }
 
-/* Breadcrumb satırı — SEKME-F1.2: global topbar'ı artık ÖRTMÜYOR, `.ayarlar-
-   content`in EN ÜSTÜNDE normal akışta bir satır. Eskiden `position:fixed`
-   ile 52px'lik global topbar'ın orta/sağını örtüyordu (ref §A.1, ARŞİV); o
-   kanon burada KAPANDI — kırıntı artık kabuk kırıntısıyla (`PageBreadcrumb`)
-   aynı katmanda: içerik. */
-.settings-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px; /* eyebrow satırlarıyla aynı ölçülmüş emsal, bkz. page-breadcrumb.css */
-}
-.settings-breadcrumb__link {
-  font-size: 13px;
-  color: var(--color-primary);
-  text-decoration: none;
-}
-.settings-breadcrumb__sep {
-  color: var(--color-border);
-}
-.settings-breadcrumb__current {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.settings-breadcrumb__logout {
-  margin-left: auto;
-  font-size: 13px;
-  color: var(--color-danger);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.settings-breadcrumb__error {
-  margin: 0;
-  font-size: 11px;
-  color: var(--color-danger);
-}
+/* SEKME-F1.7a: `.settings-breadcrumb*` (eski içerik-içi kırıntı + Çıkış Yap
+   satırı) buradan KALKTI — kırıntı üst çubuğa taşındı (`TopbarBreadcrumb`),
+   Çıkış Yap `Topbar.tsx`teki `.topbar-settings-exit`e ve/veya bu dosyadaki
+   `.settings-logout`a (Ayarlar sidebar'ının altı) taşındı. */
 
 /* İçerik alanı — 240px sidebar'a göre.
    Bu alan global <main class="app-content">'in İÇİNDE render edilir; o kutu

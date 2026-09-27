@@ -6,7 +6,7 @@ import { PROJECT_QUERY_KEY } from "@/lib/api/hooks/useProjects";
 import { SECTION_QUERY_KEY } from "@/lib/api/hooks/useSection";
 import { SITE_QUERY_KEY } from "@/lib/api/hooks/useSites";
 
-import { PageBreadcrumb } from "./PageBreadcrumb";
+import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 
 let currentPath = "/";
 vi.mock("next/navigation", () => ({
@@ -18,9 +18,9 @@ const SITE_KEY = "a-blok";
 const SECTION_KEY = "kaba-insaat";
 
 /**
- * 🔴 B3'ün ÖLÇÜM ARACI. Kırıntı ad için ikinci bir istek atarsa bu casus onu
- * görür. `fetch`i mock'lamak DEĞİL, ÇAĞRILDIĞINI SAYMAK önemli: mock'lanmış
- * ama çağrılan bir fetch de "ikinci istek"tir.
+ * 🔴 B3'ün ÖLÇÜM ARACI (`PageBreadcrumb.test.tsx`teki kanonik desen, SEKME-
+ * F1.7a ile burada devam eder). Kırıntı ad için ikinci bir istek atarsa bu
+ * casus onu görür.
  */
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -28,8 +28,6 @@ function seededClient(): QueryClient {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  // Sayfanın KENDİ sorgularının önbelleğe yazdığı hâl — anahtarlar
-  // `useProject` / `useSite` / `useSection` ile BİREBİR aynıdır.
   client.setQueryData([PROJECT_QUERY_KEY, PROJECT_KEY], { name: "Güneşkent Konut" });
   client.setQueryData([SITE_QUERY_KEY, SITE_KEY, PROJECT_KEY], {
     name: "A-Blok",
@@ -45,7 +43,7 @@ function renderAt(pathname: string, client: QueryClient = seededClient()) {
   currentPath = pathname;
   return render(
     <QueryClientProvider client={client}>
-      <PageBreadcrumb />
+      <TopbarBreadcrumb />
     </QueryClientProvider>,
   );
 }
@@ -66,19 +64,17 @@ describe("ad çözümleme — yalnız önbellek", () => {
   it("adları basar ama HİÇBİR ağ isteği atmaz", async () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
 
-    const list = screen.getByTestId("page-crumbs");
+    const list = screen.getByTestId("topbar-crumbs");
     expect(within(list).getByText("Güneşkent Konut")).toBeInTheDocument();
     expect(within(list).getByText("A-Blok")).toBeInTheDocument();
 
-    // Mutasyon: kırıntıyı kendi `useQuery`siyle (queryFn dolu) beslet → kırmızı.
     await Promise.resolve();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("bölüm adı da yalnız önbellekten gelir", () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/bolumler/${SECTION_KEY}`);
-    const list = screen.getByTestId("page-crumbs");
-    // 🔴 Parça bazında: birleşik metin iddiası üç ad tek düğüme çökse de geçerdi.
+    const list = screen.getByTestId("topbar-crumbs");
     expect(within(list).getByText("Kaba İnşaat")).toBeInTheDocument();
     expect(within(list).getByText("A-Blok")).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -92,7 +88,7 @@ describe("ad çözümleme — yalnız önbellek", () => {
     });
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/puantaj`, client);
 
-    const list = screen.getByTestId("page-crumbs");
+    const list = screen.getByTestId("topbar-crumbs");
     expect(within(list).getByText("Güneşkent Konut")).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -102,10 +98,9 @@ describe("ad çözümleme — yalnız önbellek", () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}`, client);
 
     expect(screen.getAllByTestId("crumb-pending")).toHaveLength(2);
-    const list = screen.getByTestId("page-crumbs");
+    const list = screen.getByTestId("topbar-crumbs");
     expect(list.textContent).not.toContain(PROJECT_KEY);
     expect(list.textContent).not.toContain(SITE_KEY);
-    // Ekran okuyucu yine de nerede olduğunu duyar.
     expect(within(list).getByText("Şantiye")).toBeInTheDocument();
   });
 });
@@ -115,10 +110,8 @@ describe("ad çözümleme — yalnız önbellek", () => {
 describe("son parça", () => {
   it("bağlantı DEĞİLDİR; öncekilerin hepsi bağlantıdır", () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
-    const list = screen.getByTestId("page-crumbs");
+    const list = screen.getByTestId("topbar-crumbs");
 
-    // 🔴 `getAllByRole("link")` KULLANILMAZ: açık `role` taşıyan bir `<a>`
-    // (ör. `role="tab"`) o sorgudan KAÇAR ve bekçinin yarısı sessizce ölçmez.
     const anchors = [...list.querySelectorAll("a[href]")];
     expect(anchors.map((a) => a.textContent)).toEqual([
       "Projeler",
@@ -128,74 +121,52 @@ describe("son parça", () => {
 
     const current = within(list).getByText("Günlük Kayıt");
     expect(current.closest("a")).toBeNull();
-    expect(current).toHaveClass("page-crumbs__current");
+    expect(current).toHaveClass("topbar-crumbs__current");
+  });
+
+  it("tam ad `title` özniteliğinde okunur (ellipsis kısaltsa da)", () => {
+    renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
+    const list = screen.getByTestId("topbar-crumbs");
+    expect(within(list).getByText("A-Blok")).toHaveAttribute("title", "A-Blok");
+    expect(within(list).getByText("Günlük Kayıt")).toHaveAttribute("title", "Günlük Kayıt");
   });
 });
 
-/* ─── SEKME-F1.2 · tek parçalı kırıntı HİÇ BASILMAZ (M1) ─────────────────── */
+/* ─── SEKME-F1.7a · tek parçalı kırıntı da basılır (main davranışı) ──────── */
 
-describe("tek parçalı kırıntı — boş kutu bile kalmaz", () => {
-  it("kökte (`/`) hiçbir şey basılmaz", () => {
-    // Mutasyon (M1): `trail.length === 1` erken dönüşünü kaldır → bu container
-    // artık BOŞ değil, `page-crumbs` testid'i bulunur → kırmızı.
-    const { container } = renderAt("/");
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("page-crumbs")).toBeNull();
+describe("tek parçalı kırıntı — main davranışı KORUNUR", () => {
+  it("kökte (`/`) TEK parça basılır, geri tuşu YOK", () => {
+    renderAt("/");
+    expect(screen.getByTestId("topbar-crumbs")).toBeInTheDocument();
+    expect(screen.getByText("Gösterge Paneli")).toHaveClass("topbar-crumbs__current");
+    expect(screen.queryByTestId("topbar-back")).toBeNull();
   });
 
-  it("modül kökünde (`/puantaj`) hiçbir şey basılmaz", () => {
-    const { container } = renderAt("/puantaj");
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("yazılmamış (ComingSoon) rotada (`/raporlar`) hiçbir şey basılmaz", () => {
-    // Sayfanın KENDİ başlığı ("Raporlar") zaten ekranda basılıdır (ComingSoon);
-    // kabuk kırıntısı burada İKİNCİ bir "Raporlar" yazmaz.
-    const { container } = renderAt("/raporlar");
-    expect(container).toBeEmptyDOMElement();
+  it("modül kökünde (`/puantaj`) TEK parça basılır", () => {
+    renderAt("/puantaj");
+    expect(screen.getByTestId("topbar-crumbs")).toBeInTheDocument();
+    expect(screen.queryByTestId("topbar-back")).toBeNull();
   });
 });
 
-/* ─── SEKME-F1.2 · /ayarlar altında kabuk kırıntısı BASILMAZ (M5) ────────── */
+/* ─── SEKME-F1.7a · /ayarlar altında "Ayarlar / <bölüm>" basılır ─────────── */
 
-describe("/ayarlar altında kabuk kırıntısı basılmaz", () => {
-  it("`/ayarlar/kullanicilar` çok parçalı olsa da null döner", () => {
-    // Mutasyon (M5): `/ayarlar` önek kontrolünü kaldır → `page-crumbs` basılır
-    // → kırmızı. Ayarlar kendi kırıntısını (`SettingsBreadcrumb`) basar.
-    const { container } = renderAt("/ayarlar/kullanicilar");
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("page-crumbs")).toBeNull();
+describe("/ayarlar altında kırıntı ikinci bir kaynak İCAT ETMEZ", () => {
+  it("`/ayarlar/kullanicilar` → \"Ayarlar / Kullanıcılar\", geri tuşu Ayarlar'a gider", () => {
+    // Mutasyon (M3): `route-tree.ts`teki `ayarlar` alt ağacını sil → bu iddia
+    // kırmızı olur (kırıntı tek parçalı "yakında" kırıntısına düşer).
+    renderAt("/ayarlar/kullanicilar");
+    const list = screen.getByTestId("topbar-crumbs");
+    expect(within(list).getByText("Ayarlar")).toBeInTheDocument();
+    expect(within(list).getByText("Kullanıcılar")).toHaveClass("topbar-crumbs__current");
+    const back = screen.getByTestId("topbar-back");
+    expect(back).toHaveAttribute("href", "/ayarlar");
   });
 
-  // D6 (SEKME-F1.2-FIX) — ikinci bir alt sayfa: tek bir yol tesadüfen
-  // geçmiyor, dışlama GERÇEKTEN `isActivePath`ten (`routes.settings.root()`
-  // ile eşleşme) geliyor.
-  it("`/ayarlar/roller` (ikinci alt sayfa) de null döner", () => {
-    const { container } = renderAt("/ayarlar/roller");
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("page-crumbs")).toBeNull();
-  });
-
-  it("çıplak `/ayarlar` de null döner (isActivePath TAM eşleşme kolu)", () => {
-    const { container } = renderAt("/ayarlar");
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("page-crumbs")).toBeNull();
-  });
-
-  // 🔴 ÇÜRÜTME NOTU (D6) — `startsWith("/ayarlar")` kusuru teorik olarak
-  // "/ayarlarX/..." gibi bir yolda YANLIŞ eşleşirdi (Ayarlar DIŞI bir sayfayı
-  // da dışlardı). ÖLÇÜLDÜ: `route-tree.ts`in kök çocukları arasında "ayarlar"
-  // ile başlayıp ONA EŞİT OLMAYAN bir anahtar YOK; böyle bir yol
-  // `childFor`de İLK segmentte zaten eşleşmez ve `buildTrail` onu
-  // `comingSoonTrail`e (TEK parçalı kırıntı) düşürür — `trail.length === 1`
-  // erken dönüşü zaten onu basmaz. Yani bu depoda kusur PRATİKTE
-  // ERİŞİLEMEZDİ (route-tree çok parçalı bir eşleşme üretmiyor); yine de
-  // `isActivePath` kullanmak DOĞRU birincil kaynaktır (D6) ve gelecekte
-  // "ayarlarim" gibi bir üst-seviye rota eklenirse bu ölçüm geçersiz olur.
-  it("ÖLÇÜM — `/ayarlar-harici/x` route-tree'de zaten TEK parçalı kırıntıya düşer", () => {
-    const { container } = renderAt("/ayarlar-harici/x");
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("page-crumbs")).toBeNull();
+  it("çıplak `/ayarlar` → TEK parça \"Ayarlar\", geri tuşu YOK", () => {
+    renderAt("/ayarlar");
+    expect(screen.getByText("Ayarlar")).toHaveClass("topbar-crumbs__current");
+    expect(screen.queryByTestId("topbar-back")).toBeNull();
   });
 });
 
@@ -204,9 +175,7 @@ describe("/ayarlar altında kabuk kırıntısı basılmaz", () => {
 describe("geri tuşu", () => {
   it("bir seviye yukarıya giden GERÇEK bir bağlantıdır", () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
-    const back = screen.getByTestId("page-back");
-    // Mutasyon: `router.back()` çağıran bir <button>a çevir → `href` kaybolur
-    // ve bu iddia kırmızı olur.
+    const back = screen.getByTestId("topbar-back");
     expect(back.tagName).toBe("A");
     expect(back).toHaveAttribute("href", `/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}`);
     expect(back).toHaveAccessibleName("A-Blok sayfasına dön");
@@ -214,20 +183,20 @@ describe("geri tuşu", () => {
 
   it("aynı yol iki ayrı render'da AYNI hedefi verir (geçmiş etkisi yok)", () => {
     const first = renderAt(`/projeler/${PROJECT_KEY}/ozet`);
-    const target = first.getByTestId("page-back").getAttribute("href");
+    const target = first.getByTestId("topbar-back").getAttribute("href");
     first.unmount();
     const second = renderAt(`/projeler/${PROJECT_KEY}/ozet`);
-    expect(second.getByTestId("page-back")).toHaveAttribute("href", target ?? "");
+    expect(second.getByTestId("topbar-back")).toHaveAttribute("href", target ?? "");
     expect(target).toBe(`/projeler/${PROJECT_KEY}`);
   });
 
   it("POZİTİF KONTROL — kökte ve modül kökünde geri tuşu BASILMAZ", () => {
     const atRoot = renderAt("/");
-    expect(atRoot.queryByTestId("page-back")).toBeNull();
+    expect(atRoot.queryByTestId("topbar-back")).toBeNull();
     atRoot.unmount();
 
     const atModule = renderAt("/puantaj");
-    expect(atModule.queryByTestId("page-back")).toBeNull();
+    expect(atModule.queryByTestId("topbar-back")).toBeNull();
   });
 });
 
@@ -237,18 +206,13 @@ describe("kırıntı kabuğu", () => {
   it("erişilebilir bir gezinme bölgesidir", () => {
     renderAt("/muhasebe/mizan");
     expect(screen.getByRole("navigation", { name: "Yol göstergesi" })).toBeInTheDocument();
-    expect(screen.getByText("Mizan")).toHaveClass("page-crumbs__current");
+    expect(screen.getByText("Mizan")).toHaveClass("topbar-crumbs__current");
   });
 
   it("K7 — kırıntı `aria-current` SÜRMEZ (sayfadaki tek işaret kabuk menüsünde)", () => {
-    // 🔴 Bu deponun YAZILI kararı: sayfada TAM BİR `aria-current="page"`
-    // bulunur ve o da kabuk nav'ındadır; ikincisi ekran okuyucuya iki sayfa
-    // derdi. Mali Tablolar segment şeridi (aynı şekle sahip yol göstergesi)
-    // de sürmez. Mutasyon: son parçaya `aria-current="page"` ekle → kırmızı
-    // (burada ve `financial-statements.spec.ts`in BEŞ K7 bekçisinde).
     renderAt("/muhasebe/mizan");
     expect(
-      screen.getByTestId("page-crumbs").querySelectorAll("[aria-current]"),
+      screen.getByTestId("topbar-crumbs").querySelectorAll("[aria-current]"),
     ).toHaveLength(0);
   });
 });

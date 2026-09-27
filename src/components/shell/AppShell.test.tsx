@@ -4,12 +4,12 @@ import { render, screen } from "@testing-library/react";
 import AppShell from "./AppShell";
 
 /**
- * SEKME-F1.2 — `AppShell` yalnız KABUK MONTAJINI doğrular: kırıntının kendi
- * davranışı `breadcrumb/PageBreadcrumb.test.tsx`de, oturumun kendi davranışı
- * `SessionProvider.test.tsx`de zaten bekçilenmiş. Burada tek soru DOM SIRASI:
- * `PageBreadcrumb`, `StaleBuildBanner`in ALTINDA ve `{children}`dan ÖNCE mi?
- * Bu yüzden alt bileşenler test kimlikli sahte'lerle DEĞİŞTİRİLİR — gerçek
- * `Topbar`/`SessionProvider` ağı (fetch, router) burada GEREKSİZ gürültüdür.
+ * SEKME-F1.7a — `AppShell` yalnız KABUK MONTAJINI doğrular: kırıntı üst
+ * çubuğa taşındığı için (`Topbar.tsx` → `TopbarBreadcrumb`) burada TEK soru
+ * `<main class="app-content">`in kırıntı BASMADIĞI ve DOM sırasının
+ * (StaleBuildBanner → children) doğru olduğu. Alt bileşenler test kimlikli
+ * sahte'lerle DEĞİŞTİRİLİR — gerçek `Topbar`/`SessionProvider` ağı (fetch,
+ * router) burada GEREKSİZ gürültüdür.
  */
 vi.mock("./Topbar", () => ({
   default: () => <div data-testid="fake-topbar" />,
@@ -26,9 +26,6 @@ vi.mock("@/lib/query/QueryProvider", () => ({
 vi.mock("./StaleBuildBanner", () => ({
   StaleBuildBanner: () => <div data-testid="fake-stale-banner" />,
 }));
-vi.mock("./breadcrumb/PageBreadcrumb", () => ({
-  PageBreadcrumb: () => <div data-testid="fake-page-breadcrumb" />,
-}));
 // SEKME-F1.4a — senkron bileşeni `useSearchParams` kullanır; `suspendSync`
 // açıkken ASKIYA ALINIR (hiç çözülmeyen söz fırlatır). Kabuğun geri kalanı
 // yine basılıyorsa Suspense sınırı DOĞRU yerdedir.
@@ -42,19 +39,23 @@ vi.mock("./workspace-tabs/TabsRouterSync", () => ({
 }));
 
 describe("AppShell — kabuk montajı", () => {
-  it("PageBreadcrumb `main.app-content` İÇİNDEDİR", () => {
+  it("`main.app-content` İÇİNDE kırıntı YOK (kırıntı üst çubuğa taşındı)", () => {
+    // Mutasyon (M1): `<PageBreadcrumb />`u/`<TopbarBreadcrumb />`ı `{children}`
+    // ÖNCESİNE `<main>`e geri koy → bu iddia kırmızı olur (nav[aria-label=
+    // "Yol göstergesi"] bulunur).
     render(
       <AppShell>
         <div data-testid="fake-page-content">içerik</div>
       </AppShell>,
     );
-    const main = screen.getByTestId("fake-page-breadcrumb").closest("main.app-content");
+    const main = screen.getByTestId("fake-page-content").closest("main.app-content");
     expect(main).not.toBeNull();
+    expect(main?.querySelector('nav[aria-label="Yol göstergesi"]')).toBeNull();
   });
 
-  it("DOM SIRASI: StaleBuildBanner → PageBreadcrumb → children", () => {
-    // Mutasyon (M4): `<PageBreadcrumb />`u `{children}`dan SONRAYA taşı → bu
-    // iddia kırmızı olur (sıra bozulur).
+  it("DOM SIRASI: StaleBuildBanner → children", () => {
+    // Mutasyon (M4): `<StaleBuildBanner />`u `{children}`dan SONRAYA taşı →
+    // bu iddia kırmızı olur (sıra bozulur).
     render(
       <AppShell>
         <div data-testid="fake-page-content">içerik</div>
@@ -63,7 +64,7 @@ describe("AppShell — kabuk montajı", () => {
     const main = screen.getByTestId("fake-stale-banner").closest("main.app-content");
     expect(main).not.toBeNull();
     const order = [...(main?.children ?? [])].map((el) => el.getAttribute("data-testid"));
-    expect(order).toEqual(["fake-stale-banner", "fake-page-breadcrumb", "fake-page-content"]);
+    expect(order).toEqual(["fake-stale-banner", "fake-page-content"]);
   });
 });
 

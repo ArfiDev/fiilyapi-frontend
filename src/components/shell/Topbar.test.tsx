@@ -6,15 +6,24 @@ import Topbar from "./Topbar";
 vi.mock("./SessionProvider", () => ({
   useSession: () => ({ me: { full_name: "Ahmet Yılmaz", role_key: "patron", title: "Patron" }, isLoading: false }),
 }));
-// SEKME-F1.2: kırıntı topbar'dan KALKTI, Topbar artık rotayı OKUMUYOR; bu
-// mock yalnız `usePathname` başka bir yerden çağrılırsa (yanlışlıkla) patlamaz.
+
+let currentPath = "/projeler/gunesken-konut";
+// SEKME-F1.7a: kırıntı geri döndüğü için Topbar artık rotayı OKUR (Ayarlar
+// altında Çıkış Yap düğmesi için de). `TopbarBreadcrumb` gerçek — kendi
+// davranışı `TopbarBreadcrumb.test.tsx`de bekçilenir; burada yalnız YERİ
+// (logo ile sekme yuvası arası) ve varlığı ölçülür.
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/projeler/gunesken-konut",
+  usePathname: () => currentPath,
 }));
 // SEKME-F1.4a — şerit yuvasının kendi davranışı `workspace-tabs/` testlerinde;
-// burada yalnız YERİ (logo ile eylemler arası) ölçülür.
+// burada yalnız YERİ (kırıntı ile eylemler arası) ölçülür.
 vi.mock("./workspace-tabs/WorkspaceTabsBar", () => ({
   WorkspaceTabsBar: () => <div className="topbar-tabs" data-testid="fake-tabs-bar" />,
+}));
+
+const logoutSpy = vi.fn();
+vi.mock("@/lib/shell/useLogout", () => ({
+  useLogout: () => ({ logout: logoutSpy, error: null }),
 }));
 
 function renderTopbar() {
@@ -27,29 +36,50 @@ function renderTopbar() {
 
 describe("Topbar", () => {
   it("marka logosunu gosterir", () => {
+    currentPath = "/projeler/gunesken-konut";
     renderTopbar();
     expect(screen.getByAltText("FİİL YAPI İNŞAAT MİMARLIK SAN. TİC. A.Ş.")).toBeInTheDocument();
   });
   it("kullanici bas harflerini avatar'da gosterir", () => {
+    currentPath = "/projeler/gunesken-konut";
     renderTopbar();
     expect(screen.getByText("AY")).toBeInTheDocument();
   });
 
-  it("SEKME-F1.2 — kırıntı artık TOPBAR'DA basılmaz; SEKME-F1.4a — logo | sekme yuvası | eylemler", () => {
-    // Mutasyon (M2): `<PageBreadcrumb />`u `Topbar.tsx`e geri koy → bu iddia
-    // kırmızı olur (dördüncü bir kardeş belirir / testid bulunur).
+  it("SEKME-F1.7a — kırıntı ÜST ÇUBUĞA geri döndü: logo | kırıntı | sekme yuvası | eylemler", () => {
+    // Mutasyon (M1): `<TopbarBreadcrumb />`u `Topbar.tsx`den kaldır → bu
+    // iddia kırmızı olur (üçüncü kardeş kaybolur / testid bulunmaz).
+    currentPath = "/projeler/gunesken-konut";
     const { container } = renderTopbar();
     const header = container.querySelector(".topbar");
     const order = [...(header?.children ?? [])].map((el) => el.className);
-    expect(order).toEqual(["topbar-logo", "topbar-tabs", "topbar-actions"]);
+    expect(order).toEqual(["topbar-logo", "topbar-crumbs", "topbar-tabs", "topbar-actions"]);
     expect(screen.getByTestId("fake-tabs-bar")).toBeInTheDocument();
-    expect(screen.queryByTestId("page-crumbs")).toBeNull();
-    expect(screen.queryByRole("navigation", { name: "Yol göstergesi" })).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Yol göstergesi" })).toBeInTheDocument();
   });
 
-  it("zil ve avatar kirinti OLMADAN da 52px seridi bozulmaz", () => {
+  it("zil ve avatar kirinti/sekme yuvasi ile birlikte 52px seridi bozulmaz", () => {
+    currentPath = "/projeler/gunesken-konut";
     renderTopbar();
     expect(screen.getByRole("button", { name: "Bildirimler" })).toBeInTheDocument();
     expect(screen.getByText("AY")).toBeInTheDocument();
+  });
+
+  it("Ayarlar DIŞINDA 'Çıkış Yap' düğmesi basılmaz", () => {
+    currentPath = "/projeler/gunesken-konut";
+    renderTopbar();
+    expect(screen.queryByRole("button", { name: "Çıkış Yap" })).toBeNull();
+  });
+
+  it("Ayarlar altında topbar'da 'Çıkış Yap' düğmesi belirir (öneri A)", async () => {
+    // Mutasyon (M2): `inSettings` koşulunu kaldır (her zaman false) → bu
+    // iddia kırmızı olur (düğme hiç basılmaz).
+    currentPath = "/ayarlar/kullanicilar";
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderTopbar();
+    const button = screen.getByRole("button", { name: "Çıkış Yap" });
+    expect(button).toHaveClass("topbar-settings-exit");
+    await userEvent.click(button);
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
   });
 });

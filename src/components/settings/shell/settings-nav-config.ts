@@ -51,11 +51,3 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     ],
   },
 ];
-
-export function settingsLabelForPath(pathname: string): string {
-  for (const group of SETTINGS_NAV) {
-    const found = group.items.find((i) => pathname.startsWith(i.href));
-    if (found) return found.label;
-  }
-  return "Ayarlar";
-}

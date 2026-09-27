@@ -93,7 +93,7 @@ test("gunluk detay gonderildi gorsel", async ({ page }) => {
   // Kırıntının son parçası kaydın tarihi; "Günlük Kayıt" bölüm SEKMESİNE bağlı.
   await expect(crumbItems(page).last()).toHaveText(/15\.07\.2026$/);
   await expect(
-    page.getByTestId("page-crumbs").getByRole("link", { name: "Günlük Kayıt", exact: true }),
+    page.getByTestId("topbar-crumbs").getByRole("link", { name: "Günlük Kayıt", exact: true }),
   ).toHaveAttribute("href", SECTION_DIARY_TAB_HREF);
 
   await prepareFrame(page);
