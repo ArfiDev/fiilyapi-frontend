@@ -88,6 +88,11 @@ const URUN_TARIH_ENVANTERI: Record<string, number> = {
   "lib/auth/cookies.ts": 1,
   "lib/settings/audit-query.ts": 4,
   "lib/settings/last-login.ts": 1,
+  // SEKME-F1.1 — ekranda basılan bir tarih DEĞİL: `Date.now()` yalnız
+  // sekme mağazasının VARSAYILAN `now()` üreticisidir (`deps.now` ile
+  // enjekte edilir), `lastViewedAt` LRU SIRALAMA damgasını üretir.
+  // `page.clock.setFixedTime` gerekmez.
+  "lib/workspace-tabs/tabs-store.ts": 1,
 };
 
 function isProductFile(rel: string): boolean {
