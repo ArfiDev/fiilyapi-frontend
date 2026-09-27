@@ -1,4 +1,6 @@
 import { formatDateDots, formatDays, formatPercent } from "@/lib/format";
+import { toDecimalString } from "@/lib/decimal";
+import { asPercent } from "@/lib/api/scale";
 import type { LeaveBalanceResponse, LeaveRequestResponse } from "@/lib/api/hooks/useLeaves";
 
 import {
@@ -215,7 +217,10 @@ export function usageCell(balance: LeaveBalanceResponse): UsageCell {
   // 🔴 KAYIT NO 147 — metin çubukla AYNI kırpılmış `pct`i kullanır. `usage_pct`
   // 100'ü aşarsa (ör. 140) çubuk %100 dolu görünürken metin eskiden HAM
   // değeri ("%140 kullanıldı") basardı — çubuk ile metin çelişirdi.
-  return { pct, text: `${formatPercent(pct)} kullanıldı` };
+  // KAÇIŞ: LeaveBalanceResponse.usage_pct BU şemada gerçekten number
+  // (diğer şemalardaki aynı adın aksine) — formatPercent sınırında Decimal
+  // kanonuyla stringe çevriliyor, `pct` çubuk genişliği için number kalır.
+  return { pct, text: `${formatPercent(asPercent(toDecimalString(pct) ?? "0"))} kullanıldı` };
 }
 
 /* ═══ F-IZN T4 · form türetmeleri ═══════════════════════════════════════════

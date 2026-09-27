@@ -9,9 +9,10 @@ import { EQUIPMENT_DETAIL_QUERY_KEY } from "./useEquipmentDetail";
 // anahtarda yaşar; tazelenmezse `staleTime` (30 sn) boyunca bayat kalır.
 import { EQUIPMENT_DETAIL_SCREEN_QUERY_KEY } from "./useEquipmentDetailScreen";
 import { EQUIPMENT_SUMMARY_QUERY_KEY } from "./useEquipmentSummary";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type EquipmentCreateRequest = components["schemas"]["EquipmentCreate"];
-export type EquipmentUpdateRequest = components["schemas"]["EquipmentUpdate"];
+export type EquipmentCreateRequest = DeepScale<components["schemas"]["EquipmentCreate"]>;
+export type EquipmentUpdateRequest = DeepScale<components["schemas"]["EquipmentUpdate"]>;
 
 /**
  * Ekipman oluşturma (`POST /equipment`) — `useCreatePersonnel` deseniyle AYNI:

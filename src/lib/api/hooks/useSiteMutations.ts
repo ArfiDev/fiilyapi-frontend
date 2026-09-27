@@ -4,16 +4,17 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import { SITES_QUERY_KEY, SITE_QUERY_KEY } from "./useSites";
 import { PROJECT_QUERY_KEY } from "./useProjects";
+import type { DeepScale } from "@/lib/api/scale";
 
 export type SiteCreateRequest = components["schemas"]["SiteCreate"];
 export type SiteUpdateRequest = components["schemas"]["SiteUpdate"];
-export type SiteUpdateResponse = components["schemas"]["SiteDetailResponse"];
+export type SiteUpdateResponse = DeepScale<components["schemas"]["SiteDetailResponse"]>;
 
 /**
  * 201 yaniti `SiteDetailResponse`'tur (openapi.json). Yeni santiyenin detay
  * sayfasina yonlendirme bu tipin `id` alanina dayanir (spec §12).
  */
-export type SiteCreateResponse = components["schemas"]["SiteDetailResponse"];
+export type SiteCreateResponse = DeepScale<components["schemas"]["SiteDetailResponse"]>;
 
 // Santiye olusturma ucu (T10'dan beri tam sayfa form kullanir). useSites(projectId) deseniyle ayni:
 // projectId hook'a baglanir, mutate yalnizca govdeyi alir. site_count (proje

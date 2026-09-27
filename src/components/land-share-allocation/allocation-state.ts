@@ -25,8 +25,9 @@
  */
 
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type LandShareUnitRow = components["schemas"]["LandShareUnitRow"];
+export type LandShareUnitRow = DeepScale<components["schemas"]["LandShareUnitRow"]>;
 export type UnitOwnerSide = components["schemas"]["UnitOwnerSide"];
 
 export interface PendingAllocation {

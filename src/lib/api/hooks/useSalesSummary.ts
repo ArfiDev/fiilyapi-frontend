@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-P8 T1 · Satış Yönetimi (SY) KPI şeridinin + "Yaklaşan Tahsilatlar"
 // kartının TEK kaynağı: `GET /projects/{project_id}/sales/summary`.
@@ -9,7 +10,7 @@ export type SalesSummaryResponse = components["schemas"]["SalesSummaryResponse"]
 export type SoldKpi = components["schemas"]["SoldKpi"];
 export type ReservedKpi = components["schemas"]["ReservedKpi"];
 export type AvailableUnitsKpi = components["schemas"]["AvailableUnitsKpi"];
-export type CollectionKpi = components["schemas"]["CollectionKpi"];
+export type CollectionKpi = DeepScale<components["schemas"]["CollectionKpi"]>;
 export type OverdueKpi = components["schemas"]["OverdueKpi"];
 export type UpcomingCollection = components["schemas"]["UpcomingCollection"];
 export type ExpiredReservation = components["schemas"]["ExpiredReservation"];

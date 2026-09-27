@@ -206,7 +206,7 @@ function ProgressCell({
         />
       </div>
       <div className={`szl-progress__label szl-progress__label--${tone}`}>
-        {formatPercent(value)}
+        {formatPercent(pct)}
       </div>
     </div>
   );

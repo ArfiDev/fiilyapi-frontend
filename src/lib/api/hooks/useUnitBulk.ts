@@ -5,6 +5,7 @@ import type { components } from "@/lib/api/schema";
 
 import type { UnitListResponse } from "./useProjectUnits";
 import { invalidateUnitDerived } from "./useUnitMutations";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-UNIT2 T2a · TU ("Toplu Ünite Üretimi") ekranının YAZMA yüzeyi — İKİ uç.
@@ -30,7 +31,7 @@ import { invalidateUnitDerived } from "./useUnitMutations";
  *     bile blokta varsa HICBIRI yazilmaz"*. Yani 409 kısmi yazma DEĞİLDİR;
  *     ekran bunu "bir kısmı yazıldı" diye göstermemeli.
  */
-export type UnitBulkCreate = components["schemas"]["UnitBulkCreate"];
+export type UnitBulkCreate = DeepScale<components["schemas"]["UnitBulkCreate"]>;
 export type UnitBulkPreview = components["schemas"]["UnitBulkPreview"];
 export type UnitBulkPreviewRow = components["schemas"]["UnitBulkPreviewRow"];
 

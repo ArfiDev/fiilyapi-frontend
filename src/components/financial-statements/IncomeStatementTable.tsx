@@ -4,6 +4,8 @@ import type {
 } from "@/lib/api/hooks/useIncomeStatement";
 import { formatAmount, formatPercent } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
+import { toDecimalString } from "@/lib/decimal";
+import { asPercent } from "@/lib/api/scale";
 
 import { INCOME_STATEMENT_TREND_REASON, revenueSharePercent } from "./income-statement";
 
@@ -138,7 +140,10 @@ const EXPENSE_SECTION_KEY = "expenses";
 function RatioCell({ percent, strong = false }: { percent: number | null; strong?: boolean }) {
   return (
     <td className={`fs-is-ratio${strong ? " fs-is-ratio--strong" : ""}`}>
-      {percent === null ? "—" : formatPercent(percent)}
+      {/* KAÇIŞ: revenueSharePercent test edilen kesinlikte (toBeCloseTo) number
+          döndürür — davranışı korumak için burada sadece formatPercent
+          sınırında Decimal kanonuyla stringe çevriliyor. */}
+      {percent === null ? "—" : formatPercent(asPercent(toDecimalString(percent) ?? "0"))}
     </td>
   );
 }

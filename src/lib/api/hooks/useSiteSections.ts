@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-PL T5 · Planlama ızgarasında satır açarken bölüm SEÇİLEBİLİR olmalı
 // (spec §3). Grupları yalnız mevcut satırlardan türeten okuma ucu, henüz satırı
@@ -12,7 +13,7 @@ import type { components } from "@/lib/api/schema";
 // takma ad olarak alınır, elle arayüz yazılmaz. BFF kökü `sites` — zaten
 // izinlidir (`/sites/{site_id}/sections`), yeni kök eklenmez.
 export type SectionListResponse = components["schemas"]["SectionListResponse"];
-export type SectionListItem = components["schemas"]["SectionResponse"];
+export type SectionListItem = DeepScale<components["schemas"]["SectionResponse"]>;
 
 export const SITE_SECTIONS_QUERY_KEY = "site-sections";
 

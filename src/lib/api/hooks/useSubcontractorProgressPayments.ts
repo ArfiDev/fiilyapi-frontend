@@ -4,6 +4,7 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { isScopePending } from "@/lib/api/pending-scope";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-TH T1 · Taşeron Hakedişi ekranları — okuma sorguları. `useProgressPayments.ts`
 // deseniyle AYNI (isimlendirme/hata-unwrap yardımcıları). Tipler `pnpm gen:api`
@@ -13,13 +14,13 @@ export type SubcontractorProgressPaymentListResponse =
 export type SubcontractorProgressPaymentListItem =
   components["schemas"]["SubcontractorProgressPaymentListItem"];
 export type SubcontractorProgressPaymentDetail =
-  components["schemas"]["SubcontractorProgressPaymentDetail"];
+  DeepScale<components["schemas"]["SubcontractorProgressPaymentDetail"]>;
 export type SubcontractorProgressPaymentLineRead =
   components["schemas"]["SubcontractorProgressPaymentLineRead"];
 export type SubcontractorProgressPaymentSummary =
   components["schemas"]["SubcontractorProgressPaymentSummary"];
 export type SubcontractorPaymentStatus = components["schemas"]["SubcontractorPaymentStatus"];
-export type SubcontractorContractDetail = components["schemas"]["SubcontractorContractDetail"];
+export type SubcontractorContractDetail = DeepScale<components["schemas"]["SubcontractorContractDetail"]>;
 export type SubcontractorContractListItem = components["schemas"]["SubcontractorContractListItem"];
 export type SubcontractorContractListResponse =
   components["schemas"]["SubcontractorContractListResponse"];

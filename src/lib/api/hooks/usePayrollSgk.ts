@@ -10,6 +10,7 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { PAYROLL_PERIOD_QUERY_KEY, PAYROLL_PERIODS_QUERY_KEY } from "./usePayroll";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-BOR T4 · `/bordro/sgk` (SGK Bildirimi) ekranının İKİ ucu. Yorumlardaki
@@ -22,7 +23,7 @@ import { PAYROLL_PERIOD_QUERY_KEY, PAYROLL_PERIODS_QUERY_KEY } from "./usePayrol
  * eklenmedi): bu iki uç YALNIZ SGK ekranının işidir ve o iki dosyanın
  * başlıkları kendilerini açıkça `/bordro` ekranına bağlar.
  */
-export type PayrollSgkSummaryResponse = components["schemas"]["PayrollSgkSummaryResponse"];
+export type PayrollSgkSummaryResponse = DeepScale<components["schemas"]["PayrollSgkSummaryResponse"]>;
 export type PayrollSgkSubmitResult = components["schemas"]["PayrollSgkSubmitResult"];
 
 export const PAYROLL_SGK_SUMMARY_QUERY_KEY = "payroll-sgk-summary";

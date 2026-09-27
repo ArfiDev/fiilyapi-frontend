@@ -3,12 +3,13 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import type { ProjectAccessResponse } from "@/lib/api/models";
+import type { DeepScale } from "@/lib/api/scale";
 
 // NOT: Plan "ProjectResponse" adini varsayiyordu; gercek semada oge tipi
 // "ProjectListItem" (bkz. src/lib/api/schema.d.ts). Gercek adi kullaniyoruz.
 export type ProjectListResponse = components["schemas"]["ProjectListResponse"];
-export type ProjectListItem = components["schemas"]["ProjectListItem"];
-export type ProjectDetail = components["schemas"]["ProjectDetailResponse"];
+export type ProjectListItem = DeepScale<components["schemas"]["ProjectListItem"]>;
+export type ProjectDetail = DeepScale<components["schemas"]["ProjectDetailResponse"]>;
 export type ProjectCounts = ProjectListResponse["counts"];
 /**
  * Proje türü enum'u — `ProjectDetailResponse.project_type` ve

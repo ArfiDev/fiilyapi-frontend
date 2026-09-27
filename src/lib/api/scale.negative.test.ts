@@ -17,6 +17,7 @@ import { describe, it, expect } from "vitest";
 
 import { formatPercent01 } from "@/lib/earned-value";
 import { progressBarWidth } from "@/components/earned-value/reports/panel/panel-kpi-format";
+import { formatPercent } from "@/lib/format";
 import { asFraction, asPercent, type Fraction, type Percent } from "./scale";
 
 describe("TYPE-F1 SPIKE · Fraction/Percent marka tipleri (derleyici bekçisi, yumuşak brand)", () => {
@@ -48,6 +49,13 @@ function typeOnlyAssertions(): void {
   // 3b) `Percent` → progressBarWidth (Fraction bekler) HÂLÂ HATA (ters yön de kapalı).
   // @ts-expect-error — Percent, Fraction'a GEÇİRİLEMEZ.
   progressBarWidth(percentValue);
+
+  // 4) FAZ 2 · `Fraction` → formatPercent (Percent bekler) HÂLÂ HATA — asıl
+  //    korunan sınıf: kesri yanlışlıkla yüzde biçimlendiricisine vermek
+  //    (ör. `item.completion_ratio`'yu `toCompletionPercent(...)` ATLAYIP
+  //    doğrudan `formatPercent`e geçirmek — bkz. mutant kanıtı, DiarySummaryAccrualTable).
+  // @ts-expect-error — Fraction, Percent'e GEÇİRİLEMEZ.
+  formatPercent(fractionValue);
 
   // Ek: kaçışların KENDİSİ (asFraction/asPercent) her iki yöne de izin verir —
   // bu, "tek açık kaçış" olduklarının kanıtı.

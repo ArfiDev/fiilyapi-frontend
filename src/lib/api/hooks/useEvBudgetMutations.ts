@@ -4,6 +4,7 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import type { EvBudgetView, EvFillOut, EvRevisionOut } from "@/lib/api/models";
+import type { DeepScale } from "@/lib/api/scale";
 
 import {
   EV_BUDGET_DIFF_KEY,
@@ -18,7 +19,7 @@ import {
 // yoksa ilk yazma Rev 0'ı doğurur (B1-5). Bu yüzden her yazmadan sonra
 // revizyon listesi, Gantt, önizleme ve fark da tazelenir.
 
-export type EvLeafPatch = components["schemas"]["LeafPatch"];
+export type EvLeafPatch = DeepScale<components["schemas"]["LeafPatch"]>;
 export type EvItemPatch = components["schemas"]["ItemPatch"];
 export type EvGroupDisciplinePair = components["schemas"]["GroupDisciplinePair"];
 export type EvDistributionPair = components["schemas"]["DistributionPair"];

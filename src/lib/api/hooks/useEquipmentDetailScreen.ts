@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-MKD · `GET /equipment/{equipment_id}/detail` (MK-4).
@@ -44,7 +45,7 @@ import type { components } from "@/lib/api/schema";
  * türetir, istemci saatinden DEĞİL (F-P10 kanonu + tarih determinizmi).
  */
 export type EquipmentDetailScreenResponse = components["schemas"]["EquipmentDetailResponse"];
-export type EquipmentMaintenanceBlock = components["schemas"]["EquipmentMaintenanceBlock"];
+export type EquipmentMaintenanceBlock = DeepScale<components["schemas"]["EquipmentMaintenanceBlock"]>;
 export type EquipmentRentalTotals = components["schemas"]["EquipmentRentalTotals"];
 
 export const EQUIPMENT_DETAIL_SCREEN_QUERY_KEY = "equipment-detail-screen";

@@ -1,4 +1,5 @@
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * Şantiye yanıt sözleşmesinin T0'da (2026-07-30) eklenen 16 alanı için test
@@ -38,7 +39,7 @@ export const SITE_CONTRACT_DEFAULTS = {
   water_subscription_no: null,
   planned_worker_count: null,
 } as const satisfies Pick<
-  components["schemas"]["SiteCard"],
+  DeepScale<components["schemas"]["SiteCard"]>,
   | "is_draft"
   | "site_manager_user_id"
   | "safety_officer_user_id"

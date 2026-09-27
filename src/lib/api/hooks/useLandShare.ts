@@ -11,6 +11,7 @@ import type { components } from "@/lib/api/schema";
 
 import type { UnitListResponse } from "./useProjectUnits";
 import { invalidateUnitDerived } from "./useUnitMutations";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-UNIT2 T2c · PG ("Kat Karşılığı Paylaşım Girişi") ekranının ÜÇ ucu —
@@ -27,11 +28,11 @@ import { invalidateUnitDerived } from "./useUnitMutations";
  * (`PATCH /projects/{project_id}/units/allocation`). Yanlış metot 405 üretir
  * ve üretilmiş tipler yolu tanısa bile metodu doğrulamaz.
  */
-export type LandShareSummaryResponse = components["schemas"]["LandShareSummaryResponse"];
-export type LandShareContract = components["schemas"]["LandShareContract"];
+export type LandShareSummaryResponse = DeepScale<components["schemas"]["LandShareSummaryResponse"]>;
+export type LandShareContract = DeepScale<components["schemas"]["LandShareContract"]>;
 export type LandShareCountBalance = components["schemas"]["LandShareCountBalance"];
-export type LandShareValueBalance = components["schemas"]["LandShareValueBalance"];
-export type LandShareShareholderRow = components["schemas"]["LandShareShareholderRow"];
+export type LandShareValueBalance = DeepScale<components["schemas"]["LandShareValueBalance"]>;
+export type LandShareShareholderRow = DeepScale<components["schemas"]["LandShareShareholderRow"]>;
 export type LandShareUnitListResponse = components["schemas"]["LandShareUnitListResponse"];
 export type UnitOwnerSideFilter = components["schemas"]["UnitOwnerSideFilter"];
 export type UnitAllocationRequest = components["schemas"]["UnitAllocationRequest"];

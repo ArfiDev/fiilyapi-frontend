@@ -9,6 +9,7 @@ import {
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * AI-CHAT-2 / K2 · sohbet geçmişi veri katmanı.
@@ -28,7 +29,7 @@ import type { components } from "@/lib/api/schema";
 export type AiConversationRead = components["schemas"]["AiConversationRead"];
 export type AiConversationListResponse = components["schemas"]["AiConversationListResponse"];
 export type AiConversationDetail = components["schemas"]["AiConversationDetail"];
-export type AiMessageRead = components["schemas"]["AiMessageRead"];
+export type AiMessageRead = DeepScale<components["schemas"]["AiMessageRead"]>;
 
 export const AI_CONVERSATIONS_QUERY_KEY = "ai-conversations";
 export const AI_CONVERSATION_QUERY_KEY = "ai-conversation";

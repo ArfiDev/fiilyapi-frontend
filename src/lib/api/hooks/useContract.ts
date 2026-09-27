@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // P7 T5 · İşveren sözleşmesi okuma uçları — hakediş oluştur/düzenle formunun
 // satır kaynağı (poz dağılımı) ve Fiyat Farkı bandı (sözleşme detayı) için.
@@ -20,7 +21,7 @@ export type ContractDistributionSiteSummary =
   components["schemas"]["ContractDistributionSiteSummary"];
 export type ContractDistributionSiteItem =
   components["schemas"]["ContractDistributionSiteItem"];
-export type EmployerContractDetail = components["schemas"]["EmployerContractDetail"];
+export type EmployerContractDetail = DeepScale<components["schemas"]["EmployerContractDetail"]>;
 
 // F-P5 T1 · E14 "İş Kalemleri" sekmesi — gruplar + kalemler
 // (`distributed_quantity`/`remaining_quantity` kolonlarıyla). Bu ekleme

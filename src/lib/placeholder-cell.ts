@@ -26,9 +26,9 @@ import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules
  *     `pending_module="timesheet"` döner). Bu yüzden dolu/boş ayrımını
  *     `pending_module`dan yapmak sayaçlarda KESİNLİKLE yanlıştır.
  */
-export interface MetricEnvelope {
+export interface MetricEnvelope<V extends string | number = string | number> {
   available: boolean;
-  value?: string | number | null;
+  value?: V | null;
   pending_module?: PendingModuleKey;
 }
 
@@ -54,9 +54,9 @@ function pendingCell(pendingModule: PendingModuleKey): PlaceholderCell {
  * `MetricPlaceholder` okuması. Zarf `undefined` olabilir: KPI şeritleri yük
  * gelmeden de basılır ve o anda ipucu metni UYDURULMAZ.
  */
-export function metricCell(
-  metric: MetricEnvelope | undefined,
-  format: (value: string | number) => string,
+export function metricCell<V extends string | number>(
+  metric: MetricEnvelope<V> | undefined,
+  format: (value: V) => string,
 ): PlaceholderCell {
   const value = metric?.value;
   // `!= null` DEĞİL, açık iki karşılaştırma: `0` ve `"0"` GERÇEK cevaplardır ve

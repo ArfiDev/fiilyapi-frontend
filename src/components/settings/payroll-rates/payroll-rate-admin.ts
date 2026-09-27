@@ -1,11 +1,12 @@
 import type { components } from "@/lib/api/schema";
 
 import { checkRatePct, type BracketDraft, type DecimalCheck } from "./payroll-rate-guards";
+import type { DeepScale } from "@/lib/api/scale";
 
 export type WorkerSource = components["schemas"]["WorkerSource"];
 export type IncomeKind = components["schemas"]["IncomeKind"];
-export type PayrollRateResponse = components["schemas"]["PayrollRateResponse"];
-export type PayrollTaxBracketResponse = components["schemas"]["PayrollTaxBracketResponse"];
+export type PayrollRateResponse = DeepScale<components["schemas"]["PayrollRateResponse"]>;
+export type PayrollTaxBracketResponse = DeepScale<components["schemas"]["PayrollTaxBracketResponse"]>;
 export type PayrollPeriodListRow = components["schemas"]["PayrollPeriodListRow"];
 
 /* ------------------------------------------------------------ personel tipi */
@@ -163,7 +164,7 @@ export function rateToDraft(rate: PayrollRateResponse): RateDraft {
 }
 
 export type RateDraftCheck =
-  | { ok: true; body: components["schemas"]["PayrollRateUpdate"] }
+  | { ok: true; body: DeepScale<components["schemas"]["PayrollRateUpdate"]> }
   | { ok: false; field: RateField; reason: string };
 
 /**
@@ -186,7 +187,7 @@ export function rateDraftToBody(draft: RateDraft): RateDraftCheck {
     if (!checked.ok) return { ok: false, field, reason: checked.reason };
     body[field] = checked.value;
   }
-  return { ok: true, body: body as components["schemas"]["PayrollRateUpdate"] };
+  return { ok: true, body: body as DeepScale<components["schemas"]["PayrollRateUpdate"]> };
 }
 
 /* --------------------------------------------------------- dilim taslakları */

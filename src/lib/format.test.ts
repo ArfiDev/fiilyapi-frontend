@@ -55,7 +55,7 @@ describe("formatPercent", () => {
     expect(formatPercent("75.00")).toBe("%75");
   });
   it("sifiri basar", () => {
-    expect(formatPercent(0)).toBe("%0");
+    expect(formatPercent("0")).toBe("%0");
   });
 });
 

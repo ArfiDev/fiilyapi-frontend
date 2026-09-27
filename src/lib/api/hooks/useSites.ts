@@ -2,14 +2,15 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // Task 5 — Proje Detay › Şantiyeler listesi (spec §4.3). Tip adı "SiteCard" bilesen
 // adiyla catisir, bu yuzden "SiteListItem" olarak takma ad verildi.
 export type SiteListResponse = components["schemas"]["SiteListResponse"];
-export type SiteListItem = components["schemas"]["SiteCard"];
+export type SiteListItem = DeepScale<components["schemas"]["SiteCard"]>;
 // Task 8 — Şantiye Detay tekil kaynağı (spec §5). Bileşen adıyla çakışmasın
 // diye "SiteDetail" (SiteCard deseniyle aynı) takma adı verildi.
-export type SiteDetail = components["schemas"]["SiteDetailResponse"];
+export type SiteDetail = DeepScale<components["schemas"]["SiteDetailResponse"]>;
 
 export const SITES_QUERY_KEY = "sites";
 export const SITE_QUERY_KEY = "site";

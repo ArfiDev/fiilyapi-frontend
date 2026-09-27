@@ -1,5 +1,6 @@
 import { compareDecimalStrings, multiplyDecimalStrings } from "@/lib/decimal";
 import { formatAmount, formatCurrencyPrecise, formatPercent } from "@/lib/format";
+import { asPercentOrNull, type Percent } from "@/lib/api/scale";
 import type { SiteDiarySummary } from "@/lib/api/hooks/useSiteDiary";
 
 import { clampWidthPct } from "./summary-kpis";
@@ -20,8 +21,8 @@ const LOW_COMPLETION_THRESHOLD = "50";
  * `clampWidthPct` YÜZDE (0-100) bekler. Kayıpsız ×100 (`multiplyDecimalStrings`)
  * ile ölçek düzeltilir; `null` girdi `null` kalır.
  */
-function toCompletionPercent(ratio: string | null): string | null {
-  return ratio === null ? null : multiplyDecimalStrings(ratio, "100");
+function toCompletionPercent(ratio: string | null): Percent | null {
+  return ratio === null ? null : asPercentOrNull(multiplyDecimalStrings(ratio, "100"));
 }
 
 export interface DiarySummaryAccrualTableProps {

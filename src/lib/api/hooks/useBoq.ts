@@ -2,13 +2,14 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // Ekran 13 · Is Kalemleri (BOQ) — spec §6.2. Tipler `pnpm gen:api` ciktisindan
 // takma ad olarak alinir; elle arayuz yazmak yasak.
 export type BoqListResponse = components["schemas"]["BoqListResponse"];
-export type BoqTotals = components["schemas"]["BoqTotals"];
+export type BoqTotals = DeepScale<components["schemas"]["BoqTotals"]>;
 export type BoqGroup = components["schemas"]["BoqGroupResponse"];
-export type BoqItem = components["schemas"]["BoqItemResponse"];
+export type BoqItem = DeepScale<components["schemas"]["BoqItemResponse"]>;
 export type BoqGroupCreate = components["schemas"]["BoqGroupCreate"];
 export type BoqGroupUpdate = components["schemas"]["BoqGroupUpdate"];
 export type BoqItemCreate = components["schemas"]["BoqItemCreate"];

@@ -2,12 +2,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MK T2 · Makine & Ekipman — ekipman liste sorgusu. `useStockItems.ts` /
 // `usePersonnel.ts` deseniyle AYNI: tipler `pnpm gen:api` çıktısından takma ad
 // olarak alınır, elle arayüz yazılmaz.
 export type EquipmentListResponse = components["schemas"]["EquipmentListResponse"];
-export type EquipmentResponse = components["schemas"]["EquipmentResponse"];
+export type EquipmentResponse = DeepScale<components["schemas"]["EquipmentResponse"]>;
 export type EquipmentCategory = components["schemas"]["EquipmentCategory"];
 export type EquipmentStatus = components["schemas"]["EquipmentStatus"];
 export type EquipmentOwnership = components["schemas"]["EquipmentOwnership"];

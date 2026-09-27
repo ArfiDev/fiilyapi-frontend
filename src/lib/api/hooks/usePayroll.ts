@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-BOR T2 · `/bordro` (Aylık Bordro) ekranının İKİ okuma ucu. Yorumlardaki
@@ -21,7 +22,7 @@ export type PayrollPeriodDetailResponse =
   components["schemas"]["PayrollPeriodDetailResponse"];
 export type PayrollSectionResponse = components["schemas"]["PayrollSectionResponse"];
 export type PayrollLineResponse = components["schemas"]["PayrollLineResponse"];
-export type PayrollSummaryResponse = components["schemas"]["PayrollSummaryResponse"];
+export type PayrollSummaryResponse = DeepScale<components["schemas"]["PayrollSummaryResponse"]>;
 export type PayrollLineStatus = components["schemas"]["PayrollLineStatus"];
 export type PayrollPeriodStatus = components["schemas"]["PayrollPeriodStatus"];
 export type WorkerSource = components["schemas"]["WorkerSource"];

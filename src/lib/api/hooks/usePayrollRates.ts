@@ -11,6 +11,7 @@ import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 
 import { PAYROLL_PERIODS_QUERY_KEY } from "./usePayroll";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-BORORAN · `Ayarlar > Bordro Oranları` veri katmanı.
@@ -25,10 +26,10 @@ import { PAYROLL_PERIODS_QUERY_KEY } from "./usePayroll";
  * Tipler `pnpm gen:api` çıktısından TAKMA AD olarak alınır; elle arayüz yazmak
  * YASAK (`useApprovals.ts` kanonu).
  */
-export type PayrollRateResponse = components["schemas"]["PayrollRateResponse"];
+export type PayrollRateResponse = DeepScale<components["schemas"]["PayrollRateResponse"]>;
 export type PayrollRateListResponse = components["schemas"]["PayrollRateListResponse"];
-export type PayrollRateUpdate = components["schemas"]["PayrollRateUpdate"];
-export type PayrollTaxBracketResponse = components["schemas"]["PayrollTaxBracketResponse"];
+export type PayrollRateUpdate = DeepScale<components["schemas"]["PayrollRateUpdate"]>;
+export type PayrollTaxBracketResponse = DeepScale<components["schemas"]["PayrollTaxBracketResponse"]>;
 export type PayrollTaxBracketListResponse =
   components["schemas"]["PayrollTaxBracketListResponse"];
 export type PayrollTaxBracketSetUpdate = components["schemas"]["PayrollTaxBracketSetUpdate"];

@@ -30,8 +30,9 @@ import type { components } from "@/lib/api/schema";
 import { normalizeDecimalInput, parseCountInput } from "@/lib/decimal";
 
 import type { UnitFormValues, UnitTouched } from "./form-state";
+import type { DeepScale } from "@/lib/api/scale";
 
-export type UnitCreate = components["schemas"]["UnitCreate"];
+export type UnitCreate = DeepScale<components["schemas"]["UnitCreate"]>;
 
 /** Mockup'ta kutusu olmayan `sort_order` için tek kaynak (şema varsayılanı). */
 export const UNIT_DEFAULT_SORT_ORDER = 0;

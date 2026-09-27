@@ -6,7 +6,7 @@ import "./boq.css";
 
 export interface BoqPctCellProps {
   /** `BoqItemResponse.progress_pct` ya da `BoqTotals.grand_progress_pct`. */
-  progress: MetricEnvelope;
+  progress: MetricEnvelope<string>;
   /**
    * Hücrenin taban sınıfı — satır `boq-table__pct`, toplam
    * `boq-table__total-pct boq-table__col--pct`.

@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * F-PKK T1 · Proje Özeti (`/projeler/[projectId]/ozet`) maliyet katmanı —
@@ -29,8 +30,8 @@ import type { components } from "@/lib/api/schema";
  */
 export type ProjectCostsResponse = components["schemas"]["ProjectCostsResponse"];
 export type ProjectCostBreakdown = components["schemas"]["ProjectCostBreakdown"];
-export type ProjectProfitProjection = components["schemas"]["ProjectProfitProjection"];
-export type SubcontractorCostRow = components["schemas"]["SubcontractorCostRow"];
+export type ProjectProfitProjection = DeepScale<components["schemas"]["ProjectProfitProjection"]>;
+export type SubcontractorCostRow = DeepScale<components["schemas"]["SubcontractorCostRow"]>;
 export type SubcontractorCostSummary = components["schemas"]["SubcontractorCostSummary"];
 
 export const PROJECT_COSTS_QUERY_KEY = "project-costs";

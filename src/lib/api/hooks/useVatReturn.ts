@@ -2,11 +2,12 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
+import type { DeepScale } from "@/lib/api/scale";
 
 // F-MU2 T3 · KDV:53-143 beyanname ekranı. Tipler `pnpm gen:api` çıktısından
 // TAKMA AD olarak alınır — elle arayüz yazmak yasak (`useJournalSummary.ts`).
 export type VatReturnResponse = components["schemas"]["VatReturnResponse"];
-export type VatTaxableRow = components["schemas"]["VatTaxableRow"];
+export type VatTaxableRow = DeepScale<components["schemas"]["VatTaxableRow"]>;
 export type VatDeductionRow = components["schemas"]["VatDeductionRow"];
 
 export const VAT_RETURN_QUERY_KEY = "vat-return";

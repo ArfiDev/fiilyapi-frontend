@@ -17,7 +17,7 @@ export type OwnCrewFromTimesheet = components["schemas"]["OwnCrewFromTimesheet"]
 // TYPE-F1 SPIKE EK (2026-09-27): DeepScale — `completion_ratio` (fraction)
 // otomatik marka'lanır (FIX-F1 Kusur 2 mutantının derleyici karşılığını ölçmek için).
 export type SiteDiarySummary = DeepScale<components["schemas"]["SiteDiarySummary"]>;
-export type SiteDiarySummaryItem = components["schemas"]["SiteDiarySummaryItem"];
+export type SiteDiarySummaryItem = DeepScale<components["schemas"]["SiteDiarySummaryItem"]>;
 export type DiaryStatus = components["schemas"]["DiaryStatus"];
 export type Weather = components["schemas"]["Weather"];
 export type WorkerSource = components["schemas"]["WorkerSource"];
