@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "@/components/settings/settings.css";
 import "./progress-payment-detail.css";
 import { PaymentActionButtons } from "./shared/PaymentActionButtons";
@@ -98,6 +99,9 @@ export function SubcontractorProgressPaymentStatusActions({
 
   const trimmedReason = rejectReason.trim();
   const rejectDisabled = trimmedReason.length === 0;
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır;
+  // yalnız Reddet diyaloğu AÇIKKEN anlamlıdır (`rejectOpen`).
+  useUnsavedChanges(rejectOpen && !rejectDisabled, "Hakediş reddi (taşeron)");
 
   function confirmReject() {
     if (rejectDisabled) return;

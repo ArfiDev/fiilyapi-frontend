@@ -7,6 +7,7 @@ import { Field } from "@/components/ui/field/Field";
 import { Input } from "@/components/ui/input/Input";
 import { Select } from "@/components/ui/select/Select";
 import type { PlanResourceKind } from "@/lib/api/hooks/useSitePlan";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import type { PlanDraftNewRow } from "./plan-draft-reducer";
 import { planSectionsHint, type PlanSectionsState } from "./plan-sections";
@@ -54,6 +55,13 @@ export function PlanRowAddPopover({
   const [sectionId, setSectionId] = useState<string | null>(defaultSectionId);
   const [label, setLabel] = useState("");
   const [workerCount, setWorkerCount] = useState("");
+
+  // SEKME-F1.3b · dirty (tercih 1): oluşturma popover'ı, taban `defaultKind`/
+  // `defaultSectionId` (props, ASYNC TABAN DEĞİL). Taslağa (usePlanDraft)
+  // yalnız "Ekle" ile yazılır — çift kayıt YOK. Modal kullanılmıyor.
+  const isDirty =
+    label.trim() !== "" || workerCount !== "" || kind !== defaultKind || sectionId !== defaultSectionId;
+  useUnsavedChanges(isDirty, "Yeni plan satırı");
 
   const isEquipment = kind === "equipment";
   const parsedCount = Number.parseInt(workerCount, 10);

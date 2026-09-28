@@ -5,6 +5,7 @@ import type {
   PayrollSectionResponse,
   WorkerSource,
 } from "@/lib/api/hooks/usePayroll";
+import { compareDecimalStrings, normalizeDecimalInput } from "@/lib/decimal";
 
 import { SOURCE_ORDER } from "./payroll-labels";
 
@@ -283,6 +284,28 @@ export const AMOUNT_PATTERN = /^\d*[.,]?\d*$/;
 
 export function isAmountInputValid(raw: string): boolean {
   return AMOUNT_PATTERN.test(raw.trim());
+}
+
+/**
+ * SEKME-F1.3-FIX O6 · girdi kutusu sunucu DEĞERİNDEN GERÇEKTEN saptı mı?
+ *
+ * Eski karşılaştırma HAM METİN eşitliğine bakıyordu (`raw !== amountFieldValue(...)`)
+ * — sunucu `"26538.00"` gönderdiğinde kullanıcı SAYISAL OLARAK aynı `"26538"`i
+ * yazınca satır KALICI "kirli" kalıyordu (biçim farkı, değer farkı değil). Bu,
+ * hem üst çubuğun sekme onayını yanlışlıkla tetikliyor HEM DE odak çıkışında
+ * gereksiz bir `PATCH` atılmasına yol açıyordu (sunucu zaten aynı değeri
+ * döner). `Number()` ile karşılaştırma YASAK (float yuvarlama) — bunun yerine
+ * `compareDecimalStrings` (kayıpsız, K18/ROUND_HALF_UP kanonu) kullanılır.
+ * Ayrıştırılamayan (yarım/geçersiz) girdi HER ZAMAN "değişti" sayılır — güvenli
+ * yön budur (sessiz "temiz" YERİNE gereksiz uyarı).
+ */
+export function isAmountFieldDirty(raw: string, serverValue: string | null): boolean {
+  const serverField = amountFieldValue(serverValue);
+  if (raw === serverField) return false;
+  if (serverValue === null) return true;
+  const normalizedRaw = normalizeDecimalInput(toAmountPayload(raw));
+  if (normalizedRaw === null) return true;
+  return compareDecimalStrings(normalizedRaw, serverValue) !== 0;
 }
 
 /* ----------------------------------------------------- işlem sonuç özeti */

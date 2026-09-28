@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { Button, Field, Input, Segmented } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { cx } from "@/lib/cx";
@@ -46,6 +47,12 @@ export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: 
   const [form, setForm] = useState<DisciplineFormState>(() =>
     discipline ? disciplineFormFromRead(discipline) : newDisciplineForm(existing.length),
   );
+  // SEKME-F1.3b — taban anlık görüntüsü (`CatalogItemFormModal`daki `initial`
+  // deseni birebir).
+  const [initial] = useState(form);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initial);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Disiplin formu");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const isPending = create.isPending || update.isPending;
   const saveError = create.error ?? update.error;

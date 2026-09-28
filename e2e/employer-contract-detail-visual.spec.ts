@@ -99,8 +99,8 @@ test("isveren sozlesme detayi is kalemleri sekmesi gorsel", async ({ page }) => 
   // satır-içi ekleme düğmesi vardır. Bu kare BU YÜZDEN oynar — beklenen.
   // (Değer iddiası YAZILMAZ: `pinEmployerContractItems` yalnız türev
   // kolonları sabitler, `quantity`/`unit_price` sabitli değildir.)
-  await expect(page.getByLabel("03.001 miktar")).toBeEditable();
-  await expect(page.getByLabel("03.001 birim fiyatı")).toBeEditable();
+  await expect(page.locator("main").getByLabel("03.001 miktar")).toBeEditable();
+  await expect(page.locator("main").getByLabel("03.001 birim fiyatı")).toBeEditable();
   await expect(page.getByTestId("ecd-add-row-cg-1")).toBeEnabled();
   // Taslak satır KAPALI hâliyle basılır (kadraj bir düzenleme oturumu değil).
   await expect(page.getByTestId("ecd-new-row")).toHaveCount(0);

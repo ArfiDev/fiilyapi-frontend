@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { EvDayView } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { draftFromView, invalidCellCount, isDraftDirty, type AllocationDraft } from "./allocation-model";
 
@@ -41,11 +42,14 @@ export function useAllocationDraft(siteId: string, view: EvDayView | undefined):
       setState(current);
     }
   }
+  const isDirty =
+    view !== undefined && current !== null ? isDraftDirty(current.draft, current.base, view.rows) : false;
+  useUnsavedChanges(isDirty, "Kaynak dağılımı");
   if (view === undefined || current === null) return null;
-  const { draft, base } = current;
+  const { draft } = current;
   return {
     draft,
-    isDirty: isDraftDirty(draft, base, view.rows),
+    isDirty,
     invalidCount: invalidCellCount(draft),
     update: (fn) => setState((prev) => (prev === null ? prev : { ...prev, draft: fn(prev.draft) })),
   };

@@ -14,6 +14,7 @@
 .topbar-logo {
   width: 220px;
   height: 100%;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -37,13 +38,24 @@
   width: auto;
   flex-shrink: 0;
 }
+/* SEKME-F1.4a — çalışma sekmeleri şeridinin YUVASI (logo ile eylemler arası).
+   `flex: 1` kalan genişliği alır; `min-width: 0` flex öğesinin içerik
+   genişliğinin altına daralabilmesi için ŞART (varsayılan `min-width:auto`
+   uzun şeridin zil/avatarı sağdan taşırmasına yol açardı) — şerit kendi
+   içinde daralır/kayar. `height: 100%` şeridin 52px çubuğu doldurmasını sağlar. */
+.topbar-tabs {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
 .topbar-actions {
-  /* `margin-left: auto` KORUNDU. Kırıntı `flex: 1` aldığı için bugün etkisi
-     YOKTUR (boşluk zaten kırıntıya gidiyor); kaldırmak, kırıntının hiç
-     basılmadığı bir gelecekte (ör. kabuk dışı bir yüzey) eylemleri sola
-     kaydırırdı. İki hâli de ölçüldü: bugünkü kadrajlarda fark 0 piksel.
-     `flex-shrink: 0` mockup satır 41'in birebir karşılığıdır — uzun bir proje
-     adı zil/avatarı ezemez. */
+  /* SEKME-F1.2: kırıntı topbar'dan içeriğe indi, `topbar-logo` ile
+     `topbar-actions` artık `.topbar`in TEK iki çocuğu. `margin-left: auto`
+     KORUNDU — kırıntı zamanında `flex:1` aldığı için o gün etkisi YOKTU
+     (boşluk zaten kırıntıya gidiyordu), bugün ise eylemleri sağda tutan
+     TEK mekanizma bu; ölçüldü, ekstra bir `topbar-slot` yer tutucusuna
+     GEREK YOK. `flex-shrink: 0` mockup satır 41'in birebir karşılığıdır —
+     ileride buraya gelecek çalışma sekmesi şeridi zil/avatarı ezemez. */
   margin-left: auto;
   flex-shrink: 0;
   display: flex;
@@ -76,28 +88,60 @@
   font-weight: 700;
 }
 
-/* ─── Yol göstergesi (kırıntı) + geri tuşu · F-KIRINTI ────────────────────
-   Kanon: `projedesign/Şantiye - Günlük Kayıt.dc.html` 33-41 — kırıntı 52px'lik
-   üst çubuğun İÇİNDE, logo ile eylemler ARASINDA yaşar. Ölçülen şerit:
-   `padding:0 16px; gap:5px; height:100%; font-size:12px; flex:1;
-   overflow:hidden`; bağlantı `#2563eb`, ayraç `#e2e8f0`, son parça `600 /
-   #1e293b` ve BAĞLANTI DEĞİL.
+/* ─── Yol göstergesi (kırıntı) + geri tuşu · SEKME-F1.7a ──────────────────
+   KULLANICI KARARI: kırıntı `<main>`den ÜST ÇUBUĞA geri döner (SEKME-F1.2'nin
+   tam tersi). Görsel token'lar main'deki (5fc3a54) `.topbar-crumbs*`ten
+   AYNEN alınır (12px yazı, 5px boşluk, ayraç/bağlantı/son-parça renkleri,
+   600 ağırlık); YENİ olan tek şey GENİŞLİK sözleşmesi:
 
-   🔴 `.pf-breadcrumb` (styles/form-shell.css) YENİDEN KULLANILMADI. İki
-   ÖLÇÜLMÜŞ sebep var, ikisi de tercih değil:
-   1. `form-shell.css` GLOBAL DEĞİLDİR — yalnız yedi form bileşeni onu import
-      eder (`grep -rn "form-shell.css" src`). Üst çubuk HER rotada basılır;
-      `.pf-breadcrumb`a bağlanmak, kırıntıyı form dışındaki ~80 ekranda
-      STİLSİZ bırakırdı. (CSS'te eksik sınıf sessizdir: ne konsol ne test.)
-   2. Kanon zaten AYRIŞIYOR: mockup'ın üst çubuk kırıntısında bağlantılar
-      `#2563eb` (marka mavisi), form kabuğununkiler `--color-text-muted`.
-      Aynı sınıfı paylaşmak birini değiştirince ötekini sessizce oynatırdı.
-   Paylaşılan şey SINIF değil TOKEN'dır: 12px/5px/ayraç/600 aynı token'lardan
-   okunur, yani iki yüzey birlikte kayar ama birbirini ezmez. */
+   🔴 main'de kırıntı `flex: 1` alıyordu (sekme şeridi henüz yoktu). Şimdi
+   sekme şeridi (`.topbar-tabs`) KALAN alanı istiyor — ikisi `flex:1` olamaz.
+   Kırıntı bu yüzden ESNEMEZ (`flex-shrink: 0`) ve sabit bir üst sınır taşır.
+
+   🔴 İLK ÖLÇÜM (360px SABİT) ÇÜRÜTÜLDÜ — headless Chromium'la gerçek
+   uygulamada (v6 karesi, 768px/10 sekme) 360px'lik kırıntı + 220px logo +
+   ~140px eylemler sekme şeridine NEGATİF alan bırakıyordu, şerit TAMAMEN
+   kayboluyordu (tam olarak bu dilimin YASAKLADIĞI şey).
+
+   🔴 İKİNCİ ÖLÇÜM (220px SABİT) de ÇÜRÜTÜLDÜ (lider gözlemi + ölçüm) —
+   768px'i güvenli kılmak için seçilen sabit tavan 1440px gibi GENİŞ
+   ekranlarda da aynı 220px'e sıkışıyordu: dört seviyeli bir kırıntı
+   ("Projeler / Kule A / A-Blok Şantiyesi / Kat 6-10 Kaba İnşaat") "P. / I /
+   A.. / Kat 6-10 Kab..." gibi NEREDEYSE OKUNMAZ bir hâle düşüyordu — oysa
+   1440px'te sekme şeridine ayrılacak BOL boşluk vardı. Sabit bir piksel
+   değeri iki ucu (dar ekranda şeridi ezmemek / geniş ekranda okunaklı
+   kalmak) AYNI ANDA karşılayamaz; çözüm GENİŞLİĞE DUYARLI bir tavan:
+
+     max-width: clamp(220px, 34vw, 520px)
+
+   Ölçüm (viewport genişliği × 0.34, alt/üst sınırla kelepçeli):
+     390px  → clamp alt sınıra oturur:  220px (dar ekran zaten §mobil kuralıyla
+              listeyi tamamen gizliyor, bu değer yalnız medya sorgusu ÖNCESİ
+              geçiş anı için)
+     768px  → 768×0.34 ≈ 261px          (10 sekmede şerit YİNE kayıyor, en az
+              bir sekme görünür — 768'deki eski 220px kanıtı hâlâ geçerli:
+              261 < 248px güvenli tavan)
+     1440px → 1440×0.34 = 489.6px → 490px (dört seviyeli kırıntının SON İKİ
+              parçası — "A-Blok Şantiyesi / Kat 6-10 Kaba İnşaat" — tam
+              okunur; ölçüldü, v6b karesi)
+     1920px → clamp üst sınıra oturur: 520px (daha da geniş ekranda kırıntı
+              sonsuza kadar büyümez, sekme şeridi payını yemez)
+
+   Bu KABUL EDİLEN ödünleşim aynı kalır: sınırı aşan (beşinci seviye + çok
+   uzun ad) durumlarda `ellipsis`e düşer, tam ad `title` tooltip'inde ve geri
+   tuşunun `aria-label`ında okunur; sekme şeridinin alanı hiçbir genişlikte
+   SIFIRA İNMEZ (10 sekmede şerit kayar, kırıntı ASLA ezilmez — KARARLAR
+   §SEKME-F1.7a).
+
+   Öncekiler (`.topbar-crumbs__link`) SON parçadan (`__current`) ÖNCE
+   daralır (F1.2-FIX'in `flex-shrink` önceliği AYNEN taşındı) — her ikisi de
+   `ellipsis` ile kısalır, tam ad `title` özniteliğinde okunur
+   (`TopbarBreadcrumb.tsx`). Ayraç: `.topbar-logo`nun `border-right`iyle AYNI
+   dil — yeni renk/token İCAT EDİLMEDİ, sekme şeridinden görsel ayrım bu ince
+   dikey çizgiyle sağlanır. */
 .topbar-crumbs {
-  flex: 1;
-  /* `min-width: 0` olmadan flex öğesi içeriğinden küçülemez ve uzun bir proje
-     adı eylemleri (zil + avatar) çubuğun DIŞINA iterdi. */
+  flex-shrink: 0;
+  max-width: clamp(220px, 34vw, 520px);
   min-width: 0;
   height: 100%;
   display: flex;
@@ -105,15 +149,9 @@
   gap: var(--space-form-label-gap); /* 5px (mockup 34) */
   padding: 0 var(--space-4); /* 16px (mockup 34) */
   font-size: var(--text-xs); /* 12px (mockup 34) */
-  /* Mockup taşmayı KESER (`overflow:hidden`, satır 34). Dar pencerede kırıntı
-     sağdan kırpılır; eylemler asla kaybolmaz. Bu bir tasarım kararıdır. */
   overflow: hidden;
+  border-right: 1px solid var(--color-border);
 }
-/* Ürünün kendi `←` deyimi (`← Mali Tablolar`, `← Sözleşmeler`, … on ikiden
-   fazla ekran). Yeni bir glif İCAT EDİLMEDİ: U+2190 `fonts.css` kapsamında
-   olduğu ÖLÇÜLMÜŞ tek ok karakteridir (bkz. BalanceSheetView docstring'i).
-   Hedefin ADI hemen sağdaki kırıntı parçasında zaten yazılı olduğu için tuşun
-   metni tekrarlanmaz; ad `aria-label`/`title`ta yaşar. */
 .topbar-crumbs__back {
   display: flex;
   align-items: center;
@@ -150,11 +188,19 @@
   align-items: center;
   gap: var(--space-form-label-gap);
   min-width: 0;
+  /* D7 (F1.2-FIX, AYNEN taşındı) — önceki parçalar SON parçadan (kullanıcının
+     bulunduğu sayfa) önce daralır; K3'ün "son parça" vurgusuyla tutarlı. */
+  flex-shrink: 3;
+}
+.topbar-crumbs__item:last-child {
+  flex-shrink: 1;
 }
 .topbar-crumbs__link {
   color: var(--color-primary);
   text-decoration: none;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .topbar-crumbs__link:hover {
   text-decoration: underline;
@@ -167,18 +213,99 @@
   font-weight: var(--weight-semibold);
   color: var(--color-text);
   white-space: nowrap;
-  /* SON parça kırpılır: kaybolacak metin varsa o, en soldaki bağlam değil. */
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Ad önbellekten gelene kadarki yer tutucu (K6). Ham UUID basmaz, sabit
-   genişlikte durur ve ad gelince yalnız KIRINTI ŞERİDİ içinde yeniden dizilir
-   — üst çubuk `position: fixed` olduğu için sayfa içeriği HİÇ kaymaz (CLS 0).
-   Animasyon YOK: görsel kareler (161 baseline) shimmer'ı kararsız yakalardı. */
+/* Ad önbellekten gelene kadarki yer tutucu (K6). */
 .topbar-crumbs__pending {
   display: inline-block;
   width: 88px;
   height: 10px;
   border-radius: var(--radius-sm);
   background: var(--color-border);
+}
+
+/* SEKME-F1.7a — Ayarlar altında topbar'da beliren "Çıkış Yap" (öneri A,
+   bkz. rapor v6 ekran görüntüleri "-a"/"-b"). `.settings-breadcrumb__logout`
+   (kalkan SettingsBreadcrumb) ile AYNI görsel dil: metin düğmesi, tehlike
+   rengi, sınır/zemin YOK. */
+.topbar-settings-exit {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.topbar-settings-exit:hover {
+  text-decoration: underline;
+}
+.topbar-settings-exit:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.topbar-settings-exit__error {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-danger);
+}
+
+/* SEKME-F1.4c — dar ekran (kullanıcı kararı): 768px altında logodaki "FİİL
+   YAPI" yazısı gizlenir, yalnız sol baştaki F amblemi kalır. Ölçüm (Pillow,
+   F1.4b): kaynak PNG 1569x418, amblem bbox x:[0,146] y:[67,290]; hedef amblem
+   yüksekliği 26px -> ölçek 0,11607 -> görsel 182x48,52px, amblem genişliği
+   17px, üst ofset 7,78px.
+   v3 turu KUSURU (lider gözlemi, ölçüldü): amblem ekranın/şeridin SOL KENARINA
+   0px yapışıktı — "kesik" algısı buradan geliyordu (kaynak PNG'de amblem
+   TAMDI, bu ÇÜRÜTÜLDÜ; eksik olan NEFES PAYIYDI). Çözüm: masaüstü
+   `.topbar-logo`nun `padding: 0 14px`iyle AYNI 14px değeri sol boşluk VE
+   amblem-şerit arası boşluk olarak kullanılır. `padding-left` DENENMEDİ
+   ÖNCE ÇÜRÜTÜLDÜ: mutlak konumlu `.topbar-logo__image`in konumlanma kutusu
+   (containing block) ebeveynin PADDING KUTUSU'dur ve `left:0` bu kutunun
+   dış kenarına (paddingi YOK SAYARAK) oturur — `padding-left` TEK BAŞINA
+   görseli kaydırmaz (ölçüldü). Bunun yerine hücre genişliği
+   14(sol)+17(amblem)+14(sağ)=45px'e büyütülür, görsel `left: 14px`e
+   TAŞINIR ve `clip-path` görselin KENDİ 182px kutusundan yalnızca ilk 17px'i
+   (amblem sağ kenarına KADAR) bırakır — sağdaki 14px boşluk "FİİL" yazısından
+   bir kırıntı DEĞİL, `clip-path`in kestiği tamamen boş alandır. Konteynerin
+   `overflow: hidden`i dikey taşmayı (48,52px > 26px) kırpmaya devam eder.
+
+   SEKME-F1.7a — AYNI kırılma noktasında kırıntı da daralır (öneri, kullanıcı
+   seçecek — bkz. rapor v6 ekran görüntüleri "tam kırıntı" / "yalnız ← üst"):
+   768px altında sekme şeridi ZATEN dar; kırıntının TAM listesi (birden çok
+   parça) şeride yer bırakmaz. Varsayılan öneri: yalnız geri tuşu (←) kalır,
+   parça listesi (`.topbar-crumbs__list`) gizlenir — hedefin adı geri
+   tuşunun `aria-label`/`title`ında ZATEN var, yalnız GÖRSEL OLARAK kaybolur
+   (ekran okuyucu yine "<ad> sayfasına dön" duyar). */
+@media (max-width: 767px) {
+  .topbar-logo {
+    width: 45px;
+    min-width: 45px;
+    flex-shrink: 0;
+    height: 26px;
+    padding: 0;
+    border-right: none;
+    overflow: hidden;
+    position: relative;
+  }
+  .topbar-logo__image {
+    position: absolute;
+    top: -7.78px;
+    left: 14px;
+    width: 182px;
+    height: 48.52px;
+    max-width: none;
+    /* 182 - 17 (amblem genişliği) = 165px sağdan kes — amblemin SAĞ KENARINDAN
+       itibaren "FİİL YAPI" yazısının TAMAMI kaybolur, yalnız yayın (emblem)
+       kalır. */
+    clip-path: inset(0 165px 0 0);
+  }
+  .topbar-crumbs {
+    max-width: none;
+    padding: 0 var(--space-2);
+  }
+  .topbar-crumbs__list {
+    display: none;
+  }
 }

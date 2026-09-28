@@ -8,6 +8,7 @@ import { useCreateEmployer } from "@/lib/api/hooks/useEmployerMutations";
 import type { EmployerListItem } from "@/lib/api/hooks/useEmployers";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { taxNumberError } from "./validate";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 // SectionFormModal kanonu birebir izlenir: settings-form sinifi
 // settings.css'ten, etiket katmani ui/field/Field'den gelir.
 import "@/components/settings/settings.css";
@@ -39,6 +40,9 @@ export function EmployerFormModal({ onClose, onCreated }: EmployerFormModalProps
   const [formError, setFormError] = useState<string | null>(null);
 
   const isPending = createEmployer.isPending;
+  const isDirty = name !== "" || taxNumber !== "" || contactPerson !== "";
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır.
+  useUnsavedChanges(isDirty, "İşveren");
 
   function validate(): string | null {
     if (!name.trim()) return "Ticari Ünvan zorunludur.";

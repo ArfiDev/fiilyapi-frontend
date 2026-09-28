@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cx } from "@/lib/cx";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "./modal.css";
 
 interface ModalProps {
@@ -47,6 +48,7 @@ function focusableElementsOf(root: HTMLElement): HTMLElement[] {
 
 export function Modal({ title, onClose, children, footer, className, isDirty = false }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  useUnsavedChanges(isDirty, "Diyalog");
 
   function handleOverlayClick() {
     if (isDirty && !window.confirm("Kaydedilmemiş değişiklikleriniz var. Kapatmak istediğinize emin misiniz?")) {

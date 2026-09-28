@@ -18,9 +18,9 @@ const SITE_KEY = "a-blok";
 const SECTION_KEY = "kaba-insaat";
 
 /**
- * 🔴 B3'ün ÖLÇÜM ARACI. Kırıntı ad için ikinci bir istek atarsa bu casus onu
- * görür. `fetch`i mock'lamak DEĞİL, ÇAĞRILDIĞINI SAYMAK önemli: mock'lanmış
- * ama çağrılan bir fetch de "ikinci istek"tir.
+ * 🔴 B3'ün ÖLÇÜM ARACI (`PageBreadcrumb.test.tsx`teki kanonik desen, SEKME-
+ * F1.7a ile burada devam eder). Kırıntı ad için ikinci bir istek atarsa bu
+ * casus onu görür.
  */
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -28,8 +28,6 @@ function seededClient(): QueryClient {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  // Sayfanın KENDİ sorgularının önbelleğe yazdığı hâl — anahtarlar
-  // `useProject` / `useSite` / `useSection` ile BİREBİR aynıdır.
   client.setQueryData([PROJECT_QUERY_KEY, PROJECT_KEY], { name: "Güneşkent Konut" });
   client.setQueryData([SITE_QUERY_KEY, SITE_KEY, PROJECT_KEY], {
     name: "A-Blok",
@@ -70,7 +68,6 @@ describe("ad çözümleme — yalnız önbellek", () => {
     expect(within(list).getByText("Güneşkent Konut")).toBeInTheDocument();
     expect(within(list).getByText("A-Blok")).toBeInTheDocument();
 
-    // Mutasyon: kırıntıyı kendi `useQuery`siyle (queryFn dolu) beslet → kırmızı.
     await Promise.resolve();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -78,7 +75,6 @@ describe("ad çözümleme — yalnız önbellek", () => {
   it("bölüm adı da yalnız önbellekten gelir", () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/bolumler/${SECTION_KEY}`);
     const list = screen.getByTestId("topbar-crumbs");
-    // 🔴 Parça bazında: birleşik metin iddiası üç ad tek düğüme çökse de geçerdi.
     expect(within(list).getByText("Kaba İnşaat")).toBeInTheDocument();
     expect(within(list).getByText("A-Blok")).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -105,7 +101,6 @@ describe("ad çözümleme — yalnız önbellek", () => {
     const list = screen.getByTestId("topbar-crumbs");
     expect(list.textContent).not.toContain(PROJECT_KEY);
     expect(list.textContent).not.toContain(SITE_KEY);
-    // Ekran okuyucu yine de nerede olduğunu duyar.
     expect(within(list).getByText("Şantiye")).toBeInTheDocument();
   });
 });
@@ -117,8 +112,6 @@ describe("son parça", () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
     const list = screen.getByTestId("topbar-crumbs");
 
-    // 🔴 `getAllByRole("link")` KULLANILMAZ: açık `role` taşıyan bir `<a>`
-    // (ör. `role="tab"`) o sorgudan KAÇAR ve bekçinin yarısı sessizce ölçmez.
     const anchors = [...list.querySelectorAll("a[href]")];
     expect(anchors.map((a) => a.textContent)).toEqual([
       "Projeler",
@@ -131,9 +124,49 @@ describe("son parça", () => {
     expect(current).toHaveClass("topbar-crumbs__current");
   });
 
-  it("tek parçalı kırıntıda hiç bağlantı yoktur", () => {
+  it("tam ad `title` özniteliğinde okunur (ellipsis kısaltsa da)", () => {
+    renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
+    const list = screen.getByTestId("topbar-crumbs");
+    expect(within(list).getByText("A-Blok")).toHaveAttribute("title", "A-Blok");
+    expect(within(list).getByText("Günlük Kayıt")).toHaveAttribute("title", "Günlük Kayıt");
+  });
+});
+
+/* ─── SEKME-F1.7a · tek parçalı kırıntı da basılır (main davranışı) ──────── */
+
+describe("tek parçalı kırıntı — main davranışı KORUNUR", () => {
+  it("kökte (`/`) TEK parça basılır, geri tuşu YOK", () => {
     renderAt("/");
-    expect(screen.getByTestId("topbar-crumbs").querySelectorAll("a[href]")).toHaveLength(0);
+    expect(screen.getByTestId("topbar-crumbs")).toBeInTheDocument();
+    expect(screen.getByText("Gösterge Paneli")).toHaveClass("topbar-crumbs__current");
+    expect(screen.queryByTestId("topbar-back")).toBeNull();
+  });
+
+  it("modül kökünde (`/puantaj`) TEK parça basılır", () => {
+    renderAt("/puantaj");
+    expect(screen.getByTestId("topbar-crumbs")).toBeInTheDocument();
+    expect(screen.queryByTestId("topbar-back")).toBeNull();
+  });
+});
+
+/* ─── SEKME-F1.7a · /ayarlar altında "Ayarlar / <bölüm>" basılır ─────────── */
+
+describe("/ayarlar altında kırıntı ikinci bir kaynak İCAT ETMEZ", () => {
+  it("`/ayarlar/kullanicilar` → \"Ayarlar / Kullanıcılar\", geri tuşu Ayarlar'a gider", () => {
+    // Mutasyon (M3): `route-tree.ts`teki `ayarlar` alt ağacını sil → bu iddia
+    // kırmızı olur (kırıntı tek parçalı "yakında" kırıntısına düşer).
+    renderAt("/ayarlar/kullanicilar");
+    const list = screen.getByTestId("topbar-crumbs");
+    expect(within(list).getByText("Ayarlar")).toBeInTheDocument();
+    expect(within(list).getByText("Kullanıcılar")).toHaveClass("topbar-crumbs__current");
+    const back = screen.getByTestId("topbar-back");
+    expect(back).toHaveAttribute("href", "/ayarlar");
+  });
+
+  it("çıplak `/ayarlar` → TEK parça \"Ayarlar\", geri tuşu YOK", () => {
+    renderAt("/ayarlar");
+    expect(screen.getByText("Ayarlar")).toHaveClass("topbar-crumbs__current");
+    expect(screen.queryByTestId("topbar-back")).toBeNull();
   });
 });
 
@@ -143,8 +176,6 @@ describe("geri tuşu", () => {
   it("bir seviye yukarıya giden GERÇEK bir bağlantıdır", () => {
     renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
     const back = screen.getByTestId("topbar-back");
-    // Mutasyon: `router.back()` çağıran bir <button>a çevir → `href` kaybolur
-    // ve bu iddia kırmızı olur.
     expect(back.tagName).toBe("A");
     expect(back).toHaveAttribute("href", `/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}`);
     expect(back).toHaveAccessibleName("A-Blok sayfasına dön");
@@ -179,20 +210,9 @@ describe("kırıntı kabuğu", () => {
   });
 
   it("K7 — kırıntı `aria-current` SÜRMEZ (sayfadaki tek işaret kabuk menüsünde)", () => {
-    // 🔴 Bu deponun YAZILI kararı: sayfada TAM BİR `aria-current="page"`
-    // bulunur ve o da kabuk nav'ındadır; ikincisi ekran okuyucuya iki sayfa
-    // derdi. Mali Tablolar segment şeridi (aynı şekle sahip yol göstergesi)
-    // de sürmez. Mutasyon: son parçaya `aria-current="page"` ekle → kırmızı
-    // (burada ve `financial-statements.spec.ts`in BEŞ K7 bekçisinde).
     renderAt("/muhasebe/mizan");
     expect(
       screen.getByTestId("topbar-crumbs").querySelectorAll("[aria-current]"),
     ).toHaveLength(0);
-  });
-
-  it("yazılmamış rotada tek parça basar, geri tuşu basmaz", () => {
-    renderAt("/raporlar");
-    expect(screen.getByText("Raporlar")).toBeInTheDocument();
-    expect(screen.queryByTestId("topbar-back")).toBeNull();
   });
 });

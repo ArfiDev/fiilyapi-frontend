@@ -26,7 +26,8 @@ import "./reports.css";
  * (`NAV_GROUPS[0].heading`) ve ekranlar onu sayfa içi "eyebrow" olarak basar
  * (`stok__eyebrow` · `fs__eyebrow` emsali). Metin KOPYALANMAZ, nav'dan TÜRER:
  * grup yeniden adlandırılırsa bu satır kendiliğinden ona uyar. Gerçek kırıntı
- * zaten üst çubukta basılır (`TopbarBreadcrumb`) — ikinci kez BASILMAZ.
+ * zaten kabuk düzeyinde `<main>`in üstünde basılır (SEKME-F1.2,
+ * `PageBreadcrumb`) — ikinci kez BASILMAZ.
  */
 export function ReportsCatalogView() {
   return (

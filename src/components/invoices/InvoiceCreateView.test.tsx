@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { InvoiceCreateView } from "./InvoiceCreateView";
 import { useEmployers } from "@/lib/api/hooks/useEmployers";
@@ -8,6 +9,7 @@ import { useCreateInvoice, useInvoiceAction } from "@/lib/api/hooks/useInvoiceMu
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 // `useModulePermission` ağ isteği atmaz, kaynağı `useSession`'dır.
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
@@ -142,5 +144,22 @@ describe("InvoiceCreateView — sunucu 403'ü de AccessDenied'e döner (O5a-131)
     render(<InvoiceCreateView />);
 
     expect(screen.queryByText("Bu alana yetkiniz yok")).not.toBeInTheDocument();
+  });
+});
+
+describe("InvoiceCreateView — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı/dokunulmadı → false; alıcı adı değişti → true; başarılı kayıt → false (unmount)", async () => {
+    const user = userEvent.setup();
+    createMutate.mockImplementation((_body, opts: { onSuccess: (data: { id: string }) => void }) =>
+      opts.onSuccess({ id: "inv-1" }),
+    );
+    const { unmount } = render(<InvoiceCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByTestId("fat-party-name"), "ACME");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

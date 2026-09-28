@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { WarningTriangleIcon, inlineSymbolProps } from "@/components/ui/icons";
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { formatAmount } from "@/lib/format";
 import { useCreateSubcontractorContractItem } from "@/lib/api/hooks/useSubcontractorContractMutations";
@@ -65,6 +66,12 @@ export function SubcontractorItemFormModal({
   const createItem = useCreateSubcontractorContractItem(contractId);
 
   const [values, setValues] = useState<ContractItemFormValues>(EMPTY_VALUES);
+  // SEKME-F1.3b — taban anlık görüntüsü; `keepOpen` sonrası `setValues(EMPTY_VALUES)`
+  // ile birlikte AYNI YERDE tazelenir.
+  const [initialValues, setInitialValues] = useState(EMPTY_VALUES);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(initialValues);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Taşeron poz formu");
   const [keepOpen, setKeepOpen] = useState(true); // 197 · varsayılan işaretli
   const [formError, setFormError] = useState<string | null>(null);
   const [savedCode, setSavedCode] = useState<string | null>(null);
@@ -124,6 +131,7 @@ export function SubcontractorItemFormModal({
     }
     setSavedCode(body.code);
     setValues(EMPTY_VALUES);
+    setInitialValues(EMPTY_VALUES);
     codeRef.current?.focus();
   }
 

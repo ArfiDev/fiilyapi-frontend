@@ -27,7 +27,7 @@ test("işveren sözleşme detayı: listeden satıra tıklayınca açılır", asy
 
   await page.getByRole("link", { name: "Detay →" }).first().click();
   await expect(page).toHaveURL(/\/sozlesmeler\/isveren\/p-1$/);
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
   await expect(page.getByTestId("ecd-metrics")).toBeVisible();
 });
 
@@ -38,7 +38,7 @@ test("işveren sözleşme detayı: başlık kartı + 5 metrik + devre-dışı bu
   await page.goto("/sozlesmeler/isveren/p-1");
 
   await expect(page.getByRole("heading", { name: "Kule A" })).toBeVisible();
-  await expect(page.getByText("SZL-2025-01")).toBeVisible();
+  await expect(page.locator("main").getByText("SZL-2025-01")).toBeVisible();
 
   const metrics = page.getByTestId("ecd-metrics");
   for (const label of [
@@ -55,8 +55,8 @@ test("işveren sözleşme detayı: başlık kartı + 5 metrik + devre-dışı bu
   // Üst kural: buton SİLİNMEZ, devre dışı + görünür gerekçe.
   await expect(page.getByTestId("ecd-pdf-disabled")).toBeDisabled();
   await expect(page.getByTestId("ecd-edit-disabled")).toBeDisabled();
-  await expect(page.getByText(/Dışa aktarma ucu henüz açılmadı/)).toBeVisible();
-  await expect(page.getByText(/İşveren sözleşmesi proje formunda kurulur/)).toBeVisible();
+  await expect(page.locator("main").getByText(/Dışa aktarma ucu henüz açılmadı/)).toBeVisible();
+  await expect(page.locator("main").getByText(/İşveren sözleşmesi proje formunda kurulur/)).toBeVisible();
 
   await expect(page.getByRole("link", { name: "← Sözleşmeler" })).toHaveAttribute(
     "href",
@@ -109,9 +109,9 @@ test("işveren sözleşme detayı: Genel sekmesi — özet kartı, milestone tak
     "30 Eylül 2026 · Planlandı",
   ]);
   // Milestone'suz bölüm grup ÜRETMEZ; mockup'ın sahte metinleri BASILMAZ.
-  await expect(page.getByText("Peyzaj Düzenlemesi (Taslak)")).toHaveCount(0);
-  await expect(page.getByText("Temel ve Bodrum Katlar")).toHaveCount(0);
-  await expect(page.getByText("Teslimat & Kesin Kabul")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Peyzaj Düzenlemesi (Taslak)")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Temel ve Bodrum Katlar")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Teslimat & Kesin Kabul")).toHaveCount(0);
 
   // §7 S3 — salt-okunur koşullar; ızgaranın DIŞINDA ayrı bölüm.
   const terms = page.getByTestId("ecd-terms");
@@ -181,7 +181,7 @@ test("işveren sözleşme detayı: Hakedişler sekmesi proje filtrelidir", async
   await page.goto("/sozlesmeler/isveren/p-1?tab=payments");
 
   // p-1 hakedişleri gelir; proje adı etiketi TEKRAR basılmaz (başlıkta var).
-  const list = page.locator(".pp-list");
+  const list = page.locator("main").locator(".pp-list");
   await expect(list).toBeVisible();
   await expect(list.locator(".pp-row__project")).toHaveCount(0);
   await expect(list.getByRole("link").first()).toHaveAttribute(
@@ -200,5 +200,5 @@ test("işveren sözleşme detayı: Belgeler sekmesi basılır, içerik PENDING'd
     "Belge verisi bu yüzeye henüz bağlanmadı",
   );
   // Arşiv ekranı bu dilimde YAZILMAZ — tablo/yükleme yüzeyi yok.
-  await expect(page.locator(".ecd-items")).toHaveCount(0);
+  await expect(page.locator("main").locator(".ecd-items")).toHaveCount(0);
 });

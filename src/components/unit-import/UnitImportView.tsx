@@ -18,6 +18,7 @@ import {
 } from "@/lib/api/hooks/useUnitImport";
 import type { UnitImportUploadInput } from "@/lib/api/units-import-client";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildImportFields, emptyUnitImportFormValues, type UnitImportFormValues } from "./build-request";
 import { checkImportFile } from "./file-check";
@@ -105,6 +106,12 @@ export function UnitImportView() {
   const permission = useModulePermission("projects");
 
   const [values, setValues] = useState<UnitImportFormValues>(() => emptyUnitImportFormValues());
+  // SEKME-F1.6-Y1 — taban `StockEntryForm` deseniyle AYRI durum
+  // (`[baseline, setBaseline]`): `isDirty` SABİT `emptyUnitImportFormValues()`
+  // yerine bu tabanla kıyaslanır. `?proje=` tohumu (aşağıdaki efekt) tabanı da
+  // kaydırır — yoksa proje seçimi URL'ye yazılıp sekmeye dönüldüğünde veya
+  // sayfa yenilendiğinde form kullanıcı hiçbir şey yapmadan kirli açılırdı.
+  const [baseline, setBaseline] = useState<UnitImportFormValues>(values);
   // 🔴 SEÇİLEN DOSYA DURUMDA TUTULUR — iki adımlı akışın tek dayanağı budur.
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -124,13 +131,41 @@ export function UnitImportView() {
   const [templateError, setTemplateError] = useState<string | null>(null);
 
   // `?proje=` tohumlaması — YALNIZ BİR KEZ (`UnitCreateView`/TU deseni).
+  // SEKME-F1.6-Y1 — `setValues` VE `setBaseline` AYNI dönüşümle, birlikte
+  // çağrılır ("otomatik URL tohumu asla kullanıcı kirletti SAYILMAZ"): yalnız
+  // `values` kaydırılsaydı taban geride kalır ve form kullanıcı hiçbir şey
+  // yapmadan kirli doğardı.
   const projectSeededRef = useRef(false);
   useEffect(() => {
     if (projectSeededRef.current) return;
     projectSeededRef.current = true;
     const projeParam = searchParams.get(PROJECT_PARAM);
-    if (projeParam) setValues((prev) => ({ ...prev, projectId: projeParam }));
+    if (!projeParam) return;
+    const applySeed = (prev: UnitImportFormValues): UnitImportFormValues => ({
+      ...prev,
+      projectId: projeParam,
+    });
+    setValues(applySeed);
+    setBaseline(applySeed);
   }, [searchParams]);
+
+  // SEKME-F1.3b · dirty (tercih 1): ASYNC TABAN KISMEN — `?proje=` seed'i
+  // senkron `useEffect`le TEK SEFER (`touched` kirletmez, `projectSeededRef`
+  // deseniyle aynı güvenlik). 🔴 SIFIRLAMA — ORTAK EMİR KURAL 1 (B4): "aktarma
+  // başarılı → TEMİZ" (kullanıcı/CEO kararı). Sayfadan ÇIKILMASA da
+  // (bilerek — `created`/`skipped` sonucu ekranda kalır) `result !== null`
+  // olduğunda form TEMİZ sayılır; dosya/proje seçimleri ekranda dursa da
+  // "kaybolacak commit edilmemiş veri" artık YOKTUR.
+  //
+  // 🔴 TABAN `emptyUnitImportFormValues()` SABİTİ DEĞİL `baseline`dır
+  // (SEKME-F1.6-Y1): `?proje=` tohumundan SONRA kullanıcının proje/şantiye
+  // değiştirmesi hâlâ kirli sayılır — YALNIZ tohum efekti tabanı kaydırır,
+  // `handleChangeProject`/`handleChangeSite` KAYDIRMAZ.
+  const isDirty =
+    result === null &&
+    (file !== null || JSON.stringify(values) !== JSON.stringify(baseline));
+  // Hook, erken dönüşten (`AccessDenied`) ÖNCE çağrılır.
+  useUnsavedChanges(isDirty, "Ünite içe aktarma");
 
   if (!permission.canWrite) return <AccessDenied />;
 

@@ -10,6 +10,7 @@ import { siteQuotaOf } from "@/lib/boq-quota";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { useBoq, type BoqItem } from "@/lib/api/hooks/useBoq";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import {
   fetchBoqItemAllocations,
   useReplaceBoqItemAllocations,
@@ -156,6 +157,10 @@ function LiveCard({
   const [isSaving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
+
+  // SEKME-F1.3b — erken dönüşlerden ÖNCE (Rules of Hooks); taslak satır
+  // varsa "Bu Bölüme" kolonunda commit edilmemiş miktar vardır.
+  useUnsavedChanges(draft.size > 0, "Poz ataması");
 
   if (siteBoq.isError || sectionBoq.isError) {
     return (

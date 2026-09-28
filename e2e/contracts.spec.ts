@@ -23,7 +23,7 @@ test("sözleşmeler: rota ComingSoon değil gerçek listedir", async ({ page }) 
   await page.goto("/sozlesmeler");
 
   await expect(page.getByRole("heading", { name: "Sözleşmeler" })).toBeVisible();
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
   await expect(page.getByTestId("szl-kpi-strip")).toBeVisible();
 });
 
@@ -65,7 +65,7 @@ test("sözleşmeler: işveren sekmesi — çubuklu ilerleme + devre-dışı 'Yen
   // ONAYLI KARAR S2: buton silinmez, devre dışı + görünür gerekçe.
   const disabled = page.getByTestId("szl-new-contract-disabled");
   await expect(disabled).toBeDisabled();
-  await expect(page.getByText("İşveren sözleşmesi proje formunda kurulur.")).toBeVisible();
+  await expect(page.locator("main").getByText("İşveren sözleşmesi proje formunda kurulur.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Taşeron Firmaları →" })).toHaveCount(0);
 
   // Satır → işveren detayı PROJE kimliğine gider (T3'te yazılacak rota).
@@ -104,7 +104,7 @@ test("sözleşmeler: taşeron sekmesi — ilerleme GERÇEK, '—' yalnız BEDELS
   await expect(page.getByTestId("szl-kpi-payment-total")).not.toHaveText(/—/);
   // Kolon ve kart SİLİNMEZ.
   await expect(page.getByRole("columnheader", { name: "İlerleme" })).toBeVisible();
-  await expect(page.getByText("Toplam Hakediş")).toBeVisible();
+  await expect(page.locator("main").getByText("Toplam Hakediş")).toBeVisible();
 
   // İkinci kolon başlığı bu sekmede "Taşeron"dur.
   await expect(page.getByRole("columnheader", { name: "Taşeron", exact: true })).toBeVisible();

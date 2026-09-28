@@ -64,6 +64,7 @@ import { PURCHASING_LIST_MAX_LIMIT, PURCHASING_PERMISSION_MODULE } from "./purch
 import "@/styles/form-shell.css";
 import "./purchase-request-form.css";
 import { routes } from "@/lib/routes";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 const EMPTY_ERRORS: PurchaseRequestFormErrors = { lineErrors: {} };
 
@@ -99,6 +100,13 @@ export function PurchaseRequestForm() {
     // `toISOString()` UTC'ye çevirip günü geri atardı).
     emptyPurchaseRequestFormValues(isoDate(new Date())),
   );
+  // SEKME-F1.3b · KULLANICI KARARI B3: "Taslak Kaydet" başarılı → form TEMİZ.
+  // Taban başlangıçta boş formdur; her başarılı `persist()` (taslak YA DA
+  // onaya-gönder öncesi ilk kayıt) sonrası o anki değerlere hizalanır — veri
+  // sunucuya yazıldıysa "kaydedilmemiş" sayılmaz (ortak emir ilkesi).
+  const [baseline, setBaseline] = useState(values);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(baseline);
+  useUnsavedChanges(isDirty, "Satınalma talebi");
   const [errors, setErrors] = useState<PurchaseRequestFormErrors>(EMPTY_ERRORS);
   const [formError, setFormError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
@@ -220,6 +228,7 @@ export function PurchaseRequestForm() {
     persist()
       .then((saved) => {
         setCreatedRequest(saved);
+        setBaseline(values);
         setSavedNotice(
           `Talep ${saved.request_no} taslak olarak kaydedildi. Düzenlemeye devam edebilir ya da “Onaya Gönder”e basabilirsiniz.`,
         );
@@ -235,6 +244,7 @@ export function PurchaseRequestForm() {
     persist()
       .then((saved) => {
         setCreatedRequest(saved);
+        setBaseline(values);
         setPendingSubmit(true);
       })
       .catch((error: unknown) => {

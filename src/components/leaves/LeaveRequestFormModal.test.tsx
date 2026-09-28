@@ -15,6 +15,7 @@ import { usePersonnel, type PersonnelListItem } from "@/lib/api/hooks/usePersonn
 import { BackendError } from "@/lib/api/unwrap";
 
 import { LeaveRequestFormModal } from "./LeaveRequestFormModal";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 /**
  * F-IZN T4 · `Form - Izin Talebi.dc.html` diyaloğu.
@@ -400,5 +401,36 @@ describe("LeaveRequestFormModal — gönderim (POST /leave-requests)", () => {
 
     expect(screen.getByTestId("iz-request-error")).toHaveTextContent("Tarih aralığı geçersiz.");
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("LeaveRequestFormModal — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı/dokunulmadı → false; alanlar dolduruldu → true; başarılı kayıt → false (kapanış)", async () => {
+    const user = userEvent.setup();
+    let unmount = () => {};
+    const onClose = vi.fn(() => unmount());
+    ({ unmount } = render(<LeaveRequestFormModal year={2026} onClose={onClose} />));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await fillBase(user);
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.click(screen.getByTestId("iz-request-submit"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("KURAL 7 · dirty hâldeyken arka plana tıklamak window.confirm'ü ÇAĞIRMAZ (settings/Modal'a isDirty verilmez)", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onClose = vi.fn();
+    render(<LeaveRequestFormModal year={2026} onClose={onClose} />);
+
+    await fillBase(user);
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.click(screen.getByRole("presentation"));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    // Bugünkü davranış AYNI kalır: overlay tıklaması doğrudan kapatır.
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

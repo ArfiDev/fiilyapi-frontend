@@ -73,6 +73,7 @@ test("stok genel katalog (bos) gorsel", async ({ page }) => {
 
   await login(page);
   await page.goto(STOCK_URL);
+  const content = page.locator("main");
   await expect(page.getByRole("heading", { level: 1, name: "Stok & Depo" })).toBeVisible();
 
   // YERLEŞİM OTURDU (1. parça): yanıt GELDİ ve boş-katalog metni basıldı —
@@ -80,8 +81,8 @@ test("stok genel katalog (bos) gorsel", async ({ page }) => {
   // akış-SSR'da (streamed SSR) sunucu kopyası ile hidrasyon kopyası bir an yan
   // yana durur ve strict-mode ihlali verir (F-PL baseline turu dersi, yalnız
   // Linux CI'da patlar).
-  await expect(page.getByText("Henüz malzeme kartı yok.").first()).toBeVisible();
-  await expect(page.getByText("“+ Malzeme Ekle” ile ilk kartı oluşturun.").first()).toBeVisible();
+  await expect(content.getByText("Henüz malzeme kartı yok.").first()).toBeVisible();
+  await expect(content.getByText("“+ Malzeme Ekle” ile ilk kartı oluşturun.").first()).toBeVisible();
   // Sıfır KPI'lar sunucudan gelir; ekran sahte sayı basmaz.
   await expect(page.getByTestId("stok-kpi-strip")).toContainText("0 Kalem");
   // Süzgeçsiz boş katalogda kırpılma/fiyat uyarıları BASILMAZ.

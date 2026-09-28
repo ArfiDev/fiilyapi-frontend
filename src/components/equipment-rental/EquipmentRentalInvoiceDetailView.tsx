@@ -17,6 +17,7 @@ import {
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { PERIOD_MONTHS, formatPeriod } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { RentalLinesTable } from "./RentalLinesTable";
 import { RentalSiteDistributionCard } from "./RentalSiteDistributionCard";
@@ -99,6 +100,23 @@ export function EquipmentRentalInvoiceDetailView({
       ratePeriod: detail.rate_period,
     });
   }, [detail]);
+
+  // SEKME-F1.3b — hook erken dönüşlerden ÖNCE (Rules of Hooks); `detail`
+  // GET'ten SONRA seed edilen `draft` her `detail` değişiminde efektle
+  // yeniden hizalanır (yukarıda), bu yüzden dirty hesabı da AYNI 7 alanı
+  // karşılaştırır — kayıt sonrası invalidation `detail`i tazeler, efekt
+  // `draft`ı sunucuyla hizalar ve dirty kendiliğinden false'a döner.
+  const isDirty =
+    draft !== null &&
+    detail !== undefined &&
+    (draft.supplierId !== detail.supplier_id ||
+      (draft.invoiceNo || null) !== detail.invoice_no ||
+      (draft.invoiceAmount || null) !== detail.invoice_amount ||
+      Number(draft.periodYear) !== detail.period_year ||
+      Number(draft.periodMonth) !== detail.period_month ||
+      (draft.siteId || null) !== detail.site_id ||
+      draft.ratePeriod !== detail.rate_period);
+  useUnsavedChanges(isDirty, "Kira hakedişi başlığı");
 
   if (isForbidden(detailQuery.error)) return <AccessDenied />;
 

@@ -85,7 +85,9 @@ test("dönem alt başlıkta Türkçeleştirilir (backend `MM/YYYY` gömer)", asy
   await login(page);
   await openApprovals(page);
 
-  await expect(page.getByText("Güneşkent A-Blok · Kat 6–8 · Temmuz 2026")).toBeVisible();
+  await expect(
+    page.locator("main").getByText("Güneşkent A-Blok · Kat 6–8 · Temmuz 2026"),
+  ).toBeVisible();
 });
 
 test("ÜÇ sekme devre dışıdır, SAYI BASMAZ ve gerekçesi GÖRÜNÜR", async ({ page }) => {

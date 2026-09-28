@@ -34,7 +34,7 @@ test("kabuk sidebar'ındaki 'Belge Arşivi' gerçek ekranı açar (ComingSoon DE
   await page.getByRole("navigation").getByRole("link", { name: "Belge Arşivi" }).first().click();
   await expect(page).toHaveURL(/\/belgeler$/);
   await expect(page.getByRole("navigation", { name: "Belge klasörleri" })).toBeVisible();
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
 });
 
 test("klasör paneli kökleri PROJELERDİR; proje seçimi klasörleri açar (S4)", async ({ page }) => {
@@ -47,7 +47,7 @@ test("klasör paneli kökleri PROJELERDİR; proje seçimi klasörleri açar (S4)
   await expect(panel.getByText("Klasörler")).toBeVisible();
 
   // Proje seçilmeden yönlendirme metni basılır (uydurma satır YOK)
-  await expect(page.getByText("Belgeleri görmek için soldaki panelden bir proje seçin.")).toBeVisible();
+  await expect(page.locator("main").getByText("Belgeleri görmek için soldaki panelden bir proje seçin.")).toBeVisible();
 
   await panel.getByRole("link", { name: /Kule A/ }).first().click();
   await expect(page).toHaveURL(/\?proje=p-1/);
@@ -59,7 +59,7 @@ test("klasör paneli kökleri PROJELERDİR; proje seçimi klasörleri açar (S4)
   // E12 118-119 — breadcrumb + başlık
   await panel.getByRole("link", { name: /Hakedişler/ }).first().click();
   await expect(page).toHaveURL(/folder=df-p1-2/);
-  await expect(page.getByText("Kule A / Hakedişler")).toBeVisible();
+  await expect(page.locator("main").getByText("Kule A / Hakedişler")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Hakedişler" })).toBeVisible();
 });
 
@@ -91,8 +91,8 @@ test("kapsam kuralı: HİÇBİR istek site_id taşımaz, şantiye belgesi görü
 
   // Şantiye (s-1) belgeleri E12'de GÖRÜNMEZ — kapsamın görünür kanıtı.
   await page.goto(`${ARCHIVE_URL}?proje=p-1`);
-  await expect(page.getByText("Hakediş_5_Jul2026.pdf")).toHaveCount(0);
-  await expect(page.getByText("Yapı_Ruhsatı_2025.pdf")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Hakediş_5_Jul2026.pdf")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Yapı_Ruhsatı_2025.pdf")).toHaveCount(0);
 });
 
 test("kart ızgarası, arama ve indirme", async ({ page }) => {
@@ -118,7 +118,7 @@ test("kart ızgarası, arama ve indirme", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Hakediş_44\.pdf/ })).toHaveCount(0);
 
   await page.getByRole("searchbox", { name: "Belge ara" }).fill("boyleBirBelgeYok");
-  await expect(page.getByText("Aramanızla eşleşen belge bulunamadı.")).toBeVisible();
+  await expect(page.locator("main").getByText("Aramanızla eşleşen belge bulunamadı.")).toBeVisible();
 });
 
 test("'Son Eklenenler' listesinde İndir düğmesi YOKTUR; satır tıklaması indirir", async ({
@@ -148,8 +148,8 @@ test("basılmayanlar: belge silme / klasör düzenleme / versiyon yüzeyi YOKTUR
   await expect(page.getByRole("button", { name: /^sil$/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /yeniden adlandır/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /klasörü sil/i })).toHaveCount(0);
-  await expect(page.getByText(/versiyon/i)).toHaveCount(0);
-  await expect(page.getByText(/onay bekliyor/i)).toHaveCount(0);
+  await expect(page.locator("main").getByText(/versiyon/i)).toHaveCount(0);
+  await expect(page.locator("main").getByText(/onay bekliyor/i)).toHaveCount(0);
 });
 
 // Yazma akışı: fikstür izolasyonu için p-1'in BAŞKA bir projesinde (p-2) yürür

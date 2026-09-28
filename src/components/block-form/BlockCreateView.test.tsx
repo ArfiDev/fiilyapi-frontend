@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { BlockCreateView } from "./BlockCreateView";
 import { BLOCK_PROJECT_REQUIRED_MESSAGE } from "./constants";
@@ -305,5 +306,30 @@ describe("BlockCreateView — kaydetme", () => {
     render(<BlockCreateView />);
     fireEvent.click(screen.getAllByRole("button", { name: "İptal" })[0]);
     expect(pushMock).toHaveBeenCalledWith("/satis");
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("BlockCreateView — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    render(<BlockCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alana dokunuldu → kirli", () => {
+    render(<BlockCreateView />);
+    fireEvent.change(screen.getByTestId("blok-form-ad"), { target: { value: "A Blok" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (router.push unmount eder) → temiz", async () => {
+    const { unmount } = render(<BlockCreateView />);
+    selectProject();
+    fireEvent.change(screen.getByTestId("blok-form-ad"), { target: { value: "A Blok" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByTestId("blok-form-kaydet"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

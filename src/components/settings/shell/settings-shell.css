@@ -87,53 +87,16 @@
   color: var(--color-danger);
 }
 
-/* Breadcrumb bar — global topbar orta/sağını örter (ref §A.1) */
-.settings-breadcrumb {
-  position: fixed;
-  top: 0;
-  left: var(--settings-sidebar-width);
-  right: 0;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 24px 0 8px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-topbar);
-  z-index: 101; /* global topbar (100) üstünde */
-}
-.settings-breadcrumb__link {
-  font-size: 13px;
-  color: var(--color-primary);
-  text-decoration: none;
-}
-.settings-breadcrumb__sep {
-  color: var(--color-border);
-}
-.settings-breadcrumb__current {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.settings-breadcrumb__logout {
-  margin-left: auto;
-  font-size: 13px;
-  color: var(--color-danger);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.settings-breadcrumb__error {
-  margin: 0;
-  font-size: 11px;
-  color: var(--color-danger);
-}
+/* SEKME-F1.7a: `.settings-breadcrumb*` (eski içerik-içi kırıntı + Çıkış Yap
+   satırı) buradan KALKTI — kırıntı üst çubuğa taşındı (`TopbarBreadcrumb`),
+   Çıkış Yap `Topbar.tsx`teki `.topbar-settings-exit`e ve/veya bu dosyadaki
+   `.settings-logout`a (Ayarlar sidebar'ının altı) taşındı. */
 
 /* İçerik alanı — 240px sidebar'a göre.
    Bu alan global <main class="app-content">'in İÇİNDE render edilir; o kutu
-   zaten margin-left: var(--sidebar-width) (220px) + padding: var(--space-6)
-   (24px, dört yön) uyguluyor. Offsetler üst üste binmesin diye o kutuyu bu
+   zaten margin-left: var(--sidebar-width) (220px) + padding: 28px 32px
+   (`shell.css`teki gerçek değer — `var(--space-6)`/24px DEĞİL) uyguluyor.
+   Offsetler üst üste binmesin diye o kutuyu bu
    alt-ağaçta negatif margin ile iptal edip yerine kendi 240px sidebar offsetini
    ve kendi iç boşluğunu (28/32px) koyuyoruz — sonuç: sol kenar viewport'ta
    x = 240px'te (sabit Ayarlar sidebar'ının hemen sağında), global .app-content

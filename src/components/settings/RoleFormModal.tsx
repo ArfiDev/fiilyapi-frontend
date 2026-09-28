@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Field, Input } from "@/components/ui";
 import { Modal } from "./Modal";
 import { useCreateRole, useRenameRole } from "@/lib/api/hooks/useRoleMutations";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { RoleResponse } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 const KEY_RE = /^[a-z][a-z0-9_]*$/;
 
@@ -24,6 +25,22 @@ export function RoleFormModal({ mode, role, onClose }: RoleFormModalProps) {
   const [emoji, setEmoji] = useState(role?.emoji ?? "");
   const [description, setDescription] = useState(role?.description ?? "");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // SEKME-F1.3b · dirty = tercih 2 (tabana göre karşılaştırma). `role`
+  // senkron prop'tur (ASYNC TABAN DEĞİL) — taban BİR KEZ (mount'ta) yakalanır.
+  const initialRef = useRef({
+    key: role?.key ?? "",
+    name: role?.name ?? "",
+    emoji: role?.emoji ?? "",
+    description: role?.description ?? "",
+  });
+  const isDirty =
+    key !== initialRef.current.key ||
+    name !== initialRef.current.name ||
+    emoji !== initialRef.current.emoji ||
+    description !== initialRef.current.description;
+  // KURAL 7 · Modal'a isDirty VERİLMEZ, doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Rol");
 
   const isPending = createRole.isPending || renameRole.isPending;
 

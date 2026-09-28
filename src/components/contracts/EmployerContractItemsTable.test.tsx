@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { EmployerContractItemsTable } from "./EmployerContractItemsTable";
 import type {
@@ -84,5 +85,40 @@ describe("EmployerContractItemsTable — hücre içi doğrulama hatası noop'ta 
     fireEvent.blur(quantityInput);
 
     expect(screen.queryByTestId("ecd-items-error")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * SEKME-F1.3b · merkezi kayda bağlanma bekçisi. Hücre-içi `drafts` (odak
+ * çıkışında ANINDA kaydolur) BİLEREK dışarıda tutulur — yalnız "+ Satır Ekle"
+ * taslağı commit edilmemiş sayılır.
+ */
+describe("EmployerContractItemsTable — kaydedilmemiş değişiklik kaydı (yalnız + Satır Ekle taslağı)", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    renderTable();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("hücre-içi düzenleme (drafts) kirli SAYILMAZ — anında kaydolur", () => {
+    renderTable();
+    const quantityInput = screen.getByLabelText(`${ITEM_CODE} miktar`);
+    fireEvent.change(quantityInput, { target: { value: "150" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("+ Satır Ekle açıldı, bir alan dolduruldu → kirli", () => {
+    renderTable();
+    fireEvent.click(screen.getByTestId(`ecd-add-row-${GROUP_ID}`));
+    fireEvent.change(screen.getByLabelText("Yeni poz no"), { target: { value: "03.012" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("Vazgeç taslağı sıfırlar → temiz", () => {
+    renderTable();
+    fireEvent.click(screen.getByTestId(`ecd-add-row-${GROUP_ID}`));
+    fireEvent.change(screen.getByLabelText("Yeni poz no"), { target: { value: "03.012" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByTestId("ecd-new-row-cancel"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

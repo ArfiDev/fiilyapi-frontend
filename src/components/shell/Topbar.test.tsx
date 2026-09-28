@@ -6,9 +6,24 @@ import Topbar from "./Topbar";
 vi.mock("./SessionProvider", () => ({
   useSession: () => ({ me: { full_name: "Ahmet Yılmaz", role_key: "patron", title: "Patron" }, isLoading: false }),
 }));
-// F-KIRINTI: üst çubuk artık yol göstergesi taşıyor, yani rotayı OKUYOR.
+
+let currentPath = "/projeler/gunesken-konut";
+// SEKME-F1.7a: kırıntı geri döndüğü için Topbar artık rotayı OKUR (Ayarlar
+// altında Çıkış Yap düğmesi için de). `TopbarBreadcrumb` gerçek — kendi
+// davranışı `TopbarBreadcrumb.test.tsx`de bekçilenir; burada yalnız YERİ
+// (logo ile sekme yuvası arası) ve varlığı ölçülür.
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/projeler/gunesken-konut",
+  usePathname: () => currentPath,
+}));
+// SEKME-F1.4a — şerit yuvasının kendi davranışı `workspace-tabs/` testlerinde;
+// burada yalnız YERİ (kırıntı ile eylemler arası) ölçülür.
+vi.mock("./workspace-tabs/WorkspaceTabsBar", () => ({
+  WorkspaceTabsBar: () => <div className="topbar-tabs" data-testid="fake-tabs-bar" />,
+}));
+
+const logoutSpy = vi.fn();
+vi.mock("@/lib/shell/useLogout", () => ({
+  useLogout: () => ({ logout: logoutSpy, error: null }),
 }));
 
 function renderTopbar() {
@@ -21,26 +36,50 @@ function renderTopbar() {
 
 describe("Topbar", () => {
   it("marka logosunu gosterir", () => {
+    currentPath = "/projeler/gunesken-konut";
     renderTopbar();
     expect(screen.getByAltText("FİİL YAPI İNŞAAT MİMARLIK SAN. TİC. A.Ş.")).toBeInTheDocument();
   });
   it("kullanici bas harflerini avatar'da gosterir", () => {
+    currentPath = "/projeler/gunesken-konut";
     renderTopbar();
     expect(screen.getByText("AY")).toBeInTheDocument();
   });
 
-  it("kirinti LOGO ile EYLEMLER arasinda durur (mockup 33-41)", () => {
-    // K1 — konum mockup'ın kendisidir; `flex` sırası DOM sırasıdır, yani
-    // kırıntıyı yanlış kardeşin yanına koymak sessizce farklı bir çubuk çizer.
+  it("SEKME-F1.7a — kırıntı ÜST ÇUBUĞA geri döndü: logo | kırıntı | sekme yuvası | eylemler", () => {
+    // Mutasyon (M1): `<TopbarBreadcrumb />`u `Topbar.tsx`den kaldır → bu
+    // iddia kırmızı olur (üçüncü kardeş kaybolur / testid bulunmaz).
+    currentPath = "/projeler/gunesken-konut";
     const { container } = renderTopbar();
     const header = container.querySelector(".topbar");
     const order = [...(header?.children ?? [])].map((el) => el.className);
-    expect(order).toEqual(["topbar-logo", "topbar-crumbs", "topbar-actions"]);
+    expect(order).toEqual(["topbar-logo", "topbar-crumbs", "topbar-tabs", "topbar-actions"]);
+    expect(screen.getByTestId("fake-tabs-bar")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Yol göstergesi" })).toBeInTheDocument();
   });
 
-  it("zil ve avatar kirintiyla birlikte yasar (52px seridi bozulmaz)", () => {
+  it("zil ve avatar kirinti/sekme yuvasi ile birlikte 52px seridi bozulmaz", () => {
+    currentPath = "/projeler/gunesken-konut";
     renderTopbar();
     expect(screen.getByRole("button", { name: "Bildirimler" })).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Yol göstergesi" })).toBeInTheDocument();
+    expect(screen.getByText("AY")).toBeInTheDocument();
+  });
+
+  it("Ayarlar DIŞINDA 'Çıkış Yap' düğmesi basılmaz", () => {
+    currentPath = "/projeler/gunesken-konut";
+    renderTopbar();
+    expect(screen.queryByRole("button", { name: "Çıkış Yap" })).toBeNull();
+  });
+
+  it("Ayarlar altında topbar'da 'Çıkış Yap' düğmesi belirir (öneri A)", async () => {
+    // Mutasyon (M2): `inSettings` koşulunu kaldır (her zaman false) → bu
+    // iddia kırmızı olur (düğme hiç basılmaz).
+    currentPath = "/ayarlar/kullanicilar";
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderTopbar();
+    const button = screen.getByRole("button", { name: "Çıkış Yap" });
+    expect(button).toHaveClass("topbar-settings-exit");
+    await userEvent.click(button);
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
   });
 });

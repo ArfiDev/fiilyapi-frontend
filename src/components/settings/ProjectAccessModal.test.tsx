@@ -8,6 +8,7 @@ import { ProjectAccessModal } from "./ProjectAccessModal";
 import { PROJECT_LIST_MAX_LIMIT } from "@/lib/api/hooks/useProjects";
 import { backendClient } from "@/lib/api/client";
 import type { UserResponse } from "@/lib/api/models";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn(), PUT: vi.fn() } }));
 
@@ -114,5 +115,39 @@ describe("ProjectAccessModal — mevcut erisim yuklenmeden Kaydet", () => {
     await waitFor(() => {
       expect(putMock).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("SEKME-F1.3b — kaydedilmemiş değişiklik kaydı", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(backendClient.GET).mockImplementation(fakeBackendGet as never);
+  });
+
+  it("yüklendi + dokunulmadı → false (async taban: GET dönene kadar da false)", async () => {
+    render(<ProjectAccessModal user={USER} onClose={() => {}} />, { wrapper });
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    await screen.findByText("PRJ-1 — Proje 1");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir proje seçimi değişti → true", async () => {
+    const user = userEvent.setup();
+    render(<ProjectAccessModal user={USER} onClose={() => {}} />, { wrapper });
+    await screen.findByText("PRJ-1 — Proje 1");
+    await user.click(screen.getByRole("checkbox", { name: /PRJ-1 — Proje 1/ }));
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: onClose) → unmount ile false", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.PUT).mockResolvedValue({ data: {}, error: undefined, response: new Response() } as never);
+    const onClose = vi.fn();
+    render(<ProjectAccessModal user={USER} onClose={onClose} />, { wrapper });
+    await screen.findByText("PRJ-1 — Proje 1");
+    await user.click(screen.getByRole("checkbox", { name: /PRJ-1 — Proje 1/ }));
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });

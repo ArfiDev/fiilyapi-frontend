@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppearanceScreen } from "./AppearanceScreen";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const PREFERENCES = {
   theme: "light",
@@ -75,5 +76,47 @@ describe("AppearanceScreen", () => {
 
     const notes = screen.getAllByText("Seçiminiz kaydedilir; arayüze yansıtılması yakında gelecek.");
     expect(notes).toHaveLength(2);
+  });
+});
+
+describe("SEKME-F1.3b — kaydedilmemiş değişiklik kaydı", () => {
+  it("yüklendi + dokunulmadı → false (GET henüz dönmeden de false — async taban)", async () => {
+    stubFetch(() => json(PREFERENCES));
+    renderScreen();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    await screen.findByLabelText("Arayüz Dili");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir seçim değişti → true", async () => {
+    stubFetch(() => json(PREFERENCES));
+    renderScreen();
+    const currency = await screen.findByLabelText("Para Birimi");
+    await userEvent.selectOptions(currency, "USD");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (PUT sonrası `query.data` yenilenir) → false", async () => {
+    // GET her zaman GÜNCEL server durumunu döner; PUT o durumu günceller —
+    // `invalidateQueries` sonrası gerçek refetch akışını taklit eder.
+    let server = { ...PREFERENCES };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input as Request;
+        if (request.method === "PUT") {
+          const body = (await request.clone().json()) as Partial<typeof PREFERENCES>;
+          server = { ...server, ...body };
+          return json(server);
+        }
+        return json(server);
+      }),
+    );
+    renderScreen();
+    const currency = await screen.findByLabelText("Para Birimi");
+    await userEvent.selectOptions(currency, "USD");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 });

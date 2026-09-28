@@ -20,6 +20,7 @@ import { useProject } from "@/lib/api/hooks/useProjects";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSubcontractorDiarySuggestion } from "@/lib/api/hooks/useDiarySuggestion";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
@@ -776,5 +777,30 @@ describe("SubcontractorProgressPaymentForm — Günlükten Doldur", () => {
     expect(await screen.findByTestId("thf-diary-fill-notice")).toHaveTextContent(
       "Bu sözleşmeye yetkiniz yok.",
     );
+  });
+});
+
+describe("SubcontractorProgressPaymentForm — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("🔴 BU FORMDA BUGÜN HİÇ DİRTY YOKTU — yüklendi/dokunulmadı → false; miktar değişti → true; taslak kayıt → false (yönlendirme)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await screen.findByTestId("thf-hierarchy");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByLabelText(`${ITEM_MANUAL.description} — miktar`), "5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // "Taslak Kaydet" başarılı olunca ekran listeye yönlendirir (unmount).
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("düzenleme: 🔴 ASYNC TABAN — sözleşme/detay geldikten sonra da false", async () => {
+    vi.mocked(useSubcontractorProgressPayment).mockReturnValue(
+      queryResult({ data: detailFixture() }),
+    );
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByTestId("thf-hierarchy");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

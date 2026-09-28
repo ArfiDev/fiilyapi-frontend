@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { CheckCircleIcon } from "@/components/ui/icons";
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { formatAmount } from "@/lib/format";
 import {
@@ -99,6 +100,11 @@ export function EmployerItemFormModal({
     // açılır — kullanıcı boş bir açılırla baş başa bırakılmaz.
     groups.length > 0 ? EMPTY_VALUES : { ...EMPTY_VALUES, groupId: NEW_GROUP_OPTION },
   );
+  // SEKME-F1.3b — taban anlık görüntüsü (yalnız string alanlar).
+  const [initialValues] = useState(values);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(initialValues);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "İşveren poz formu");
   /**
    * Yaratılmış ama listeye (kalem sorgusu) HENÜZ yansımamış grup. Açılıra
    * geçici seçenek olarak eklenir: tazeleme gelene kadar `values.groupId`

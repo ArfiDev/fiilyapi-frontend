@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Field, Input, Select } from "@/components/ui";
 import { Modal } from "./Modal";
 import { useRoles } from "@/lib/api/hooks/useRoles";
 import { useCreateUser, useUpdateUser } from "@/lib/api/hooks/useUserMutations";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { UserResponse, UserStatus } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
@@ -29,6 +30,25 @@ export function UserFormModal({ mode, user, onClose }: UserFormModalProps) {
   const [roleId, setRoleId] = useState(user?.role_id ?? "");
   const [status, setStatus] = useState<UserStatus>(user?.status ?? "active");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // SEKME-F1.3b · dirty: tercih 2 (edit) / tercih 1 (create). `user` senkron
+  // prop'tur (ASYNC TABAN DEĞİL). `password` yalnız create'te gösterilir ve
+  // edit'te dirty hesabına GİRMEZ (envanter notu — parola alanı edit'te yok).
+  const initialRef = useRef({
+    fullName: user?.full_name ?? "",
+    email: user?.email ?? "",
+    title: user?.title ?? "",
+    roleId: user?.role_id ?? "",
+    status: user?.status ?? "active",
+  });
+  const isDirty =
+    fullName !== initialRef.current.fullName ||
+    title !== initialRef.current.title ||
+    roleId !== initialRef.current.roleId ||
+    status !== initialRef.current.status ||
+    (mode === "create" && (email !== initialRef.current.email || password.length > 0));
+  // KURAL 7 · Modal'a isDirty VERİLMEZ, doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Kullanıcı");
 
   const isPending = createUser.isPending || updateUser.isPending;
 

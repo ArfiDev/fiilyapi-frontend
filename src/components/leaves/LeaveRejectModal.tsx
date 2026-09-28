@@ -9,6 +9,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { useRejectLeaveRequest } from "@/lib/api/hooks/useLeaveMutations";
 import type { LeaveBalanceResponse, LeaveRequestResponse } from "@/lib/api/hooks/useLeaves";
 import { initials } from "@/lib/shell/initials";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import {
   buildBalanceIndex,
@@ -74,6 +75,11 @@ export function LeaveRejectModal({ request, balances, onClose }: LeaveRejectModa
   const [formError, setFormError] = useState<string | null>(null);
 
   const isReady = isRejectReasonReady(reason);
+  const isDirty = isReady;
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ (arka plan tıklaması
+  // window.confirm ekler — görünür davranış değişikliği). Doğrudan kayda
+  // bağlanır.
+  useUnsavedChanges(isDirty, "İzin reddi");
   const isPending = rejectRequest.isPending;
 
   /**

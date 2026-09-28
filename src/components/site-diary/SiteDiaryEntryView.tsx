@@ -31,6 +31,7 @@ import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 
 import { formatMonthName } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { DiaryBasicInfoCard } from "./DiaryBasicInfoCard";
 import { DiaryLinesCard } from "./DiaryLinesCard";
@@ -261,6 +262,17 @@ export function DiaryEntryScreen({
     lastContextRef.current = extensionContext;
     onExtensionContext(extensionContext);
   });
+
+  // SEKME-F1.3-FIX D1 · form efektte (yukarıdaki seed effect'te) doldurulur;
+  // ilk render'da entry zaten hazırken form henüz boştur (emptyDiaryForm).
+  // Bu yüzden dirty ifadesi seed effect'in BU kayıt için (seedKey eşleşmesi)
+  // çalışmış olmasını da şart koşar — aksi hâlde ilk commit'te boş form ≠
+  // entry sahte-kirli üretip üst çubukta boşuna onay modalı açtırır.
+  const isFormSeededForEntry = entry !== undefined && seededRef.current === seedKey;
+  useUnsavedChanges(
+    isFormSeededForEntry ? isDiaryFormDirty(entry, form) : false,
+    "Şantiye günlüğü",
+  );
 
   if (!permission.canView) return <AccessDenied />;
   if (isForbidden(siteQuery.error) || isForbidden(entriesQuery.error)) return <AccessDenied />;

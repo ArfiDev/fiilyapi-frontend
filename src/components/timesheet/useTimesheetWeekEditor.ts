@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 import { timesheetWeekQuery, type TimesheetCode } from "@/lib/api/hooks/useTimesheet";
 import { useSaveTimesheetWeek } from "@/lib/api/hooks/useTimesheetMutations";
 import { downloadTimesheetExport } from "@/lib/api/timesheet-client";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { isoWeekDates, mondayOfIsoWeek, shiftIsoWeek, type TimesheetIsoWeek } from "./iso-week";
 import { buildCopyPreviousWeekDraft } from "./timesheet-copy";
@@ -327,6 +328,8 @@ export function useTimesheetWeekEditor({
     },
     [sectionId, siteId],
   );
+
+  useUnsavedChanges(dirtyKeys.size > 0, "Puantaj");
 
   return {
     draft,

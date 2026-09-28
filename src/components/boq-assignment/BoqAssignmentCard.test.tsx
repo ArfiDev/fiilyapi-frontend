@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { BoqAssignmentCard, CREATE_MODE_DISABLED_REASON } from "./BoqAssignmentCard";
 import { useBoq } from "@/lib/api/hooks/useBoq";
@@ -287,5 +288,38 @@ describe("sites:full ama boq:view (backend full eşiği karşılanmıyor)", () =
     );
     expect(screen.getByRole("button", { name: "+ Poz Seç" })).not.toBeDisabled();
     expect(screen.getByLabelText("03.001 için bu bölüme atanan miktar")).not.toBeDisabled();
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi (yalnız `edit`/`LiveCard` dalı). */
+describe("BoqAssignmentCard — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    renderEdit();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("taslak miktar girildi → kirli", async () => {
+    const user = userEvent.setup();
+    renderEdit();
+    const input = screen.getByLabelText("03.001 için bu bölüme atanan miktar");
+    await user.clear(input);
+    await user.type(input, "500");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (taslak sıfırlanır) → temiz", async () => {
+    vi.mocked(fetchBoqItemAllocations).mockResolvedValue({
+      item: SITE_GROUPS[0].items[0],
+      allocations: [{ section_id: SECTION_ID, section_name: "Kat 11-14", quantity: "480.000" }],
+    } as never);
+    const user = userEvent.setup();
+    renderEdit();
+    const input = screen.getByLabelText("03.001 için bu bölüme atanan miktar");
+    await user.clear(input);
+    await user.type(input, "500");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Atamaları Kaydet" }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

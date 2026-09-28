@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CompanyScreen } from "./CompanyScreen";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const COMPANY = {
   id: "c1",
@@ -115,5 +116,48 @@ describe("CompanyScreen", () => {
     const ozel = await screen.findByRole("option", { name: "%18.5 (özel)" });
     expect(ozel).toBeInTheDocument();
     expect(await screen.findByLabelText("KDV Oranı (Varsayılan)")).toHaveValue("18.5");
+  });
+});
+
+describe("SEKME-F1.3b — kaydedilmemiş değişiklik kaydı", () => {
+  it("yüklendi + dokunulmadı → false (GET henüz dönmeden de false — async taban)", async () => {
+    stubFetch(() => json(COMPANY));
+    renderScreen();
+    // 🔴 ASYNC TABAN: veri GELMEDEN önce de false olmalı (`baseline === null`
+    // koruması olmazsa `form` `{}`, `baseline` `null` → JSON farkı SAHTE
+    // dirty üretir).
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    await waitForFormFilled();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan değişti → true", async () => {
+    stubFetch(() => json(COMPANY));
+    renderScreen();
+    await waitForFormFilled();
+    await userEvent.selectOptions(screen.getByLabelText("KDV Oranı (Varsayılan)"), "10");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (invalidateQueries → refetch) → false", async () => {
+    let server = { ...COMPANY };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input as Request;
+        if (request.method === "PUT") {
+          const body = (await request.clone().json()) as Partial<typeof COMPANY>;
+          server = { ...server, ...body };
+          return json(server);
+        }
+        return json(server);
+      }),
+    );
+    renderScreen();
+    await waitForFormFilled();
+    await userEvent.selectOptions(screen.getByLabelText("KDV Oranı (Varsayılan)"), "10");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "Değişiklikleri Kaydet" }));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 });

@@ -14,6 +14,7 @@ import {
   PAYMENT_TERMS_OPTIONS,
   PURCHASING_LIST_MAX_LIMIT,
 } from "./purchasing-labels";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 /**
  * TEK · teklif GİRİŞİ — spec §3 **K5 (ONAYLI SAPMA, F-BC/`SupplierModal`
@@ -68,6 +69,19 @@ export function QuoteCreateModal({ requestId, onClose }: QuoteCreateModalProps) 
 
   const suppliers = suppliersQuery.data?.items ?? [];
   const isPending = createQuote.isPending;
+  // SEKME-F1.3b · `paymentTerms`/`shippingIncluded` BOŞ değil, VARSAYILAN
+  // değer taşır (envanter uyarısı) — dirty "boşsa temiz" değil, spesifik
+  // varsayılanla eşitliktir.
+  const isDirty =
+    supplierId !== "" ||
+    unitPrice !== "" ||
+    deliveryTime !== "" ||
+    warrantyNote !== "" ||
+    paymentTerms !== DEFAULT_PAYMENT_TERMS ||
+    shippingIncluded !== true ||
+    shippingCost !== "";
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır.
+  useUnsavedChanges(isDirty, "Teklif");
 
   function handleSubmit() {
     if (!supplierId) return setFormError(MESSAGES.supplierRequired);

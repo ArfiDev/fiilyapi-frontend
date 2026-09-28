@@ -17,6 +17,7 @@ import { useCreateUnit } from "@/lib/api/hooks/useUnitMutations";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
@@ -437,5 +438,36 @@ describe("UnitCreateView — kaydetme", () => {
     fireEvent.click(screen.getByTestId("unite-form-kaydet"));
     expect(await screen.findByTestId("unite-form-hata")).toHaveTextContent("Blok bulunamadı.");
     expect(pushMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("UnitCreateView — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false (`touched` boş)", () => {
+    render(<UnitCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan dokunuldu → true", () => {
+    render(<UnitCreateView />);
+    fireEvent.change(screen.getByTestId("unite-form-no"), { target: { value: "B-12" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: router.push) → unmount ile false", async () => {
+    const { unmount } = render(<UnitCreateView />);
+    fireEvent.change(screen.getByTestId("unite-form-proje"), { target: { value: "prj-1" } });
+    fireEvent.change(screen.getByTestId("unite-form-blok"), { target: { value: "blk-b" } });
+    fireEvent.change(screen.getByTestId("unite-form-kat"), { target: { value: "3. Kat" } });
+    fireEvent.change(screen.getByTestId("unite-form-no"), { target: { value: "B-12" } });
+    fireEvent.change(screen.getByTestId("unite-form-brut"), { target: { value: "178" } });
+    fireEvent.change(screen.getByTestId("unite-form-liste-fiyat"), { target: { value: "1480000,00" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByTestId("unite-form-kaydet"));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    // Gerçek uygulamada `router.push` sayfayı değiştirir (unmount); testte
+    // bu, `pushMock` yalnızca çağrıyı kaydettiği için ELLE simüle edilir.
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

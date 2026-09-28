@@ -18,6 +18,7 @@ import { useWarehouses } from "@/lib/api/hooks/useWarehouses";
 import { stockErrorMessage } from "@/lib/api/stock-error";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import {
   isUserListUnavailable,
   userPickerNote,
@@ -119,6 +120,17 @@ export function StockEntryForm() {
   const [values, setValues] = useState<StockEntryFormValues>(() =>
     emptyStockEntryFormValues(isoDate(new Date())),
   );
+  // SEKME-F1.3b · dirty (tercih 1, "touched" bayrağı yerine taban-aynalama):
+  // taban `values`in İLK haliyle başlar. 🔴 ASYNC TABAN KISMEN — depo ön
+  // doldurma aşağıdaki efektte OTOMATİK olur ve "kullanıcı dokunuşu"
+  // SAYILMAMALI; bu yüzden efekt `baseline`ı da AYNI koşulla (yalnız
+  // `warehouseId === ""` iken) günceller — otomatik dolan alan taban ile
+  // birlikte kayar, dirty SAHTE true üretmez. Gerçek kullanıcı değişikliği
+  // `handleChange`/satır fonksiyonları `values`i tabandan AYIRIR.
+  const [baseline, setBaseline] = useState<StockEntryFormValues>(values);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(baseline);
+  // Hook koşulsuz, erken dönüşlerden (aşağıda, `AccessDenied`) ÖNCE çağrılır.
+  useUnsavedChanges(isDirty, "Stok girişi");
   const [errors, setErrors] = useState<StockEntryFormErrors>(EMPTY_ERRORS);
   const [formError, setFormError] = useState<string | null>(null);
   const lineSeqRef = useRef(1);
@@ -141,6 +153,7 @@ export function StockEntryForm() {
     // seçimini EZMEZ (yalnız DOKUNULMAMIŞ alan doldurulur).
     if (prefill) {
       setValues((prev) => (prev.warehouseId === "" ? { ...prev, warehouseId: prefill } : prev));
+      setBaseline((prev) => (prev.warehouseId === "" ? { ...prev, warehouseId: prefill } : prev));
     }
   }, [warehouses, siteId]);
 

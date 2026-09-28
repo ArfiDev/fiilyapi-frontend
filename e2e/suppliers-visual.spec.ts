@@ -41,7 +41,7 @@ test("tedarikciler izgarasi gorsel", async ({ page }) => {
   // (d) kesikli ekleme kartı ızgaranın sonunda,
   await expect(page.getByTestId("ted-add-card")).toBeVisible();
   // (e) fikstür sabitlemesi İŞLEDİ: yalnız dört tohum kartı kadrajda.
-  await expect(page.locator(".ted-card")).toHaveCount(4);
+  await expect(page.locator("main .ted-card")).toHaveCount(4);
   await expect(page.getByTestId("ted-truncation-notice")).toHaveCount(0);
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.

@@ -76,7 +76,9 @@ const EV_LINES_CAPTION = "İş tipi × bölüm · kazanılmış = bugün miktar 
 const CORE_LINES_CAPTION = "Kalem × bölüm · girişler otomatik olarak aylık hakedişe işlenir";
 
 function linesCard(page: Page): Locator {
-  return page.locator("section[aria-labelledby='diary-lines-title']");
+  // `main`e kapsamlanır: akış-SSR'da `</main>`den SONRA kalan S:0 SSR kopyası
+  // aynı `section[aria-labelledby=…]` köküyle strict-mode ihlaline yol açar.
+  return page.locator("main").locator("section[aria-labelledby='diary-lines-title']");
 }
 
 /** Kalem başlığının kod satırı (`kod · etiket · ₺birim fiyat`) — etiketi taşıyan satırlar. */
@@ -97,8 +99,9 @@ function visibleSendButtons(scope: Page | Locator): Locator {
  * "+ İş kodu" · "Kalanı orantılı dağıt" · "Gönder") GÖRÜNMEZ (F2.6 · CEO kararı).
  */
 async function expectNoTabletBars(page: Page) {
-  await expect(page.locator(".ev-diary-tablet-head__pill")).toBeHidden();
-  await expect(page.getByText(new RegExp(`^\\d{2}\\.\\d{2} · ${SITE_NAME}$`)).filter({ visible: true })).toHaveCount(0);
+  const content = page.locator("main");
+  await expect(content.locator(".ev-diary-tablet-head__pill")).toBeHidden();
+  await expect(content.getByText(new RegExp(`^\\d{2}\\.\\d{2} · ${SITE_NAME}$`)).filter({ visible: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "+ İş kodu", exact: true }).filter({ visible: true })).toHaveCount(0);
   await expect(page.getByRole("group", { name: "Saat Dağıtımı eylemleri" })).toBeHidden();
 }
@@ -111,10 +114,11 @@ async function expectNoTabletBars(page: Page) {
 // ---------------------------------------------------------------------------
 test("gunluk ilerleme dolu gun gorsel", async ({ page }) => {
   await openDiaryProgress(page, "full");
+  const content = page.locator("main");
 
   // Başlık (İ:113 · CEO): "… · 07.10.2026 Çarşamba · Gün 129 · H23". "YENİ" çipi YOK.
-  await expect(page.locator(".diary__subtitle")).toHaveText(endsWithTail(HEADER_TAIL.full));
-  await expect(page.getByText("YENİ", { exact: true })).toHaveCount(0);
+  await expect(content.locator(".diary__subtitle")).toHaveText(endsWithTail(HEADER_TAIL.full));
+  await expect(content.getByText("YENİ", { exact: true })).toHaveCount(0);
   // Kendi/Taşeron etiketi (İ:225) — bütçe köprüsüyle: 01.002 + 02.001 + 02.002 Kendi, 03.001 Taşeron.
   await expect(itemMetaWithTag(page, "Kendi")).toHaveCount(3);
   await expect(itemMetaWithTag(page, "Taşeron")).toHaveCount(1);
@@ -128,25 +132,25 @@ test("gunluk ilerleme dolu gun gorsel", async ({ page }) => {
   await expect(linesCard(page).locator(".diary-lines__leaf-name").filter({ hasText: /^Bölümsüz/ })).toHaveCount(2);
 
   // Şerit (İ:392-397): 164 a-s kaynak − 130 dağıtılan = 34 dağıtılmamış; taşeron 7×8 + 3×8.
-  await expect(page.locator(".ev-diary-strip__item--warn dd")).toHaveText("34");
-  await expect(page.locator(".ev-diary-strip__item--sub dd")).toHaveText("80");
+  await expect(content.locator(".ev-diary-strip__item--warn dd")).toHaveText("34");
+  await expect(content.locator(".ev-diary-strip__item--sub dd")).toHaveText("80");
   // İ:465 — Mehmet Demir kayıtta 9 sa, puantaj şimdi 11.
-  await expect(page.locator(".ev-diary-grid__row--changed")).toHaveCount(1);
-  await expect(page.locator(".ev-diary-grid__row--changed")).toContainText("Mehmet Demir");
-  await expect(page.locator(".ev-diary-grid__changed")).toContainText("dağılımı gözden geçir");
+  await expect(content.locator(".ev-diary-grid__row--changed")).toHaveCount(1);
+  await expect(content.locator(".ev-diary-grid__row--changed")).toContainText("Mehmet Demir");
+  await expect(content.locator(".ev-diary-grid__changed")).toContainText("dağılımı gözden geçir");
   // Izgara: 9 kişi + 2 firma; beş iş kodu kolonu.
-  await expect(page.locator(".ev-diary-grid__row")).toHaveCount(11);
-  await expect(page.locator(".ev-diary-grid__code")).toHaveCount(5);
+  await expect(content.locator(".ev-diary-grid__row")).toHaveCount(11);
+  await expect(content.locator(".ev-diary-grid__code")).toHaveCount(5);
   // Miktar tablosu ek kolonları (İ:220) + Rev 1 alt başlığı (İ:213) + alt toplam (İ:248).
-  await expect(page.getByText("Bugün kaz. a-s")).toBeVisible();
+  await expect(content.getByText("Bugün kaz. a-s")).toBeVisible();
   await expect(linesCard(page).getByText(EV_LINES_CAPTION, { exact: true })).toBeVisible();
-  await expect(page.getByText(CORE_LINES_CAPTION)).toHaveCount(0);
-  await expect(page.locator(".ev-diary-line-foot__total")).toContainText("Bugün toplam kazanılmış");
+  await expect(content.getByText(CORE_LINES_CAPTION)).toHaveCount(0);
+  await expect(content.locator(".ev-diary-line-foot__total")).toContainText("Bugün toplam kazanılmış");
   // İ:241-246 — oransız İç Sıva (Bölümsüz) satırının alt uyarısı, TEK satırda.
-  await expect(page.locator(".ev-diary-norate")).toHaveCount(1);
-  await expect(page.locator(".ev-diary-norate")).toContainText("Bu kaleme oran atanmamış");
+  await expect(content.locator(".ev-diary-norate")).toHaveCount(1);
+  await expect(content.locator(".ev-diary-norate")).toContainText("Bu kaleme oran atanmamış");
   // İşçi Dağılımı (İ:344-372): kendi ekip puantajdan 4 meslek (salt okunur) + iki firma.
-  const workers = page.locator("section[aria-labelledby='diary-workers-title']");
+  const workers = content.locator("section[aria-labelledby='diary-workers-title']");
   await expect(workers.locator(".diary-workers__count-ro")).toHaveCount(4);
   await expect(workers).toContainText("Kalıpçı");
   await expect(workers).toContainText("Aydın Elektrik Taah.");
@@ -175,6 +179,7 @@ test("gunluk ilerleme dolu gun gorsel", async ({ page }) => {
 // ---------------------------------------------------------------------------
 test("gunluk ilerleme is kodu secici gorsel", async ({ page }) => {
   await openDiaryProgress(page, "full");
+  const content = page.locator("main");
   await page.getByRole("button", { name: "+ İş kodu ekle" }).click();
   const picker = page.getByRole("dialog", { name: "İş kodu ekle" });
   await picker.getByLabel("Kalem, bölüm veya kod ara").fill("Sıva");
@@ -192,7 +197,7 @@ test("gunluk ilerleme is kodu secici gorsel", async ({ page }) => {
   // 1408,6 → Playwright'ta 0 eşik üstü piksel); kaynağı ızgara dışındaki sayfa geneli
   // kesirler (F-SUBPX-2, kuyrukta).
   await prepareFrame(page);
-  await expect(page.locator(".ev-diary-alloc")).toHaveScreenshot("gunluk-ilerleme-is-kodu-popover.png");
+  await expect(content.locator(".ev-diary-alloc")).toHaveScreenshot("gunluk-ilerleme-is-kodu-popover.png");
 });
 
 // ---------------------------------------------------------------------------
@@ -202,19 +207,20 @@ test("gunluk ilerleme is kodu secici gorsel", async ({ page }) => {
 // ---------------------------------------------------------------------------
 test("gunluk ilerleme kilitli gun gorsel", async ({ page }) => {
   await openDiaryProgress(page, "locked");
+  const content = page.locator("main");
 
-  await expect(page.locator(".diary__subtitle")).toHaveText(endsWithTail(HEADER_TAIL.locked));
+  await expect(content.locator(".diary__subtitle")).toHaveText(endsWithTail(HEADER_TAIL.locked));
   // CEO (karar 5): kilit bandı TAM GENİŞLİK üst bant — başlığın altında, kartlardan
   // önce; çekirdeğin durum satırındaki bandı basılmaz. Metin İ:146 birebir.
-  const banner = page.locator(".diary__top-banner .ev-diary-lock");
+  const banner = content.locator(".diary__top-banner .ev-diary-lock");
   await expect(banner).toHaveCount(1);
   await expect(banner).toHaveAttribute("role", "status");
   await expect(banner).toContainText("Bu gün 05.10.2026 raporuyla kilitlendi. Bütün alanlar salt okunur.");
   await expect(banner.getByRole("button", { name: "Kilidi aç (yetkili)" })).toBeVisible();
-  await expect(page.locator(".diary__lock-banner")).toHaveCount(0);
+  await expect(content.locator(".diary__lock-banner")).toHaveCount(0);
   const [bannerBox, headBox, linesBox] = await Promise.all([
     banner.boundingBox(),
-    page.locator(".diary__head").boundingBox(),
+    content.locator(".diary__head").boundingBox(),
     linesCard(page).boundingBox(),
   ]);
   expect(bannerBox && headBox && linesBox, "bant · başlık · miktar kartı yerleşimi").toBeTruthy();
@@ -231,13 +237,13 @@ test("gunluk ilerleme kilitli gun gorsel", async ({ page }) => {
   await expect(itemMetaWithTag(page, "Kendi")).toHaveCount(3);
   await expect(itemMetaWithTag(page, "Taşeron")).toHaveCount(1);
   await expect(linesCard(page).getByText("Tüm şantiye", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("YENİ", { exact: true })).toHaveCount(0);
+  await expect(content.getByText("YENİ", { exact: true })).toHaveCount(0);
   await expectNoTabletBars(page);
-  await expect(page.locator(".ev-diary-alloc__ro")).toHaveText("Salt okunur · gün kilitli");
+  await expect(content.locator(".ev-diary-alloc__ro")).toHaveText("Salt okunur · gün kilitli");
   await expect(page.getByRole("button", { name: "+ İş kodu ekle" })).toBeDisabled();
   // K20 — kilitli günde miktar hücresi kutu değil düz metin.
-  await expect(page.locator(".diary-lines__qty")).toHaveCount(0);
-  await expect(page.locator(".diary-lines__today-text").first()).toBeVisible();
+  await expect(content.locator(".diary-lines__qty")).toHaveCount(0);
+  await expect(content.locator(".diary-lines__today-text").first()).toBeVisible();
   await expect(page.getByRole("region", { name: "Gönder kontrolü" })).toContainText("Gün kilitli");
 
   await prepareFrame(page);
@@ -266,8 +272,9 @@ test("gunluk ilerleme kilit acma modali gorsel", async ({ page }) => {
 // ---------------------------------------------------------------------------
 test("gunluk ilerleme gonder engelli gorsel", async ({ page }) => {
   await openDiaryProgress(page, "blocked");
+  const content = page.locator("main");
 
-  await expect(page.locator(".diary__subtitle")).toHaveText(endsWithTail(HEADER_TAIL.blocked));
+  await expect(content.locator(".diary__subtitle")).toHaveText(endsWithTail(HEADER_TAIL.blocked));
   const submitBar = page.getByRole("region", { name: "Gönder kontrolü" });
   await expect(visibleSendButtons(submitBar)).toBeDisabled();
   await expectNoTabletBars(page);
@@ -276,7 +283,7 @@ test("gunluk ilerleme gonder engelli gorsel", async ({ page }) => {
   await expect(submitBar).toContainText("Gönderim engelli");
   await expect(page.getByRole("button", { name: "Kaydet & Gönder" })).toBeDisabled();
   // S4: gerekçeler YALNIZ kontrol çubuğunda — çekirdeğin kutusu basılmaz.
-  await expect(page.locator(".diary__gate")).toHaveCount(0);
+  await expect(content.locator(".diary__gate")).toHaveCount(0);
 
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("gunluk-ilerleme-gonder-engelli.png", { fullPage: true });
@@ -288,16 +295,17 @@ test("gunluk ilerleme gonder engelli gorsel", async ({ page }) => {
 // ---------------------------------------------------------------------------
 test("gunluk ilerleme formen gorunumu gorsel", async ({ page }) => {
   await openDiaryProgress(page, "full", { evLevel: "view" });
+  const content = page.locator("main");
 
-  await expect(page.locator(".diary__top-banner")).toContainText("Formen görünümü.");
-  await expect(page.locator(".diary__top-banner")).toContainText("Gönderim mühendiste.");
-  await expect(page.locator(".ev-diary-alloc--faded")).toBeVisible();
-  await expect(page.locator(".ev-diary-alloc__ro")).toHaveText(
+  await expect(content.locator(".diary__top-banner")).toContainText("Formen görünümü.");
+  await expect(content.locator(".diary__top-banner")).toContainText("Gönderim mühendiste.");
+  await expect(content.locator(".ev-diary-alloc--faded")).toBeVisible();
+  await expect(content.locator(".ev-diary-alloc__ro")).toHaveText(
     "Salt okunur · Saat Dağıtımı mühendis tarafından yapılır",
   );
   await expect(page.getByRole("button", { name: "+ İş kodu ekle" })).toBeDisabled();
   // Hücre etiketi `${kişi} · ${kolon} saati` (AllocationCell) — ilk kolon üst grup "BETONARME İŞLERİ".
-  await expect(page.getByLabel("Mehmet Demir · BETONARME İŞLERİ saati")).toBeDisabled();
+  await expect(content.getByLabel("Mehmet Demir · BETONARME İŞLERİ saati")).toBeDisabled();
   await expect(page.getByRole("region", { name: "Gönder kontrolü" })).toContainText("Gönderim mühendiste");
   await expectNoTabletBars(page);
 
@@ -321,19 +329,20 @@ test("gunluk ilerleme formen gorunumu gorsel", async ({ page }) => {
 // ---------------------------------------------------------------------------
 test("gunluk ilerleme puantajsiz gun gorsel", async ({ page }) => {
   await openDiaryProgress(page, "noEv");
+  const content = page.locator("main");
 
-  const empty = page.locator(".diary-workers__empty");
+  const empty = content.locator(".diary-workers__empty");
   await expect(empty).toContainText("Bu gün için puantaj girilmemiş");
   await expect(empty.getByRole("link", { name: "Puantaja git" })).toHaveAttribute("href", /\/puantaj/);
   // Uzantısız çekirdek: Saat Dağıtımı, kontrol çubuğu, ek kolonlar ve başlık eki YOK.
   await expect(page.getByRole("region", { name: "Gönder kontrolü" })).toHaveCount(0);
-  await expect(page.getByText("Bugün kaz. a-s")).toHaveCount(0);
-  await expect(page.locator(".diary__subtitle-suffix")).toHaveCount(0);
+  await expect(content.getByText("Bugün kaz. a-s")).toHaveCount(0);
+  await expect(content.locator(".diary__subtitle-suffix")).toHaveCount(0);
   // Başlık: tarih + takvim gün adı, gün/hafta no YOK (takvim dışı: `day_no`/`week_no` null).
-  await expect(page.locator(".diary__subtitle")).toHaveText(/· 08\.10\.2026 Perşembe$/);
+  await expect(content.locator(".diary__subtitle")).toHaveText(/· 08\.10\.2026 Perşembe$/);
   // Miktar kartı alt başlığı ÇEKİRDEK metni (uzantı `caption` vermez).
   await expect(linesCard(page).getByText(CORE_LINES_CAPTION, { exact: true })).toBeVisible();
-  await expect(page.getByText(EV_LINES_CAPTION)).toHaveCount(0);
+  await expect(content.getByText(EV_LINES_CAPTION)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Kaydet & Gönder" })).toBeEnabled();
 
   await prepareFrame(page);
@@ -349,16 +358,17 @@ test("gunluk ilerleme puantajsiz gun gorsel", async ({ page }) => {
 // ---------------------------------------------------------------------------
 test("gunluk ilerleme tablet 1024 gorsel", async ({ page }) => {
   await openDiaryProgress(page, "full", { width: TABLET_WIDTH });
+  const content = page.locator("main");
 
   // Üst şerit — masaüstü başlığı + 4'lü şerit tablette gizli; yerini şerit alır.
-  const pill = page.locator(".ev-diary-tablet-head__pill");
+  const pill = content.locator(".ev-diary-tablet-head__pill");
   await expect(pill).toBeVisible();
   await expect(pill).toHaveText("Dağıtılmamış 34 a-s");
-  const meta = page.getByText(`07.10 · ${SITE_NAME}`, { exact: true });
+  const meta = content.getByText(`07.10 · ${SITE_NAME}`, { exact: true });
   await expect(meta).toBeVisible();
-  const title = page.getByText("Saat Dağıtımı", { exact: true }).filter({ visible: true });
+  const title = content.getByText("Saat Dağıtımı", { exact: true }).filter({ visible: true });
   await expect(title).toHaveCount(1);
-  await expect(page.locator(".ev-diary-strip__item--warn dd")).toBeHidden();
+  await expect(content.locator(".ev-diary-strip__item--warn dd")).toBeHidden();
   // Şerit TEK satır: başlık · tarih/şantiye · hap aynı yatay bantta, soldan sağa.
   const [titleBox, metaBox, pillBox] = await Promise.all([title.boundingBox(), meta.boundingBox(), pill.boundingBox()]);
   expect(titleBox && metaBox && pillBox, "tablet şeridi yerleşimi").toBeTruthy();
@@ -385,7 +395,7 @@ test("gunluk ilerleme tablet 1024 gorsel", async ({ page }) => {
     addCode.boundingBox(),
     distribute.boundingBox(),
     send.boundingBox(),
-    page.locator(".ev-diary-grid__row").last().boundingBox(),
+    content.locator(".ev-diary-grid__row").last().boundingBox(),
   ]);
   expect(addBox && distBox && sendBox && lastRowBox, "tablet eylem çubuğu yerleşimi").toBeTruthy();
   if (addBox && distBox && sendBox && lastRowBox) {
@@ -396,7 +406,7 @@ test("gunluk ilerleme tablet 1024 gorsel", async ({ page }) => {
     expect(distBox.x).toBeLessThan(sendBox.x);
     expect(addBox.y, "eylem çubuğu ızgaranın ALTINDA").toBeGreaterThanOrEqual(lastRowBox.y + lastRowBox.height);
   }
-  await expect(page.getByText("YENİ", { exact: true })).toHaveCount(0);
+  await expect(content.getByText("YENİ", { exact: true })).toHaveCount(0);
   await expect(itemMetaWithTag(page, "Taşeron")).toHaveCount(1);
 
   const layout = await page.evaluate(() => {

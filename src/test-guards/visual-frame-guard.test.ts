@@ -45,7 +45,16 @@ function usesPrepareFrame(content: string): boolean {
   return content.includes("prepareFrame(page)");
 }
 
-const PREPARE_FRAME_CALL = "await prepareFrame(page);";
+// SEKME-F1.7c: preserveScrollLeft yalnız şerit iç kaydırmasını korur, CEO K5 / (d).
+//
+// DAR GENİŞLETME: tam metin eşleşmesi yerine SIKI bir desen — yalnız İKİ biçim
+// kabul edilir: çıplak `prepareFrame(page);` VEYA `preserveScrollLeft` ile
+// `prepareFrame(page, { preserveScrollLeft: [...] });`. Başka seçenek adı,
+// serbest argüman veya ekstra boşluk/biçim KABUL EDİLMEZ — bekçi `prepareFrame`e
+// keyfi bir şey geçirilmesini de yakalamaya devam eder. Kanonun kendisi
+// ("hemen önce" kuralı) DEĞİŞMEDİ, yalnız TANINAN çağrı biçimi genişledi.
+const PREPARE_FRAME_CALL_RE =
+  /^await prepareFrame\(page(?:, \{ preserveScrollLeft: \[[^\]]*\] \})?\);$/;
 const SCREENSHOT_CALL_RE = /^await expect\(.+\)\.toHaveScreenshot\(/;
 
 interface Violation {
@@ -77,7 +86,7 @@ function findViolations(file: string, content: string): Violation[] {
     }
 
     const precedingLine = j >= 0 ? lines[j].trim() : "";
-    if (precedingLine !== PREPARE_FRAME_CALL) {
+    if (!PREPARE_FRAME_CALL_RE.test(precedingLine)) {
       violations.push({ file, line: i + 1, precedingLine });
     }
   }
@@ -111,6 +120,182 @@ describe("gorsel kadraj kanonu — prepareFrame HER zaman toHaveScreenshot'tan h
       .join("\n");
 
     expect(allViolations, message).toEqual([]);
+  });
+});
+
+// SEKME-F1.7c: preserveScrollLeft yalnız şerit iç kaydırmasını korur, CEO K5 / (d).
+//
+// `preserveScrollLeft` bir KAÇIŞ KAPISI — kaçış kapıları GEREKÇESİZ çoğalırsa
+// kanon sessizce erir (bkz. `escape-hatch-inventory-guard.test.ts` emsali).
+// Bu yüzden her kullanım GEREKÇELİ bir izin listesi girdisiyle EŞLEŞMEK
+// ZORUNDADIR: listede olmayan dosyada kullanım KIRMIZI, listede olup artık
+// KULLANMAYAN dosya da KIRMIZI (bayat/unutulmuş giriş — "sessiz muafiyet yok"
+// ilkesi, bkz. dosyanın ilerisindeki "muafiyet gerekcesiz yazilmaz" deseni).
+const PRESERVE_SCROLL_LEFT_ALLOWLIST: Record<string, string> = {
+  "workspace-tabs-visual.spec.ts":
+    "fullPage şerit scrollLeft'ini sıfırlıyor; kaydırılmış kare için şerit korunur (CEO K5/(d))",
+  "visual-scroll.spec.ts":
+    "prepareFrame'in preserveScrollLeft davranışını doğrudan sınayan birim testi — hiçbir toHaveScreenshot çağrısı YOK, kare bekçisi kapsamı dışında",
+};
+
+const PRESERVE_SCROLL_LEFT_RE = /preserveScrollLeft\s*:/;
+
+function usesPreserveScrollLeft(content: string): boolean {
+  return PRESERVE_SCROLL_LEFT_RE.test(content);
+}
+
+describe("preserveScrollLeft kaçış kapısı — yalnız gerekçeli izin listesindeki dosyalarda", () => {
+  const specFiles = readdirSync(e2eDir).filter(isVisualSpecFile);
+
+  it("izin listesinde OLMAYAN bir dosya preserveScrollLeft kullanmaz", () => {
+    const unlisted: string[] = [];
+
+    for (const fileName of specFiles) {
+      const content = readFileSync(path.join(e2eDir, fileName), "utf8");
+      if (usesPreserveScrollLeft(content) && !(fileName in PRESERVE_SCROLL_LEFT_ALLOWLIST)) {
+        unlisted.push(fileName);
+      }
+    }
+
+    const message = unlisted
+      .map((f) => `${f} — preserveScrollLeft KULLANIYOR ama izin listesinde YOK (gerekçesiz)`)
+      .join("\n");
+
+    expect(unlisted, message).toEqual([]);
+  });
+
+  it("izin listesindeki HER giriş hâlâ preserveScrollLeft kullanıyor (bayat giriş yok)", () => {
+    const stale: string[] = [];
+
+    for (const fileName of Object.keys(PRESERVE_SCROLL_LEFT_ALLOWLIST)) {
+      const fullPath = path.join(e2eDir, fileName);
+      const content = existsSync(fullPath) ? readFileSync(fullPath, "utf8") : "";
+      if (!usesPreserveScrollLeft(content)) stale.push(fileName);
+    }
+
+    const message = stale
+      .map((f) => `${f} — izin listesinde ama artık preserveScrollLeft KULLANMIYOR (bayat giris)`)
+      .join("\n");
+
+    expect(stale, message).toEqual([]);
+  });
+});
+
+// FIX-IZN: `stylePath` da bir KAÇIŞ KAPISI — `preserveScrollLeft` deseninin
+// AYNISI (yukarıdaki describe emsali). Baseline'ı kalıcı olarak bozan bir CSS
+// enjeksiyonu GEREKÇESİZ çoğalırsa "kadraj mockup'ı birebir basar" kanonu
+// sessizce erir. Bu yüzden her kullanım GEREKÇELİ bir izin listesiyle
+// EŞLEŞMEK ZORUNDADIR: listede olmayan dosyada kullanım KIRMIZI, listede olup
+// artık KULLANMAYAN dosya da KIRMIZI (bayat giriş).
+//
+// Bugün TEK giriş: `leaves-visual.spec.ts` "izin talep formu gorsel" —
+// `.modal.iz-modal--request` 85vh'e sığmadığı için Chromium'un onu bileşik
+// kaydırma katmanı olarak çizmesi (raster bayt oynaması, kökten çözüm
+// KARARLAR-BEKLEYEN §12'deki "diyaloğu 85vh'e sığdır" kararına kadar
+// ertelendi — bkz. `e2e/visual-styles/scroll-layer-freeze.css` dosya başı
+// gerekçe).
+const STYLE_PATH_ALLOWLIST: Record<string, string> = {
+  "leaves-visual.spec.ts :: izin talep formu gorsel":
+    "`.modal.iz-modal--request` 85vh'e sığmadığı için Chromium onu bileşik " +
+    "kaydırma katmanı olarak çiziyor, ardışık yakalamalar bayt düzeyinde " +
+    "oynuyordu (8/8 baseline aynı hash DEĞİL). `overflow: hidden` katmanı " +
+    "dondurur; kökten çözüm KARARLAR-BEKLEYEN §12'deki 85vh sığdırma kararı.",
+};
+
+const STYLE_PATH_RE = /\bstylePath\s*:/;
+
+function usesStylePath(content: string): boolean {
+  return STYLE_PATH_RE.test(content);
+}
+
+/**
+ * `toHaveScreenshot`a verilen `stylePath` KULLANAN test BAŞLIKLARI —
+ * `preserveScrollLeft` bekçisinden farklı olarak dosya değil TEST anahtarı:
+ * aynı dosyada birden çok kadraj olabilir ve yalnız biri `stylePath` taşıyor
+ * olabilir (bugünkü durum tam budur — `leaves-visual.spec.ts`teki DÖRT
+ * kadrajdan yalnız biri).
+ */
+function stylePathTestKeys(specFiles: string[], e2eRoot: string): Set<string> {
+  const keys = new Set<string>();
+  for (const fileName of specFiles) {
+    const full = path.join(e2eRoot, fileName);
+    for (const specTest of screenshotTestsOf(full)) {
+      const body = readFileSync(full, "utf8").slice(specTest.start, specTest.end);
+      if (usesStylePath(body)) keys.add(`${fileName} :: ${specTest.title}`);
+    }
+  }
+  return keys;
+}
+
+describe("stylePath kaçış kapısı — yalnız gerekçeli izin listesindeki testlerde", () => {
+  const specFiles = readdirSync(e2eDir).filter(isVisualSpecFile);
+
+  it("izin listesinde OLMAYAN bir test stylePath kullanmaz", () => {
+    const used = stylePathTestKeys(specFiles, e2eDir);
+    const unlisted = [...used].filter((key) => !(key in STYLE_PATH_ALLOWLIST));
+
+    expect(
+      unlisted,
+      unlisted.map((k) => `${k} — stylePath KULLANIYOR ama izin listesinde YOK (gerekçesiz)`).join("\n"),
+    ).toEqual([]);
+  });
+
+  it("izin listesindeki HER giriş hâlâ stylePath kullanıyor (bayat giriş yok)", () => {
+    const used = stylePathTestKeys(specFiles, e2eDir);
+    const stale = Object.keys(STYLE_PATH_ALLOWLIST).filter((key) => !used.has(key));
+
+    expect(
+      stale,
+      stale.map((k) => `${k} — izin listesinde ama artık stylePath KULLANMIYOR (bayat giris)`).join("\n"),
+    ).toEqual([]);
+  });
+});
+
+// FIX-IZN · Playwright 1.61.1 TUZAĞI (ölçüldü): `toHaveScreenshot({ style })`
+// seçeneği SESSİZCE yok sayılıyor — `stylePath` çalışıyor, `style` çalışmıyor.
+// Bu bekçi `style:` kullanımını KOŞULSUZ kırmızıya düşürür; kaçış kapısı YOK,
+// çünkü doğru araç zaten var (`stylePath`) ve `style` hiçbir zaman meşru
+// DEĞİLDİR.
+//
+// 🔴 DÜZ METİN REGEX DEĞİL, AST: `stylePath: path.join(...)` gibi bir değerin
+// İÇİNDEKİ parantez düz bir `[^)]*` deseninin `toHaveScreenshot(` çağrısını
+// ERKEN kapatmasına yol açar (ölçüldü — mutasyon testinde yakalandı) ve `style:`
+// hiç görülmeden atlanır. AST, ObjectLiteralExpression özelliklerini parantez
+// DERİNLİĞİNDEN bağımsız okur.
+function usesStyleOption(file: string): boolean {
+  const source = sourceOf(file);
+  let found = false;
+  function walk(node: ts.Node) {
+    if (found) return;
+    if (ts.isCallExpression(node) && /(^|\.)toHaveScreenshot$/.test(node.expression.getText(source))) {
+      for (const arg of node.arguments) {
+        if (!ts.isObjectLiteralExpression(arg)) continue;
+        for (const prop of arg.properties) {
+          if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) && prop.name.text === "style") {
+            found = true;
+            return;
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, walk);
+  }
+  walk(source);
+  return found;
+}
+
+describe("toHaveScreenshot({ style }) YASAK — Playwright 1.61.1'de sessizce yok sayılır", () => {
+  const specFiles = readdirSync(e2eDir).filter(isVisualSpecFile);
+
+  it("hiçbir gorsel spec toHaveScreenshot çağrısında style: seçeneği KULLANMAZ", () => {
+    const offenders = specFiles.filter((fileName) => usesStyleOption(path.join(e2eDir, fileName)));
+
+    expect(
+      offenders,
+      offenders
+        .map((f) => `${f} — toHaveScreenshot({ style }) kullanıyor: style sessizce yok sayılır, stylePath kullan`)
+        .join("\n"),
+    ).toEqual([]);
   });
 });
 

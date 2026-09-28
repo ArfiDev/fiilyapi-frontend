@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { Button, Field, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { formatAmount } from "@/lib/format";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { BackendError } from "@/lib/api/unwrap";
@@ -127,6 +128,19 @@ export function BoqItemFormModal({
   const [formError, setFormError] = useState<string | null>(null);
   // Onay adimi AYNI diyalogun icindedir; ikinci modal acilmaz (spec §7.5.2).
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+  // SEKME-F1.3b — taban anlık görüntüsü (yalnız string alanlar, mount'ta bir kez).
+  const [initialSnapshot] = useState({ groupId, groupName, code, description, unit, quantity, unitPrice });
+  const isDirty =
+    groupId !== initialSnapshot.groupId ||
+    groupName !== initialSnapshot.groupName ||
+    code !== initialSnapshot.code ||
+    description !== initialSnapshot.description ||
+    unit !== initialSnapshot.unit ||
+    quantity !== initialSnapshot.quantity ||
+    unitPrice !== initialSnapshot.unitPrice;
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "İş kalemi formu");
 
   const groupRef = useRef<HTMLSelectElement>(null);
   const groupNameRef = useRef<HTMLInputElement>(null);

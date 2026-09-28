@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { backendClient } from "@/lib/api/client";
@@ -7,6 +8,7 @@ import {
   CHART_ACCOUNTS_MAX_LIMIT,
   type ChartAccountResponse,
 } from "@/lib/api/hooks/useChartOfAccounts";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { JournalEntryFormModal } from "./JournalEntryFormModal";
 
@@ -144,5 +146,46 @@ describe("JournalEntryFormModal · hesap seçicisi katalog tavanı", () => {
     // Gerçek yapraklar yerinde: süzgeç kümeyi boşaltarak "geçmiş" olmaz.
     expect(texts).toContain("100 · Kasa");
     expect(texts).toContain("492 · Gelecek Yıllara Ait Gelirler");
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi (O8 emsali). */
+describe("JournalEntryFormModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", async () => {
+    await optionTexts();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("açıklama alanı değiştirildi → kirli", async () => {
+    const user = userEvent.setup();
+    await optionTexts();
+    await user.type(screen.getByTestId("mu-entry-description"), "Kira ödemesi");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: { id: "e1" },
+      error: undefined,
+      response: new Response(),
+    } as never);
+    const onClose = vi.fn();
+    const { unmount } = render(
+      <QueryClientProvider client={client}>
+        <JournalEntryFormModal entryId={null} onClose={onClose} />
+      </QueryClientProvider>,
+    );
+    const select = screen.getByTestId("mu-line-account-0");
+    await waitFor(() => expect(within(select).getAllByRole("option").length).toBeGreaterThan(1));
+    await user.type(screen.getByTestId("mu-entry-description"), "Kira ödemesi");
+    await user.selectOptions(screen.getByTestId("mu-line-account-0"), "100 · Kasa");
+    await user.selectOptions(screen.getByTestId("mu-line-account-1"), "600 · Yurt İçi Satışlar");
+    await user.type(screen.getByTestId("mu-line-debit-0"), "100");
+    await user.type(screen.getByTestId("mu-line-credit-1"), "100");
+    await user.click(screen.getByTestId("mu-entry-dialog-save"));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

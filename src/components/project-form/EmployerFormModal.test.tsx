@@ -4,6 +4,7 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import { EmployerFormModal } from "./EmployerFormModal";
 import { useCreateEmployer } from "@/lib/api/hooks/useEmployerMutations";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useEmployerMutations", () => ({ useCreateEmployer: vi.fn() }));
 
@@ -108,5 +109,20 @@ describe("EmployerFormModal (F7)", () => {
     ).toBeInTheDocument();
     expect(onCreated).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("SEKME-F1.3b · açıldı/dokunulmadı → false; ünvan yazıldı → true; başarılı kayıt (çağıran kapatınca) → false", () => {
+    vi.mocked(useCreateEmployer).mockReturnValue({ mutate, isPending: false } as never);
+    const { unmount } = render(<EmployerFormModal onClose={onClose} onCreated={onCreated} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    fireEvent.change(screen.getByLabelText("Ticari Ünvan"), {
+      target: { value: "ABC İnşaat A.Ş." },
+    });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // Başarılı kayıtta `onCreated` çağrılır; çağıran modalı kapatır (unmount).
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

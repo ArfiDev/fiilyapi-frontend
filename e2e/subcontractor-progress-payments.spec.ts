@@ -64,7 +64,7 @@ test("taşeron: Aktif Taşeron KPI'ı 2'de kalır (sc-3 kanıt kaydı distinct s
 
   await page.goto("/hakedisler/taseron");
   await expect(page.getByTestId("thk-kpi-strip")).toBeVisible();
-  const activeCard = page.getByText("Aktif Taşeron").locator("..");
+  const activeCard = page.locator("main").getByText("Aktif Taşeron").locator("..");
   await expect(activeCard.getByTestId("thk-kpi-value")).toHaveText("2");
 });
 
@@ -74,19 +74,19 @@ test("taşeron: filtreler URL state (yazma, kalıcılık, paylaşılan URL)", as
   // 1) Seçim URL'ye yazılır.
   await page.goto("/hakedisler/taseron");
   await expect(page.getByTestId("thk-kpi-strip")).toBeVisible();
-  await page.getByLabel("Durum filtresi").selectOption("paid");
+  await page.locator("main").getByLabel("Durum filtresi").selectOption("paid");
   await expect(page).toHaveURL(/status=paid/);
 
   // 2) Sayfa yenilenince filtre korunur.
   await page.reload();
-  await expect(page.getByLabel("Durum filtresi")).toHaveValue("paid");
+  await expect(page.locator("main").getByLabel("Durum filtresi")).toHaveValue("paid");
 
   // 3) Paylaşılan URL doğrudan filtreli açılır — yalnız `paid` (scpp-1)
   // görünür, diğer durumlardaki sabit kayıtlar (scpp-2..5) basılmaz.
   await page.goto("/hakedisler/taseron?status=paid");
-  await expect(page.getByLabel("Durum filtresi")).toHaveValue("paid");
+  await expect(page.locator("main").getByLabel("Durum filtresi")).toHaveValue("paid");
   await expect(page.getByRole("link", { name: "Aydın Elektrik Taah." }).first()).toBeVisible();
-  await expect(page.getByText("Çelik İnşaat Taah.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Çelik İnşaat Taah.")).toHaveCount(0);
 });
 
 test("taşeron: liste → detay geçişi", async ({ page }) => {
@@ -113,12 +113,12 @@ test("taşeron: sözleşme seçim adımı (hiç hakedişi olmayan sözleşme de 
   // sınır ("yalnız en az bir hakedişi olan sözleşmeler görünür") bitti; bunu
   // kanıtlamak için hiç hakedişi olmayan `sc-3` (Yılmaz Boya A.Ş.) da seçim
   // kutusunda görünür olmalı.
-  await expect(page.getByLabel("Taşeron Sözleşmesi")).toBeVisible();
+  await expect(page.locator("main").getByLabel("Taşeron Sözleşmesi")).toBeVisible();
   await expect(
     page.getByRole("option", { name: /Yılmaz Boya A\.Ş\./ }),
   ).toHaveCount(1);
 
-  await page.getByLabel("Taşeron Sözleşmesi").selectOption("sc-1");
+  await page.locator("main").getByLabel("Taşeron Sözleşmesi").selectOption("sc-1");
   await page.getByRole("button", { name: "Devam Et" }).click();
   await expect(page).toHaveURL(/\/hakedisler\/taseron\/yeni\?contract=sc-1$/);
   // Final inceleme F-7 sonrası başlık parçalıdır ("Hakediş" + pending `#—` +
@@ -282,16 +282,16 @@ test("taşeron: Günlükten Doldur miktarları yazar", async ({ page }) => {
   await page.goto("/hakedisler/taseron/yeni?contract=sc-2");
   await expect(page.getByTestId("thf-hierarchy")).toBeVisible();
 
-  await page.getByLabel("Dönem").selectOption("7");
-  await page.getByLabel("Hakediş yılı").fill("2026");
+  await page.locator("main").getByLabel("Dönem").selectOption("7");
+  await page.locator("main").getByLabel("Hakediş yılı").fill("2026");
 
   await page.getByTestId("thf-diary-fill").click();
 
   await expect(page.getByTestId("thf-diary-fill-notice")).toContainText(
     "2 satır günlük kayıtlardan dolduruldu.",
   );
-  await expect(page.getByLabel("Duvar Örgü İşleri — miktar")).toHaveValue("320.000");
-  await expect(page.getByLabel("Sıva İşleri — miktar")).toHaveValue("260.000");
+  await expect(page.locator("main").getByLabel("Duvar Örgü İşleri — miktar")).toHaveValue("320.000");
+  await expect(page.locator("main").getByLabel("Sıva İşleri — miktar")).toHaveValue("260.000");
   // F-P10 T2 · rozet göçü: rozet artık YALNIZ sunucunun `quantity_source`
   // damgasından basılır — kaydedilmemiş doldurma rozet üretmez.
   await expect(page.getByTestId("thf-diary-source")).toHaveCount(0);

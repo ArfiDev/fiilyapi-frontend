@@ -3,6 +3,7 @@
 import { useEffect, useReducer, useRef, type Dispatch } from "react";
 
 import type { SitePlanWeek } from "@/lib/api/hooks/useSitePlan";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { emptyPlanDraft, isPlanDraftDirty, type PlanDraft } from "./plan-draft";
 import { planDraftReducer, type PlanDraftAction } from "./plan-draft-reducer";
@@ -37,6 +38,8 @@ export function usePlanDraft(plan: SitePlanWeek | undefined, weekStart: string):
     sourceRef.current = plan;
     dispatch({ type: "reset", plan });
   }, [plan, draft]);
+
+  useUnsavedChanges(isPlanDraftDirty(draft), "Şantiye planlaması");
 
   return { draft, dispatch, isDirty: isPlanDraftDirty(draft) };
 }

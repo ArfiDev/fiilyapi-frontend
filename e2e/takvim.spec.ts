@@ -77,6 +77,7 @@ test("🔴 K2: barlarda ilerleme yüzdesi BASILMAZ ve bar TEK PARÇADIR", async 
   await login(page);
   await pinTimeline(page);
   await page.goto(TIMELINE_URL);
+  const content = page.locator("main");
   await expectTimelineLoaded(page);
 
   for (const testId of ["tkv-project-bar", "tkv-section-bar"]) {
@@ -87,7 +88,7 @@ test("🔴 K2: barlarda ilerleme yüzdesi BASILMAZ ve bar TEK PARÇADIR", async 
   // İki parçalı bar (koyu tamamlanan + açık kalan) HİÇ üretilmez: satır başına
   // en fazla BİR bar vardır.
   const bars = await page.getByTestId("tkv-section-bar").count();
-  const rows = await page.locator(".tkv__row--section").count();
+  const rows = await content.locator(".tkv__row--section").count();
   expect(rows).toBe(3);
   expect(bars).toBe(2);
   // Gerekçe EKRANDA (title'da değil).

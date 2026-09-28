@@ -7,6 +7,7 @@ import type { LeaveBalanceResponse, LeaveRequestResponse } from "@/lib/api/hooks
 import { BackendError } from "@/lib/api/unwrap";
 
 import { LeaveRejectModal } from "./LeaveRejectModal";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 /**
  * F-IZN T4 · `Form - Izin Reddi.dc.html` diyaloğu.
@@ -209,5 +210,23 @@ describe("LeaveRejectModal — gönderim (POST /leave-requests/{id}/reject)", ()
       "Talep zaten karara bağlandı.",
     );
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("LeaveRejectModal — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı/dokunulmadı → false; gerekçe yazıldı → true; başarılı kayıt → false (kapanış)", async () => {
+    const user = userEvent.setup();
+    let unmount = () => {};
+    const onClose = vi.fn(() => unmount());
+    ({ unmount } = render(
+      <LeaveRejectModal request={request()} balances={[balance()]} onClose={onClose} />,
+    ));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByTestId("iz-reject-reason"), "Belge eksik");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.click(screen.getByTestId("iz-reject-submit"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

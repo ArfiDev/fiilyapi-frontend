@@ -24,6 +24,7 @@ import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { cx } from "@/lib/cx";
 import { normalizeDecimalInput, sumDecimalStrings } from "@/lib/decimal";
 import { formatDecimal } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import {
   BRACKETS_CARD_TITLE,
   BRACKETS_FULL_SET_WARNING,
@@ -100,6 +101,16 @@ export function PayrollRatesScreen() {
 
   const upsertRate = useUpsertPayrollRate();
   const replaceBrackets = useReplacePayrollTaxBrackets();
+
+  // SEKME-F1.3b · dirty (tercih 1, hazır): iki bağımsız "kirli" kaynağı
+  // (oran/dilim taslakları) TEK bayrağa OR'lanır. ASYNC TABAN DEĞİL
+  // (taslaklar yalnız dokununca dolar). Sıfırlama ZATEN VAR — `saveRates`/
+  // `saveBrackets` `onSuccess`inde ilgili anahtar drafts'tan siliniyor.
+  // 🔴 Hook, erken dönüşlerden (`Yükleniyor…`/`AccessDenied`) ÖNCE çağrılır.
+  useUnsavedChanges(
+    Object.keys(rateDrafts).length > 0 || Object.keys(bracketDrafts).length > 0,
+    "Bordro oranları",
+  );
 
   const queries = [ratesQuery, bracketsQuery, periodsQuery];
   if (queries.some((q) => q.isLoading)) return <p className="settings-note">Yükleniyor…</p>;

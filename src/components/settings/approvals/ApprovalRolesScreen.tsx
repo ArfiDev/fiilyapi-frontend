@@ -32,6 +32,7 @@ import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { cx } from "@/lib/cx";
 import { formatCurrencyTight } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import {
   APPROVAL_PENDING_COLUMN_LABEL,
   APPROVAL_PENDING_COLUMN_REASON,
@@ -92,6 +93,15 @@ export function ApprovalRolesScreen() {
     setThresholdDraft(null);
     setThresholdError(null);
   }, [savedThreshold]);
+
+  // SEKME-F1.3b (B1, kullanıcı kararı) · YALNIZ eşik alt-formu bağlanır.
+  // Kullanıcı×rol rozet ızgarası her tıklamada ANINDA kaydolur (`toggleRow`),
+  // ayrı taslak YOK — o kısım bağlanmaz (çift kayıt/anlamsız dirty olurdu).
+  // dirty: `thresholdDraft !== null` zaten "dokunuldu" sinyali (tercih 1).
+  // 🔴 ASYNC TABAN: taban `settingsQuery.data.approval_threshold_try`;
+  // yukarıdaki efekt kayıttan SONRA da (savedThreshold değişince) taslağı
+  // KENDİLİĞİNDEN `null`a döndürüp dirty'yi sıfırlıyor (İYİ ÖRNEK, envanter).
+  useUnsavedChanges(thresholdDraft !== null, "Onay eşiği");
 
   const updateSettings = useUpdateApprovalSettings();
   const setRoles = useSetApprovalRoles();

@@ -27,7 +27,7 @@ test("gorsel: ayarlar kullanicilar", async ({ page }) => {
 test("gorsel: ayarlar roller", async ({ page }) => {
   await login(page);
   await page.goto("/ayarlar/roller");
-  await expect(page.getByText("Modül Erişimleri")).toBeVisible();
+  await expect(page.locator("main").getByText("Modül Erişimleri")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);
@@ -40,7 +40,7 @@ test("gorsel: ayarlar izin matrisi", async ({ page }) => {
   // "Genel" hem ayarlar sidebar grup basligi hem matris icerik grup basligi olarak
   // gectigi icin iddiayi yalnizca matris icerik bolgesine (.matrix-wrap) sabitliyoruz —
   // aksi halde strict-mode "resolved to N elements" hatasi alinir.
-  await expect(page.locator(".matrix-wrap").getByText("Genel")).toBeVisible();
+  await expect(page.locator("main .matrix-wrap").getByText("Genel")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { Button, DateInput, Field, Input, Textarea } from "@/components/ui";
 import { WarningTriangleIcon } from "@/components/ui/icons";
 import { formatAmount } from "@/lib/format";
@@ -141,6 +142,14 @@ function JournalEntryFormBody({
   );
   const [nextKey, setNextKey] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
+  // SEKME-F1.3b — taban anlık görüntüsü; edit kipinde `entry` prop zaten
+  // sunucudan yüklü geldikten SONRA bu bileşen mount edilir (dış `JournalEntryFormModal`
+  // yalnız `entryQuery` başarıyla dönünce bu gövdeyi render eder), bu yüzden
+  // GET yarışı yoktur.
+  const [initialForm] = useState(form);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Yevmiye fişi formu");
 
   // 🔴 `allPages`: SEÇİCİ KATALOGUN TAMAMINI İSTER. Tek sayfa (tavan 200)
   // çekildiğinde canlı tohumun 316 hesabının 116'sı seçenekte HİÇ görünmüyordu

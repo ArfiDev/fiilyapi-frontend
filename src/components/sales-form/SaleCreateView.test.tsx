@@ -14,6 +14,7 @@ import {
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { useSession } from "@/components/shell/SessionProvider";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useProjectUnits", () => ({ useProjectUnits: vi.fn() }));
@@ -285,5 +286,22 @@ describe("SaleCreateView — ?unit= tohumlaması (no 248)", () => {
     mockUnits(makeUnit({ id: "u-1" }));
     rerender(<SaleCreateView />);
     expect(screen.getByTestId("satis-form-unite")).toHaveValue("");
+  });
+});
+
+describe("SaleCreateView — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı/dokunulmadı → false (proje/ünite URL tohumu SAYILMAZ); alıcı adı yazıldı → true; kayıt sonrası (yönlendirme) → false", () => {
+    searchParams = new URLSearchParams("proje=p-2&unit=u-1");
+    const { unmount } = render(<SaleCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    fireEvent.change(screen.getByTestId("satis-form-alici-ad"), {
+      target: { value: "Ahmet Yılmaz" },
+    });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // "Satışı Kaydet" başarılı olunca ekran listeye yönlendirir (unmount).
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { DocumentUploadModal } from "./DocumentUploadModal";
 import { useUploadDocument } from "@/lib/api/hooks/useDocumentMutations";
@@ -209,5 +210,34 @@ describe("DocumentUploadModal", () => {
     expect(screen.getByLabelText("Dosya")).not.toHaveAttribute("multiple");
     expect(screen.queryByText(/sürükle/i)).toBeNull();
     expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("DocumentUploadModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    render(<DocumentUploadModal projectId="p-1" siteId="s-1" folders={FOLDERS} onClose={vi.fn()} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("dosya seçildi → kirli", async () => {
+    const user = userEvent.setup();
+    render(<DocumentUploadModal projectId="p-1" siteId="s-1" folders={FOLDERS} onClose={vi.fn()} />);
+    await pickFile(user);
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { unmount } = render(
+      <DocumentUploadModal projectId="p-1" siteId="s-1" folders={FOLDERS} onClose={onClose} />,
+    );
+    await pickFile(user);
+    await user.click(screen.getByRole("button", { name: "Yükle" }));
+    lastCallbacks().onSuccess?.({});
+    expect(onClose).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

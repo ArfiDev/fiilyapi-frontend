@@ -5,6 +5,7 @@ import { SubcontractorFormModal } from "./SubcontractorFormModal";
 import { useCreateSubcontractor } from "@/lib/api/hooks/useSubcontractorMutations";
 import type { SubcontractorResponse } from "@/lib/api/hooks/useSubcontractorMutations";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useSubcontractorMutations", () => ({
   useCreateSubcontractor: vi.fn(),
@@ -147,5 +148,37 @@ describe("SubcontractorFormModal · paylaşılan '+ Taşeron Ekle' modalı", () 
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Vazgeç" }));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("SubcontractorFormModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false", () => {
+    setup();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("`initialName` ile ön-dolu açılınca → false (taban initialName'dir)", () => {
+    setup("Yılmaz Boya");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("ünvan değişti → true", () => {
+    setup();
+    fillName();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: onCreated) → unmount ile false", () => {
+    vi.mocked(useCreateSubcontractor).mockReturnValue({ mutate, isPending: false } as never);
+    mutate.mockImplementation((_body, options) => options.onSuccess({ id: "s-1" } as SubcontractorResponse));
+    const { unmount } = render(
+      <SubcontractorFormModal onClose={onClose} onCreated={onCreated} />,
+    );
+    fillName();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+    expect(onCreated).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

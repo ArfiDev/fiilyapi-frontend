@@ -1,7 +1,17 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { test, expect, type Page } from "@playwright/test";
 
 import { pinLeaveRequests } from "./leaves-helpers";
 import { prepareFrame } from "./visual-scroll";
+
+// FIX-IZN · yalnız "izin talep formu gorsel" kadrajı için (bkz. aşağıdaki
+// "izin-talep-formu" testi + `e2e/visual-styles/scroll-layer-freeze.css`teki
+// dosya başı gerekçe). `import.meta.url` kullanılır çünkü bu depo ESM'dir
+// (`package.json` `"type": "module"`) — `__dirname` burada YOKTUR
+// (`src/test-guards/visual-frame-guard.test.ts`teki `fileURLToPath` emsali).
+const E2E_DIR = fileURLToPath(new URL(".", import.meta.url));
 
 // F-IZN T7 · İZ (`/personel/izinler`) görsel testleri — kanon mockup'lar
 // `İK - İzin Yönetimi.dc.html` (ekran) · `Form - Izin Talebi.dc.html` (talep
@@ -130,7 +140,7 @@ async function expectSummaryLoaded(page: Page) {
   await expect(page.getByTestId("iz-carried-per-2")).toHaveText("6");
   await expect(page.getByTestId("iz-balances-empty")).toHaveCount(0);
   await expect(page.getByTestId("iz-balances-error")).toHaveCount(0);
-  await expect(page.getByText(BALANCES_LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main").getByText(BALANCES_LOADING_TEXT)).toHaveCount(0);
   // 📅 `page.clock` KANITI: yıl seçici dondurulmuş takvimden 2026'ya düştü —
   // fikstür yılı budur ve bakiye satırları ancak bu yılda gelir.
   await expect(page.getByTestId("iz-year-select")).toHaveValue("2026");
@@ -153,7 +163,7 @@ async function expectPendingLoaded(page: Page) {
   await expect(page.getByTestId("iz-pending-row-lv-w2")).toHaveCount(0);
   await expect(page.getByTestId("iz-pending-empty")).toHaveCount(0);
   await expect(page.getByTestId("iz-pending-error")).toHaveCount(0);
-  await expect(page.getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main").getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
   // Karar akışı BAĞLI (T4) — "henüz bağlanmadı" bandı kadraja giremez.
   await expect(page.getByTestId("iz-decision-reason")).toHaveCount(0);
   await expect(page.getByTestId("iz-decision-error")).toHaveCount(0);
@@ -235,7 +245,7 @@ test("izin yonetimi (bos) gorsel", async ({ page }) => {
   await expect(page.getByTestId("iz-pending-empty")).toHaveText("Onay bekleyen izin talebi yok.");
   await expect(page.getByTestId("iz-pending-row-lv-1")).toHaveCount(0);
   await expect(page.getByTestId("iz-pending-error")).toHaveCount(0);
-  await expect(page.getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
+  await expect(page.locator("main").getByText(PENDING_LOADING_TEXT)).toHaveCount(0);
   // ⚠️ KPI "Bekleyen Talep 7" ile tablo "(0)" ÇELİŞMEZ, iki AYRI uçtandır ve
   // ekran bunu bilerek böyle basar (K5 gerekçesi) — kare de öyle kalır.
 
@@ -312,7 +322,21 @@ test("izin talep formu gorsel", async ({ page }) => {
   await expect(dialog.getByTestId("iz-request-error")).toHaveCount(0);
 
   await prepareFrame(page);
-  await expect(page).toHaveScreenshot("izin-talep-formu.png", { fullPage: true });
+  // FIX-IZN (opus teşhisi, kanıtlı): `.modal.iz-modal--request` 85vh'e
+  // sığmadığı için kaydırılabilir (`overflow-y: auto`) ve Chromium onu
+  // BİLEŞİK bir kaydırma katmanı olarak çiziyor — ardışık yakalamalar
+  // arasında raster bayt düzeyinde gidip geliyordu (8/8 baseline aynı hash
+  // DEĞİL). Kökten çözüm diyaloğu 85vh'e sığdırmaktır (KARARLAR-BEKLEYEN
+  // §12, henüz yapılmadı); `scroll-layer-freeze.css` o karara kadar SADECE bu
+  // kadrajda `overflow: hidden` ile katmanı dondurur (kaydırma zaten 0'da,
+  // görünen içerik AYNI kalır). `stylePath` kullanılır, `style` DEĞİL —
+  // Playwright 1.61.1'de `toHaveScreenshot({ style })` SESSİZCE yok sayılıyor
+  // (ölçüldü). Kullanım `src/test-guards/visual-frame-guard.test.ts`teki
+  // gerekçeli izin listesiyle bekçilenir.
+  await expect(page).toHaveScreenshot("izin-talep-formu.png", {
+    fullPage: true,
+    stylePath: path.join(E2E_DIR, "visual-styles/scroll-layer-freeze.css"),
+  });
 });
 
 /* ── 4) R · İzin Talebini Reddet diyaloğu ────────────────────────────────── */

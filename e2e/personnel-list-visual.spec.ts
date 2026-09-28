@@ -50,7 +50,7 @@ test("personel liste (dolu) gorsel", async ({ page }) => {
   await expect(page.getByTestId("personel-row-per-1")).toBeVisible();
   await expect(page.getByTestId("personel-row-per-6")).toBeVisible();
   await expect(page.getByTestId("personel-kpi-strip")).toContainText("6");
-  await expect(page.getByText("6 personelden 1–6 gösteriliyor").first()).toBeVisible();
+  await expect(page.locator("main").getByText("6 personelden 1–6 gösteriliyor").first()).toBeVisible();
   // Tür rozetlerinin üçü de kadrajda — palet tam basılır (Şirket/Taşeron/Genel).
   await expect(page.getByTestId("personel-row-per-1").getByText("Şirket")).toBeVisible();
   await expect(page.getByTestId("personel-row-per-3").getByText("Taşeron")).toBeVisible();
@@ -98,8 +98,10 @@ test("personel liste (bos) gorsel", async ({ page }) => {
   // kapsam daraltmadan yapılan `getByText` strict-mode ihlali verir (F-PL/
   // F-ST baseline turu dersi, yalnız Linux CI'da patlar).
   await expect(page.getByRole("heading", { level: 1, name: "İnsan Kaynakları" })).toBeVisible();
-  await expect(page.getByText("Henüz personel kaydı yok.").first()).toBeVisible();
-  await expect(page.getByText("“+ Personel Ekle” ile ilk kaydı oluşturun.").first()).toBeVisible();
+  await expect(page.locator("main").getByText("Henüz personel kaydı yok.").first()).toBeVisible();
+  await expect(
+    page.locator("main").getByText("“+ Personel Ekle” ile ilk kaydı oluşturun.").first(),
+  ).toBeVisible();
   // Sıfır KPI sunucudan gelir; ekran sahte sayı basmaz.
   await expect(page.getByTestId("personel-kpi-strip")).toContainText("0");
   // Süzgeçsiz boş listede kırpılma uyarısı BASILMAZ.

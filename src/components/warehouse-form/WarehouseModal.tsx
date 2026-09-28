@@ -10,6 +10,7 @@ import { useSiteFanOutOptions } from "@/lib/api/hooks/useSiteFanOutOptions";
 import { useCreateWarehouse } from "@/lib/api/hooks/useStockMutations";
 import { listTruncationMessage } from "@/lib/list-truncation";
 import { stockErrorMessage } from "@/lib/api/stock-error";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildWarehouseBody } from "./build-body";
 import {
@@ -52,6 +53,12 @@ export function WarehouseModal({ onClose }: WarehouseModalProps) {
   const [siteId, setSiteId] = useState(EMPTY_OPTION_VALUE);
   const [shouldReturnToEntry, setShouldReturnToEntry] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // SEKME-F1.3b · dirty (tercih 1): oluşturma formu, taban boş. ASYNC TABAN
+  // DEĞİL. Kayıttan sonra `router.push`/`onClose()` unmount ile sıfırlar.
+  const isDirty = name.trim() !== "" || siteId !== EMPTY_OPTION_VALUE || shouldReturnToEntry;
+  // KURAL 7 · Modal'a isDirty VERİLMEZ, doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Depo");
 
   const isPending = createWarehouse.isPending;
   const selectedSite = siteOptions.options.find((option) => option.siteId === siteId) ?? null;

@@ -26,6 +26,7 @@ import {
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
@@ -694,5 +695,69 @@ describe("UnitImportView — KISMİ AKTARIM ve sessiz başarı YASAĞI", () => {
     expect(screen.queryByTestId("excel-form-dosya-ozet")).toBeNull();
     expect(screen.queryByTestId("excel-form-sayaclar")).toBeNull();
     expect(screen.getByTestId("excel-form-dosya-bos")).toBeInTheDocument();
+  });
+});
+
+describe("UnitImportView — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false", () => {
+    render(<UnitImportView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("proje seçilip dosya yüklendi → true", async () => {
+    render(<UnitImportView />);
+    await fillAndValidate();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı aktarma sonrası → false (ORTAK EMİR KURAL 1, B4: sayfadan çıkılmasa da TEMİZ)", async () => {
+    render(<UnitImportView />);
+    await fillAndValidate();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByTestId("excel-form-aktar"));
+    await waitFor(() => expect(importAsync).toHaveBeenCalled());
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+    // Sayfadan ÇIKILMADI (sonuç ekranda kalır) — bileşen hâlâ MONTE.
+    expect(screen.getByTestId("excel-form-govde")).toBeInTheDocument();
+  });
+});
+
+/**
+ * SEKME-F1.6-Y1 — gerçek yol: proje seçimi `handleChangeProject` ile
+ * `router.replace`den `?proje=`e yazılır; sekmeye dönüşte veya yenilemede
+ * tohum efekti aynı değeri geri okur. Taban tohumla BİRLİKTE kaymazsa form
+ * kullanıcı hiçbir şey yapmadan `isDirty=true` doğardı (kusur no 2).
+ */
+describe("UnitImportView — SEKME-F1.6-Y1: URL tohumu tabanı da kaydırır", () => {
+  it("`?proje=` ile açılış, sorgular çözülünce KİRLİ olmaz", () => {
+    searchParams = new URLSearchParams("proje=prj-1");
+    render(<UnitImportView />);
+    expect(screen.getByTestId("excel-form-proje")).toHaveValue("prj-1");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("aynı açılış + kullanıcı PROJEYİ DEĞİŞTİRİR → kirli", () => {
+    vi.mocked(useProjects).mockReturnValue(
+      queryStub({
+        items: [
+          { id: "prj-1", name: "Yeşilvadi Rezidans" },
+          { id: "prj-2", name: "2. Etap Rezidans" },
+        ],
+      }),
+    );
+    searchParams = new URLSearchParams("proje=prj-1");
+    render(<UnitImportView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    fireEvent.change(screen.getByTestId("excel-form-proje"), { target: { value: "prj-2" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("aynı açılış + dosya seçmek → kirli (tohum yalnız `values`i kapsar)", async () => {
+    searchParams = new URLSearchParams("proje=prj-1");
+    render(<UnitImportView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    selectFile(xlsxFile());
+    await waitFor(() => expect(validateAsync).toHaveBeenCalled());
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
   });
 });

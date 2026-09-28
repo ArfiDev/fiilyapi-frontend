@@ -18,6 +18,7 @@ import {
 import { PROGRESS_PAYMENT_QUERY_KEY, type ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 // Ayarlar modal/form kanonu birebir izlenir (SectionFormModal/BoqItemFormModal
 // deseniyle ayni): settings-form sinifi settings.css'ten, ConfirmDialog yikici
 // aksiyonlar icin paylasilan onay diyalogu.
@@ -118,6 +119,9 @@ export function ProgressPaymentStatusActions({ detail }: ProgressPaymentStatusAc
   const rejectBody: RejectBody | null =
     trimmedReason.length === 0 ? null : { reason: trimmedReason };
   const rejectDisabled = rejectBody === null;
+  // KURAL 7 · settings/Modal'a isDirty VERİLMEZ. Doğrudan kayda bağlanır;
+  // yalnız Reddet diyaloğu AÇIKKEN anlamlıdır (`rejectOpen`).
+  useUnsavedChanges(rejectOpen && rejectBody !== null, "Hakediş reddi");
 
   function confirmReject() {
     if (rejectBody === null) return;

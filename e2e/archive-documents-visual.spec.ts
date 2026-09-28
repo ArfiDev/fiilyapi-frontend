@@ -52,7 +52,7 @@ async function expectArchiveLoaded(page: Page) {
   await expect(page.getByRole("button", { name: /Hakediş_47_Güneşkent\.pdf/ }).first()).toContainText(
     "1,2 MB · Bugün",
   );
-  await expect(page.locator(".sdoc-grid").first().locator(".sdoc-card")).not.toHaveCount(0);
+  await expect(page.locator("main").locator(".sdoc-grid").first().locator(".sdoc-card")).not.toHaveCount(0);
   // "Son Eklenenler" listesi de dolu (E12 166-184).
   await expect(
     page.getByRole("list", { name: "Son eklenen belgeler" }).getByRole("listitem"),
@@ -67,7 +67,7 @@ test("belge arsivi (dolu) gorsel", async ({ page }) => {
 
   // E12 118 — breadcrumb; kadraj başlık şeridini de taşısın.
   // `.first()` — akış-SSR çift kopyası metin locator'larını da ikiye çözer.
-  await expect(page.getByText("Kule A / Hakedişler").first()).toBeVisible();
+  await expect(page.locator("main").getByText("Kule A / Hakedişler").first()).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);
@@ -91,7 +91,7 @@ test("belge arsivi (bos durum) gorsel", async ({ page }) => {
   await expect(panel.getByRole("link", { name: /Kule A/ }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Belge Arşivi" })).toBeVisible();
   await expect(
-    page.getByText("Belgeleri görmek için soldaki panelden bir proje seçin."),
+    page.locator("main").getByText("Belgeleri görmek için soldaki panelden bir proje seçin."),
   ).toBeVisible();
   // Proje seçilmeden "Son Eklenenler" bloğu HİÇ basılmaz.
   await expect(page.getByRole("list", { name: "Son eklenen belgeler" })).toHaveCount(0);

@@ -34,12 +34,13 @@ function submitButton(page: Page) {
 test("ŞS'deki '+ Stok Girişi' gerçek formu açar (ComingSoon DEĞİL)", async ({ page }) => {
   await login(page);
   await page.goto("/projeler/p-1/santiyeler/s-1/stok");
+  const content = page.locator("main");
 
   await page.getByTestId("santiye-stok-giris-link").click();
 
   await expect(page).toHaveURL(/\/santiyeler\/s-1\/stok\/giris$/);
   await expect(page.getByRole("heading", { level: 1, name: "Stok Girişi" })).toBeVisible();
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(content.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
 });
 
 test("depo ROTADAN ön doldurulur; merkez depo listede durur, query parametresi YOKTUR", async ({

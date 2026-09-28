@@ -29,7 +29,7 @@ test("poz dagilimi izgarasi gorsel", async ({ page }) => {
   // sayaçlar ve sabitlenen hücre değeri basıldı.
   await expect(page.getByTestId("cdist-site-column")).toHaveCount(2);
   await expect(page.getByTestId("cdist-distributed-count")).toHaveText("4/4");
-  await expect(page.getByLabel("03.001 · A-Blok Şantiyesi kotası").first()).toHaveValue("1800");
+  await expect(page.locator("main").getByLabel("03.001 · A-Blok Şantiyesi kotası").first()).toHaveValue("1800");
   // Şantiye özet kartları (mockup alt bloğu) da kadrajdadır.
   await expect(page.getByTestId("cdist-summary-card")).toHaveCount(2);
 

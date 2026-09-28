@@ -12,6 +12,7 @@ import { contractTabHref } from "@/components/contracts/contract-tabs";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { useEmployerContract } from "@/lib/api/hooks/useContract";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { useSites } from "@/lib/api/hooks/useSites";
@@ -85,6 +86,17 @@ export function SubcontractorContractCreateView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadQueued, setIsLoadQueued] = useState(false);
+
+  // SEKME-F1.3b (B5, ORTAK EMİR KURAL 1) · dirty = YALNIZ commit edilmemiş
+  // ALAN değerleri (`values`in boş formdan farkı, tercih 1). Taslak
+  // sözleşmenin sunucuda KALEMSİZ durması (yalnız `contractId` set edilmiş
+  // olması) kirli SAYILMAZ — poz satırları `handleCommitItem`/
+  // `handleDeleteItem` ile ANINDA kaydolur, ayrı bir taslak değildir. ASYNC
+  // TABAN DEĞİL (`detailQuery` kalemleri sunucudan gelir ama `values`in
+  // kendisi async seed almaz). Sıfırlama: her iki `submit` yolu da
+  // (taslak/nihai) başarıda `router.push(listHref)` ile unmount eder.
+  const isDirty = JSON.stringify(values) !== JSON.stringify(emptySubcontractorContractFormValues());
+  useUnsavedChanges(isDirty, "Taşeron sözleşmesi");
 
   const projectsQuery = useProjects();
   const sitesQuery = useSites(values.projectId);

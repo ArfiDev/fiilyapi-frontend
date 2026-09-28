@@ -13,6 +13,7 @@ import {
 import type { MeResponse } from "@/lib/auth/types";
 
 import { PayrollRatesScreen } from "./PayrollRatesScreen";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/usePayrollRates", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/usePayrollRates")>()),
@@ -390,5 +391,33 @@ describe("geçersiz ondalık girdi — toplam sütunu", () => {
     await userEvent.clear(employee);
     await userEvent.type(employee, "14,5");
     expect(totalCellOf("SGK Primi işçi payı")).toHaveTextContent("35,00");
+  });
+});
+
+describe("SEKME-F1.3b — kaydedilmemiş değişiklik kaydı", () => {
+  it("yüklendi + dokunulmadı → false", () => {
+    render(<PayrollRatesScreen />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir oran alanı değişti → true", async () => {
+    render(<PayrollRatesScreen />);
+    const employee = screen.getByLabelText("SGK Primi işçi payı");
+    await userEvent.clear(employee);
+    await userEvent.type(employee, "15");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess) → false", async () => {
+    // Reset zaten koddadır (saveRates onSuccess'te draft'ı siler) — mutasyon
+    // mock'u gerçek onSuccess'i çağırarak bunu doğrular.
+    upsertRate.mockImplementation((_input, opts) => opts?.onSuccess?.());
+    render(<PayrollRatesScreen />);
+    const employee = screen.getByLabelText("SGK Primi işçi payı");
+    await userEvent.clear(employee);
+    await userEvent.type(employee, "15");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await userEvent.click(screen.getByTestId("bro-save-rates"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

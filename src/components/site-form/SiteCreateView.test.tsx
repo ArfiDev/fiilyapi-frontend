@@ -10,6 +10,7 @@ import { BackendError } from "@/lib/api/unwrap";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 import { MESSAGES, validateSiteForm } from "./validate";
 import { emptySiteFormValues } from "./form-state";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const PROJECT_ID = "11111111-1111-1111-1111-111111111111";
 const NEW_SITE_ID = "22222222-2222-4222-8222-222222222222";
@@ -511,5 +512,31 @@ describe("SiteCreateView — her doğrulama hatası EKRANDA görünür (§10, §
         `"${key}" alani hatali isaretlenmemis`,
       ).toHaveAttribute("aria-invalid", "true");
     }
+  });
+});
+
+describe("SiteCreateView — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false", () => {
+    render(<SiteCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan yazıldı → true", async () => {
+    const user = userEvent.setup();
+    render(<SiteCreateView />);
+    await user.type(screen.getByLabelText("Şantiye Adı"), "C-Blok Şantiyesi");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: router.push) → unmount ile false", async () => {
+    mutateMock.mockImplementation((_body, opts) => opts?.onSuccess?.({ id: NEW_SITE_ID, code: "STE-1" }));
+    const user = userEvent.setup();
+    const { unmount } = render(<SiteCreateView />);
+    await fillRequired(user);
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await clickSubmit(user);
+    expect(pushMock).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

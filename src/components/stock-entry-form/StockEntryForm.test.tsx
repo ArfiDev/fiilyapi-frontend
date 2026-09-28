@@ -11,6 +11,7 @@ import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { useWarehouses } from "@/lib/api/hooks/useWarehouses";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const PROJECT_ID = "p-1";
 const SITE_ID = "s-1";
@@ -580,5 +581,30 @@ describe("StockEntryForm — yetki", () => {
     render(<StockEntryForm />);
 
     expect(vi.mocked(useModulePermission)).toHaveBeenCalledWith("inventory");
+  });
+});
+
+describe("StockEntryForm — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false (OTOMATİK depo ön doldurma dirty SAYILMAZ)", () => {
+    render(<StockEntryForm />);
+    expect(screen.getByTestId("stok-giris-depo")).toHaveValue("wh-1");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir satır dolduruldu → true", () => {
+    render(<StockEntryForm />);
+    fillValidLine();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: router.push) → unmount ile false", () => {
+    mutate.mockImplementation((_body, options) => options.onSuccess({ id: "se-new-1" }));
+    const { unmount } = render(<StockEntryForm />);
+    fillValidLine();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(submitButton());
+    expect(push).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

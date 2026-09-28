@@ -7,6 +7,7 @@ import { useCreateWarehouse } from "@/lib/api/hooks/useStockMutations";
 
 import { WarehouseModal } from "./WarehouseModal";
 import { KEEP_FLOW_NEEDS_SITE_REASON, WAREHOUSE_TEXT as TEXT } from "./constants";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -208,5 +209,29 @@ describe("WarehouseModal — fan-out eksikleri", () => {
     render(<WarehouseModal onClose={onClose} />);
     expect(screen.queryByTestId("whf-site-fanout-error")).not.toBeInTheDocument();
     expect(screen.queryByTestId("whf-site-truncation")).not.toBeInTheDocument();
+  });
+});
+
+describe("WarehouseModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı + dokunulmadı → false", () => {
+    render(<WarehouseModal onClose={onClose} />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("depo adı yazıldı → true", () => {
+    render(<WarehouseModal onClose={onClose} />);
+    fireEvent.change(screen.getByTestId("whf-name"), { target: { value: "Merkez Depo" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: onClose) → unmount ile false", () => {
+    mutate.mockImplementation((_body, options) => options.onSuccess());
+    const { unmount } = render(<WarehouseModal onClose={onClose} />);
+    fireEvent.change(screen.getByTestId("whf-name"), { target: { value: "Merkez Depo" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    submit();
+    expect(onClose).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

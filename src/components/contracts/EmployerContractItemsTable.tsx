@@ -18,6 +18,7 @@ import type { EmployerItemFormValues } from "@/components/contract-item-form/val
 import type { EmployerItemCreateBody } from "@/components/contract-item-form/build-body";
 import { cx } from "@/lib/cx";
 import { formatAmount, formatQuantity } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import type {
   EmployerContractDetail,
   EmployerContractItemsResponse,
@@ -149,6 +150,13 @@ export function EmployerContractItemsTable({
   const [addingGroupId, setAddingGroupId] = useState<string | null>(null);
   const [newRow, setNewRow] = useState<NewRowValues>(EMPTY_NEW_ROW);
   const [clientError, setClientError] = useState<string | null>(null);
+
+  // SEKME-F1.3b — hücre-içi `drafts` (odak çıkışında ANINDA kaydolur) DIŞARI
+  // BIRAKILIR (kanon); yalnız YENİ SATIR taslağı commit edilmemiştir.
+  useUnsavedChanges(
+    addingGroupId !== null && JSON.stringify(newRow) !== JSON.stringify(EMPTY_NEW_ROW),
+    "İş kalemi satırı",
+  );
 
   function setDraft(itemId: string, patch: InlineRowDraft) {
     setDrafts((prev) => ({ ...prev, [itemId]: { ...prev[itemId], ...patch } }));

@@ -6,6 +6,7 @@ import { Button, Field, Input } from "@/components/ui";
 import { Modal } from "@/components/settings/Modal";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useCreateDocumentFolder } from "@/lib/api/hooks/useDocumentMutations";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "@/components/settings/settings.css";
 import "@/styles/form-shell.css";
 
@@ -34,6 +35,8 @@ export function DocumentFolderModal({ projectId, siteId, onClose }: DocumentFold
   const [formError, setFormError] = useState<string | null>(null);
 
   const isPending = createFolder.isPending;
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(name.trim() !== "", "Yeni klasör");
 
   function handleSubmit() {
     const trimmed = name.trim();

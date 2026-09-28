@@ -7,7 +7,10 @@ import { Modal } from "@/components/settings/Modal";
 import { stockErrorMessage } from "@/lib/api/stock-error";
 import { useCreateStockItem } from "@/lib/api/hooks/useStockMutations";
 import type { StockCategory } from "@/lib/api/hooks/useStockItems";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "@/components/settings/settings.css";
+
+const DEFAULT_CATEGORY: StockCategory = "structural";
 
 import { STOCK_CATEGORY_LABELS, STOCK_CATEGORY_OPTIONS } from "./stock-labels";
 
@@ -43,10 +46,21 @@ export function StockItemModal({ onClose }: StockItemModalProps) {
 
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<StockCategory>("structural");
+  const [category, setCategory] = useState<StockCategory>(DEFAULT_CATEGORY);
   const [unit, setUnit] = useState("");
   const [minStock, setMinStock] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // SEKME-F1.3b · dirty (tercih 1): oluşturma formu, taban her zaman boş.
+  // ASYNC TABAN DEĞİL. Kayıttan sonra `onClose()` unmount ile sıfırlar.
+  const isDirty =
+    code.trim() !== "" ||
+    name.trim() !== "" ||
+    unit.trim() !== "" ||
+    minStock.trim() !== "" ||
+    category !== DEFAULT_CATEGORY;
+  // KURAL 7 · Modal'a isDirty VERİLMEZ, doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Malzeme kartı");
 
   const isPending = createItem.isPending;
 

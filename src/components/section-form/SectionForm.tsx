@@ -31,6 +31,7 @@ import { hasSectionFormErrors, MESSAGES, validateSectionForm, type SectionFormEr
 import "@/styles/form-shell.css";
 import "./section-form.css";
 import { routes, routeKeyOf } from "@/lib/routes";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 /** F-TKV T5 — devre dışı Gantt kutusunun GÖRÜNÜR gerekçesi (test bunu import eder). */
 export const GANTT_AUTO_ADD_REASON = pendingModuleLabel("gantt_auto_add");
@@ -89,6 +90,14 @@ export function SectionForm(props: SectionFormProps) {
   const [values, setValues] = useState<SectionFormValues>(emptySectionFormValues);
   const [errors, setErrors] = useState<SectionFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  // SEKME-F1.3b · dirty = `values`in tabanından sapması (tercih 2). Oluşturma
+  // kipinde taban sabit boş formdur; düzenleme kipinde 🔴 ASYNC TABAN —
+  // `detail` GET'i tamamlanana kadar taban da boş formdur (henüz render
+  // edilmiyor: aşağıdaki "Yükleniyor…" erken dönüşü bu süreyi zaten kapatır),
+  // gerçek taban tohumlama efektiyle AYNI ANDA (aşağıda) alınır.
+  const [baseline, setBaseline] = useState<SectionFormValues>(emptySectionFormValues);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(baseline);
+  useUnsavedChanges(isDirty, "Bölüm");
 
   // Düzenleme kipinde tohumlama YALNIZ BİR KEZ çalışır (ProgressPaymentForm
   // deseni) — sonraki `detailQuery` yenilemeleri kullanıcının o anki
@@ -99,7 +108,9 @@ export function SectionForm(props: SectionFormProps) {
     if (!isEdit) return;
     if (!detail) return;
     seededRef.current = true;
-    setValues(sectionFormValuesFromDetail(detail));
+    const seeded = sectionFormValuesFromDetail(detail);
+    setValues(seeded);
+    setBaseline(seeded);
   }, [isEdit, detail]);
 
   const shouldFocusRef = useRef(false);

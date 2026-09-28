@@ -93,7 +93,7 @@ test("proje süzgeci SUNUCUDA süzer (TELDEN kanıt)", async ({ page }) => {
   const projectRequest = page.waitForRequest(
     (request) => request.url().includes("/personnel") && request.url().includes("project_id=p-2"),
   );
-  await page.getByLabel("Proje filtresi").selectOption("p-2");
+  await page.locator("main").getByLabel("Proje filtresi").selectOption("p-2");
   await projectRequest;
 
   await expect(page).toHaveURL(/proje=p-2/);
@@ -130,7 +130,7 @@ test("arama SUNUCUYA ?q= olarak gider (TELDEN kanıt)", async ({ page }) => {
   const searchRequest = page.waitForRequest(
     (request) => request.url().includes("/personnel") && request.url().includes("q=Ramazan"),
   );
-  await page.getByLabel("Personel ara").fill("Ramazan");
+  await page.locator("main").getByLabel("Personel ara").fill("Ramazan");
   await searchRequest;
 
   await expect(page).toHaveURL(/q=Ramazan/);
@@ -151,7 +151,7 @@ test("meslek süzgeci İSTEMCİDE çalışır — yeni istek ATILMAZ (TELDEN kan
     }
   });
 
-  await page.getByLabel("Meslek filtresi").selectOption("Elektrikçi");
+  await page.locator("main").getByLabel("Meslek filtresi").selectOption("Elektrikçi");
   await expect(page.getByTestId("personel-row-per-3")).toContainText("Ramazan Yıldız");
   await expect(page.getByTestId("personel-row-per-1")).toHaveCount(0);
 
@@ -170,7 +170,7 @@ test("durum süzgecinde 'İzinde' basılır ama seçilemez; Aktif/Pasif GERÇEKt
   const inactiveRequest = page.waitForRequest(
     (request) => request.url().includes("/personnel") && request.url().includes("is_active=false"),
   );
-  await page.getByLabel("Durum filtresi").selectOption("inactive");
+  await page.locator("main").getByLabel("Durum filtresi").selectOption("inactive");
   await inactiveRequest;
 
   await expect(page.getByTestId("personel-row-per-6")).toContainText("Kemal Toprak");
@@ -194,7 +194,7 @@ test("sekme şeridinden 'İzin Yönetimi' GERÇEK ekranı açar (ComingSoon DEĞ
 
   await page.getByRole("tab", { name: "İzin Yönetimi" }).first().click();
   await expect(page).toHaveURL(/\/personel\/izinler$/);
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "İzin Yönetimi" })).toHaveAttribute(
     "aria-selected",
     "true",

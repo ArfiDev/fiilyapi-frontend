@@ -36,6 +36,7 @@ import {
   numberOrNull,
   type ProjectFormValues,
 } from "./form-state";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import type { BasicInfoValues, ProjectType } from "./types";
 import {
   emptyProjectFormErrors,
@@ -68,6 +69,14 @@ export function ProjectCreateView() {
   const [values, setValues] = useState<ProjectFormValues>(emptyProjectFormValues);
   const [errors, setErrors] = useState<ProjectFormErrors>(emptyProjectFormErrors);
   const [formError, setFormError] = useState<string | null>(null);
+  // SEKME-F1.3b · her zaman OLUŞTURMA (async taban yok); `values` sabit boş
+  // başlangıçla (tercih 2) derin karşılaştırılır. 🔴 `emptyProjectFormValues()`
+  // HER ÇAĞRIDA yeni bir `sites[0].id` üretir (`createSiteRowId()`) — taban
+  // BİR KEZ (mount'ta) yakalanır, her render'da yeniden ÇAĞRILMAZ, aksi hâlde
+  // form hiç dokunulmasa bile sahte-kirli görünürdü.
+  const [baseline] = useState<ProjectFormValues>(() => values);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(baseline);
+  useUnsavedChanges(isDirty, "Proje");
 
   // Doğrulama sonrası ilk hatalı alana odak taşınır (§4.10). Odak isteği
   // bayrakla taşınır; hangi alanın "ilk" olduğunu DOM sırası söyler.

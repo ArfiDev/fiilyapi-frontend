@@ -184,6 +184,7 @@ test("toplu uretim 409'da HEP-YA-HIC anlamini basar ve tek satir bile yazmaz", a
 test("excel: .csv ISTEMCIDE reddedilir ve sunucunun cumlesi basilir", async ({ page }) => {
   await login(page);
   await page.goto(`${IMPORT_URL}?proje=p-1`);
+  const content = page.locator("main");
   await expect(page.getByTestId("excel-form-proje")).toHaveValue("p-1");
 
   // Mockup EI 76 `.xls`/`.csv` de çizer; sunucu YALNIZ `.xlsx` okur
@@ -195,7 +196,7 @@ test("excel: .csv ISTEMCIDE reddedilir ve sunucunun cumlesi basilir", async ({ p
     buffer: Buffer.from("Blok,Kat,Ünite No\n", "utf8"),
   });
 
-  await expect(page.getByText("Yalnızca .xlsx dosyası yüklenebilir")).toBeVisible();
+  await expect(content.getByText("Yalnızca .xlsx dosyası yüklenebilir")).toBeVisible();
   // Reddedilen dosya için HİÇBİR istek kurulmaz → doğrulama kartı boş kalır.
   await expect(page.getByTestId("excel-form-dogrulama-bos")).toBeVisible();
   await expect(page.getByTestId("excel-form-dosya-ozet")).toHaveCount(0);

@@ -50,7 +50,7 @@ test("taseron hakedisleri listesi ekrani gorsel", async ({ page }) => {
   // basılı olmadan ekran görüntüsü alınırsa baseline yükleme durumunu
   // dondurur — durum rozeti yerine bu daha kararlı bir çapa.
   await expect(page.getByTestId("thk-kpi-strip")).toBeVisible();
-  await expect(page.getByText("Çelik İnşaat Taah.")).toBeVisible();
+  await expect(page.locator("main").getByText("Çelik İnşaat Taah.")).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);

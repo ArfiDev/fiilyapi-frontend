@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/hooks/useInvoiceMutations";
 import { formatAmount, formatDateDots } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { PAYMENT_KIND_LABELS, PAYMENT_KIND_OPTIONS } from "./invoice-labels";
 
@@ -56,6 +57,18 @@ export function InvoicePaymentsPanel({
   const [amount, setAmount] = useState("");
   const [paidOn, setPaidOn] = useState(() => isoDate(today));
   const [error, setError] = useState<string | null>(null);
+  // SEKME-F1.3b · yalnız `amount` `onSuccess`te sıfırlanır (bilinen kısmi
+  // reset borcu, envanter notu) — diğer alanlar (hesap/şekil/tarih) KALIR.
+  // Baseline bu davranışı AYNEN izler: kaydetme başarılı olunca yalnız
+  // `amount` tabanı "" olur, diğerleri o anki değerlere hizalanır — görünür
+  // davranış DEĞİŞMEZ, yalnız "kaydedilmiş" alanlar sahte-kirli göstermez.
+  const [baseline, setBaseline] = useState({ accountId: "", method: "transfer", paidOn: isoDate(today) });
+  const isDirty =
+    accountId !== baseline.accountId ||
+    method !== baseline.method ||
+    amount !== "" ||
+    paidOn !== baseline.paidOn;
+  useUnsavedChanges(isDirty, "Tahsilat");
 
   const rows = paymentsQuery.data?.items;
   const truncation = buildListTruncation(rows?.length ?? 0, paymentsQuery.data?.total);
@@ -81,7 +94,10 @@ export function InvoicePaymentsPanel({
       },
       {
         onError: (err) => setError(backendErrorMessage(err, "Tahsilat kaydedilemedi.")),
-        onSuccess: () => setAmount(""),
+        onSuccess: () => {
+          setAmount("");
+          setBaseline({ accountId, method, paidOn });
+        },
       },
     );
   }

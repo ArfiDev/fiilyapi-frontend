@@ -17,6 +17,7 @@ import { useSession } from "@/components/shell/SessionProvider";
 
 import { APPROVAL_PENDING_COLUMN_REASON } from "./approval-role-admin";
 import { ApprovalRolesScreen } from "./ApprovalRolesScreen";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useApprovals", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useApprovals")>()),
@@ -240,5 +241,41 @@ describe("ApprovalRolesScreen — yükleme/yetki dalları", () => {
     );
     renderScreen();
     expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
+  });
+});
+
+describe("SEKME-F1.3b — kaydedilmemiş değişiklik kaydı (yalnız eşik alt-formu)", () => {
+  it("yüklendi + dokunulmadı → false", () => {
+    renderScreen();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("eşik alanı yazıldı → true", async () => {
+    renderScreen();
+    const input = screen.getByLabelText(/Patron Onay Eşiği/);
+    await userEvent.clear(input);
+    await userEvent.type(input, "750000");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt → false (`savedThreshold` değişince taslak KENDİLİĞİNDEN sıfırlanır)", async () => {
+    const { rerender } = renderScreen();
+    const input = screen.getByLabelText(/Patron Onay Eşiği/);
+    await userEvent.clear(input);
+    await userEvent.type(input, "750000");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await userEvent.click(screen.getByTestId("okr-threshold-save"));
+    await waitFor(() => expect(setSettingsMutate).toHaveBeenCalledTimes(1));
+    // Gerçek akışta `updateSettings` onSuccess → invalidateQueries →
+    // `settingsQuery.data` yenilenir. Burada AYNI etki mock'un sunucu
+    // değerini güncelleyip yeniden render ederek taklit edilir.
+    vi.mocked(useApprovalSettings).mockReturnValue(q({ approval_threshold_try: "750000.00" }));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <ApprovalRolesScreen />
+      </QueryClientProvider>,
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

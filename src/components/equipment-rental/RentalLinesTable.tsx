@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Badge, Input } from "@/components/ui";
 import { formatAmount, formatDecimal, formatPeriod } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import type {
   RentalInvoiceDetailResponse,
   RentalInvoiceLineResponse,
@@ -310,6 +311,11 @@ function RentalEditableCell({
   useEffect(() => {
     setDraft(value ?? "");
   }, [value]);
+
+  // SEKME-F1.3b — `PayrollLineRow` emsali: odak çıkışında anında kaydeden
+  // hücrede de yazım ile blur arasında kısa bir pencere vardır; erken
+  // dönüşten (`!isEditable`) ÖNCE çağrılır.
+  useUnsavedChanges(draft.trim() !== (value ?? "").trim(), FIELD_LABEL[field]);
 
   if (!isEditable) {
     // Kilitli durumda (approved/paid) kutu YOKTUR — PATCH 409 döner, çalışmayan

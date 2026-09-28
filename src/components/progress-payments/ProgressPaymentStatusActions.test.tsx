@@ -7,6 +7,7 @@ import { ProgressPaymentStatusActions } from "./ProgressPaymentStatusActions";
 import { useSession } from "@/components/shell/SessionProvider";
 import type { MeResponse } from "@/lib/auth/types";
 import { PROGRESS_PAYMENT_QUERY_KEY, type ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 // Kaynak oturum yüküdür (spec §2.5.2) — hook kendi isteğini ATMAZ, bu yüzden
 // sağlayıcı yerine `useSession` taklit edilir (useModulePermission.test.tsx
@@ -341,5 +342,25 @@ describe("ProgressPaymentStatusActions — hata gösterimi (Türkçe, sessiz ba�
     await userEvent.click(screen.getByRole("button", { name: "Onaya Gönder" }));
 
     expect(await screen.findByText("Onaya gönderilemedi.")).toBeInTheDocument();
+  });
+});
+
+describe("ProgressPaymentStatusActions — SEKME-F1.3b kaydedilmemiş değişiklik kaydı (yalnız Reddet diyaloğu)", () => {
+  it("kapalı → false; diyalog açık + gerekçe yazıldı → true; başarılı reddet → false", async () => {
+    mockSession({ progress_payments: "approve" });
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(makeDetail("draft"))));
+
+    renderActions(makeDetail("pending_approval"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reddet" }));
+    const dialog = screen.getByRole("dialog", { name: "Hakedişi Reddet" });
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await userEvent.type(within(dialog).getByLabelText("Gerekçe (zorunlu)"), "eksik belge");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reddet" }));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 });

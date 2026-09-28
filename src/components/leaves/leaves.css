@@ -408,8 +408,15 @@
    (T) = `Form - Izin Talebi.dc.html` · (R) = `Form - Izin Reddi.dc.html`
    K6: mockup'ların soluk üst şeridi/sol menüsü harness'tır, çizilmez. */
 
-/* T 66 — talep diyaloğu 600px'tir (Modal varsayılanı 480). R 55 = 480. */
-.iz-modal--request {
+/* T 66 — talep diyaloğu 600px'tir (Modal varsayılanı 480). R 55 = 480.
+   K1 (ölçüldü): `Modal` bileşeni `cx("modal", className)` ile
+   `class="modal iz-modal iz-modal--request"` üretir. `.modal` (480px, tek
+   sınıf) ile `.iz-modal--request` (tek sınıf) AYNI ÖZGÜLLÜKTEDİR — kazanan,
+   DOM sırası DEĞİL, CSS YÜKLEME SIRASI olurdu; `modal.css` chunk'ı
+   `leaves.css`den SONRA gelirse 600px yerine 480px basılır (sessizce). Bileşik
+   seçici (`.modal.iz-modal--request`, iki sınıf) özgüllüğü kalıcı üstün kılar
+   — yükleme sırasından BAĞIMSIZ. */
+.modal.iz-modal--request {
   max-width: 600px;
 }
 .iz-form__subtitle {

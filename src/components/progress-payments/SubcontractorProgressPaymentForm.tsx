@@ -44,6 +44,7 @@ import {
 import "./progress-payment-form.css";
 import "./subcontractor-progress-payment-form.css";
 import { routes } from "@/lib/routes";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 export type SubcontractorProgressPaymentFormProps =
   | { mode: "create"; contractId: string }
@@ -111,6 +112,26 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
   const [touchedPeriodFields, setTouchedPeriodFields] = useState<
     ReadonlySet<OmittablePeriodField>
   >(() => new Set());
+  // SEKME-F1.3b · bu formda BUGÜN hiç dirty durumu YOK (envanter ölçümü —
+  // doğrulandı) — başlangıçla karşılaştırma kurulur (tercih 2). Taban 🔴
+  // ASYNC: tohumlama efektiyle AYNI ANDA (aşağıda) alınır; efekt tamamlanana
+  // kadar `rows === null` ve form "Yükleniyor…" gösterir (aşağıdaki erken
+  // dönüş), yani dirty hiç YANLIŞ-POZİTİF üretmez.
+  const [baseline, setBaseline] = useState<{
+    rows: readonly { itemId: string; quantity: string }[];
+    periodYear: number | null;
+    periodMonth: number | null;
+    sectionId: string | null;
+    defaultCoefficient: string;
+  } | null>(null);
+  const isDirty =
+    baseline !== null &&
+    (periodYear !== baseline.periodYear ||
+      periodMonth !== baseline.periodMonth ||
+      sectionId !== baseline.sectionId ||
+      defaultCoefficient !== baseline.defaultCoefficient ||
+      (rows ?? []).some((row, index) => row.quantity !== baseline.rows[index]?.quantity));
+  useUnsavedChanges(isDirty, "Taşeron hakediş");
 
   // Tohumlama YALNIZ BİR KEZ çalışır (`ProgressPaymentForm` deseni) —
   // sonraki `detailQuery`/`contractQuery` yenilemeleri (ör. kaydetme
@@ -121,11 +142,23 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
     if (!contract) return;
     if (isEdit && !detail) return;
     seededRef.current = true;
-    setRows(buildSubcontractorLineRows(contract.items, detail?.lines ?? []));
-    setPeriodYear(detail?.period_year ?? new Date().getFullYear());
-    setPeriodMonth(detail?.period_month ?? new Date().getMonth() + 1);
-    setSectionId(detail?.section_id ?? null);
-    setDefaultCoefficient(detail?.default_coefficient ?? "1");
+    const seededRows = buildSubcontractorLineRows(contract.items, detail?.lines ?? []);
+    const seededYear = detail?.period_year ?? new Date().getFullYear();
+    const seededMonth = detail?.period_month ?? new Date().getMonth() + 1;
+    const seededSection = detail?.section_id ?? null;
+    const seededCoefficient = detail?.default_coefficient ?? "1";
+    setRows(seededRows);
+    setPeriodYear(seededYear);
+    setPeriodMonth(seededMonth);
+    setSectionId(seededSection);
+    setDefaultCoefficient(seededCoefficient);
+    setBaseline({
+      rows: seededRows.map((row) => ({ itemId: row.itemId, quantity: row.quantity })),
+      periodYear: seededYear,
+      periodMonth: seededMonth,
+      sectionId: seededSection,
+      defaultCoefficient: seededCoefficient,
+    });
   }, [contract, detail, isEdit]);
 
   // "Günlükten Doldur" (spec §4) — sözleşme bazlı uç. Açılışta ÇEKİLMEZ

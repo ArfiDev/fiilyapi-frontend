@@ -8,6 +8,7 @@ import { useCreatePersonnelDocument } from "@/lib/api/hooks/usePersonnelDocument
 import type { PersonnelDetailResponse } from "@/lib/api/hooks/usePersonnelDetail";
 
 import { PersonnelDocumentFormModal } from "./PersonnelDocumentFormModal";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 import {
   ARCHIVE_PICK_REASON,
   NO_PROJECT_UPLOAD_REASON,
@@ -279,5 +280,22 @@ describe("PersonnelDocumentFormModal — karşılıksız öğe ve bağlam", () =
     } as never);
     renderModal();
     expect(screen.getByTestId("pdf-types-error")).toHaveTextContent("kataloğu yüklenemedi");
+  });
+});
+
+describe("PersonnelDocumentFormModal — SEKME-F1.3b kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı/dokunulmadı → false; belge türü seçildi → true; başarılı kayıt → false (kapanış)", async () => {
+    let unmount = () => {};
+    const wrappedOnClose = vi.fn(() => unmount());
+    ({ unmount } = render(
+      <PersonnelDocumentFormModal personnel={personnel()} onClose={wrappedOnClose} />,
+    ));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    fireEvent.change(screen.getByTestId("pdf-type"), { target: { value: TYPE_ID } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    submit();
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 });

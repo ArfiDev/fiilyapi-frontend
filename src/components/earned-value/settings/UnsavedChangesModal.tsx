@@ -2,6 +2,7 @@
 
 import { Modal } from "@/components/settings/Modal";
 import { Button } from "@/components/ui/button";
+import "./unsaved-changes-modal.css";
 
 import type { SectionName } from "./settings-form";
 

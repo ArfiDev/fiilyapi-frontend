@@ -11,6 +11,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { cx } from "@/lib/cx";
 import { usePreferences, useUpdatePreferences } from "@/lib/api/hooks/usePreferences";
 import type { PreferencesRead, PreferencesUpdate } from "@/lib/api/models";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "./appearance-screen.css";
 
 // Sadece Acik tema secilebilir; Koyu/Sistem yakinda gelecek (sunucu 4xx doner).
@@ -51,10 +52,23 @@ export function AppearanceScreen() {
   const update = useUpdatePreferences();
   const [form, setForm] = useState<PreferencesRead | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // SEKME-F1.3b · dirty (tercih 2), taban `form`u dolduran AYNI efektte
+  // alınır. 🔴 ASYNC TABAN: `baseline` `null` iken dirty FALSE. Komşu kusur
+  // (envanter notu): bu efekt `query.data` REFERANSI her değiştiğinde
+  // (arkaplan refetch dahil) `form`u SESSİZCE EZER — mevcut davranış
+  // KORUNUR, bu bağlama görevi onu değiştirmez; `baseline` de aynı efektte
+  // aynı şekilde hizalanır (kayıt sonrası `invalidateQueries` de bu yoldan
+  // sıfırlar).
+  const [baseline, setBaseline] = useState<PreferencesRead | null>(null);
+  const isDirty = baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
+  // 🟡 hook riski: `form`/`baseline` başlangıçta `null` — ifade `null`
+  // güvenlidir (yalnız `baseline !== null` kontrolü), hook koşulsuz çağrılır.
+  useUnsavedChanges(isDirty, "Görünüm tercihleri");
 
   useEffect(() => {
     if (!query.data) return;
     setForm(query.data);
+    setBaseline(query.data);
   }, [query.data]);
 
   if (query.isLoading) return <p className="settings-note">Yükleniyor…</p>;

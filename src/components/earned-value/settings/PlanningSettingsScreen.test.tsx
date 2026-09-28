@@ -7,6 +7,7 @@ import { useSession } from "@/components/shell/SessionProvider";
 import type { EvSettingsRead, EvSettingsSave } from "@/lib/api/models";
 import type { MeResponse } from "@/lib/auth/types";
 import { useEvSiteOptions, type EvSiteOption } from "@/lib/api/hooks/useEvSettings";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { PlanningSettingsScreen } from "./PlanningSettingsScreen";
 
@@ -376,6 +377,28 @@ describe("PlanningSettingsScreen · düzenle → kaydet", () => {
     await user.click(within(saveBar()).getByRole("button", { name: "Vazgeç" }));
     expect(hours).toHaveValue("9");
     expect(within(saveBar()).getByText("Bütün değişiklikler kaydedildi · A-Blok Şantiyesi")).toBeInTheDocument();
+  });
+
+  // SEKME-F1.3-FIX O7 · `PlanningSettingsForm`in `useUnsavedChanges`
+  // bağlanması için davranış bekçisi — üst çubuğun GERÇEKTEN okuduğu merkezi
+  // kayıt (`unsavedRegistry`) doğrudan doğrulanır (yalnız "Kaydet" düğmesinin
+  // aktifliği DEĞİL — o düğme kopsa bile ayrı bir bağ olduğundan görünmez
+  // kalabilirdi).
+  it("yükle, dokunma → kayıt temiz; alan değiştir → kirli; kaydetme başarılı → tekrar temiz", async () => {
+    const user = userEvent.setup();
+    stubBackend();
+    renderScreen();
+    await waitForForm();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    const hours = screen.getByRole("textbox", { name: "Günlük standart saat" });
+    await user.clear(hours);
+    await user.type(hours, "8");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.click(within(saveBar()).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(putBodies).toHaveLength(1));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 
   it("kayıt hatasında ortak hata kartı backend mesajıyla çıkar, taslak kalır (K24)", async () => {

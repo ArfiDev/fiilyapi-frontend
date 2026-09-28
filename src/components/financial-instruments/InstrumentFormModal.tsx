@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { Button, Field, Input, Select } from "@/components/ui";
 import { DateInput } from "@/components/ui/date-input";
 import { CheckCircleIcon, WarningTriangleIcon } from "@/components/ui/icons";
@@ -95,6 +96,10 @@ export function InstrumentFormModal({ onClose }: InstrumentFormModalProps) {
   const createInstrument = useCreateFinancialInstrument();
   const [values, setValues] = useState<InstrumentFormValues>(EMPTY_INSTRUMENT_FORM);
   const [formError, setFormError] = useState<string | null>(null);
+  // SEKME-F1.3b — tüm alanlar string/enum; taban sabit `EMPTY_INSTRUMENT_FORM`la kıyaslanır.
+  const isDirty = JSON.stringify(values) !== JSON.stringify(EMPTY_INSTRUMENT_FORM);
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Çek/senet formu");
 
   // FCE:171-183 — iki opsiyonel seçicinin kaynakları. Kırpma korkuluğu (TB3):
   // tavan AÇIKÇA gönderilir, sessizce kırpılmaz.

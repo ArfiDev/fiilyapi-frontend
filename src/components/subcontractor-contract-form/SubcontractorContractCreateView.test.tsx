@@ -12,6 +12,7 @@ import { useEmployerContract } from "@/lib/api/hooks/useContract";
 import { useSubcontractorContract } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { useCreateSubcontractor } from "@/lib/api/hooks/useSubcontractorMutations";
 import type { SubcontractorContractDetail } from "@/lib/api/hooks/useSubcontractorProgressPayments";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const pushMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -431,5 +432,54 @@ describe("doğrulama ve alt eylemler", () => {
     // Eski sözleşme PATCH EDİLMEZ — yeni bir taslak POST edilir.
     expect(updateContractMock).not.toHaveBeenCalled();
     expect(createContractMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("SubcontractorContractCreateView — kaydedilmemiş değişiklik kaydı (B5, ORTAK EMİR KURAL 1)", () => {
+  it("açıldı + dokunulmadı → false", () => {
+    render(<SubcontractorContractCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan (proje) değişti → true", () => {
+    render(<SubcontractorContractCreateView />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Proje" }), {
+      target: { value: "p-1" },
+    });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("yalnız taslak kurulması (kalemsiz) KİRLİ SAYILMAZ — B5", async () => {
+    createContractMock.mockImplementation(
+      (_body: unknown, options?: { onSuccess?: (data: unknown) => void }) =>
+        options?.onSuccess?.({ id: "sc-new-1" }),
+    );
+    render(<SubcontractorContractCreateView />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Proje" }), {
+      target: { value: "p-1" },
+    });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: FSO_TEXT.loadFromEmployer }));
+    await waitFor(() => expect(loadItemsMock).toHaveBeenCalled());
+    // `values` (proje) DEĞİŞMEDİ — dirty hâlâ yalnız o alandan gelir; taslağın
+    // sunucuda kalemsiz durması ayrı bir kirlilik EKLEMEZ.
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt (onSuccess: router.push) → unmount ile false", () => {
+    createContractMock.mockImplementation(
+      (_body: unknown, options?: { onSuccess?: (data: unknown) => void }) =>
+        options?.onSuccess?.({ id: "sc-new-1" }),
+    );
+    const { unmount } = render(<SubcontractorContractCreateView />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Proje" }), {
+      target: { value: "p-1" },
+    });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
+    expect(createContractMock).toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

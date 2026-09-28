@@ -21,6 +21,7 @@ import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { parseCountInput } from "@/lib/decimal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildBulkUnitBody } from "./build-body";
 import {
@@ -98,6 +99,15 @@ export function BulkUnitCreateView() {
   const permission = useModulePermission("projects");
 
   const [values, setValues] = useState<BulkUnitFormValues>(() => emptyBulkUnitFormValues());
+  // SEKME-F1.6-Y1 — taban artık anlık görüntü DEĞİL, `StockEntryForm`
+  // deseniyle AYRI durum (`[baseline, setBaseline]`): `?proje=&blok=` tohumu
+  // tabanı da kaydırır (aşağıdaki efekt), yoksa form açılır açılmaz
+  // `isDirty=true` doğardı — kullanıcı hiçbir şey yapmadan "kaydedilmemiş
+  // değişiklik" uyarısı görürdü. ÖNİZLEME (`preview`) BİLEREK dışarıda
+  // tutulur (envanter uyarısı): önizleme "yenile" tıklamak kullanıcı girdisi
+  // kaybettirmez, formu değiştirmez.
+  const [baseline, setBaseline] = useState<BulkUnitFormValues>(values);
+  const isDirty = JSON.stringify(values) !== JSON.stringify(baseline);
   const [preview, setPreview] = useState<UnitBulkPreview | null>(null);
   const [previewStale, setPreviewStale] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -117,6 +127,11 @@ export function BulkUnitCreateView() {
   // da `@/lib/navigation-params`ten gelir — üretici ile tüketici AYNI sabiti paylaşır.
   // Tek `useRef` ikisini birlikte korur: ayrı bayraklar, kullanıcı seçimi
   // değiştirdikten sonra URL güncellenince tohumu YENİDEN uygulayabilirdi.
+  //
+  // SEKME-F1.6-Y1 — `setValues` VE `setBaseline` AYNI dönüşümle, birlikte
+  // çağrılır ("otomatik URL tohumu asla kullanıcı kirletti SAYILMAZ"):
+  // yalnız `values` kaydırılsaydı taban geride kalır ve form açılır açılmaz
+  // `isDirty=true` doğardı (gerçek yol: `BlockCreateView` → burası).
   const contextSeededRef = useRef(false);
   useEffect(() => {
     if (contextSeededRef.current) return;
@@ -124,13 +139,15 @@ export function BulkUnitCreateView() {
     const projeParam = searchParams.get(PROJECT_PARAM);
     const blokParam = searchParams.get(BLOCK_PARAM);
     if (!projeParam && !blokParam) return;
-    setValues((prev) => ({
+    const applySeed = (prev: BulkUnitFormValues): BulkUnitFormValues => ({
       ...prev,
       ...(projeParam ? { projectId: projeParam } : {}),
       // Blok listesi projeye bağlıdır; blok tek başına gelirse de yazılır ve
       // liste geldiğinde seçici o bloğa oturur.
       ...(blokParam ? { blockId: blokParam } : {}),
-    }));
+    });
+    setValues(applySeed);
+    setBaseline(applySeed);
   }, [searchParams]);
 
   const projects = projectsQuery.data?.items ?? [];
@@ -167,6 +184,9 @@ export function BulkUnitCreateView() {
       unitsPerFloor: parseCountInput(values.unitsPerFloor),
     });
   }, [values.startFloor, values.endFloor, values.unitsPerFloor, range]);
+
+  // SEKME-F1.3b — hook, erken dönüşten ÖNCE (Rules of Hooks).
+  useUnsavedChanges(isDirty, "Toplu ünite formu");
 
   if (!hasAtLeast(permission.level, "full")) return <AccessDenied />;
 

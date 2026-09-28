@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { Button, DateInput, Field, FileInput, Input, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/settings/Modal";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useEquipmentDocumentTypes, useEquipmentDocuments } from "@/lib/api/hooks/useEquipmentDocuments";
 import { useUploadEquipmentDocument } from "@/lib/api/hooks/useEquipmentDocumentMutations";
@@ -86,6 +87,11 @@ export function EquipmentDocumentFormModal({
 
   const [values, setValues] = useState<EquipmentDocumentFormValues>(EMPTY_VALUES);
   const [formError, setFormError] = useState<string | null>(null);
+  // SEKME-F1.3b — `File` `JSON.stringify` ile KIYASLANAMAZ, ayrı `!== null`.
+  const isDirty =
+    values.file !== null || values.typeId !== EMPTY_VALUES.typeId || values.validUntil !== EMPTY_VALUES.validUntil;
+  // Kayıt 50/ortak emir §7 — `Modal`a `isDirty` VERİLMEZ; doğrudan bağlanır.
+  useUnsavedChanges(isDirty, "Ekipman belgesi formu");
 
   const fileRef = useRef<HTMLInputElement>(null);
   const typeRef = useRef<HTMLSelectElement>(null);

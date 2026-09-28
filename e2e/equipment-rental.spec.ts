@@ -73,7 +73,7 @@ test("arama kutusu YOKTUR (uc `q` parametresi tanimiyor)", async ({ page }) => {
   // Emsal `SubcontractorProgressPaymentsView` bir arama kutusu basıyor;
   // buraya kopyalansaydı yazdığı metnin hiçbir etkisi olmayan bir kutu olurdu.
   await expect(page.getByRole("searchbox")).toHaveCount(0);
-  await expect(page.getByPlaceholder(/ara/i)).toHaveCount(0);
+  await expect(page.locator("main").getByPlaceholder(/ara/i)).toHaveCount(0);
 });
 
 test("olusturma dugmesi DEVRE-DISI + GORUNUR gerekceli (form mockup'i yok)", async ({ page }) => {
@@ -83,7 +83,7 @@ test("olusturma dugmesi DEVRE-DISI + GORUNUR gerekceli (form mockup'i yok)", asy
   const createButton = page.getByTestId("makine-kira-create");
   await expect(createButton).toBeDisabled();
   // Gerekçe `title` ipucuna GÖMÜLÜ DEĞİL, ekranda okunur (F-TH kuralı).
-  await expect(page.getByText("Kira hakedişi oluşturma formunun mockup'ı henüz yok.")).toBeVisible();
+  await expect(page.locator("main").getByText("Kira hakedişi oluşturma formunun mockup'ı henüz yok.")).toBeVisible();
 });
 
 test("liste satiri detaya gider ve M5'in bes karti basilir", async ({ page }) => {

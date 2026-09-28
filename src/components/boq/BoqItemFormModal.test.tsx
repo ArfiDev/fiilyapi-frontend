@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { BoqItemFormModal } from "./BoqItemFormModal";
 import {
@@ -567,5 +568,30 @@ describe("BoqItemFormModal — kalem silme (F13, spec §7.5)", () => {
     expect(
       screen.getByText("02.007 — Kalıp Yapımı kalemi silinecek. Bu işlem geri alınamaz."),
     ).toBeInTheDocument();
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("BoqItemFormModal — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    renderCreate();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan değiştirildi → kirli", () => {
+    renderCreate();
+    setField("Poz No", "01.003");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
+    const { unmount } = render(
+      <BoqItemFormModal siteId={SITE_ID} groups={GROUPS} mode={{ kind: "create" }} canDelete onClose={onClose} />,
+    );
+    fillValidCreateForm();
+    save();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });

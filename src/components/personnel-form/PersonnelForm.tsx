@@ -66,6 +66,7 @@ import {
 import "@/styles/form-shell.css";
 import "./personnel-form.css";
 import { PERSONNEL_RETURN_PARAM, routes } from "@/lib/routes";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 /**
  * "İptal"/kaydetme sonrası dönülecek rotayı taşıyan sorgu parametresi
@@ -134,6 +135,12 @@ export function PersonnelForm(props: PersonnelFormProps) {
     () => new Set(),
   );
   const [formError, setFormError] = useState<string | null>(null);
+  // SEKME-F1.3b · dirty = `touched.size > 0` (tercih 1, ZATEN tutuluyor).
+  // 🔴 ASYNC TABAN: edit modunda tohumlama efekti `handleChange` ÜZERİNDEN
+  // GEÇMEDİĞİ için `touched`ı doğal olarak kirletmiyor — güvenli desen
+  // (envanter notu), ayrı bir baseline gerekmiyor.
+  const isDirty = touched.size > 0;
+  useUnsavedChanges(isDirty, "Personel");
 
   // Düzenleme kipinde tohumlama YALNIZ BİR KEZ çalışır (`SectionForm` deseni)
   // — sonraki `detailQuery` yenilemeleri kullanıcının o anki düzenlemesini

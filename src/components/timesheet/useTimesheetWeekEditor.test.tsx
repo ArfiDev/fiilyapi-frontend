@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { BackendError } from "@/lib/api/unwrap";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 import { useTimesheetWeekEditor } from "./useTimesheetWeekEditor";
 
 vi.mock("@/lib/api/hooks/useTimesheetMutations", () => ({
@@ -139,5 +140,32 @@ describe("useTimesheetWeekEditor · copyState kapsamı", () => {
 
     rerender({ week: { isoYear: 2026, isoWeek: 29 } });
     expect(result.current.copyState.kind).toBe("copied");
+  });
+});
+
+// SEKME-F1.3 · üst çubuk sekme onayı bu ekranın kaydedilmemiş verisini
+// `unsavedRegistry`den okur — burada hücreye değer yazmanın kaydı GERÇEKTEN
+// bildirdiğini, kapsam sıfırlanınca (hafta değişimi ⇒ taslak sıfırlanır)
+// kaydın da düştüğünü doğruluyoruz.
+describe("useTimesheetWeekEditor · unsavedRegistry bağlantısı", () => {
+  it("hücreye saat yazmak kaydı 'kirli' işaretler, hafta değişip taslak sıfırlanınca kayıt düşer", async () => {
+    const { wrapper } = setup();
+    const { result, rerender, unmount } = renderHook(
+      ({ week }) => useTimesheetWeekEditor({ siteId: "s-1", week, sectionId: null }),
+      { wrapper, initialProps: { week: { isoYear: 2026, isoWeek: 29 } } },
+    );
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    act(() => result.current.commitHours([], "p-1", "2026-07-13", "8"));
+    expect(result.current.isDirty).toBe(true);
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // Hafta değişince taslak KENDİ kuralıyla sıfırlanır (kapsam anahtarı
+    // değişir) — kayıt da bunu izler.
+    rerender({ week: { isoYear: 2026, isoWeek: 30 } });
+    expect(result.current.isDirty).toBe(false);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    unmount();
   });
 });

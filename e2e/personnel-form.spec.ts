@@ -35,7 +35,7 @@ async function login(page: Page) {
 
 /** Alt eylem şeridindeki bir buton (mockup 210–212). */
 function actionButton(page: Page, name: string) {
-  return page.locator(".pf-actions").first().getByRole("button", { name, exact: true });
+  return page.locator("main").locator(".pf-actions").first().getByRole("button", { name, exact: true });
 }
 
 function submitButton(page: Page) {
@@ -47,19 +47,20 @@ async function fillPublishable(
   page: Page,
   values: { firstName: string; lastName: string; tcNo: string },
 ) {
-  await page.getByLabel("Ad", { exact: true }).first().fill(values.firstName);
-  await page.getByLabel("Soyad").first().fill(values.lastName);
-  await page.getByLabel("Çalışan Tipi").first().selectOption("subcontractor");
-  await page.getByLabel("Meslek / Görev").first().selectOption("Elektrikçi");
-  await page.getByLabel("TC Kimlik No").first().fill(values.tcNo);
-  await page.getByLabel("Doğum Tarihi").first().fill("12.04.1985");
-  await page.getByLabel("Cep Telefonu").first().fill("0532 123 45 67");
-  await page.getByLabel("Adres").first().fill("Cumhuriyet Mah. 12/3 Ankara");
-  await page.getByLabel("Acil Durum Kişisi").first().fill("Ayşe Yılmaz");
-  await page.getByLabel("Acil Durum Telefonu").first().fill("0533 987 65 43");
-  await page.getByLabel("İşe Giriş Tarihi").first().fill("01.08.2026");
-  await page.getByLabel("Atandığı Proje").first().selectOption({ index: 1 });
-  await page.getByLabel("Ücret Tutarı (₺)").first().fill("1200");
+  const content = page.locator("main");
+  await content.getByLabel("Ad", { exact: true }).first().fill(values.firstName);
+  await content.getByLabel("Soyad").first().fill(values.lastName);
+  await content.getByLabel("Çalışan Tipi").first().selectOption("subcontractor");
+  await content.getByLabel("Meslek / Görev").first().selectOption("Elektrikçi");
+  await content.getByLabel("TC Kimlik No").first().fill(values.tcNo);
+  await content.getByLabel("Doğum Tarihi").first().fill("12.04.1985");
+  await content.getByLabel("Cep Telefonu").first().fill("0532 123 45 67");
+  await content.getByLabel("Adres").first().fill("Cumhuriyet Mah. 12/3 Ankara");
+  await content.getByLabel("Acil Durum Kişisi").first().fill("Ayşe Yılmaz");
+  await content.getByLabel("Acil Durum Telefonu").first().fill("0533 987 65 43");
+  await content.getByLabel("İşe Giriş Tarihi").first().fill("01.08.2026");
+  await content.getByLabel("Atandığı Proje").first().selectOption({ index: 1 });
+  await content.getByLabel("Ücret Tutarı (₺)").first().fill("1200");
 }
 
 test("puantajdan girilir, personel kaydedilir ve matriste satır olur", async ({ page }) => {
@@ -74,7 +75,7 @@ test("puantajdan girilir, personel kaydedilir ve matriste satır olur", async ({
 
   await fillPublishable(page, { firstName: "Zeki", lastName: "Karaca", tcNo: "10000000001" });
   // "Bağlı Taşeron" yalnız taşeron işçisinde açılır ve GERÇEK veriyi listeler.
-  const subcontractor = page.getByLabel("Bağlı Taşeron").first();
+  const subcontractor = page.locator("main").getByLabel("Bağlı Taşeron").first();
   await expect(subcontractor).toBeEnabled();
   await subcontractor.selectOption({ label: "Aydın Elektrik Taah." });
 
@@ -83,7 +84,7 @@ test("puantajdan girilir, personel kaydedilir ve matriste satır olur", async ({
   // Geldiği puantaj ekranına DÖNER (hafta korunur) ve yeni kişi satır alır.
   await expect(page).toHaveURL(new RegExp(`${SITE_URL}\\?.*iso_week=36`));
   await expect(
-    page.locator(".ts-week-table").first().getByRole("rowheader", { name: /Zeki Karaca/ }),
+    page.locator("main .ts-week-table").first().getByRole("rowheader", { name: /Zeki Karaca/ }),
   ).toBeVisible();
 });
 
@@ -100,9 +101,9 @@ test("İK alanları ETKİN; PENDING kalan tek alan Bölüm'dür", async ({ page 
     "Ücret Tutarı (₺)",
     "SGK Sicil No",
   ]) {
-    await expect(page.getByLabel(label).first()).toBeEnabled();
+    await expect(page.locator("main").getByLabel(label).first()).toBeEnabled();
   }
-  await expect(page.getByLabel("Bölüm").first()).toBeDisabled();
+  await expect(page.locator("main").getByLabel("Bölüm").first()).toBeDisabled();
 
   // Taslak yolu ARTIK açık (mockup 39, 211).
   await expect(page.getByRole("button", { name: "Taslak", exact: true }).first()).toBeEnabled();
@@ -122,16 +123,16 @@ test("yayın yolunda yıldızlı alanlar denetlenir, taslak yolunda denetlenmez"
   await page.goto("/personel/yeni");
 
   await submitButton(page).click();
-  await expect(page.getByText("Ad zorunludur.").first()).toBeVisible();
-  await expect(page.getByText("TC kimlik no zorunludur.").first()).toBeVisible();
+  await expect(page.locator("main").getByText("Ad zorunludur.").first()).toBeVisible();
+  await expect(page.locator("main").getByText("TC kimlik no zorunludur.").first()).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 1, name: "Yeni Personel Kaydı" }).first(),
   ).toBeVisible();
 
   // Taslak yolu sunucunun gerçekten istediği iki alanla geçer.
-  await page.getByLabel("Ad", { exact: true }).first().fill("Taslak");
-  await page.getByLabel("Soyad").first().fill("Adayı");
-  await page.getByLabel("Çalışan Tipi").first().selectOption("company");
+  await page.locator("main").getByLabel("Ad", { exact: true }).first().fill("Taslak");
+  await page.locator("main").getByLabel("Soyad").first().fill("Adayı");
+  await page.locator("main").getByLabel("Çalışan Tipi").first().selectOption("company");
   await actionButton(page, "Taslak Kaydet").click();
 
   await expect(page).toHaveURL(/\/puantaj/);
@@ -167,6 +168,6 @@ test("geçersiz TCKN (422) ile çift kayıt (409) AYRI mesaj gösterir", async (
   await expect(error).not.toContainText("Geçersiz bilgi");
   expect(await error.textContent()).not.toBe(invalidMessage);
   await expect(
-    page.getByText("Bu TC kimlik no ile kayıtlı personel zaten var.").first(),
+    page.locator("main").getByText("Bu TC kimlik no ile kayıtlı personel zaten var.").first(),
   ).toBeVisible();
 });

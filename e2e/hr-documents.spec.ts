@@ -34,7 +34,7 @@ test("liste → 'Belge & Sertifika' sekmesi GERÇEK ekranı açar (ComingSoon DE
 
   await expect(page).toHaveURL(/\/personel\/belgeler$/);
   await expect(page.getByRole("heading", { name: "Belge & Sertifika", level: 1 })).toBeVisible();
-  await expect(page.getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Bu modül yakında eklenecek.")).toHaveCount(0);
 });
 
 test("sekme aktifliği bu ekranda 'Belge & Sertifika'ya geçer, liste sekmesi geri döner", async ({

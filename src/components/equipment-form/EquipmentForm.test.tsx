@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { EquipmentForm } from "./EquipmentForm";
 import {
@@ -397,5 +398,37 @@ describe("EquipmentForm (edit) · tohumlama", () => {
     });
     render(<EquipmentForm mode="edit" equipmentId="eq-9" />);
     expect(screen.queryByTestId("makine-form-loaded-sites")).not.toBeInTheDocument();
+  });
+});
+
+/** SEKME-F1.3b · merkezi kayda bağlanma bekçisi. */
+describe("EquipmentForm — kaydedilmemiş değişiklik kaydı", () => {
+  it("açıldı, dokunulmadı → temiz", () => {
+    render(<EquipmentForm mode="create" />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("edit kipinde ASYNC TABAN: seed efekti dokunuş SAYILMAZ → temiz", () => {
+    render(<EquipmentForm mode="edit" equipmentId="eq-9" />);
+    expect(screen.getByLabelText("Ekipman Adı")).toHaveValue("Tower Crane TC-48");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("bir alan değiştirildi → kirli", async () => {
+    const user = userEvent.setup();
+    render(<EquipmentForm mode="create" />);
+    await fillCore(user);
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("başarılı kayıt sonrası (router.push unmount eder) → temiz", async () => {
+    createMutate.mockImplementation((_body, options) => options.onSuccess?.({}));
+    const user = userEvent.setup();
+    const { unmount } = render(<EquipmentForm mode="create" />);
+    await fillCore(user);
+    await user.click(actionButton("Ekipmanı Kaydet"));
+    expect(push).toHaveBeenCalled();
+    unmount();
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });
