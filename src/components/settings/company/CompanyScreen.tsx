@@ -93,7 +93,17 @@ export function CompanyScreen() {
 
   function save() {
     setErr(null);
-    update.mutate(form, { onError: (e) => setErr(backendErrorMessage(e)) });
+    // O2 (SEKME-F2) · taban SUNULAN gövdeye çekilir, o anki `form`a DEĞİL:
+    // kayıt sürerken kullanıcı yeni bir değişiklik yaparsa (state ilerlerken
+    // `submittedForm` sabit kalır) form kirli KALMALI. Sunucu normalleştirip
+    // aynı/eski veriyi dönse ya da yeniden çekme (invalidateQueries → refetch)
+    // hata verse bile bu taban kayıttan HEMEN sonra temiz sayar — `query.data`
+    // efektine bağımlı kalınmaz.
+    const submittedForm = form;
+    update.mutate(submittedForm, {
+      onSuccess: () => setBaseline(submittedForm),
+      onError: (e) => setErr(backendErrorMessage(e)),
+    });
   }
 
   return (

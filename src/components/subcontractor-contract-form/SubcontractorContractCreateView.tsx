@@ -87,15 +87,24 @@ export function SubcontractorContractCreateView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadQueued, setIsLoadQueued] = useState(false);
 
+  // O3 (SEKME-F2, CEO KARARI 2026-09-28, B5 ilkesi) · taban BAŞTA boş formdur;
+  // "İşveren Sözleşmesinden Yükle" otomatik taslağı SUNUCUYA yazınca (aşağıda
+  // `handleLoadFromEmployer`in `onSuccess`i) taban O ANKİ (sunucuya giden)
+  // `values`e ÇEKİLİR — veri sunucuya yazıldıysa temiz sayılır. Yazım
+  // BAŞARISIZ olursa taban KAYMAZ (kirli kalır, veri sunucuya gitmedi).
+  const [baseline, setBaseline] = useState<SubcontractorContractFormValues>(
+    emptySubcontractorContractFormValues,
+  );
+
   // SEKME-F1.3b (B5, ORTAK EMİR KURAL 1) · dirty = YALNIZ commit edilmemiş
-  // ALAN değerleri (`values`in boş formdan farkı, tercih 1). Taslak
+  // ALAN değerleri (`values`in tabandan farkı, tercih 1). Taslak
   // sözleşmenin sunucuda KALEMSİZ durması (yalnız `contractId` set edilmiş
   // olması) kirli SAYILMAZ — poz satırları `handleCommitItem`/
   // `handleDeleteItem` ile ANINDA kaydolur, ayrı bir taslak değildir. ASYNC
   // TABAN DEĞİL (`detailQuery` kalemleri sunucudan gelir ama `values`in
   // kendisi async seed almaz). Sıfırlama: her iki `submit` yolu da
   // (taslak/nihai) başarıda `router.push(listHref)` ile unmount eder.
-  const isDirty = JSON.stringify(values) !== JSON.stringify(emptySubcontractorContractFormValues());
+  const isDirty = JSON.stringify(values) !== JSON.stringify(baseline);
   useUnsavedChanges(isDirty, "Taşeron sözleşmesi");
 
   const projectsQuery = useProjects();
@@ -232,10 +241,15 @@ export function SubcontractorContractCreateView() {
       return;
     }
     setFormError(null);
+    // O3 · taban SUNULAN `values`e (o anki alan değerleri) çekilir — daha
+    // SONRAKİ bir değişiklik değil, TAM BU YAZIMA giden değer (CompanyScreen
+    // O2 ile aynı desen: "gönderilen gövde" tabanlanır, güncel state değil).
+    const submittedValues = values;
     createContract.mutate(buildContractCreateBody(values, { isDraft: true }), {
       onSuccess: (created) => {
         setContractId(created.id);
         setIsLoadQueued(true);
+        setBaseline(submittedValues);
       },
       onError: (error) => setLoadError(backendErrorMessage(error)),
     });

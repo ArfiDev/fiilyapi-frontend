@@ -208,6 +208,27 @@ export function DiaryEntryScreen({
   // kullanıcının yazdığı boş-gün formu bir kez sıfırlanırdı.
   const seedKey = entry ? `entry:${entry.id}:${entry.updated_at}` : `new:${activeDate}`;
   const seededRef = useRef<string | null>(null);
+  // O4 (SEKME-F2, lider denetimi 2. tur) · kaydı OLMAYAN günün "başlangıç
+  // formu" — aşağıdaki efekt gün değişiminde önceki günün YAZILMIŞ
+  // (kaydedilmemiş) alanlarını KASITLI taşıdığı için (bkz. "previous.startsWith"
+  // dalı), kirlilik tabanı salt `emptyDiaryForm(activeDate)` OLAMAZ — efektin
+  // bu gün için ürettiği GERÇEK başlangıç değeriyle kıyaslanır, yoksa taşınan
+  // alan sahte-kirli üretir. ANAHTARLI DURUMDUR (`ref` DEĞİL): D1'in kusur
+  // sınıfı ("render sırasında `ref.current` okuma") burada BÜYÜMESİN diye —
+  // `key` ile "bu değer HANGİ gün için üretildi" render'da GÜVENLE okunur
+  // (bir `ref`in o an neyi tuttuğu render sırasında BİLİNMEZ).
+  const [noEntryBaseline, setNoEntryBaseline] = useState<{
+    key: string;
+    form: DiaryFormState;
+  } | null>(null);
+  // Efekt `form`u DEPENDENCY yapmadan (döngüye girmesin diye) en güncel
+  // `form`u okuyabilsin diye — `SubcontractorContractCreateView`deki
+  // `loadItemsRef` deseniyle aynı. YALNIZ efekt İÇİNDE okunur, render
+  // sırasında DEĞİL — D1'in kusur sınıfına girmez.
+  const formRef = useRef(form);
+  useEffect(() => {
+    formRef.current = form;
+  });
   useEffect(() => {
     if (isEntryLoading) return;
     if (seededRef.current === seedKey) return;
@@ -215,17 +236,20 @@ export function DiaryEntryScreen({
     seededRef.current = seedKey;
     if (entry) {
       setForm(diaryFormFromEntry(entry));
+      setNoEntryBaseline(null);
       return;
     }
     // Kayıtlı günden boş güne geçildiyse (ya da ilk yükleme) temiz form:
     // önceki günün notları yeni güne KOPYALANMAZ.
     if (previous === null || previous.startsWith("entry:")) {
-      setForm(emptyDiaryForm(activeDate));
+      const next = emptyDiaryForm(activeDate);
+      setForm(next);
+      setNoEntryBaseline({ key: seedKey, form: next });
       return;
     }
-    setForm((prev) => ({
+    const next = {
       ...emptyDiaryForm(activeDate),
-      ...prev,
+      ...formRef.current,
       entryDate: activeDate,
       quantities: {},
       overrunReasons: {},
@@ -235,7 +259,9 @@ export function DiaryEntryScreen({
       workerHours: {},
       addedFirms: [],
       removedWorkers: [],
-    }));
+    };
+    setForm(next);
+    setNoEntryBaseline({ key: seedKey, form: next });
   }, [seedKey, entry, activeDate, isEntryLoading]);
 
   // ── Kalem ağacı (G1) + uzantı bağlamı (§2.7) ──────────────────────────
@@ -269,10 +295,20 @@ export function DiaryEntryScreen({
   // çalışmış olmasını da şart koşar — aksi hâlde ilk commit'te boş form ≠
   // entry sahte-kirli üretip üst çubukta boşuna onay modalı açtırır.
   const isFormSeededForEntry = entry !== undefined && seededRef.current === seedKey;
-  useUnsavedChanges(
-    isFormSeededForEntry ? isDiaryFormDirty(entry, form) : false,
-    "Şantiye günlüğü",
-  );
+  // O4 (SEKME-F2, lider denetimi 2. tur) · kaydı OLMAYAN günde de kayıt
+  // izlenir: `entry === undefined` iken registry'ye HER ZAMAN `false` gitmesi,
+  // o günde yazılan (ör. "Min °C") bir değerin sekme değişince UYARISIZ
+  // kaybolmasına yol açıyordu. Taban `noEntryBaseline` (yukarıdaki seed
+  // effect'in BU gün için ürettiği başlangıç değeri) — `seededRef` OKUNMAZ,
+  // BU DAL yalnız `noEntryBaseline.key`in GÜNCEL `seedKey`e eşit olup
+  // olmadığına bakar (state, render'da güvenle okunur). D1 AYRI İŞ,
+  // aşağıdaki `isDirty` (satır ~314) burada DEĞİŞMEDİ.
+  const registryDirty = isFormSeededForEntry
+    ? isDiaryFormDirty(entry, form)
+    : entry === undefined && noEntryBaseline?.key === seedKey
+      ? JSON.stringify(form) !== JSON.stringify(noEntryBaseline.form)
+      : false;
+  useUnsavedChanges(registryDirty, "Şantiye günlüğü");
 
   if (!permission.canView) return <AccessDenied />;
   if (isForbidden(siteQuery.error) || isForbidden(entriesQuery.error)) return <AccessDenied />;
