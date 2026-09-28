@@ -1,0 +1,27 @@
+/**
+ * FIX-IZN · yalnız `izin-talep-formu` kadrajı için.
+ *
+ * KÖK NEDEN (opus teşhisi, kanıtlı): `.modal.iz-modal--request` içeriği
+ * `max-height: 85vh`e sığmadığı için (bkz. KARARLAR-BEKLEYEN §12 — diyaloğu
+ * 85vh'e sığdırma AÇIK BORÇTUR, burada çözülmüyor) modal kaydırılabilir
+ * (`overflow-y: auto`). Chromium bu yüzden onu BİLEŞİK bir kaydırma katmanı
+ * olarak çiziyor ve ardışık `toHaveScreenshot` yakalamaları arasında raster
+ * iki hâl arasında BAYT DÜZEYİNDE gidip geliyor (8/8 baseline aynı hash
+ * DEĞİL) — kesirli konum/piksel yuvarlama sorunu DEĞİL, katman bileşimi
+ * kararsızlığı.
+ *
+ * `overflow: hidden` bu tek modalı bileşik olmaktan çıkarır: kaydırma zaten
+ * 0'da olduğu için (prepareFrame kanonu) ve headless yakalamada kaydırma
+ * çubuğu görünmediği için GÖRÜNEN İÇERİK AYNI kalır, yalnız raster kararlı
+ * hâle gelir. Kökten çözüm modalı 85vh'e sığdırmaktır (KARARLAR-BEKLEYEN
+ * §12); bu dosya o karara kadar geçici bir raster dondurucudur, YALNIZ bu
+ * kadrajda kullanılır (`e2e/leaves-visual.spec.ts` "izin talep formu gorsel").
+ *
+ * 🔴 `stylePath` kullan, `toHaveScreenshot({ style })` DEĞİL — Playwright
+ * 1.61.1'de `style` seçeneği SESSİZCE yok sayılıyor (ölçüldü). Bu dosyanın
+ * kullanımı `src/test-guards/visual-frame-guard.test.ts`teki gerekçeli izin
+ * listesiyle bekçilenir.
+ */
+.modal.iz-modal--request {
+  overflow: hidden !important;
+}

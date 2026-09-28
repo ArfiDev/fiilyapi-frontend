@@ -1,7 +1,17 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { test, expect, type Page } from "@playwright/test";
 
 import { pinLeaveRequests } from "./leaves-helpers";
 import { prepareFrame } from "./visual-scroll";
+
+// FIX-IZN · yalnız "izin talep formu gorsel" kadrajı için (bkz. aşağıdaki
+// "izin-talep-formu" testi + `e2e/visual-styles/scroll-layer-freeze.css`teki
+// dosya başı gerekçe). `import.meta.url` kullanılır çünkü bu depo ESM'dir
+// (`package.json` `"type": "module"`) — `__dirname` burada YOKTUR
+// (`src/test-guards/visual-frame-guard.test.ts`teki `fileURLToPath` emsali).
+const E2E_DIR = fileURLToPath(new URL(".", import.meta.url));
 
 // F-IZN T7 · İZ (`/personel/izinler`) görsel testleri — kanon mockup'lar
 // `İK - İzin Yönetimi.dc.html` (ekran) · `Form - Izin Talebi.dc.html` (talep
@@ -312,7 +322,21 @@ test("izin talep formu gorsel", async ({ page }) => {
   await expect(dialog.getByTestId("iz-request-error")).toHaveCount(0);
 
   await prepareFrame(page);
-  await expect(page).toHaveScreenshot("izin-talep-formu.png", { fullPage: true });
+  // FIX-IZN (opus teşhisi, kanıtlı): `.modal.iz-modal--request` 85vh'e
+  // sığmadığı için kaydırılabilir (`overflow-y: auto`) ve Chromium onu
+  // BİLEŞİK bir kaydırma katmanı olarak çiziyor — ardışık yakalamalar
+  // arasında raster bayt düzeyinde gidip geliyordu (8/8 baseline aynı hash
+  // DEĞİL). Kökten çözüm diyaloğu 85vh'e sığdırmaktır (KARARLAR-BEKLEYEN
+  // §12, henüz yapılmadı); `scroll-layer-freeze.css` o karara kadar SADECE bu
+  // kadrajda `overflow: hidden` ile katmanı dondurur (kaydırma zaten 0'da,
+  // görünen içerik AYNI kalır). `stylePath` kullanılır, `style` DEĞİL —
+  // Playwright 1.61.1'de `toHaveScreenshot({ style })` SESSİZCE yok sayılıyor
+  // (ölçüldü). Kullanım `src/test-guards/visual-frame-guard.test.ts`teki
+  // gerekçeli izin listesiyle bekçilenir.
+  await expect(page).toHaveScreenshot("izin-talep-formu.png", {
+    fullPage: true,
+    stylePath: path.join(E2E_DIR, "visual-styles/scroll-layer-freeze.css"),
+  });
 });
 
 /* ── 4) R · İzin Talebini Reddet diyaloğu ────────────────────────────────── */
