@@ -118,9 +118,16 @@
      390px  → clamp alt sınıra oturur:  220px (dar ekran zaten §mobil kuralıyla
               listeyi tamamen gizliyor, bu değer yalnız medya sorgusu ÖNCESİ
               geçiş anı için)
-     768px  → 768×0.34 ≈ 261px          (10 sekmede şerit YİNE kayıyor, en az
-              bir sekme görünür — 768'deki eski 220px kanıtı hâlâ geçerli:
-              261 < 248px güvenli tavan)
+     768px  → 768×0.34 = 261.12px       (TASMA-F1 ÖLÇÜMÜ, 768×900, 10 sekme,
+              headless Chromium: dört seviyeli kırıntı — doğal genişliği
+              395.6px — max-width'e OTURUR: 261.1px. Logo 220 + eylemler 120
+              ile birlikte sekme şeridi (`.workspace-tabs__list`) 167px
+              clientWidth'e iner (scrollWidth 1223, şerit kayar); bunun içinde
+              sticky "Gösterge Paneli" + "Raporlar" TAM, aktif sekme KISMEN
+              görünür — yani şerit sıfıra inmez. Tek seviyeli kırıntıda
+              ("Planlama Paneli") kırıntı 124px, şerit 304px. Bu satırdaki
+              eski "248px güvenli tavan" ölçüme dayanmıyordu, kaldırıldı;
+              ölçülmeyen bir üst sınır iddia EDİLMEZ)
      1440px → 1440×0.34 = 489.6px → 490px (dört seviyeli kırıntının SON İKİ
               parçası — "A-Blok Şantiyesi / Kat 6-10 Kaba İnşaat" — tam
               okunur; ölçüldü, v6b karesi)
