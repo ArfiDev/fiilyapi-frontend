@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, Field } from "@/components/ui";
 import { Select } from "@/components/ui/select";
 import { CheckIcon, inlineSymbolProps } from "@/components/ui/icons";
@@ -9,7 +10,7 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { isForbidden } from "@/lib/api/unwrap";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { cx } from "@/lib/cx";
-import { usePreferences, useUpdatePreferences } from "@/lib/api/hooks/usePreferences";
+import { PREFERENCES_QUERY_KEY, usePreferences, useUpdatePreferences } from "@/lib/api/hooks/usePreferences";
 import type { PreferencesRead, PreferencesUpdate } from "@/lib/api/models";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "./appearance-screen.css";
@@ -47,29 +48,37 @@ const DENSITY_OPTIONS: Array<{ value: PreferencesRead["density"]; name: string; 
   { value: "compact", name: "Kompakt", desc: "Daha fazla bilgi, daha az boşluk" },
 ];
 
+type Draft = Partial<PreferencesRead>;
+
+// Değeri `ref`teki karşılığına eşit olan alanları taslaktan çıkarır (yeni nesne).
+function dropMatching(draft: Draft, ref: object | undefined): Draft {
+  const kept = Object.entries(draft).filter(([k, v]) => (ref as Record<string, unknown> | undefined)?.[k] !== v);
+  return Object.fromEntries(kept) as Draft;
+}
+
+function differsFromServer(draft: Draft, server: PreferencesRead): boolean {
+  return Object.keys(dropMatching(draft, server)).length > 0;
+}
+
 export function AppearanceScreen() {
   const query = usePreferences();
   const update = useUpdatePreferences();
-  const [form, setForm] = useState<PreferencesRead | null>(null);
+  const qc = useQueryClient();
   const [err, setErr] = useState<string | null>(null);
-  // SEKME-F1.3b · dirty (tercih 2), taban `form`u dolduran AYNI efektte
-  // alınır. 🔴 ASYNC TABAN: `baseline` `null` iken dirty FALSE. Komşu kusur
-  // (envanter notu): bu efekt `query.data` REFERANSI her değiştiğinde
-  // (arkaplan refetch dahil) `form`u SESSİZCE EZER — mevcut davranış
-  // KORUNUR, bu bağlama görevi onu değiştirmez; `baseline` de aynı efektte
-  // aynı şekilde hizalanır (kayıt sonrası `invalidateQueries` de bu yoldan
-  // sıfırlar).
-  const [baseline, setBaseline] = useState<PreferencesRead | null>(null);
-  const isDirty = baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
-  // 🟡 hook riski: `form`/`baseline` başlangıçta `null` — ifade `null`
-  // güvenlidir (yalnız `baseline !== null` kontrolü), hook koşulsuz çağrılır.
+  // AYR-F1 · gerçek `touched` deseni (F-İK): `draft` YALNIZ kullanıcının
+  // dokunduğu alanları tutar (`{}` = dokunulmadı); gösterilen form
+  // `{...sunucu, ...draft}`. Dokunulmayan alanlar hep GÜNCEL sunucu değeridir
+  // — arkaplan refetch'i onları günceller, kirli formu EZMEZ (eski efekt
+  // `query.data` referansı her değiştiğinde `form`u eziyordu) ve kayıt
+  // gövdesi sunucunun başka alandaki değişikliğini geri yazmaz.
+  const [draft, setDraft] = useState<Partial<PreferencesRead>>({});
+  const form = query.data ? { ...query.data, ...draft } : null;
+  // 🔴 ASYNC TABAN: taban `query.data`; GET dönmeden `draft` boş → dirty
+  // FALSE. Dirty = taslakta sunucudan FARKLI en az bir alan (sunucu sonradan
+  // aynı değere gelirse ya da kullanıcı eski değere dönerse kirli sayılmaz).
+  const isDirty = query.data !== undefined && differsFromServer(draft, query.data);
+  // 🟡 hook riski: ifade `undefined` güvenlidir, hook koşulsuz çağrılır.
   useUnsavedChanges(isDirty, "Görünüm tercihleri");
-
-  useEffect(() => {
-    if (!query.data) return;
-    setForm(query.data);
-    setBaseline(query.data);
-  }, [query.data]);
 
   if (query.isLoading) return <p className="settings-note">Yükleniyor…</p>;
   if (isForbidden(query.error)) return <AccessDenied />;
@@ -77,7 +86,9 @@ export function AppearanceScreen() {
     return <p className="settings-note settings-note--error">Görünüm tercihleri yüklenemedi.</p>;
   }
 
-  const set = (patch: Partial<PreferencesRead>) => setForm((f) => (f ? { ...f, ...patch } : f));
+  // Sunucu değerine eşit düşen alan taslaktan ÇIKAR (eski değere dönüş = dokunulmadı).
+  const set = (patch: Partial<PreferencesRead>) =>
+    setDraft((d) => dropMatching({ ...d, ...patch }, query.data));
 
   function save() {
     if (!form) return;
@@ -90,7 +101,16 @@ export function AppearanceScreen() {
       accent_color: form.accent_color,
       // theme kasitli olarak gonderilmiyor — yalnizca "light" desteklenir, sunucu tarafi bunu zaten varsayilan tutar.
     };
-    update.mutate(body, { onError: (e) => setErr(backendErrorMessage(e)) });
+    update.mutate(body, {
+      onSuccess: (saved) => {
+        // PUT yanıtı sunucunun yeni hâlidir: önbelleğe yaz (refetch dönene
+        // kadar eski değer görünmesin). Taslaktan yalnız GÖNDERİLEN değerle
+        // hâlâ aynı olan alanlar düşer; kayıt yoldayken değiştirilenler kalır.
+        qc.setQueryData([PREFERENCES_QUERY_KEY], saved);
+        setDraft((d) => dropMatching(d, body));
+      },
+      onError: (e) => setErr(backendErrorMessage(e)),
+    });
   }
 
   return (

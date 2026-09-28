@@ -13,7 +13,11 @@ import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
-import { useSiteDiaryEntries, useSiteDiaryEntry } from "@/lib/api/hooks/useSiteDiary";
+import {
+  useSiteDiaryEntries,
+  useSiteDiaryEntry,
+  type SiteDiaryEntryDetail,
+} from "@/lib/api/hooks/useSiteDiary";
 import {
   useCreateSiteDiaryEntry,
   useReopenSiteDiaryEntry,
@@ -203,11 +207,24 @@ export function DiaryEntryScreen({
   const isEntryLoading =
     entriesQuery.isLoading || (matchedId !== "" && entryQuery.isLoading);
 
-  // Form tohumlama: sunucudaki kayıt DEĞİŞTİĞİNDE (id ya da updated_at) yerel
-  // durum yeniden kurulur. Yükleme sürerken tohumlanmaz — yoksa liste gelince
-  // kullanıcının yazdığı boş-gün formu bir kez sıfırlanırdı.
-  const seedKey = entry ? `entry:${entry.id}:${entry.updated_at}` : `new:${activeDate}`;
-  const seededRef = useRef<string | null>(null);
+  // Form tohumlama (D1 · form-ez-f1): yerel form YALNIZ (1) ilk yüklemede /
+  // gün ya da kayıt kimliği değişince ve (2) BU ekrandan yapılan kayıt (taslak,
+  // gönder, yeniden aç) BAŞARILI olunca sunucu verisiyle yeniden kurulur.
+  // Kayıt bu ekran DIŞINDAN değişirse (`updated_at` başka gelir: arka plan
+  // refetch'i, başka sekme/kullanıcı) KİRLİ form EZİLMEZ; TEMİZ form yeni
+  // sunucu verisine hizalanır. Yükleme sürerken tohumlanmaz — yoksa liste
+  // gelince kullanıcının yazdığı boş-gün formu bir kez sıfırlanırdı.
+  // `seedKey` yalnız KİMLİKTİR (`updated_at` taşımaz).
+  const seedKey = entry ? `entry:${entry.id}` : `new:${activeDate}`;
+  // "Form HANGİ kimlik için, HANGİ sunucu kaydından tohumlandı" — ANAHTARLI
+  // DURUM (`ref` DEĞİL: render sırasında `ref.current` okunmaz). `baseline`,
+  // formun tohumlandığı kayıttır ve kirlilik TABANIDIR: en güncel sunucu
+  // kaydına göre değil, ezilmeyen (eski tabanlı) kirli form sahte-temiz ya da
+  // dışarıdan gelen değişiklik yüzünden sahte-kirli görünürdü.
+  const [seeded, setSeeded] = useState<{
+    key: string;
+    baseline: SiteDiaryEntryDetail | null;
+  } | null>(null);
   // O4 (SEKME-F2, lider denetimi 2. tur) · kaydı OLMAYAN günün "başlangıç
   // formu" — aşağıdaki efekt gün değişiminde önceki günün YAZILMIŞ
   // (kaydedilmemiş) alanlarını KASITLI taşıdığı için (bkz. "previous.startsWith"
@@ -231,14 +248,29 @@ export function DiaryEntryScreen({
   });
   useEffect(() => {
     if (isEntryLoading) return;
-    if (seededRef.current === seedKey) return;
-    const previous = seededRef.current;
-    seededRef.current = seedKey;
+    const isSameIdentity = seeded !== null && seeded.key === seedKey;
+    if (isSameIdentity) {
+      // Aynı kayıt: yalnız TABANDAN KESİN YENİ sürüm dikkate alınır
+      // (`Date.parse` ile — dizge kıyası DEĞİL). Kayıt yoldayken önbelleğe
+      // giren eski/ara sürüm (ör. PATCH sonrası, PUT lines ÖNCESİ GET) ya da
+      // taban zaten daha yeniyse ATLANIR; yoksa dönen yeni kaydı geri ezerdi.
+      // Daha yeniyse: TEMİZ form hizalanır, KİRLİ form dokunulmaz.
+      const baseline = seeded.baseline;
+      if (!entry || !baseline) return;
+      if (!(Date.parse(entry.updated_at) > Date.parse(baseline.updated_at))) return;
+      if (isDiaryFormDirty(baseline, formRef.current)) return;
+      setForm(diaryFormFromEntry(entry));
+      setSeeded({ key: seedKey, baseline: entry });
+      return;
+    }
+    const previous = seeded?.key ?? null;
     if (entry) {
+      setSeeded({ key: seedKey, baseline: entry });
       setForm(diaryFormFromEntry(entry));
       setNoEntryBaseline(null);
       return;
     }
+    setSeeded({ key: seedKey, baseline: null });
     // Kayıtlı günden boş güne geçildiyse (ya da ilk yükleme) temiz form:
     // önceki günün notları yeni güne KOPYALANMAZ.
     if (previous === null || previous.startsWith("entry:")) {
@@ -262,7 +294,28 @@ export function DiaryEntryScreen({
     };
     setForm(next);
     setNoEntryBaseline({ key: seedKey, form: next });
-  }, [seedKey, entry, activeDate, isEntryLoading]);
+  }, [seedKey, entry, activeDate, isEntryLoading, seeded]);
+
+  /**
+   * Bu ekrandan yapılan BAŞARILI kayıt: kirlilik TABANI her zaman dönen kayıt;
+   * FORM ise yalnız kullanıcı kayıt SÜRERKEN dokunmadıysa (güncel form ==
+   * gönderilen kopya) dönen kayıttan kurulur — aksi hâlde kullanıcının yeni
+   * yazdığı kalır (taban `saved`a göre kirli görünür). `formRef` burada
+   * (olay işleyicide) okunur/yazılır, render'da DEĞİL. Dönüş: bir SONRAKİ
+   * adımın (Kaydet & Gönder'de ikinci reseed) "gönderilen kopya"sı — form
+   * kuruldu ise yeni form, kullanıcı formu değiştirmişse eski kopya (asla eşleşmez).
+   */
+  function reseedFromSaved(saved: SiteDiaryEntryDetail, sentForm: DiaryFormState): DiaryFormState {
+    const isUntouched = formRef.current === sentForm;
+    const next = isUntouched ? diaryFormFromEntry(saved) : sentForm;
+    if (isUntouched) {
+      formRef.current = next;
+      setForm(next);
+    }
+    setSeeded({ key: `entry:${saved.id}`, baseline: saved });
+    setNoEntryBaseline(null);
+    return next;
+  }
 
   // ── Kalem ağacı (G1) + uzantı bağlamı (§2.7) ──────────────────────────
   const treeSections = siteTreeSections(siteQuery.data?.sections ?? []);
@@ -291,21 +344,24 @@ export function DiaryEntryScreen({
 
   // SEKME-F1.3-FIX D1 · form efektte (yukarıdaki seed effect'te) doldurulur;
   // ilk render'da entry zaten hazırken form henüz boştur (emptyDiaryForm).
-  // Bu yüzden dirty ifadesi seed effect'in BU kayıt için (seedKey eşleşmesi)
-  // çalışmış olmasını da şart koşar — aksi hâlde ilk commit'te boş form ≠
-  // entry sahte-kirli üretip üst çubukta boşuna onay modalı açtırır.
-  const isFormSeededForEntry = entry !== undefined && seededRef.current === seedKey;
+  // Bu yüzden dirty ifadesi seed effect'in BU kayıt için (`seeded.key` ==
+  // `seedKey`) çalışmış olmasını da şart koşar — aksi hâlde ilk commit'te boş
+  // form ≠ entry sahte-kirli üretip üst çubukta boşuna onay modalı açar.
+  // Taban `seeded.baseline`dır (formun tohumlandığı kayıt), en güncel sunucu
+  // kaydı DEĞİL (D1 · form-ez-f1). `seeded` state'tir → render'da güvenle okunur.
+  const seededBaseline = seeded !== null && seeded.key === seedKey ? seeded.baseline : null;
+  const isEntryFormDirty = seededBaseline !== null && isDiaryFormDirty(seededBaseline, form);
   // O4 (SEKME-F2, lider denetimi 2. tur) · kaydı OLMAYAN günde de kayıt
   // izlenir: `entry === undefined` iken registry'ye HER ZAMAN `false` gitmesi,
   // o günde yazılan (ör. "Min °C") bir değerin sekme değişince UYARISIZ
   // kaybolmasına yol açıyordu. Taban `noEntryBaseline` (yukarıdaki seed
-  // effect'in BU gün için ürettiği başlangıç değeri) — `seededRef` OKUNMAZ,
+  // effect'in BU gün için ürettiği başlangıç değeri) — `ref` OKUNMAZ,
   // BU DAL yalnız `noEntryBaseline.key`in GÜNCEL `seedKey`e eşit olup
-  // olmadığına bakar (state, render'da güvenle okunur). D1 AYRI İŞ,
-  // aşağıdaki `isDirty` (satır ~314) burada DEĞİŞMEDİ.
-  const registryDirty = isFormSeededForEntry
-    ? isDiaryFormDirty(entry, form)
-    : entry === undefined && noEntryBaseline?.key === seedKey
+  // olmadığına bakar (state, render'da güvenle okunur). Kayıtlı gün dalı
+  // `isEntryFormDirty`dir (yukarıda); ekrandaki `isDirty` ile AYNI değer.
+  const registryDirty = entry !== undefined
+    ? isEntryFormDirty
+    : noEntryBaseline?.key === seedKey
       ? JSON.stringify(form) !== JSON.stringify(noEntryBaseline.form)
       : false;
   useUnsavedChanges(registryDirty, "Şantiye günlüğü");
@@ -347,7 +403,7 @@ export function DiaryEntryScreen({
   // Salt-okunur görünüm: yazma izni yok, kayıt gönderilmiş ya da gün kilitli.
   const isReadOnly = !permission.canWrite || isSubmitted || isLocked;
   const canReopen = hasAtLeast(permission.level, "admin");
-  const isDirty = entry ? isDiaryFormDirty(entry, form) : false;
+  const isDirty = isEntryFormDirty;
   // Uzantı yuvası `submitGate`: `canSubmit === false` → Gönder pasif + gerekçeler EKRANDA.
   const gate = extension?.submitGate ?? null;
   const isGateClosed = gate !== null && !gate.canSubmit;
@@ -482,7 +538,8 @@ export function DiaryEntryScreen({
         return;
       }
       const updated = await updateEntry.mutateAsync(buildDiaryUpdateBody(form, entry));
-      await saveLines.mutateAsync(buildDiaryLinesBody(updated, form));
+      const saved = await saveLines.mutateAsync(buildDiaryLinesBody(updated, form));
+      reseedFromSaved(saved, form);
       setActiveDate(updated.entry_date);
     } catch (error: unknown) {
       reportError(error, "Günlük kayıt kaydedilemedi.");
@@ -503,9 +560,13 @@ export function DiaryEntryScreen({
     }
     try {
       const updated = await updateEntry.mutateAsync(buildDiaryUpdateBody(form, entry));
-      await saveLines.mutateAsync(buildDiaryLinesBody(updated, form));
+      // Gönderim sonradan patlasa da KAYDEDİLEN veri tabana işlenir.
+      const sentAfterSave = reseedFromSaved(
+        await saveLines.mutateAsync(buildDiaryLinesBody(updated, form)),
+        form,
+      );
       setActiveDate(updated.entry_date);
-      await submitEntry.mutateAsync();
+      reseedFromSaved(await submitEntry.mutateAsync(), sentAfterSave);
     } catch (error: unknown) {
       reportError(error, "Günlük kayıt gönderilemedi.");
     } finally {
@@ -519,7 +580,7 @@ export function DiaryEntryScreen({
     setErrorMessage(null);
     setIsSaving(true);
     try {
-      await reopenEntry.mutateAsync();
+      reseedFromSaved(await reopenEntry.mutateAsync(), form);
     } catch (error: unknown) {
       reportError(error, "Kayıt yeniden açılamadı.");
     } finally {
