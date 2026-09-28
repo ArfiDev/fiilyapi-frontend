@@ -234,7 +234,31 @@
 .section-panel__body--flush {
   padding: 0;
 }
+/* TASMA-F1 · 768px'te İş Kalemleri sekmesi sayfayı yatay taşırıyordu
+   (documentElement.scrollWidth 829 > 768). ÖLÇÜLEN mekanizma iki halkalı:
+   (1) `.boq-table` en dar min-content'inde 604px (sütun genişlikleri + hücre
+   dolguları; `width:100%` bunun ALTINA inemez) ama `.section-panel`in (bkz.
+   `overflow:hidden`) içi 768'de 482px → tablo kırpılır, "Gerç. %"/"Durum"
+   görünmez; (2) "Durum" hücresindeki `.sr-only` gerekçe (position:absolute,
+   1px) HİÇBİR konumlu atası olmadığı için `.section-panel`in kırpmasından
+   KAÇIP sayfa kaydırma alanına 827.5+1 → 829'a katkı verir (sr-only'yi
+   içeren `.section-panel`ı `overflow:clip` yapmak 829'u DEĞİŞTİRMEDİ).
+   Çözüm: `.section-boq` hem konumlu kap (sr-only artık onun içinde) hem yatay
+   kaydırma kabı olur → tablo kutusu kaydırılarak "Durum"a ulaşılır. Ayrı
+   `min-width` GEREKMEZ: tablonun kendi min-content'i (604px) zaten taban;
+   kap 604'ten geniş olduğunda (1280) kaydırma çubuğu çıkmaz, hiçbir şey kaymaz.
+   `.boq-table`/boq.css PAYLAŞILANDIR, dokunulmadı. Masaüstü (1280) ölçümle
+   birebir aynı: tüm kutular getBoundingClientRect eşit.
+   ⚠️ `overflow-x:auto` Y ekseninde de kaydırma kabı kurar: ileride thead'e
+   `position:sticky; top:0` eklenirse SAYFAYA değil bu kaba bağlanır. */
+.section-boq {
+  position: relative;
+  overflow-x: auto;
+}
+/* Başlık şeridi kaydırmada solda kalır (kap kadar geniş, kenarlığı sabit). */
 .section-boq__head {
+  position: sticky;
+  left: 0;
   display: flex;
   align-items: center;
   gap: 10px;
