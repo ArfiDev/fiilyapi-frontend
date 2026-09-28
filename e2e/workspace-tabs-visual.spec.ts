@@ -132,7 +132,31 @@ test.describe("çalışma sekmeleri — 390 (dar ekran amblemi)", () => {
     await openViaSidebar(page, "Puantaj");
     await expect(tabByName(page, "Puantaj")).toHaveAttribute("aria-selected", "true");
 
-    await prepareFrame(page);
+    // VIS-390-F1 (ölçüldü): 390'da şerit (`.workspace-tabs__list`) aktif sekmeyi
+    // görünür tutmak için KENDİ kendini yatay kaydırır (`scroll-behavior:
+    // smooth`, sekme durumu oturana dek birkaç kez `scrollTo`). Baseline zaten
+    // bu "aktif sekme panelin yanında" durumunu basar. `prepareFrame` şeridin
+    // `scrollLeft`ini 0'a çekince bileşen onu geri kaydırıyordu (yarış → poll
+    // 1'de kalır). 1280'deki 10 sekme karesiyle AYNI CEO K5 kararı: yatay
+    // kaydırma korunur; kare anlamı olan durum önce OTURUR (iki kare üst üste
+    // aynı `scrollLeft`), dikey sıfırlama ve imleç parkı aynen çalışır.
+    const list = tabsList(page);
+    await expect.poll(() => list.evaluate((el) => Math.round(el.scrollLeft) > 0)).toBe(true);
+    await expect
+      .poll(() =>
+        list.evaluate(
+          (el) =>
+            new Promise<boolean>((resolve) => {
+              const before = el.scrollLeft;
+              requestAnimationFrame(() =>
+                requestAnimationFrame(() => resolve(el.scrollLeft === before)),
+              );
+            }),
+        ),
+      )
+      .toBe(true);
+
+    await prepareFrame(page, { preserveScrollLeft: [".workspace-tabs__list"] });
     await expect(page).toHaveScreenshot("workspace-tabs-390-emblem.png", { fullPage: true });
   });
 });
