@@ -708,4 +708,30 @@ describe("BulkUnitCreateView — kaydedilmemiş değişiklik kaydı", () => {
     unmount();
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
+
+  /**
+   * SEKME-F1.6-Y1 — gerçek yol: `BlockCreateView` "Kaydettikten sonra toplu
+   * üretime geç" ile `?proje=…&blok=…` tohumuyla buraya yönlendirir. Taban
+   * tohumla BİRLİKTE kaymazsa form kullanıcı hiçbir şey yapmadan `isDirty=true`
+   * doğardı (kusur no 1).
+   */
+  it("`?proje=&blok=` ile açılış, sorgular çözülünce KİRLİ olmaz", () => {
+    searchParams = new URLSearchParams("proje=prj-1&blok=blk-a");
+    render(<BulkUnitCreateView />);
+    // Sorgular (projeler/şantiyeler/bloklar) `beforeEach`te senkron mock'la
+    // ZATEN çözülü — kayıt dizisinde tek bir `true` bile olmamalı.
+    expect(screen.getByTestId("toplu-form-proje")).toHaveValue("prj-1");
+    expect(screen.getByTestId("toplu-form-blok")).toHaveValue("blk-a");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("aynı açılış + kullanıcı bir alanı değiştirir → kirli; geri alır → temiz", () => {
+    searchParams = new URLSearchParams("proje=prj-1&blok=blk-a");
+    render(<BulkUnitCreateView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    fireEvent.change(screen.getByTestId("toplu-form-kat-basina"), { target: { value: "3" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.change(screen.getByTestId("toplu-form-kat-basina"), { target: { value: "" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
 });

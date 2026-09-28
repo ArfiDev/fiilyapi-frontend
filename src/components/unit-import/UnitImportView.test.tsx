@@ -721,3 +721,43 @@ describe("UnitImportView — kaydedilmemiş değişiklik kaydı", () => {
     expect(screen.getByTestId("excel-form-govde")).toBeInTheDocument();
   });
 });
+
+/**
+ * SEKME-F1.6-Y1 — gerçek yol: proje seçimi `handleChangeProject` ile
+ * `router.replace`den `?proje=`e yazılır; sekmeye dönüşte veya yenilemede
+ * tohum efekti aynı değeri geri okur. Taban tohumla BİRLİKTE kaymazsa form
+ * kullanıcı hiçbir şey yapmadan `isDirty=true` doğardı (kusur no 2).
+ */
+describe("UnitImportView — SEKME-F1.6-Y1: URL tohumu tabanı da kaydırır", () => {
+  it("`?proje=` ile açılış, sorgular çözülünce KİRLİ olmaz", () => {
+    searchParams = new URLSearchParams("proje=prj-1");
+    render(<UnitImportView />);
+    expect(screen.getByTestId("excel-form-proje")).toHaveValue("prj-1");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("aynı açılış + kullanıcı PROJEYİ DEĞİŞTİRİR → kirli", () => {
+    vi.mocked(useProjects).mockReturnValue(
+      queryStub({
+        items: [
+          { id: "prj-1", name: "Yeşilvadi Rezidans" },
+          { id: "prj-2", name: "2. Etap Rezidans" },
+        ],
+      }),
+    );
+    searchParams = new URLSearchParams("proje=prj-1");
+    render(<UnitImportView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    fireEvent.change(screen.getByTestId("excel-form-proje"), { target: { value: "prj-2" } });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("aynı açılış + dosya seçmek → kirli (tohum yalnız `values`i kapsar)", async () => {
+    searchParams = new URLSearchParams("proje=prj-1");
+    render(<UnitImportView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    selectFile(xlsxFile());
+    await waitFor(() => expect(validateAsync).toHaveBeenCalled());
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+});
