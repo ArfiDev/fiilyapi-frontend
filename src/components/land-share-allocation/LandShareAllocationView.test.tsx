@@ -730,11 +730,13 @@ describe("🔴 Başarılı kayıt — tablo CEVAPTAN çizilir, ikinci GET atılm
     fireEvent.click(screen.getByTestId("paylasim-form-arsa-A-9"));
     fireEvent.click(screen.getByTestId("paylasim-form-kaydet"));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("paylasim-form-arsa-A-9")).toHaveAttribute("aria-pressed", "true"),
-    );
     // Bekleyen katman boşaldı → "kaydedilecek değişiklik yok" hâline dönüldü.
-    expect(screen.getByTestId("paylasim-form-kaydet")).toBeDisabled();
+    // LAND-FLAKY-F1 (ölçüldü): `aria-pressed` BEKLEYEN katmandan da hemen true
+    // olur — onu beklemek `waitFor`u ilk senkron denemede geçiriyor, kayıt
+    // sonrası render ise (await sonrası, act dışı) Scheduler'la yarışıyordu.
+    // "Kayıt tamamlandı"nın ayırt edici sinyali kaydet düğmesinin kapanmasıdır.
+    await waitFor(() => expect(screen.getByTestId("paylasim-form-kaydet")).toBeDisabled());
+    expect(screen.getByTestId("paylasim-form-arsa-A-9")).toHaveAttribute("aria-pressed", "true");
     // Satır cevaptaki hissedarı gösterir.
     expect(
       (screen.getByTestId("paylasim-form-hissedar-A-9") as HTMLSelectElement).value,
