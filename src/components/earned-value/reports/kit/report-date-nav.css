@@ -16,6 +16,17 @@
   color: var(--color-text-muted);
 }
 
+/* LİDER DÜZELTMESİ (GIR-F1): `NativeDatePicker`in gizli girdisi konum
+   ebeveynini artık BU sarmalayıcıdan alır (`.report-date-nav__box` DEĞİL —
+   düğme etkileşimli içerik barındıramaz, girdi düğmenin DIŞINA taşındı).
+   `inline-flex`: `nav`in flex akışında TEK bir öğe olarak durur, `.report-
+   date-nav__box`un kendi ölçüleri (height/padding/border/display/gap) HİÇ
+   değişmedi — sarmalayıcı yalnız konum ebeveyni, boşluk/hizalama EKLEMEZ. */
+.report-date-nav__box-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
 .report-date-nav__box {
   height: 34px;
   padding: 0 var(--space-3);
@@ -25,6 +36,30 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-muted);
+  /* GIR-F1: span → button. Tarayıcı varsayılanlarını sıfırla, kutunun
+     boyutu/konumu piksel piksel AYNI kalsın (yukarıdaki border/padding/
+     display/gap/color zaten kutu görünümünü tanımlıyor, burada yalnız
+     `<button>`in getirdiği fazladan varsayımlar iptal edilir). `margin: 0`
+     güvenlik amaçlı: bazı tarayıcı varsayılan sayfa sayfası `button`a örtük
+     margin verir, `span`de bu YOKTU. */
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  background: none;
+  margin: 0;
+  cursor: pointer;
+}
+.report-date-nav__box:hover {
+  /* Mockup'ta bu kutunun hover hâli yok — belirgin olmayan bir ipucu.
+     `--color-border` KULLANILMADI: o token `--color-border-strong`den
+     (mevcut varsayılan sınır) DAHA AÇIK (#e2e8f0 > #cbd5e1), yani hover'da
+     sınırı SOLDURURDU. Bunun yerine odak halkasıyla AYNI mavi aile
+     (`--focus-ring`in kaynağı) kullanılır — tıklanabilirliği ima eder. */
+  border-color: var(--color-primary-ring);
+}
+.report-date-nav__box:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .report-date-nav__glyph {

@@ -6,6 +6,8 @@
  * yani "kırıntı ne diyorsa geri tuşu oraya gider" bir gerekçe değil, tek bir
  * fonksiyonun sonucudur ve ikisi ayrışamaz.
  */
+import { routes } from "@/lib/routes";
+
 import { moduleNameForSlug } from "../nav-config";
 import { ROUTE_TRAIL_ROOT } from "./route-tree";
 import { EMPTY_KEYS, type NamedEntity, type ParamName, type RouteKeys, type TrailNode } from "./trail-node";
@@ -185,9 +187,30 @@ export function buildTrail(pathname: string, names: CrumbNames = {}): Crumb[] {
  * Kırıntı tek parçaysa (kök rota, modül kökü, "yakında" ekranı) yukarısı
  * YOKTUR ve tuş BASILMAZ — devre dışı bir tuş basmak, gidilecek bir yer
  * varmış gibi görünürdü.
+ *
+ * 🔴 SEKME-F2 D2 (ÖLÇÜLDÜ) — bazı köklerin KENDİ sayfası yoktur, yalnız bir
+ * alt sayfaya yönlendirirler (`/ayarlar` → `redirect(routes.settings.
+ * users())`, `app/(app)/ayarlar/page.tsx`). `route-tree.ts`teki `ayarlar`
+ * düğümünün `href`i YİNE DE `/ayarlar`ın KENDİSİDİR — URL-1 bekçisi
+ * ("href taşıyan her düğümün href'i, o düğüme giden YOLUN KENDİSİDİR") bunu
+ * ZORUNLU kılar (`routes.settings.users()`e taşımak DENENDİ, o bekçiyi
+ * KIRDI — ÇÜRÜTÜLDÜ, `trail.test.ts` "URL-1"). Yani "Ayarlar" atasının
+ * kırıntıdaki href'i (`/ayarlar`) ile TARAYICIDA GERÇEKTEN VARACAĞI sayfa
+ * (`/ayarlar/kullanicilar`) FARKLI iki şeydir. Bu harita YALNIZ o farkı
+ * `backTarget`e taşır, kırıntı LİNKİNİ (`route-tree.ts`) DEĞİŞTİRMEZ:
+ * `/ayarlar/kullanicilar` sayfasındayken ata "Ayarlar"a tıklamak
+ * yönlendirmeden geçip AYNI sayfaya döner — sahte bir "yukarı". Böyle bir
+ * döngü, tuşun HİÇ basılmamasından daha kötüdür — devre dışı bırakılır.
  */
+const ROOT_REDIRECT_TARGETS: Readonly<Record<string, string>> = {
+  [routes.settings.root()]: routes.settings.users(),
+};
+
 export function backTarget(trail: Crumb[]): Crumb | undefined {
   const parent = trail[trail.length - 2];
   if (parent === undefined || parent.href === undefined) return undefined;
+  const current = trail[trail.length - 1];
+  const parentRealTarget = ROOT_REDIRECT_TARGETS[parent.href] ?? parent.href;
+  if (current?.href !== undefined && current.href === parentRealTarget) return undefined;
   return parent;
 }

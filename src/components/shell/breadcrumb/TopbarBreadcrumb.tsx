@@ -34,6 +34,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { cx } from "@/lib/cx";
+
 import { backTarget, buildTrail, routeKeysOf, type Crumb } from "./trail";
 import { useCrumbNames } from "./useCrumbNames";
 
@@ -57,9 +59,19 @@ export function TopbarBreadcrumb() {
   const names = useCrumbNames(keys);
   const trail = buildTrail(pathname, names);
   const back = backTarget(trail);
+  const hasBack = back?.href !== undefined;
 
   return (
-    <nav className="topbar-crumbs" aria-label="Yol göstergesi">
+    // D3 (SEKME-F2, ÖLÇÜLDÜ): <768px'te parça LİSTESİ zaten CSS'le gizlenir
+    // (`topbar.css` mobil kuralı) — geri tuşu YOKSA (tek parçalı rota: `/`,
+    // `/projeler` vb.) nav'ın İÇİNDE basılacak HİÇBİR ŞEY kalmaz, yalnız
+    // kenarlıklı/dolgulu boş bir kutu görünür kalırdı. `--no-back` değişkeni
+    // yalnız <768'de (aşağıdaki medya sorgusu) nav'ın KENDİSİNİ gizler;
+    // masaüstünde (liste görünür) davranış DEĞİŞMEZ.
+    <nav
+      className={cx("topbar-crumbs", !hasBack && "topbar-crumbs--no-back")}
+      aria-label="Yol göstergesi"
+    >
       {back?.href !== undefined && (
         <Link
           href={back.href}

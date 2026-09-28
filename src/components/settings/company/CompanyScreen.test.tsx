@@ -160,4 +160,61 @@ describe("SEKME-F1.3b — kaydedilmemiş değişiklik kaydı", () => {
     await userEvent.click(screen.getByRole("button", { name: "Değişiklikleri Kaydet" }));
     await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
+
+  // O2 (i) — sunucu PUT'tan SONRA da GET'te hep AYNI (eski) veriyi dönerse
+  // (normalleştirme ya da yeniden çekmenin yansıtmaması): `query.data` efektine
+  // bağımlı kalınırsa taban hiç kaymaz ve form KALICI kirli görünür. Kayıt
+  // `onSuccess`i tabanı GÖNDERİLEN gövdeyle hizalamalı.
+  it("PUT sonrası GET hep eski veriyi dönerse (yeniden çekme yansıtmaz) → kayıttan sonra TEMİZ", async () => {
+    stubFetch(() => json(COMPANY));
+    renderScreen();
+    await waitForFormFilled();
+    await userEvent.selectOptions(screen.getByLabelText("KDV Oranı (Varsayılan)"), "10");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await userEvent.click(screen.getByRole("button", { name: "Değişiklikleri Kaydet" }));
+
+    // `stubFetch` GET'i DEĞİŞMEDEN döndürüyor — yeniden çekme (invalidateQueries)
+    // eski veriyi getirir; buna rağmen kayıt SONRASI temiz olmalı.
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+  });
+
+  // O2 (ii) — kayıt SÜRERKEN kullanıcı yeni bir değişiklik yaparsa taban o anki
+  // (kayıt bitmiş) forma DEĞİL, GÖNDERİLEN gövdeye çekilir; kayıt bitince form
+  // hâlâ kirli kalmalı.
+  it("kayıt sürerken ek değişiklik yapılırsa kayıt bitince yine kirli kalır", async () => {
+    let resolvePut!: (value: Response) => void;
+    const putPromise = new Promise<Response>((resolve) => {
+      resolvePut = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input as Request;
+        if (request.method === "PUT") return putPromise;
+        return json(COMPANY);
+      }),
+    );
+    renderScreen();
+    await waitForFormFilled();
+    const vat = screen.getByLabelText("KDV Oranı (Varsayılan)");
+    const saveButton = screen.getByRole("button", { name: "Değişiklikleri Kaydet" });
+    await userEvent.selectOptions(vat, "10");
+
+    await userEvent.click(saveButton);
+    expect(saveButton).toBeDisabled();
+    // Kayıt (PUT) HENÜZ dönmedi — kullanıcı ikinci bir alanı değiştirir.
+    await userEvent.selectOptions(vat, "1");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    resolvePut(json({ ...COMPANY, default_vat_rate: "10" }));
+    // Kayıt tamamen BİTSİN (isPending false) — yalnız DOM değerini beklemek
+    // yeterli değildir: `onSuccess` henüz çalışmamış olabilir (sahte-yeşil
+    // riski, mutasyonla ölçüldü).
+    await waitFor(() => expect(saveButton).not.toBeDisabled());
+    // Kayıt (yalnız "10"u taşıyan gövde) bitti — ama form artık "1"i taşıyor;
+    // taban "10"a çekildiği için hâlâ kirli olmalı.
+    expect(vat).toHaveValue("1");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
 });

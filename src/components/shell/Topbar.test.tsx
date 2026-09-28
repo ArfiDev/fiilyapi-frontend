@@ -82,4 +82,20 @@ describe("Topbar", () => {
     await userEvent.click(button);
     expect(logoutSpy).toHaveBeenCalledTimes(1);
   });
+
+  it("SEKME-F2 D(a) — dar ekranda ikona inince erişilebilir ad `aria-label` ile SABİT kalır", () => {
+    // Mutasyon (M2): `aria-label="Çıkış Yap"`i kaldır → görünür `__label`
+    // span'i CSS'le gizlenince (≤900px) erişilebilir ad kaybolur, bu iddia
+    // kırmızı olur (jsdom @media UYGULAMAZ — bu yüzden gerçek kırılma CSS'te
+    // görsel/e2e turuyla doğrulanır; burada yalnız MEKANİZMA — aria-label'ın
+    // görünür metinden BAĞIMSIZ var olduğu — ölçülür).
+    currentPath = "/ayarlar/kullanicilar";
+    renderTopbar();
+    const button = screen.getByRole("button", { name: "Çıkış Yap" });
+    expect(button).toHaveAttribute("aria-label", "Çıkış Yap");
+    // Görünür metin AYRI bir span'dedir (CSS ≤900px'te bunu gizler, ikon
+    // gösterilir) — DOM'dan KALKMAZ, yalnız görsel olarak solar.
+    expect(button.querySelector(".topbar-settings-exit__label")).toHaveTextContent("Çıkış Yap");
+    expect(button.querySelector(".topbar-settings-exit__icon")).not.toBeNull();
+  });
 });

@@ -213,6 +213,27 @@ describe("backTarget — deterministik bir seviye yukarı", () => {
     });
     expect(backTarget(trail)).toBe(trail[trail.length - 2]);
   });
+
+  it("D2 — /ayarlar/kullanicilar'ın geri hedefi KENDİSİ DEĞİL (← döngüsü YOK)", () => {
+    // `/ayarlar` kendi sayfası olmayan bir yönlendirme kabuğudur ve HER ZAMAN
+    // `/ayarlar/kullanicilar`a döner (`app/(app)/ayarlar/page.tsx`) — kırıntı
+    // linki (`route-tree.ts`teki `ayarlar.href`) YİNE DE `/ayarlar`ın
+    // KENDİSİDİR (URL-1 bekçisi bunu zorunlu kılar); `backTarget` bu ikisinin
+    // (kırıntı linki vs. tarayıcının GERÇEKTE varacağı sayfa) FARKLI olduğunu
+    // bilir (`ROOT_REDIRECT_TARGETS`) ve döngüyü GÖRÜP tuşu basmaz.
+    const trail = buildTrail("/ayarlar/kullanicilar");
+    expect(trail.map((c) => c.href)).toEqual(["/ayarlar", "/ayarlar/kullanicilar"]);
+    expect(backTarget(trail)).toBeUndefined();
+  });
+
+  it("D2 karşı-kanıt — Ayarlar'ın DİĞER alt sayfalarında geri tuşu basılır (döngü YALNIZ kullanicilar'da kapanır)", () => {
+    // Komşu bir ayarlar sayfasında (Kullanıcılar'ın KENDİSİ olmayan) ata
+    // "Ayarlar"a gitmek GERÇEK bir farklı sayfaya varır (`/ayarlar` →
+    // yönlendirme → Kullanıcılar ≠ Roller) — tuş BASILIR, href kırıntı
+    // linkinin kendisidir (`/ayarlar`); yalnız Kullanıcılar'dayken bu link
+    // GERÇEKTE kendi üstüne döndüğü için (üstteki test) devre dışı kalır.
+    expect(backTarget(buildTrail("/ayarlar/roller"))?.href).toBe("/ayarlar");
+  });
 });
 
 /* ─── B4 · href üretimi ───────────────────────────────────────────────── */

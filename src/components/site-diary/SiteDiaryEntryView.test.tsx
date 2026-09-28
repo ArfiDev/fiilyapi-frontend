@@ -1,9 +1,10 @@
 import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { isoWeekOf } from "@/components/timesheet/iso-week";
+import { formatDateDots } from "@/lib/format";
 
 import { SiteDiaryEntryView } from "./SiteDiaryEntryView";
 import { isoDate } from "./derive";
@@ -466,6 +467,109 @@ describe("SiteDiaryEntryView · türev kuralları", () => {
       screen.getByText(/İş kalemi satırları, gün için kayıt açıldığında/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Kaydet & Gönder" })).toBeDisabled();
+  });
+});
+
+// O4 (SEKME-F2) · `entry === undefined` (kaydı olmayan gün) iken registry'ye
+// HER ZAMAN `false` gitmesi, o günde yazılan bir değerin ("Min °C") sekme
+// değişince UYARISIZ kaybolmasına yol açıyordu (bkz. emir sondası). Taban
+// artık seed effect'in BU gün için ürettiği başlangıç değeridir.
+describe("SiteDiaryEntryView · O4 (SEKME-F2) — kaydı olmayan günde kirlilik", () => {
+  it("kaydı olmayan günde dokunulmadan asla kirli olmaz", () => {
+    mockScreen();
+    const setSpy = vi.spyOn(unsavedRegistry, "set");
+    const { unmount } = render(<SiteDiaryEntryView />);
+
+    const dirtyFlags = setSpy.mock.calls
+      .filter(([, entry]) => entry?.label === "Şantiye günlüğü")
+      .map(([, entry]) => entry !== null);
+    expect(dirtyFlags).not.toContain(true);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    unmount();
+    setSpy.mockRestore();
+  });
+
+  it("kaydı olmayan günde alan yazılınca kirli olur", async () => {
+    const user = setupUser();
+    mockScreen();
+    render(<SiteDiaryEntryView />);
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await user.type(screen.getByLabelText("Min °C"), "5");
+
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("kaydı olmayan günde yazılan alan geri alınınca (boşaltılınca) temiz olur", async () => {
+    const user = setupUser();
+    mockScreen();
+    render(<SiteDiaryEntryView />);
+
+    await user.type(screen.getByLabelText("Min °C"), "5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.clear(screen.getByLabelText("Min °C"));
+
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  // Kaydı olmayan günden kaydı olmayan BAŞKA bir güne geçilirse (seed effect'in
+  // "previous.startsWith" dalı) yazılmış-ama-kaydedilmemiş alanlar KASITLI
+  // taşınır; taşınan değer AYNI ZAMANDA yeni günün tabanıdır — bu yüzden geçiş
+  // TEK BAŞINA sahte-kirli üretmemelidir.
+  it("kaydı olmayan günden başka BOŞ güne geçilince sahte-kirli olmaz", async () => {
+    const user = setupUser();
+    mockScreen();
+    render(<SiteDiaryEntryView />);
+
+    await user.type(screen.getByLabelText("Min °C"), "5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextDots = formatDateDots(isoDate(tomorrow));
+    fireEvent.change(screen.getByLabelText("Tarih"), { target: { value: nextDots } });
+
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+  });
+
+  // Lider denetimi 2. tur — A günü yaz, kaydı olmayan B gününe geç (taşınan
+  // alan B'nin TABANINA da girer): B'ye VARIŞTA hiç `true` BİRİKMEMELİ (geçiş
+  // TEK BAŞINA sahte-kirli üretmemeli), ama B'de YENİ bir yazı yine `true`
+  // üretmeli — taban B'ye özgü (A'nın YENİ değişikliklerini YUTMAZ).
+  it("A gününde yaz, kaydı olmayan B'ye geç → B'de sahte-kirli birikmez, B'de yazınca true olur", async () => {
+    const user = setupUser();
+    mockScreen();
+    const setSpy = vi.spyOn(unsavedRegistry, "set");
+    render(<SiteDiaryEntryView />);
+
+    // A günü (bugün): Min °C yazılır — A için kirli.
+    await user.type(screen.getByLabelText("Min °C"), "5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    // B gününe geç (kaydı olmayan başka gün) — taşınan "5" B'nin TABANINA girer.
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextDots = formatDateDots(isoDate(tomorrow));
+    setSpy.mockClear();
+    fireEvent.change(screen.getByLabelText("Tarih"), { target: { value: nextDots } });
+
+    // B'ye varıştan SONRA hiçbir noktada `true` BİRİKMEMELİ (geçişin kendisi
+    // sahte-kirli üretmemeli) — geçiş sırasında registry'ye giden HİÇ bir
+    // "Şantiye günlüğü" kaydı `true` olmamalı.
+    const transitionDirtyFlags = setSpy.mock.calls
+      .filter(([, e]) => e?.label === "Şantiye günlüğü")
+      .map(([, e]) => e !== null);
+    expect(transitionDirtyFlags).not.toContain(true);
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+
+    // B'de YENİ bir yazı yine `true` üretmeli — taban B'ye özgüdür.
+    await user.clear(screen.getByLabelText("Min °C"));
+    await user.type(screen.getByLabelText("Min °C"), "9");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    setSpy.mockRestore();
   });
 });
 

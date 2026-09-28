@@ -449,7 +449,11 @@ describe("SubcontractorContractCreateView — kaydedilmemiş değişiklik kaydı
     expect(unsavedRegistry.hasUnsaved()).toBe(true);
   });
 
-  it("yalnız taslak kurulması (kalemsiz) KİRLİ SAYILMAZ — B5", async () => {
+  // CEO 2026-09-28, B5 ilkesi — "veri sunucuya yazıldıysa temiz". Otomatik
+  // taslak SUNUCUYA yazıldıktan sonra taban o anki (sunucuya giden) `values`e
+  // çekilir; bu test ESKİDEN tersini (taslaktan sonra hâlâ `true`) sabitliyordu,
+  // CEO kararıyla yanlış sayıldı — taslak yazımı BAŞARILIYSA form TEMİZ olmalı.
+  it("otomatik taslak SUNUCUYA yazıldıktan sonra TEMİZDİR (CEO 2026-09-28, B5 ilkesi)", async () => {
     createContractMock.mockImplementation(
       (_body: unknown, options?: { onSuccess?: (data: unknown) => void }) =>
         options?.onSuccess?.({ id: "sc-new-1" }),
@@ -461,8 +465,24 @@ describe("SubcontractorContractCreateView — kaydedilmemiş değişiklik kaydı
     expect(unsavedRegistry.hasUnsaved()).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: FSO_TEXT.loadFromEmployer }));
     await waitFor(() => expect(loadItemsMock).toHaveBeenCalled());
-    // `values` (proje) DEĞİŞMEDİ — dirty hâlâ yalnız o alandan gelir; taslağın
-    // sunucuda kalemsiz durması ayrı bir kirlilik EKLEMEZ.
+    // Taslak (o anki `values` ile) sunucuya yazıldı — taban oraya çekilir,
+    // `values` HENÜZ değişmediği için form artık TEMİZ görünür.
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+
+  it("taslak yazımı BAŞARISIZ olursa taban KAYMAZ, form kirli KALIR", async () => {
+    createContractMock.mockImplementation(
+      (_body: unknown, options?: { onError?: (error: unknown) => void }) =>
+        options?.onError?.(new Error("sunucu hatası")),
+    );
+    render(<SubcontractorContractCreateView />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Proje" }), {
+      target: { value: "p-1" },
+    });
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: FSO_TEXT.loadFromEmployer }));
+    await waitFor(() => expect(createContractMock).toHaveBeenCalled());
+    // Veri sunucuya YAZILMADI — taban kaymadı, form hâlâ kirli.
     expect(unsavedRegistry.hasUnsaved()).toBe(true);
   });
 

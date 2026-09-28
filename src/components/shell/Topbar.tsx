@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BellIcon } from "@/components/ui/icons";
+import { ArrowRightIcon, BellIcon } from "@/components/ui/icons";
 import { initials } from "@/lib/shell/initials";
 import { isActivePath } from "@/lib/shell/isActive";
 import { routes } from "@/lib/routes";
@@ -52,8 +52,25 @@ export default function Topbar() {
         </button>
         {inSettings && (
           <>
-            <button type="button" className="topbar-settings-exit" onClick={logout}>
-              Çıkış Yap
+            {/* SEKME-F2 D(a): ≤900px'te (bkz. `topbar.css` gerekçesi) görünür
+                metin YER AÇMAK için ikona iner — erişilebilir ad `aria-label`
+                ile sabit kalır, ekran okuyucu genişlikten BAĞIMSIZ "Çıkış
+                Yap" okur. `aria-hidden` ikonun KENDİSİ metnin YERİNE değil
+                YANINA basıldığı için (görünür metin CSS'te gizlenir, DOM'dan
+                KALKMAZ) çift okunmayı önler. */}
+            <button
+              type="button"
+              className="topbar-settings-exit"
+              onClick={logout}
+              aria-label="Çıkış Yap"
+            >
+              <ArrowRightIcon
+                width={14}
+                height={14}
+                aria-hidden="true"
+                className="topbar-settings-exit__icon"
+              />
+              <span className="topbar-settings-exit__label">Çıkış Yap</span>
             </button>
             {logoutError !== null && (
               <p role="alert" className="topbar-settings-exit__error">

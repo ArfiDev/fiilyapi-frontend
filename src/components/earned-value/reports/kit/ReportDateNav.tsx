@@ -1,4 +1,12 @@
+// GIR-F1 · gün kutusu artık `useRef` ile takvim seçiciyi tetikliyor →
+// istemci bileşeni ZORUNLU (bkz. `DateInput.tsx` başındaki aynı not —
+// `use-client-directive-guard` bekçisi `components/earned-value` altını tarar).
+"use client";
+
+import { useRef } from "react";
+
 import { Button } from "@/components/ui/button/Button";
+import { NativeDatePicker, type NativeDatePickerHandle } from "@/components/ui/date-input";
 
 import { formatDayWeek } from "../../diary/day-header";
 import { formatDayLongWithWeekday, formatWeekRangeShort, shiftIsoDate } from "./report-date-format";
@@ -42,6 +50,7 @@ function DayNav({ day, dayNo, weekNo, min, max, onChange }: DayNavProps) {
   const prevDisabled = min != null && prevDay < min;
   const nextDisabled = max != null && nextDay > max;
   const suffix = formatDayWeek(dayNo, weekNo);
+  const pickerRef = useRef<NativeDatePickerHandle>(null);
   return (
     <nav className="report-date-nav" aria-label="Gün gezgini">
       <Button
@@ -54,10 +63,25 @@ function DayNav({ day, dayNo, weekNo, min, max, onChange }: DayNavProps) {
       >
         ‹
       </Button>
-      <span className="report-date-nav__box">
-        <CalendarGlyph />
-        <span className="report-date-nav__label">{formatDayLongWithWeekday(day)}</span>
-        {suffix !== null && <span className="report-date-nav__suffix">{suffix}</span>}
+      {/* LİDER DÜZELTMESİ (GIR-F1): `NativeDatePicker`in gizli `<input>`ı
+          ARTIK düğmenin İÇİNDE değil — HTML içerik modeline göre `<button>`
+          etkileşimli içerik barındıramaz (axe "nested-interactive"; `aria-
+          hidden`/`tabIndex=-1` bunu GEÇERLİ KILMAZ, yalnız erişilebilirlik
+          AĞACINDAN gizler, İÇERİK MODELİ ihlalini kapatmaz). Konumlandırma
+          ebeveyni (`position: relative`) bu sarmalayıcıya taşındı; düğme
+          kendisi artık `position: static`. */}
+      <span className="report-date-nav__box-anchor">
+        <button
+          type="button"
+          className="report-date-nav__box"
+          aria-label={`Gün seç: ${formatDayLongWithWeekday(day)}`}
+          onClick={() => pickerRef.current?.open()}
+        >
+          <CalendarGlyph />
+          <span className="report-date-nav__label">{formatDayLongWithWeekday(day)}</span>
+          {suffix !== null && <span className="report-date-nav__suffix">{suffix}</span>}
+        </button>
+        <NativeDatePicker ref={pickerRef} value={day} min={min} max={max} onPick={onChange} />
       </span>
       <Button
         variant="ghost"
