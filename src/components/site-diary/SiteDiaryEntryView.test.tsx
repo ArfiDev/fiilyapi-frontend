@@ -897,3 +897,216 @@ describe("SiteDiaryEntryView · işçi dağılımı (G12a)", () => {
     ]);
   });
 });
+
+// D1 (form-ez-f1) · tohumlama YALNIZ ilk yükleme / gün-kayıt kimliği değişimi /
+// bu ekrandan başarılı kayıt sonrası. Sunucu kaydı BU EKRAN DIŞINDAN değişince
+// (`updated_at` başka gelir — arka plan refetch'i, başka sekme/kullanıcı)
+// kirli form EZİLMEZ. Kancalar mock'lu olduğundan "refetch" = yeni yanıtla
+// `rerender` (gerçek akıştaki gibi kullanıcı yazdıktan SONRA, asenkron gelir).
+describe("SiteDiaryEntryView · D1 — kayıt dışarıdan değişince kirli form ezilmez", () => {
+  const OTHER_DAY = "2026-01-15";
+
+  async function typeMinTemp(user: ReturnType<typeof setupUser>, value: string) {
+    await user.type(screen.getByLabelText("Min °C"), value);
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(true));
+  }
+
+  it("kirli form, updated_at değişen refetch'te EZİLMEZ; dirty true kalır", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const { rerender, unmount } = render(<SiteDiaryEntryView />);
+    await typeMinTemp(user, "5");
+
+    // Sunucu kaydı dışarıdan değişti (yeni updated_at + başka Max °C).
+    mockScreen({ entry: entryDetail({ updated_at: "2026-07-15T10:00:00Z", temp_max_c: "31.0" }) });
+    rerender(<SiteDiaryEntryView />);
+
+    await waitFor(() => expect(screen.getByLabelText("Min °C")).toHaveValue("5"));
+    expect(screen.getByLabelText("Max °C")).toHaveValue("28.0");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    unmount();
+  });
+
+  it("TEMİZ form, updated_at değişen refetch'te yeni sunucu verisine hizalanır", async () => {
+    mockScreen({ entry: entryDetail() });
+    const { rerender, unmount } = render(<SiteDiaryEntryView />);
+    expect(screen.getByLabelText("Max °C")).toHaveValue("28.0");
+
+    mockScreen({ entry: entryDetail({ updated_at: "2026-07-15T10:00:00Z", temp_max_c: "31.0" }) });
+    rerender(<SiteDiaryEntryView />);
+
+    await waitFor(() => expect(screen.getByLabelText("Max °C")).toHaveValue("31.0"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    unmount();
+  });
+
+  it("bu ekrandan başarılı kayıt → form yeni sunucu verisine hizalanır, dirty false", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const saved = entryDetail({ updated_at: "2026-07-15T11:00:00Z", temp_max_c: "33.0" });
+    updateMutate.mockResolvedValue(saved);
+    linesMutate.mockResolvedValue(saved);
+    const { rerender, unmount } = render(<SiteDiaryEntryView />);
+    await typeMinTemp(user, "5");
+
+    await user.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Max °C")).toHaveValue("33.0"));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+    // Ardından invalidate → refetch aynı kaydı getirir: hâlâ hizalı ve temiz.
+    mockScreen({ entry: saved });
+    rerender(<SiteDiaryEntryView />);
+    expect(screen.getByLabelText("Max °C")).toHaveValue("33.0");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    unmount();
+  });
+
+  it("kayıt sonrası kirlilik tabanı KAYDEDİLEN kayıttır: kayıt-sonrası refetch yeni yazıyı ezmez", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const saved = entryDetail({ updated_at: "2026-07-15T11:00:00Z", temp_max_c: "33.0" });
+    updateMutate.mockResolvedValue(saved);
+    linesMutate.mockResolvedValue(saved);
+    const { rerender, unmount } = render(<SiteDiaryEntryView />);
+    await typeMinTemp(user, "5");
+    await user.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+
+    // Kayıttan sonra yeniden yazıldı; sonra refetch başka updated_at getirdi.
+    await typeMinTemp(user, "7");
+    mockScreen({ entry: entryDetail({ updated_at: "2026-07-15T12:00:00Z", temp_max_c: "35.0" }) });
+    rerender(<SiteDiaryEntryView />);
+
+    await waitFor(() => expect(screen.getByLabelText("Min °C")).toHaveValue("7"));
+    expect(screen.getByLabelText("Max °C")).toHaveValue("33.0");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    unmount();
+  });
+
+  it("URL tohumlu açılış (?tarih=): form o kaydın verisiyle dolar ve kirli form orada da ezilmez", async () => {
+    const user = setupUser();
+    sharedSearchParams.set("tarih", OTHER_DAY);
+    const first = entryDetail({ id: "d-2", entry_date: OTHER_DAY, temp_max_c: "12.0" });
+    mockScreen({ entry: first });
+    const { rerender, unmount } = render(<SiteDiaryEntryView />);
+    await waitFor(() => expect(screen.getByLabelText("Max °C")).toHaveValue("12.0"));
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    await typeMinTemp(user, "5");
+
+    mockScreen({
+      entry: entryDetail({
+        id: "d-2",
+        entry_date: OTHER_DAY,
+        temp_max_c: "14.0",
+        updated_at: "2026-07-15T10:00:00Z",
+      }),
+    });
+    rerender(<SiteDiaryEntryView />);
+
+    await waitFor(() => expect(screen.getByLabelText("Min °C")).toHaveValue("5"));
+    expect(screen.getByLabelText("Max °C")).toHaveValue("12.0");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    unmount();
+  });
+
+  // Denetim YÜKSEK-1 · Taslak Kaydet: PATCH invalidate → GET, PUT lines'tan ÖNCE
+  // döner; önbelleğe ARA kayıt (yeni başlık + ESKİ satırlar) girer. Ara kayıt,
+  // kayıttan dönen daha yeni kaydı geri ezmemeli.
+  it("kayıt YOLDAYKEN gelen ara (eski satırlı) kayıt, dönen yeni kaydı ezmez", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const x1 = entryDetail({ updated_at: "2026-07-15T10:00:00Z", temp_max_c: "30.0" });
+    const x2 = entryDetail({ updated_at: "2026-07-15T11:00:00Z", temp_max_c: "33.0" });
+    updateMutate.mockResolvedValue(x1);
+    let resolveLines: (value: SiteDiaryEntryDetail) => void = () => undefined;
+    linesMutate.mockReturnValue(new Promise<SiteDiaryEntryDetail>((resolve) => { resolveLines = resolve; }));
+    const { rerender, unmount } = render(<SiteDiaryEntryView />);
+    await typeMinTemp(user, "5");
+    await user.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
+    await waitFor(() => expect(linesMutate).toHaveBeenCalledTimes(1));
+
+    mockScreen({ entry: x1 });
+    rerender(<SiteDiaryEntryView />);
+    resolveLines(x2);
+    await waitFor(() => expect(screen.getByLabelText("Max °C")).toHaveValue("33.0"));
+    mockScreen({ entry: x1 });
+    rerender(<SiteDiaryEntryView />);
+
+    expect(screen.getByLabelText("Max °C")).toHaveValue("33.0");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    unmount();
+  });
+
+  // Denetim ORTA-1 · kayıt yoldayken yazılan değişiklik başarı anında silinmez.
+  it("kayıt YOLDAYKEN yazılan değer başarıda KALIR; taban kaydedilen kayıt, dirty true", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const saved = entryDetail({ updated_at: "2026-07-15T11:00:00Z", temp_max_c: "33.0" });
+    updateMutate.mockResolvedValue(saved);
+    let resolveLines: (value: SiteDiaryEntryDetail) => void = () => undefined;
+    linesMutate.mockReturnValue(new Promise<SiteDiaryEntryDetail>((resolve) => { resolveLines = resolve; }));
+    const { unmount } = render(<SiteDiaryEntryView />);
+    await typeMinTemp(user, "5");
+    await user.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
+    await waitFor(() => expect(linesMutate).toHaveBeenCalledTimes(1));
+
+    await user.type(screen.getByLabelText("Min °C"), "7");
+    resolveLines(saved);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Taslak Kaydet" })).toBeEnabled());
+    expect(screen.getByLabelText("Min °C")).toHaveValue("57");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    unmount();
+  });
+
+  // Denetim ORTA-2 · Kaydet & Gönder: ara (lines) reseed'i, submit patlasa da
+  // kaydedilen veriyi tabana işler.
+  it("Kaydet & Gönder: submit patlarsa bile kaydedilen veri forma/tabana işlenir", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const saved = entryDetail({ updated_at: "2026-07-15T11:00:00Z", temp_max_c: "33.0" });
+    updateMutate.mockResolvedValue(saved);
+    linesMutate.mockResolvedValue(saved);
+    submitMutate.mockRejectedValue(new Error("gönderilemedi"));
+    const { unmount } = render(<SiteDiaryEntryView />);
+    await typeMinTemp(user, "5");
+
+    await user.click(screen.getByRole("button", { name: "Kaydet & Gönder" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Max °C")).toHaveValue("33.0"));
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
+    unmount();
+  });
+
+  it("Kaydet & Gönder: başarılı submit sonrası form gönderilen (submit yanıtı) kayda hizalanır", async () => {
+    const user = setupUser();
+    mockScreen({ entry: entryDetail() });
+    const saved = entryDetail({ updated_at: "2026-07-15T11:00:00Z", temp_max_c: "33.0" });
+    updateMutate.mockResolvedValue(saved);
+    linesMutate.mockResolvedValue(saved);
+    submitMutate.mockResolvedValue(
+      entryDetail({ status: "submitted", updated_at: "2026-07-15T12:00:00Z", temp_max_c: "34.0" }),
+    );
+    const { unmount } = render(<SiteDiaryEntryView />);
+
+    await user.click(screen.getByRole("button", { name: "Kaydet & Gönder" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Max °C")).toHaveValue("34.0"));
+    unmount();
+  });
+
+  it("Yeniden Aç: başarılı sonrası form dönen (taslak) kayda hizalanır", async () => {
+    const user = setupUser();
+    mockSession({ site_diary: "admin" });
+    mockScreen({ entry: entryDetail({ status: "submitted" }) });
+    reopenMutate.mockResolvedValue(
+      entryDetail({ status: "draft", updated_at: "2026-07-15T12:00:00Z", temp_max_c: "36.0" }),
+    );
+    const { unmount } = render(<SiteDiaryEntryView />);
+
+    await user.click(screen.getByRole("button", { name: "Yeniden Aç" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Max °C")).toHaveValue("36.0"));
+    unmount();
+  });
+});

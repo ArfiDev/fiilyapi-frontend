@@ -94,8 +94,9 @@ export function GeneralSiteDiaryView({ extension, onExtensionContext }: DiaryExt
        * Kök rotada şantiye bir SORGU parametresidir — bileşen monteli kalır.
        *
        * `DiaryEntryScreen`in tohumlama anahtarı ŞANTİYE TAŞIMAZ
-       * (`seedKey = entry ? "entry:<id>:<updated_at>" : "new:<activeDate>"`)
-       * ve etkisi `if (seededRef.current === seedKey) return;` ile erken döner.
+       * (`seedKey = entry ? "entry:<id>" : "new:<activeDate>"`)
+       * ve etkisi `seeded.key === seedKey` iken (yalnız aynı kaydın sunucu
+       * sürümü değiştiyse TEMİZ formu hizalayıp) erken döner.
        * Yani şantiye değişip TARİH aynı kalınca ve iki şantiyede de o gün
        * kayıt yokken anahtar DEĞİŞMEZ → form olduğu gibi kalır: önceki
        * şantiyenin notu, miktarları ve `sectionId`si yeni şantiyenin POST
