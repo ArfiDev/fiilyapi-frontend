@@ -104,7 +104,7 @@ test("'Aylık İhtiyaç' HÂLÂ gerekçeli pending basar (sayı uydurulmaz)", as
   await expect(need).toHaveAttribute("title", "Şantiye planlama verisi bu yüzeye henüz bağlanmadı");
 
   // Gerekçe `title`da görünmez kalmasın diye metne de basılır.
-  await expect(page.getByTestId("santiye-stok-pending-notice")).toContainText(
+  await expect(page.locator("main").getByTestId("santiye-stok-pending-notice")).toContainText(
     "Şantiye planlama verisi bu yüzeye henüz bağlanmadı",
   );
 });
@@ -186,7 +186,7 @@ test("'+ Stok Girişi' şantiye kapsamlı giriş rotasına bağlanır (T4 sözle
   await login(page);
   await page.goto(SITE_STOCK_URL);
 
-  await expect(page.getByTestId("santiye-stok-giris-link")).toHaveAttribute(
+  await expect(page.locator("main").getByTestId("santiye-stok-giris-link")).toHaveAttribute(
     "href",
     "/projeler/p-1/santiyeler/s-1/stok/giris",
   );
