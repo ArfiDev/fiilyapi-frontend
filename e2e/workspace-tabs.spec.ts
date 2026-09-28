@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 import {
   closeTabButton,
@@ -428,5 +428,137 @@ test.describe("k) uzun ad ellipsis", () => {
       )
       .toBe(false);
   });
+});
+
+
+test.describe("O1) dar ekranda aktif sekme ŞERİT İÇİNDE TAM görünür (taze yükleme)", () => {
+  /**
+   * SEKME-F2 O1 · F1.6 raporunun ölçümü: ≤~800px'te taze bir sayfa yüklemesinde
+   * (tam `page.goto`, SPA geçişi DEĞİL) aktif sekme sticky panelin (Gösterge
+   * Paneli) ALTINDA kalıp 0px görünür kalabiliyordu — kök neden
+   * `WorkspaceTabsStrip.tsx`teki kaydırma efektinin panel genişliği
+   * ölçülmeden ÖNCE (yalnız `activeId`e bağlı, ayrı bir efekt olarak)
+   * çalışmasıydı. Bu bekçi kaydırmanın panel genişliği ölçüldükten SONRA
+   * (ve yeniden ölçüldükçe YENİDEN) uygulandığını, aktif sekmenin şeridin
+   * GÖRÜNÜR alanında (sabit panelin sağından itibaren) TAM durduğunu ölçer.
+   *
+   * Çok sayıda sekme AÇIK tutulur (panel + 6) — 768/390px'te bu, şeridin
+   * kayması GEREKTİĞİ anlamına gelir (kanıt: kaymadan aktif her zaman zaten
+   * görünür olurdu, bekçi hiçbir şeyi ÖLÇMEZDİ).
+   */
+  const now = Date.now();
+
+  async function seedManyTabsActiveOn(page: Page, activeUrl: string, activeTitle: string) {
+    await seedWorkspaceTabs(
+      page,
+      [
+        { id: "panel", url: "/", moduleKey: "/", title: "Gösterge Paneli", lastViewedAt: now - 9000, pinned: true },
+        { id: "t1", url: "/faturalar", moduleKey: "/faturalar", title: "Fatura Yönetimi", lastViewedAt: now - 8000, pinned: false },
+        { id: "t2", url: "/onay-kutusu", moduleKey: "/onay-kutusu", title: "Onay Kutusu", lastViewedAt: now - 7000, pinned: false },
+        { id: "t3", url: "/raporlar", moduleKey: "/raporlar", title: "Raporlar", lastViewedAt: now - 6000, pinned: false },
+        { id: "t4", url: "/puantaj", moduleKey: "/puantaj", title: "Puantaj", lastViewedAt: now - 5000, pinned: false },
+        { id: "t5", url: "/projeler", moduleKey: "/projeler", title: "Projeler", lastViewedAt: now - 4000, pinned: false },
+        {
+          id: "active",
+          url: activeUrl,
+          moduleKey: activeUrl.startsWith("/ayarlar") ? "/ayarlar" : "/projeler",
+          title: activeTitle,
+          lastViewedAt: now - 1000,
+          pinned: false,
+        },
+      ],
+      "active",
+    );
+  }
+
+  /**
+   * Aktif sekmenin şerit içindeki GÖRÜNÜR (sabit panelin sağından, şeridin
+   * sağ kenarına kadar kalan) genişliğini ölçer — F1.6'nın Playwright
+   * casusunun (`scratchpad/rv6/pw/active.rv6.spec.ts`) ölçüm biçimiyle AYNI.
+   */
+  async function measureActiveVisibility(page: Page) {
+    return page.evaluate(() => {
+      const strip = document.querySelector(".topbar-tabs")!.getBoundingClientRect();
+      const list = document.querySelector(
+        '[role="tablist"][aria-label="Çalışma sekmeleri"]',
+      ) as HTMLElement;
+      const tabs = [...list.querySelectorAll('[role="tab"]')] as HTMLElement[];
+      // Panelin DIŞ sarmalayıcısı (iç `role="tab"` + kendi padding'i) —
+      // iç öğeyle ölçmek panelin arkasında kalan ~12px'i görünür sayardı.
+      const pinned = document.querySelector(".workspace-tab--pinned")!.getBoundingClientRect();
+      const active = tabs.find((t) => t.getAttribute("aria-selected") === "true")!;
+      const a = active.getBoundingClientRect();
+      const visibleLeft = Math.max(a.left, pinned.right, strip.left);
+      const visibleRight = Math.min(a.right, strip.right);
+      return {
+        activeWidth: a.width,
+        // Panelden artan alan — başlık bundan genişse TAM sığamaz (geometri).
+        availablePx: strip.right - Math.max(pinned.right, strip.left),
+        startHidden: a.left < pinned.right - 1,
+        visiblePx: Math.max(0, Math.round(visibleRight - visibleLeft)),
+        scrollLeft: list.scrollLeft,
+        pinnedVarPx: parseFloat(list.style.getPropertyValue("--pinned-tab-width") || "0"),
+      };
+    });
+  }
+
+  /**
+   * O1 düzeltmesi eşzamanlı DEĞİL — panel genişliği `document.fonts.ready`
+   * ve (başlık yeniden adlandırma gibi) sonraki `tabs` güncellemeleriyle
+   * BİRDEN FAZLA kez ölçülüp kaydırma her seferinde yeniden uygulanıyor
+   * (ölçüldü: aktif sekmenin başlığı `TabsRouterSync`teki senkronla İLK
+   * boyamadan hemen sonra değişebiliyor, bu da `tabs`i değiştirip yeniden
+   * kaydırmayı TETİKLİYOR). Sonuç birkaç render içinde YAKINSIYOR — anlık
+   * `expect` yerine `expect.poll` ile deterministik biçimde beklenir
+   * (depo testi kuralı: zamanlayıcı tabanlı YERİNE koşula göre bekleme).
+   */
+  async function expectActiveTabFullyVisible(page: Page): Promise<void> {
+    await expect
+      .poll(
+        async () => {
+          const m = await measureActiveVisibility(page);
+          // Sığıyorsa TAM, sığmıyorsa artan alanın tamamı + başlığın BAŞI
+          // panelin arkasında DEĞİL (bölüm sayfası: 95px başlık / 44px alan).
+          const need = Math.min(m.activeWidth, m.availablePx);
+          return m.visiblePx >= Math.round(need) - 1 && !m.startHidden;
+        },
+        {
+          message: "aktif sekme şerit içinde TAM görünür olmalı (sabit panelin arkasında kalmamalı)",
+          timeout: 3000,
+        },
+      )
+      .toBe(true);
+  }
+
+  for (const width of [768, 390] as const) {
+    test(`${width}px — /ayarlar/onay-rolleri, taze yükleme`, async ({ page }) => {
+      await login(page);
+      await seedManyTabsActiveOn(page, "/ayarlar/onay-rolleri", "Onay Rolleri ve Eşik");
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/ayarlar/onay-rolleri");
+      await expect(tabsList(page).getByRole("tab")).toHaveCount(7);
+      // Seed'lenen başlık `TabsRouterSync`teki başlık-senkronuyla GERÇEK
+      // sayfa adına ezilebilir (`resolveTabTitle`) — aktif sekme bu yüzden
+      // ADIYLA değil `aria-selected` ile bulunur.
+      await expect(tabsList(page).getByRole("tab", { selected: true })).toHaveCount(1);
+
+      await expectActiveTabFullyVisible(page);
+    });
+
+    test(`${width}px — bölüm sayfası, taze yükleme`, async ({ page }) => {
+      await login(page);
+      await seedManyTabsActiveOn(
+        page,
+        "/projeler/p-1/santiyeler/s-1/bolumler/sec-1",
+        "Kaba İnşaat",
+      );
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/projeler/p-1/santiyeler/s-1/bolumler/sec-1");
+      await expect(tabsList(page).getByRole("tab")).toHaveCount(7);
+      await expect(tabsList(page).getByRole("tab", { selected: true })).toHaveCount(1);
+
+      await expectActiveTabFullyVisible(page);
+    });
+  }
 });
 

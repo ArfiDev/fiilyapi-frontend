@@ -228,15 +228,34 @@
 /* SEKME-F1.7a — Ayarlar altında topbar'da beliren "Çıkış Yap" (öneri A,
    bkz. rapor v6 ekran görüntüleri "-a"/"-b"). `.settings-breadcrumb__logout`
    (kalkan SettingsBreadcrumb) ile AYNI görsel dil: metin düğmesi, tehlike
-   rengi, sınır/zemin YOK. */
+   rengi, sınır/zemin YOK.
+
+   SEKME-F2 O1/D(a) — ≤900px'te İKONA İNER (görünür metin gizlenir, `Topbar.
+   tsx`teki `aria-label` erişilebilir adı taşımaya devam eder). Eşik 900px:
+   bu depoda ZATEN kullanılan bir kırılma noktası (bkz. `reports.css`,
+   `payroll-sgk.css`, `panel-kpi.css` — hepsi `max-width: 900px`), yeni bir
+   değer İCAT EDİLMEDİ. Ölçüm — 900px'te düğme metni ("Çıkış Yap", ~70px) ile
+   ikon (14px + dolgu) arasındaki fark şerit (`.topbar-tabs`) genişliğine
+   DOĞRUDAN eklenir: kırıntı `clamp(220px, 34vw, 520px)` ile 900px'te
+   900×0,34=306px'e ulaşır, logo 220px + eylemler (zil+avatar+boşluklar
+   ~136px) sabit kalır — metin düğmesi şeridi ~54px daha fazla yer (tam
+   metin genişliği eksi ikon+boşluk) ezerdi; O1'in kaydırma düzeltmesi bu
+   ezilmeyi TAMAMEN gideremez (şerit GENİŞLİĞİ küçülür, yalnız kaydırmanın
+   KENDİSİ artık doğru çalışır), bu yüzden metin ayrıca daraltılır. */
 .topbar-settings-exit {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-xs);
   color: var(--color-danger);
   background: none;
   border: none;
   cursor: pointer;
   white-space: nowrap;
+}
+.topbar-settings-exit__icon {
+  display: none;
 }
 .topbar-settings-exit:hover {
   text-decoration: underline;
@@ -249,6 +268,17 @@
   margin: 0;
   font-size: 11px;
   color: var(--color-danger);
+}
+@media (max-width: 900px) {
+  .topbar-settings-exit__label {
+    display: none;
+  }
+  .topbar-settings-exit__icon {
+    display: block;
+  }
+  /* Metin kalkınca `:hover`in `text-decoration: underline`i bir işe
+     yaramaz (metin YOK) — odak/hover HÂLÂ `outline`/`focus-visible` ile
+     görsel olarak belli, ekstra bir kural GEREKMEZ. */
 }
 
 /* SEKME-F1.4c — dar ekran (kullanıcı kararı): 768px altında logodaki "FİİL
@@ -306,6 +336,15 @@
     padding: 0 var(--space-2);
   }
   .topbar-crumbs__list {
+    display: none;
+  }
+  /* SEKME-F2 D3 (ÖLÇÜLDÜ): geri tuşu YOKSA (tek parçalı rota — `/`,
+     `/projeler` vb.) yukarıdaki `.topbar-crumbs__list` gizlemesiyle nav'ın
+     İÇİNDE basılacak hiçbir şey kalmaz; kenarlıklı/dolgulu BOŞ bir kutu
+     (17px genişlik, sağ kenarlık) kalırdı. Geri tuşu VARSA (çok parçalı
+     rota) nav yine basılır — `<768`te davranış main'in "yalnız ← üst"
+     önerisiyle AYNEN uyumlu kalır. */
+  .topbar-crumbs--no-back {
     display: none;
   }
 }

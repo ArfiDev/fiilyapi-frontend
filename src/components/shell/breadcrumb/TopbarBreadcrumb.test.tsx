@@ -149,18 +149,44 @@ describe("tek parçalı kırıntı — main davranışı KORUNUR", () => {
   });
 });
 
+/* ─── SEKME-F2 D3 · <768'de tek parçalı rotada boş kutu kalmaz ───────────── */
+
+describe("D3 — geri tuşu yokken nav `--no-back` sınıfı taşır (768 altında CSS gizler)", () => {
+  it("kökte (`/`, tek parça, geri tuşu YOK) nav `--no-back` taşır", () => {
+    renderAt("/");
+    expect(screen.getByTestId("topbar-crumbs").closest("nav")).toHaveClass(
+      "topbar-crumbs--no-back",
+    );
+  });
+
+  it("çok parçalı rotada (geri tuşu VAR) nav `--no-back` TAŞIMAZ", () => {
+    renderAt(`/projeler/${PROJECT_KEY}/santiyeler/${SITE_KEY}/gunluk-kayit`);
+    expect(screen.getByTestId("topbar-crumbs").closest("nav")).not.toHaveClass(
+      "topbar-crumbs--no-back",
+    );
+  });
+});
+
 /* ─── SEKME-F1.7a · /ayarlar altında "Ayarlar / <bölüm>" basılır ─────────── */
 
 describe("/ayarlar altında kırıntı ikinci bir kaynak İCAT ETMEZ", () => {
-  it("`/ayarlar/kullanicilar` → \"Ayarlar / Kullanıcılar\", geri tuşu Ayarlar'a gider", () => {
+  it("`/ayarlar/kullanicilar` → \"Ayarlar / Kullanıcılar\", geri tuşu YOK (D2: kendi üstüne dönerdi)", () => {
     // Mutasyon (M3): `route-tree.ts`teki `ayarlar` alt ağacını sil → bu iddia
     // kırmızı olur (kırıntı tek parçalı "yakında" kırıntısına düşer).
+    //
+    // D2 (SEKME-F2, ÖLÇÜLDÜ): `/ayarlar` kendi sayfası OLMAYAN bir yönlendirme
+    // kabuğudur ve HER ZAMAN `/ayarlar/kullanicilar`a döner. "Ayarlar" atasının
+    // kırıntı href'i YİNE DE `/ayarlar`ın KENDİSİDİR (URL-1 bekçisi böyle
+    // zorunlu kılar) — ama `backTarget` (`trail.ts`teki `ROOT_REDIRECT_
+    // TARGETS`) bu linkin TARAYICIDA gerçekte `/ayarlar/kullanicilar`a
+    // vardığını bilir; Kullanıcılar sayfasındayken bu GERÇEK varış şu anki
+    // sayfanın KENDİSİYLE aynı olduğundan geri tuşu kendi üstüne dönerdi —
+    // `backTarget` bu döngüyü görüp tuşu BASMAZ.
     renderAt("/ayarlar/kullanicilar");
     const list = screen.getByTestId("topbar-crumbs");
     expect(within(list).getByText("Ayarlar")).toBeInTheDocument();
     expect(within(list).getByText("Kullanıcılar")).toHaveClass("topbar-crumbs__current");
-    const back = screen.getByTestId("topbar-back");
-    expect(back).toHaveAttribute("href", "/ayarlar");
+    expect(screen.queryByTestId("topbar-back")).toBeNull();
   });
 
   it("çıplak `/ayarlar` → TEK parça \"Ayarlar\", geri tuşu YOK", () => {

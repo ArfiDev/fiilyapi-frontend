@@ -72,11 +72,16 @@ function pinnedLeadingCount(tabs: readonly WorkspaceTabsStripTab[]): number {
  *   MÜMKÜNKEN `workspace-tabs--fade-left/right` sınıfını takar. `ResizeObserver`
  *   BİLEREK kullanılmadı (jsdom'da yok, karmaşıklık artırır) — `scroll` +
  *   `resize` dinleyicisi ve sekme sayısı değiştiğinde yeniden ölçüm yeterli.
- * - Kaydırma animasyonu: `scrollIntoView({ behavior: "auto" })` çağrılır —
- *   `"auto"` elemanın CSS `scroll-behavior`ına UYAR (MDN). Liste normalde
- *   `scroll-behavior: smooth`, `prefers-reduced-motion: reduce` altında
- *   `auto`ya düşer (`workspace-tabs.css`). Böylece azaltılmış hareket tercihi
- *   JS'te `matchMedia` YAZMADAN, tek bir CSS medya sorgusuyla karşılanır.
+ * - Kaydırma animasyonu: aktif sekme görünür alana `list.scrollTo({ left,
+ *   behavior: "auto" })` ile taşınır — `"auto"` listenin CSS
+ *   `scroll-behavior`ına UYAR (MDN). Liste normalde `scroll-behavior:
+ *   smooth`, `prefers-reduced-motion: reduce` altında `auto`ya düşer
+ *   (`workspace-tabs.css`). Böylece azaltılmış hareket tercihi JS'te
+ *   `matchMedia` YAZMADAN, tek bir CSS medya sorgusuyla karşılanır.
+ *   SEKME-F2 O1 (ÖLÇÜLDÜ): hedef ELLE hesaplanır — native
+ *   `scrollIntoView({inline:"nearest"})` sol (sticky panel) kenarı
+ *   karşılanınca sağ kenarı hiç kontrol etmeden durabiliyordu; ayrıntı
+ *   `scrollActiveIntoView`in kendi yorumunda.
  */
 export function WorkspaceTabsStrip({
   tabs,
@@ -98,12 +103,34 @@ export function WorkspaceTabsStrip({
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
 
-  useEffect(() => {
-    const active = tabRefs.current.get(activeId);
-    // `?.()` : jsdom bazı ortamlarda `scrollIntoView`ı hiç tanımlamaz;
-    // testler bunu global olarak mock'lar, üretimde her tarayıcıda mevcuttur.
-    active?.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "auto" });
-  }, [activeId]);
+  // SEKME-F2 O1 bulgusu (ÖLÇÜLDÜ, `workspace-tabs.spec.ts` "O1) dar ekranda
+  // aktif sekme ŞERİT İÇİNDE TAM görünür"): aktif sekmeyi kaydırma artık AYRI
+  // bir efekt DEĞİL — panel genişliğini ölçen efektin (aşağıda) İÇİNE taşındı
+  // VE artık native `scrollIntoView("nearest")`e DEĞİL, ELLE hesaplanmış bir
+  // `scrollTo`ya dayanıyor. İKİ ayrı ÖLÇÜLMÜŞ kusur vardı:
+  //
+  // (1) Eskiden kaydırma yalnız `activeId` değişince, panel-genişliği
+  //     ölçülmeden ÖNCE (ayrı bir efekt, TANIM SIRASI yüzünden önce
+  //     çalışıyordu) tetikleniyordu — `--pinned-tab-width` henüz
+  //     yazılmamışken `scroll-padding-inline-start` `var(..., 0px)`e
+  //     düşüyor, kaydırma sticky panelin ARKASINDA kalan genişliği hesaba
+  //     KATMADAN duruyordu (aktif sekme %0 görünür). SONRAKİ bir ölçüm
+  //     CSS değişkenini düzeltiyordu ama tarayıcı GEÇMİŞ bir
+  //     `scrollIntoView` çağrısını YENİDEN OYNATMIYORDU.
+  // (2) Bu SIRALAMA düzeltilse bile (kaydırma HER ölçümden SONRA yeniden
+  //     uygulansa da) native `scrollIntoView({inline:"nearest"})` +
+  //     `scroll-padding-inline-start` ikilisi tarayıcıda TAM görünürlüğü
+  //     GARANTİ ETMİYOR: ölçüldü (768px, `/ayarlar/onay-rolleri`) — aktif
+  //     sekme sığacak kadar boşluk (47px > sekme 41,5px) olduğu hâlde
+  //     tarayıcı yalnız %87'sini (36/41,5px) görünür kılıp DURUYORDU
+  //     ("nearest" sol kenar koşulu karşılanınca sağ kenarı KONTROL ETMEDEN
+  //     duruyor gibi davranıyor). Çözüm: kaydırma HEDEFİ artık `scrollTo`ya
+  //     ELLE hesaplanmış bir `scrollLeft` olarak veriliyor — panelin sağından
+  //     başlayan VE şeridin sağ kenarında biten görünür pencereye göre sol/
+  //     sağ taşmayı AYRI AYRI kontrol eder, ikisi de aşılmıyorsa dokunmaz.
+  //
+  // Kaydırma HER ölçümden SONRA (ilk ölçüm + font hazır olunca + boyut
+  // değişince) yeniden uygulanır, aşağıdaki tek efektte.
 
   // rv3 N14/kenar-solması bulgusu: eskiden yalnız `tabs.length` bağımlıydı —
   // sekme SAYISI değişmeden bir başlık uzayıp/kısalırsa (aktif sekmenin url'i
@@ -144,33 +171,98 @@ export function WorkspaceTabsStrip({
   // genişliği layout'a bağlı değişebileceğinden (ör. pencere/parent yeniden
   // boyutlanınca) `ResizeObserver` ile de izlenir; jsdom'da tanımsız
   // olabileceğinden güvenli düşüşle (varlık kontrolü) atlanır.
+  //
+  // SEKME-F2 O1 (b): `list`in KENDİSİ de gözlemlenir — kırıntı/çıkış
+  // düğmesi yerleşince ya da pencere/panel genişliği değişince şeridin
+  // GENİŞLİĞİ değişir; bu da "aktif sekme görünür mü" hesabını etkiler.
+  // Her ölçümden SONRA aktif sekme YENİDEN kaydırılır (`scrollActiveIntoView`)
+  // — yukarıdaki O1 bulgusunun düzeltmesi.
   useEffect(() => {
     const list = listRef.current;
     const leadingPinnedTab = tabs.find((tab) => tab.pinned);
     const pinnedEl = leadingPinnedTab ? tabRefs.current.get(leadingPinnedTab.id) : undefined;
     if (!list || !pinnedEl) return;
 
-    function measure() {
-      if (!list || !pinnedEl) return;
-      list.style.setProperty("--pinned-tab-width", `${pinnedEl.getBoundingClientRect().width}px`);
+    // ELLE hesaplanmış "nearest" — bkz. yukarıdaki (2) bulgusu: native
+    // `scrollIntoView`in aksine sol (panel) VE sağ (şerit sonu) kenarları
+    // AYRI AYRI kontrol eder, ikisi de aşılmıyorsa `list.scrollLeft`e
+    // DOKUNMAZ (gereksiz/salınımlı kaydırma yok).
+    //
+    // 🔴 SEKME-F2 O1 (3. bulgu, ÖLÇÜLDÜ): hedef `tabRefs` (DIŞ sarmalayıcı —
+    // başlık + × düğmesi + iç boşluklar, ör. 91,5px) DEĞİL `tabHitRefs` (İÇ
+    // `role="tab"` — yalnız başlık, ör. 41,5px) ile alınır. Dar ekranda
+    // (768px, panel ~123px) panelden ARTAN alan (~47px) DIŞ sarmalayıcıyı
+    // BARINDIRAMAZ (91,5 > 47) — × düğmesini de görünür kılmaya çalışmak
+    // matematiksel olarak İMKÂNSIZ bir hedef kovalar ve düzeltme hep başlığın
+    // solundan FEDA EDERDİ (ölçüldü: yalnız 21/41,5px başlık görünür kalıyordu).
+    // Erişilebilirlik açısından "sekme" zaten İÇ elemandır (`role="tab"`,
+    // `aria-selected`) — kullanıcının OKUMASI gereken de budur; × ikincil bir
+    // eylemdir ve dar alanda GEÇİCİ OLARAK panelin arkasında kalabilir, tıpkı
+    // tarayıcı sekmelerinde olduğu gibi. İç eleman panelden artan alana
+    // SIĞDIĞI için (41,5 < 47) bu hedef her zaman TAM karşılanabilir.
+    function scrollActiveIntoView(pinnedWidthPx: number) {
+      // Aktif sekme panelin KENDİSİYSE (`.workspace-tab--pinned` STICKY,
+      // her zaman görünür) kaydırılacak bir şey yoktur — hesap onu "panelin
+      // solunda" sanıp şeridi boşuna panel genişliği kadar sola kaydırırdı.
+      if (tabs.find((tab) => tab.id === activeId)?.pinned) return;
+      const active = tabHitRefs.current.get(activeId);
+      if (!list || !active) return;
+      const listRect = list.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      // `getBoundingClientRect` VIEWPORT koordinatı verir — şeridin KAYDIRILAN
+      // İÇERİK koordinatına çevirmek için mevcut `scrollLeft` eklenir.
+      const contentLeft = activeRect.left - listRect.left + list.scrollLeft;
+      const contentRight = contentLeft + activeRect.width;
+      const viewLeft = list.scrollLeft + pinnedWidthPx;
+      const viewRight = list.scrollLeft + list.clientWidth;
+
+      // Panelden ARTAN alana sığmayan başlık (ölçüldü: bölüm sayfası 768px'te
+      // 95px başlık / 44px alan) TAM gösterilemez — o zaman başlığın BAŞI
+      // panelin hemen sağına hizalanır (sağ kenara hizalamak başlığın okunan
+      // kısmını panelin ARKASINA saklardı).
+      const availablePx = list.clientWidth - pinnedWidthPx;
+      let target: number | undefined;
+      if (activeRect.width > availablePx || contentLeft < viewLeft) {
+        target = contentLeft - pinnedWidthPx;
+      } else if (contentRight > viewRight) {
+        target = contentRight - list.clientWidth;
+      }
+      if (target === undefined || Math.abs(target - list.scrollLeft) < 1) return;
+
+      const maxScrollLeft = Math.max(0, list.scrollWidth - list.clientWidth);
+      const clamped = Math.max(0, Math.min(target, maxScrollLeft));
+      // `?.()`: jsdom `Element.scrollTo`yu hiç tanımlamaz (ölçüldü); testler
+      // bunu global olarak mock'lar, üretimde her tarayıcıda mevcuttur.
+      // `behavior: "auto"` listenin KENDİ CSS `scroll-behavior`ına uyar
+      // (`workspace-tabs.css` — normalde smooth, azaltılmış hareket
+      // tercihinde auto).
+      list.scrollTo?.({ left: clamped, behavior: "auto" });
     }
 
-    measure();
+    function measureAndScroll() {
+      if (!list || !pinnedEl) return;
+      const pinnedWidthPx = pinnedEl.getBoundingClientRect().width;
+      list.style.setProperty("--pinned-tab-width", `${pinnedWidthPx}px`);
+      scrollActiveIntoView(pinnedWidthPx);
+    }
+
+    measureAndScroll();
 
     let cancelled = false;
     void document.fonts?.ready?.then(() => {
-      if (!cancelled) measure();
+      if (!cancelled) measureAndScroll();
     });
 
     const ResizeObserverCtor = typeof ResizeObserver === "undefined" ? undefined : ResizeObserver;
-    const observer = ResizeObserverCtor ? new ResizeObserverCtor(measure) : undefined;
+    const observer = ResizeObserverCtor ? new ResizeObserverCtor(measureAndScroll) : undefined;
     observer?.observe(pinnedEl);
+    observer?.observe(list);
 
     return () => {
       cancelled = true;
       observer?.disconnect();
     };
-  }, [tabs]);
+  }, [tabs, activeId]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>, id: string) {
     // rv3 ORTA bulgusu: × düğmesi (eskiden bu div'in İÇİNDE) odaklıyken Enter/

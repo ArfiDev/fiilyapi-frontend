@@ -267,13 +267,77 @@ describe("WorkspaceTabsStrip", () => {
     expect(props.onReorder).toHaveBeenCalledWith("b", 1);
   });
 
-  it("aktif sekme scrollIntoView çağrılır — nearest/nearest, auto", () => {
-    renderStrip({ activeId: "b" });
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
-      block: "nearest",
-      inline: "nearest",
-      behavior: "auto",
+  it("SEKME-F2 O1: aktif sekme görünür DEĞİLSE ELLE hesaplanmış hedefe `scrollTo` çağrılır", () => {
+    // O1 (2) bulgusu: native `scrollIntoView({inline:"nearest"})` sol
+    // (panel) kenarı karşılanınca SAĞ kenarı hiç kontrol etmeden durabiliyordu
+    // (ölçüldü, `e2e/workspace-tabs.spec.ts`). Düzeltme scrollIntoView'i hiç
+    // ÇAĞIRMAZ — sol/sağ taşmayı AYRI hesaplayıp `list.scrollTo`ya doğrudan
+    // hedef verir. Burada: panel 50px, şerit 300px görünür, aktif sekme
+    // içerik koordinatında [250,330] — sağ kenardan 30px taşıyor, beklenen
+    // hedef tam bu kadar (330-300).
+    const rectSpy = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: Element) {
+        if (this.getAttribute("role") === "tab" && this.closest(".workspace-tab--active")) {
+          return { left: 250, width: 80 } as DOMRect;
+        }
+        if (this.classList.contains("workspace-tab--pinned")) {
+          return { left: 0, width: 50 } as DOMRect;
+        }
+        if (this.classList.contains("workspace-tabs__list")) {
+          return { left: 0, width: 300 } as DOMRect;
+        }
+        return { left: 0, width: 0 } as DOMRect;
+      });
+
+    const { container, rerender, props } = renderStrip({ activeId: "a" });
+    const list = container.querySelector(".workspace-tabs__list") as HTMLDivElement;
+    const scrollToSpy = vi.fn();
+    Object.defineProperty(list, "scrollTo", { value: scrollToSpy, configurable: true });
+    Object.defineProperty(list, "clientWidth", { value: 300, configurable: true });
+    Object.defineProperty(list, "scrollWidth", { value: 600, configurable: true });
+    Object.defineProperty(list, "scrollLeft", { value: 0, configurable: true, writable: true });
+
+    // `activeId` değişimi kaydırma efektini YENİDEN tetikler (deps: [tabs, activeId]).
+    act(() => {
+      rerender(<WorkspaceTabsStrip {...props} activeId="b" />);
     });
+
+    expect(scrollToSpy).toHaveBeenCalledWith({ left: 30, behavior: "auto" });
+    rectSpy.mockRestore();
+  });
+
+  it("SEKME-F2 O1: aktif sekme ZATEN tam görünürse `scrollTo` ÇAĞRILMAZ (gereksiz kaydırma yok)", () => {
+    const rectSpy = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: Element) {
+        if (this.getAttribute("role") === "tab" && this.closest(".workspace-tab--active")) {
+          // Panelin (50px) hemen sağında, şerit (300px) içinde TAM görünür.
+          return { left: 60, width: 80 } as DOMRect;
+        }
+        if (this.classList.contains("workspace-tab--pinned")) {
+          return { left: 0, width: 50 } as DOMRect;
+        }
+        if (this.classList.contains("workspace-tabs__list")) {
+          return { left: 0, width: 300 } as DOMRect;
+        }
+        return { left: 0, width: 0 } as DOMRect;
+      });
+
+    const { container, rerender, props } = renderStrip({ activeId: "a" });
+    const list = container.querySelector(".workspace-tabs__list") as HTMLDivElement;
+    const scrollToSpy = vi.fn();
+    Object.defineProperty(list, "scrollTo", { value: scrollToSpy, configurable: true });
+    Object.defineProperty(list, "clientWidth", { value: 300, configurable: true });
+    Object.defineProperty(list, "scrollWidth", { value: 600, configurable: true });
+    Object.defineProperty(list, "scrollLeft", { value: 0, configurable: true, writable: true });
+
+    act(() => {
+      rerender(<WorkspaceTabsStrip {...props} activeId="b" />);
+    });
+
+    expect(scrollToSpy).not.toHaveBeenCalled();
+    rectSpy.mockRestore();
   });
 
   it("🔴 BEKÇİ (SEKME-F1.4c): sekme adı kısaltılmaz — max-width'i aşmayan bir başlık DOM'da tam metniyle basılır", () => {
@@ -440,6 +504,81 @@ describe("WorkspaceTabsStrip", () => {
     expect(list.style.getPropertyValue("--pinned-tab-width")).toBe("150px");
     rectSpy.mockRestore();
 
+    globalThis.ResizeObserver = originalRO;
+  });
+
+  it("SEKME-F2 O1 (b) bekçisi: ŞERİT (list) de gözlemlenir, boyutu değişince aktif sekme YENİDEN kaydırılır", () => {
+    // Mutasyon (M1): `observer?.observe(list)` satırını sil → bu iddia
+    // kırmızı olur (ikinci `scrollTo` çağrısı hiç gelmez, `observed` `list`i
+    // içermez).
+    //
+    // Kök neden (O1, ÖLÇÜLDÜ `e2e/workspace-tabs.spec.ts`): eskiden kaydırma
+    // yalnız `activeId` değişince, AYRI bir efektte çalışıyordu — panel
+    // genişliği (`--pinned-tab-width`) ölçülmeden ÖNCE tetiklenebiliyordu ve
+    // sonradan yapılan bir ölçüm GEÇMİŞ kaydırmayı yeniden OYNATMIYORDU.
+    // Düzeltme: kaydırma artık HER ölçümden SONRA (ilk ölçüm + font hazır +
+    // panel/ŞERİT boyutu değişince) yeniden uygulanıyor. Şerit BÜYÜYÜP aktif
+    // sekmeyi zaten görünür kılsa bile — kırıntı/çıkış düğmesi yerleşince
+    // şerit DARALABİLİR de; bu test şeridin DARALDIĞI (aktif sekme yeniden
+    // taşmaya başladığı) yönü ölçer.
+    const observed: Element[] = [];
+    const callbacks: ResizeObserverCallback[] = [];
+    class FakeResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        callbacks.push(cb);
+      }
+      observe(el: Element) {
+        observed.push(el);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const originalRO = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = FakeResizeObserver as unknown as typeof ResizeObserver;
+
+    let listClientWidth = 300;
+    const rectSpy = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: Element) {
+        if (this.getAttribute("role") === "tab" && this.closest(".workspace-tab--active")) {
+          return { left: 60, width: 80 } as DOMRect;
+        }
+        if (this.classList.contains("workspace-tab--pinned")) {
+          return { left: 0, width: 50 } as DOMRect;
+        }
+        return { left: 0, width: 0 } as DOMRect;
+      });
+
+    const { container } = renderStrip({ activeId: "b" });
+    const list = container.querySelector(".workspace-tabs__list") as HTMLDivElement;
+    const scrollToSpy = vi.fn();
+    Object.defineProperty(list, "scrollTo", { value: scrollToSpy, configurable: true });
+    Object.defineProperty(list, "clientWidth", {
+      configurable: true,
+      get: () => listClientWidth,
+    });
+    Object.defineProperty(list, "scrollWidth", { value: 600, configurable: true });
+    Object.defineProperty(list, "scrollLeft", { value: 0, configurable: true, writable: true });
+
+    // Mount'ta HEM panel HEM şerit gözlemlenir.
+    expect(observed).toContain(list);
+    // Mount anında aktif sekme (60..140) panelin (0..50) sağında VE şeridin
+    // (0..300) içinde TAM görünür — henüz kaydırma GEREKMİYOR.
+    expect(scrollToSpy).not.toHaveBeenCalled();
+
+    // Şerit daralır (kırıntı/çıkış düğmesi yerleşir gibi) — aktif sekme artık
+    // sağdan taşıyor (60+80=140 > yeni clientWidth 100).
+    listClientWidth = 100;
+    act(() => {
+      callbacks.forEach((cb) => cb([], {} as ResizeObserver));
+    });
+
+    // Panelden artan alan (100-50=50) sekmeden (80) DAR → başlığın BAŞI
+    // panelin sağına hizalanır: 60-50 = 10 (sağ kenara hizalamak başlığın
+    // başını panelin arkasına saklardı).
+    expect(scrollToSpy).toHaveBeenCalledWith({ left: 10, behavior: "auto" });
+
+    rectSpy.mockRestore();
     globalThis.ResizeObserver = originalRO;
   });
 
