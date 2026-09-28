@@ -7612,6 +7612,24 @@ export interface paths {
         patch: operations["update_user_endpoint_users__user_id__patch"];
         trace?: never;
     };
+    "/users/{user_id}/disciplines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Disciplines Endpoint */
+        get: operations["get_user_disciplines_endpoint_users__user_id__disciplines_get"];
+        /** Set User Disciplines Endpoint */
+        put: operations["set_user_disciplines_endpoint_users__user_id__disciplines_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{user_id}/password": {
         parameters: {
             query?: never;
@@ -10399,6 +10417,11 @@ export interface components {
              * @default 0
              */
             used_by_site_count: number;
+            /**
+             * User Count
+             * @default 0
+             */
+            user_count: number;
         };
         /**
          * DisciplineRef
@@ -14127,6 +14150,8 @@ export interface components {
         MaritalStatus: "single" | "married";
         /** MeResponse */
         MeResponse: {
+            /** Disciplines */
+            disciplines: string[];
             /**
              * Email
              * Format: email
@@ -23249,6 +23274,23 @@ export interface components {
              * @default
              */
             title: string;
+        };
+        /**
+         * UserDisciplinesInput
+         * @description `PUT /users/{id}/disciplines` govdesi: TAM DEGISTIRME. Bos liste = tum atamalar silinir
+         *     = kullanici kisitsiz. Yinelenen id'ler serviste tekillestirilir.
+         */
+        UserDisciplinesInput: {
+            /** Discipline Ids */
+            discipline_ids: string[];
+        };
+        /**
+         * UserDisciplinesRead
+         * @description Kullanicinin atanmis disiplinleri (id'ye gore sirali; atamasiz = []).
+         */
+        UserDisciplinesRead: {
+            /** Discipline Ids */
+            discipline_ids: string[];
         };
         /** UserListResponse */
         UserListResponse: {
@@ -42624,6 +42666,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_disciplines_endpoint_users__user_id__disciplines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDisciplinesRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_user_disciplines_endpoint_users__user_id__disciplines_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserDisciplinesInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDisciplinesRead"];
                 };
             };
             /** @description Yetkisiz işlem */
