@@ -1,0 +1,14 @@
+/* GIR-F1 · Gizli native `type="date"` seçici — YALNIZ `showPicker()`
+   penceresini açmak için durur. `date-input.css`teki `.date-input-picker`
+   ile AYNI mekanik (akıştan çıkar, 1x1, görünmez) — burada ayrı isimle
+   durur ki `ReportDateNav`in `.report-date-nav__box`u kendi konumlandırma
+   ebeveyni olsun. */
+.native-date-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
