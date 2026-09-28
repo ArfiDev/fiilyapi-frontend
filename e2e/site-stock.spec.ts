@@ -72,7 +72,8 @@ test("KPI şeridi ve tablo SUNUCU verisinden gelir; merkez depo bakiyeye GİRMEZ
   await login(page);
   await page.goto(SITE_STOCK_URL);
 
-  const strip = page.getByTestId("santiye-stok-kpi-strip");
+  // `main` ile sınırlı: akış SSR'ında gizli `div[hidden]` kopyası (bkz. site-stock-visual.spec.ts).
+  const strip = page.locator("main").getByTestId("santiye-stok-kpi-strip");
   await expect(strip).toContainText("Toplam Malzeme");
   await expect(strip).toContainText("Kritik Stok");
   await expect(strip).toContainText("Düşük Stok");

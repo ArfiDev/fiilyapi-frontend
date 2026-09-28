@@ -37,7 +37,16 @@ test("santiye stok sekmesi gorsel", async ({ page }) => {
   ).toBeVisible();
   // (b) KPI şeridinin dört kartı da GERÇEK sayı basıyor ("—" yalnız yükleme/
   //     hata durumunda çıkar, o hâl kadraja giremez),
-  await expect(page.getByTestId("santiye-stok-kpi-strip")).not.toContainText("—");
+  //     STOK-FLAKY-F1 (ölçüldü): `<Suspense>` akış (streaming) SSR'ında React,
+  //     bekleyen içeriği `<body>` altında `<div hidden>` içinde tutar ve inline
+  //     script'le `<main>`e taşır; yavaş ortamda (CI; yerelde CPU 8x kısıtlamada gözlendi) o kısa
+  //     pencerede AYNI testid iki kez bulunur (biri `main` içinde, biri gizli
+  //     `div[hidden]`de) ve strict mode patlar. Ürün hatası DEĞİL — canlı
+  //     sayfa yalnız `main` içindedir; locator oraya sınırlanır (depo kanonu:
+  //     `page.locator("main")`).
+  await expect(
+    page.locator("main").getByTestId("santiye-stok-kpi-strip"),
+  ).not.toContainText("—");
   // (c) tablo satırları geldi ve rozetler SUNUCUDAN basıldı.
   await expect(page.getByTestId("santiye-stok-row-SNK-0421")).toBeVisible();
   await expect(page.getByTestId("santiye-stok-status-SNK-0421")).toHaveText("Kritik");
