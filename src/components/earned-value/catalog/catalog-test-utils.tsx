@@ -34,6 +34,7 @@ export const KAB: EvDisciplineRead = {
   sort_order: 1,
   used_by_item_count: 6,
   used_by_site_count: 4,
+  user_count: 0,
 };
 export const DUV: EvDisciplineRead = {
   id: "d-duv",
@@ -44,6 +45,7 @@ export const DUV: EvDisciplineRead = {
   sort_order: 2,
   used_by_item_count: 4,
   used_by_site_count: 4,
+  user_count: 0,
 };
 export const INC: EvDisciplineRead = {
   id: "d-inc",
@@ -54,6 +56,7 @@ export const INC: EvDisciplineRead = {
   sort_order: 3,
   used_by_item_count: 0,
   used_by_site_count: 0,
+  user_count: 0,
 };
 /** İş tipi YOK ama bir şantiye bütçesinde eşlenmiş (B1-9: yine silinemez). */
 export const ELK_SITE_ONLY: EvDisciplineRead = {
@@ -65,6 +68,7 @@ export const ELK_SITE_ONLY: EvDisciplineRead = {
   sort_order: 4,
   used_by_item_count: 0,
   used_by_site_count: 2,
+  user_count: 0,
 };
 
 const NO_ACTUAL = { avg: null, min: null, max: null, site_count: 0, sites: [] };

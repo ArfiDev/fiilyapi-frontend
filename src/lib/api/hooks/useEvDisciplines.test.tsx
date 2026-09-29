@@ -28,6 +28,7 @@ const KAB: EvDisciplineRead = {
   sort_order: 1,
   used_by_item_count: 6,
   used_by_site_count: 4,
+  user_count: 0,
 };
 
 let client: QueryClient;

@@ -160,8 +160,8 @@ describe("disciplineOptionsFromCompany — şirket listesi (useEvDisciplines, K2
   it("sıra `sort_order`a göre; alanlar seçici biçimine çevrilir", () => {
     expect(
       disciplineOptionsFromCompany([
-        { id: "d-2", code: "PEY", name: "Peyzaj", color: "#16a34a", default_contractor_type: "subcon", sort_order: 2, used_by_item_count: 0, used_by_site_count: 0 },
-        { id: "d-1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb", default_contractor_type: "own", sort_order: 1, used_by_item_count: 0, used_by_site_count: 0 },
+        { id: "d-2", code: "PEY", name: "Peyzaj", color: "#16a34a", default_contractor_type: "subcon", sort_order: 2, used_by_item_count: 0, used_by_site_count: 0, user_count: 0 },
+        { id: "d-1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb", default_contractor_type: "own", sort_order: 1, used_by_item_count: 0, used_by_site_count: 0, user_count: 0 },
       ]),
     ).toEqual([
       { id: "d-1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb", defaultContractorType: "own" },

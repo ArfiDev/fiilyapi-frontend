@@ -535,6 +535,8 @@ const ME = {
   role_key: "patron",
   status: "active",
   permissions: { earned_value: "admin" },
+  // DSC-B0: atamasız kullanıcı = kısıtsız (boş liste).
+  disciplines: [],
 } satisfies components["schemas"]["MeResponse"];
 
 // NOT: Gercek backend semasi (bkz. src/lib/api/schema.d.ts) tip-basi metrikleri duz
@@ -19120,7 +19122,10 @@ type EvWindowSource = NonNullable<EvSchemas["LeafOut"]["window_source"]>;
  * `used_by_site_count`, B2 devri) SAKLANMAZ, yanıt anında türetilir
  * (`evDisciplineReadOut`): sayaç ile kayıt ayrışamaz.
  */
-type EvDisciplineRecord = Omit<EvSchemas["DisciplineRead"], "used_by_item_count" | "used_by_site_count">;
+type EvDisciplineRecord = Omit<
+  EvSchemas["DisciplineRead"],
+  "used_by_item_count" | "used_by_site_count" | "user_count"
+>;
 
 /** Yazma damgası — makine saati DEĞİL (determinizm; mockup günü 24.09.2026). */
 const EV_NOW = "2026-09-24T09:00:00Z";
@@ -20392,7 +20397,14 @@ function evDisciplineUsage(state: EvState, disciplineId: string): EvDisciplineUs
 
 function evDisciplineReadOut(state: EvState, record: EvDisciplineRecord): EvSchemas["DisciplineRead"] {
   const usage = evDisciplineUsage(state, record.id);
-  return { ...record, used_by_item_count: usage.itemCount, used_by_site_count: usage.siteCount };
+  // DSC-B0 `user_count`: mock'ta kullanıcı×disiplin ataması tutulmaz (ilk
+  // tüketici DSC-F1.2) → 0.
+  return {
+    ...record,
+    used_by_item_count: usage.itemCount,
+    used_by_site_count: usage.siteCount,
+    user_count: 0,
+  };
 }
 
 function evCatalogOut(state: EvState, entry: EvCatalogEntry): EvSchemas["CatalogItemRead"] {
