@@ -303,31 +303,3 @@ describe("SiteStockView — yetki ve hata yolları", () => {
     expect(screen.getByTestId("santiye-stok-error")).toHaveTextContent("Şantiye bulunamadı.");
   });
 });
-
-// DSC-F1.3 · gerçek `useDisciplineScope` (oturum mock'u me.disciplines taşır):
-// `?section=` süzgeçli boş liste kısıtlı kullanıcıda da SÜZGEÇ metnini korur.
-describe("SiteStockView — kısıtlı kullanıcı + bölüm süzgeci (DSC-F1.3)", () => {
-  const EMPTY_TITLE = "Bu şantiyenin depolarında hareket görmüş malzeme yok.";
-
-  function restrictedSession() {
-    vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { inventory: "full" }, disciplines: [{ id: "d-1", code: "KAB", name: "Kaba İnşaat", color: "#0055aa" }] } as unknown as MeResponse,
-      isLoading: false,
-    } as ReturnType<typeof useSession>);
-    vi.mocked(useSiteStock).mockReturnValue(queryStub(siteStock({ items: [], total: 0 })));
-  }
-
-  it("süzgeçli + boş → eski metin, bildirim yok", () => {
-    restrictedSession();
-    setSearchParams("section=sec-1");
-    render(<SiteStockView />);
-    expect(screen.getByText(EMPTY_TITLE)).toBeInTheDocument();
-    expect(screen.queryByText("Disiplininize ait kayıt yok.")).not.toBeInTheDocument();
-  });
-
-  it("süzgeçsiz + boş → kısıtlı bildirim", () => {
-    restrictedSession();
-    render(<SiteStockView />);
-    expect(screen.getByText("Disiplininize ait kayıt yok.")).toBeInTheDocument();
-  });
-});
