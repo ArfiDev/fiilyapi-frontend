@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ErrorCard, Skeleton, SkeletonRows } from "@/components/earned-value/common/state";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
 import {
@@ -242,6 +244,15 @@ function StepContent(props: StepContentProps) {
 
 /** BÜT:473-480 — BOQ boş hâli. */
 function EmptyBoq({ href }: { href: string | null }) {
+  // Disiplini atanmış kullanıcıda backend süzmesi kalemleri boşaltabilir (DSC-F1.3).
+  const scope = useDisciplineScope();
+  if (scope.isRestricted) {
+    return (
+      <section className="ev-budget-card ev-budget-empty" aria-label="İş kalemi yok">
+        <RestrictedEmptyNotice names={scope.names} />
+      </section>
+    );
+  }
   return (
     <section className="ev-budget-card ev-budget-empty" aria-label="İş kalemi yok">
       <div className="ev-budget-empty__box">

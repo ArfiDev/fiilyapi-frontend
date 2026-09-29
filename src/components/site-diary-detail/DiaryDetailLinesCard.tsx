@@ -2,6 +2,8 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 
 import { ArrowRightIcon, ClockIcon } from "@/components/ui/icons";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { formatCurrency, formatCurrencyTight } from "@/lib/format";
 
 import type { DiaryDetailLineColumns } from "./detail-extension";
@@ -182,6 +184,8 @@ export function DiaryDetailLinesCard({ groups, columns, notice, isPaymentHidden,
     columnCount: CORE_HEADERS.length + (columns?.headers.length ?? 0) + (isPaymentHidden ? 0 : 1),
   };
   const style = { minWidth: coreWidth + extraWidth + (isPaymentHidden ? 0 : AMOUNT_WIDTH) } as CSSProperties;
+  // Disiplini atanmış kullanıcıda backend süzmesi tüm satırları boşaltabilir (DSC-F1.3).
+  const scope = useDisciplineScope();
   return (
     <section className="diary-detail-card" aria-labelledby="diary-detail-lines">
       <div className="diary-detail-lines__head">
@@ -195,7 +199,7 @@ export function DiaryDetailLinesCard({ groups, columns, notice, isPaymentHidden,
       </div>
       {notice}
       {groups.totalCount === 0 ? (
-        <EmptyLinesBody />
+        scope.isRestricted ? <RestrictedEmptyNotice names={scope.names} /> : <EmptyLinesBody />
       ) : (
         <>
           <div className="diary-detail-lines__scroll">

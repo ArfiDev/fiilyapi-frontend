@@ -1,4 +1,6 @@
 import { Badge, Button } from "@/components/ui";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { cx } from "@/lib/cx";
 import { formatQuantity } from "@/lib/format";
 import { pendingModuleHint } from "@/lib/pending-modules";
@@ -19,6 +21,8 @@ export interface SiteStockTableProps {
   rows: SiteStockRow[] | undefined;
   isLoading: boolean;
   isError: boolean;
+  /** Sunucu bölüm süzgeci (`?section=`) aktif mi — süzgeçli boşluk tüm-liste boşluğu DEĞİLDİR. */
+  isFiltered?: boolean;
 }
 
 /** Boş/yükleniyor/hata metinleri — ŞS'de süzgeç şeridi YOK, tek dal yeter. */
@@ -77,9 +81,12 @@ function sectionText(placeholder: SiteStockRow["section"]): string | null {
  * ⚠️ Rozet ve bakiye rengi SUNUCUNUN `status` damgasındandır; eşik formülü
  * istemcide YENİDEN HESAPLANMAZ. Eksi bakiye meşrudur ve kırmızı basılır.
  */
-export function SiteStockTable({ rows, isLoading, isError }: SiteStockTableProps) {
+export function SiteStockTable({ rows, isLoading, isError, isFiltered = false }: SiteStockTableProps) {
   const visibleRows = rows ?? [];
   const message = visibleRows.length === 0 ? emptyMessage({ isLoading, isError }) : undefined;
+  const scope = useDisciplineScope();
+  // Yükleniyor/hata dalları değişmez; yalnız gerçek "liste boş" dalında kısıtlı bildirim (DSC-F1.3).
+  const isRestrictedEmpty = message !== undefined && !isLoading && !isError && !isFiltered && scope.isRestricted;
 
   return (
     <div className="stok-card">
@@ -204,7 +211,8 @@ export function SiteStockTable({ rows, isLoading, isError }: SiteStockTableProps
         </tbody>
       </table>
 
-      {message && (
+      {isRestrictedEmpty && <RestrictedEmptyNotice names={scope.names} />}
+      {message && !isRestrictedEmpty && (
         <div className="stok-empty">
           <p className="stok-empty__title">{message.title}</p>
           {message.hint && <p className="stok-empty__hint">{message.hint}</p>}

@@ -1,0 +1,9 @@
+/* Mockup: Ayarlar - Kullanıcı Disiplin Ataması, "Yapılan miktarlar · filtre" boş durumu. */
+.restricted-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: var(--space-restricted-empty-gap);
+  padding: var(--space-restricted-empty-y) var(--space-restricted-empty-x);
+}
+.restricted-empty-title { font-size: var(--text-body); font-weight: var(--weight-semibold); color: var(--color-text); }
+.restricted-empty-desc { font-size: var(--text-restricted-empty-desc); color: var(--color-text-muted); }
+.restricted-empty-desc b { font-weight: var(--weight-semibold); color: var(--color-text-secondary); }

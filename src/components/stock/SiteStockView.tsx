@@ -186,6 +186,7 @@ export function SiteStockView() {
         rows={rows}
         isLoading={stockQuery.isLoading}
         isError={stockQuery.isError}
+        isFiltered={sectionParam !== null}
       />
     </div>
   );

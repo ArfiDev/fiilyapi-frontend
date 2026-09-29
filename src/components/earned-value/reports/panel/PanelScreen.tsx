@@ -8,6 +8,8 @@ import { Select } from "@/components/ui/select/Select";
 import { Segmented, type SegmentedOption } from "@/components/ui/segmented/Segmented";
 import { ReportDateNav } from "../kit/ReportDateNav";
 import { TreeTable } from "../../common/tree-table/TreeTable";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { usePanel, type ContractorFilter, type PanelRange } from "@/lib/api/hooks/useEvReports";
 import { isForbidden } from "@/lib/api/unwrap";
@@ -76,6 +78,7 @@ export function PanelScreen({ siteId, siteCompleted, links, picker }: ReportScre
   });
 
   const ownerValue: OwnerValue = url.contractorType ?? "all";
+  const scope = useDisciplineScope();
   const canDistribute = permission.canWrite && !siteCompleted;
   // Küm./hafta PF (KPI 2/3 + uyarılar kartı) AYNI eşik kümesini paylaşır —
   // `bandsFromReport` API'nin `cumulative` alanını kod tarafının `weekly`
@@ -245,7 +248,15 @@ export function PanelScreen({ siteId, siteCompleted, links, picker }: ReportScre
               getLabel={(node) => node.data.name}
               variant="panel"
               ariaLabel="Disiplin tablosu"
-              emptyText={`Seçilen filtrede kalem yok · ${url.disciplineId === null ? "Tüm disiplinler" : ((report.data.disciplines ?? []).find((d) => d.id === url.disciplineId)?.name ?? "")} disiplini ${OWNER_LABEL[ownerValue]} ile yapılmıyor.`}
+              emptyText={
+                scope.isRestricted && url.disciplineId === null && ownerValue === "all" ? (
+                  // Süzgeçsiz (tüm disiplinler + tüm iş sahipleri) boşluk = backend
+                  // disiplin süzmesi (DSC-F1.3); süzgeçli boşluk eski metni korur.
+                  <RestrictedEmptyNotice names={scope.names} />
+                ) : (
+                  `Seçilen filtrede kalem yok · ${url.disciplineId === null ? "Tüm disiplinler" : ((report.data.disciplines ?? []).find((d) => d.id === url.disciplineId)?.name ?? "")} disiplini ${OWNER_LABEL[ownerValue]} ile yapılmıyor.`
+                )
+              }
               collapsible
               defaultExpanded={panelDefaultExpanded(report.data.rows, url.disciplineId)}
               // LİDER TALEBİ (2026-09-26, S32 turu) — mockup Panel:542

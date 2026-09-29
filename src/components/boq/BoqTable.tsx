@@ -1,6 +1,8 @@
 import { Fragment } from "react";
 
 import { Button } from "@/components/ui/button/Button";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import type { BoqGroup, BoqItem, BoqTotals } from "@/lib/api/hooks/useBoq";
 
@@ -38,6 +40,8 @@ export function BoqTable({
   // Duzenleme yalniz yazma yetkisi VE bir tetikleyici varken baglanir; aksi
   // halde "gorunup calismayan" odaklanabilir oge birakilmaz (spec §7.2).
   const isRowEditable = canWrite && Boolean(onEditItem);
+  // Disiplini atanmış kullanıcıda backend süzmesi listeyi boşaltabilir (DSC-F1.3).
+  const scope = useDisciplineScope();
   return (
     <div className="boq-table-card">
       <table className="boq-table">
@@ -71,7 +75,11 @@ export function BoqTable({
           {groups.length === 0 ? (
             <tr>
               <td className="boq-table__empty" colSpan={COLUMN_COUNT} data-testid="boq-empty">
-                <p className="boq-table__empty-text">Bu şantiyede henüz iş kalemi tanımlanmadı.</p>
+                {scope.isRestricted ? (
+                  <RestrictedEmptyNotice names={scope.names} />
+                ) : (
+                  <p className="boq-table__empty-text">Bu şantiyede henüz iş kalemi tanımlanmadı.</p>
+                )}
                 {/* Davranis F8'de baglanir; bu task'ta baslik seridindeki
                     ikizi gibi islevsizdir. Ikizi gibi ayni izin kapisina da
                     baglidir (spec §2.5): salt-okunur kullaniciya calismayan

@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge/Badge";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { formatCurrencyPrecise } from "@/lib/format";
 import type { SiteDiaryEntryDetail } from "@/lib/api/hooks/useSiteDiary";
 
@@ -91,6 +93,7 @@ export function DiaryLinesCard({
   const extraHeaders = lineColumns?.headers ?? [];
   const columnCount = CORE_COLUMN_COUNT + extraHeaders.length;
   const hasRows = entry !== undefined && groups.length > 0;
+  const scope = useDisciplineScope();
   const canMutateRows = canEditRows && !disabled && !isLocked;
 
   function handleRemove(group: DiaryItemGroup, leaf: DiaryLeafRow) {
@@ -121,7 +124,11 @@ export function DiaryLinesCard({
         </Badge>
       </div>
 
-      {!hasRows ? (
+      {!hasRows && entry && scope.isRestricted ? (
+        // Disiplini atanmış kullanıcıda backend süzmesi kalemleri boşaltabilir
+        // (DSC-F1.3); kayıt açıkken tüm liste boşsa ortak kısıtlı bildirim.
+        <RestrictedEmptyNotice names={scope.names} />
+      ) : !hasRows ? (
         // Dürüst boş durum: satırlar kayıt AÇILDIĞINDA sunucudan gelir; sahte
         // satır uydurulmaz (spec §2, backend sözleşmesi).
         <p className="diary-lines__empty">

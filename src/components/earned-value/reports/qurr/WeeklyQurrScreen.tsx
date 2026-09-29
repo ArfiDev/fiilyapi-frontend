@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button/Button";
 import { ErrorCard, Skeleton, SkeletonRows } from "@/components/earned-value/common/state";
 import { AnchoredPopover } from "@/components/ui/popover/AnchoredPopover";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { downloadWeeklyXlsx, useWeeklyReport } from "@/lib/api/hooks/useEvReports";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { formatDateDots } from "@/lib/format";
@@ -281,6 +283,7 @@ export function WeeklyQurrScreen({ siteId, siteName, companyName, projectName, l
     }
   }, [pendingPrint, view]);
 
+  const scope = useDisciplineScope();
   const columns = useMemo(
     () => [CODE_COLUMN, ITEM_COLUMN, ...qurrColumns(openColumn, toggleColumn)],
     [openColumn, toggleColumn],
@@ -551,7 +554,10 @@ export function WeeklyQurrScreen({ siteId, siteName, companyName, projectName, l
                   getLabel={nodeLabel}
                   variant="qurr"
                   ariaLabel={`QURR tablosu, Hafta ${data.week_no}`}
-                  emptyText="Bu hafta için satır yok."
+                  emptyText={
+                    // Disiplini atanmış kullanıcıda backend süzmesi satırları boşaltabilir (DSC-F1.3).
+                    scope.isRestricted ? <RestrictedEmptyNotice names={scope.names} /> : "Bu hafta için satır yok."
+                  }
                   collapsible={false}
                   headerGroups={HEADER_GROUPS}
                   rowClassName={rowClassName}
