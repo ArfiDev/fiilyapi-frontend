@@ -51,13 +51,18 @@ export interface LeafDiffMark {
 const REASON_NOTE: Record<LeafDiff["reason"], string> = {
   new: "Yeni satır · BOQ bölüm tahsisi eklendi",
   removed: "Satır kaldırıldı · BOQ bölüm tahsisi silindi",
+  // DSC-B3 S8: yalnız kısıtlı kullanıcıda; hedef disiplin bilerek gösterilmez (opak).
+  moved_out: "Başka disipline taşındı / kapsam dışı",
   qty_changed: "BOQ miktar revizyonu",
   rate_changed: "Oran değişti",
   qty_and_rate_changed: "BOQ miktar revizyonu · oran değişti",
 };
 
-const QTY_REASONS = new Set<LeafDiff["reason"]>(["new", "removed", "qty_changed", "qty_and_rate_changed"]);
-const RATE_REASONS = new Set<LeafDiff["reason"]>(["new", "removed", "rate_changed", "qty_and_rate_changed"]);
+const QTY_REASONS = new Set<LeafDiff["reason"]>(["new", "removed", "moved_out", "qty_changed", "qty_and_rate_changed"]);
+const RATE_REASONS = new Set<LeafDiff["reason"]>(["new", "removed", "moved_out", "rate_changed", "qty_and_rate_changed"]);
+
+/** Yaprağın yeni ağaçta karşılığı yok (oran/miktar null döner) — "Oran yok" uyarısı bunlara basılmaz. */
+const GONE_REASONS = new Set<LeafDiff["reason"]>(["removed", "moved_out"]);
 
 function toneOf(delta: string | null): DiffTone {
   if (delta === null) return "neutral";
@@ -76,7 +81,7 @@ function rateText(rate: string | null): string {
 
 export function diffRows(diff: EvRevisionDiffOut): DiffRow[] {
   return diff.leaves.map((leaf) => {
-    const rateMissing = leaf.unit_mhr === null && leaf.reason !== "removed";
+    const rateMissing = leaf.unit_mhr === null && !GONE_REASONS.has(leaf.reason);
     return {
       leafId: leaf.leaf_id,
       name: `${leaf.item_description} · ${leaf.section_name ?? "Bölümsüz"}`,

@@ -142,9 +142,21 @@ export interface StripValues {
 }
 
 /**
+ * Başka disiplinlerin dağıttığı saat (DSC): kısıtlı kullanıcıda backend `totals.allocated_hours`
+ * TÜM disiplinleri içerir, `cells` yalnız görünenleri. Atamasızda (tutarlı veri) 0'dır;
+ * tutarsız veride negatif olmaz.
+ */
+export function hiddenAllocated(view: EvDayView): Centi {
+  const visible = view.cells.reduce((sum, cell) => sum + toCenti(cell.hours), 0);
+  return Math.max(0, toCenti(view.totals.allocated_hours) - visible);
+}
+
+/**
  * 4'lü şerit (İ:393-396). Temiz taslakta değerler BACKEND toplamlarıdır
  * (`totals`); kullanıcı hücre düzenlerken Dağıtılan/Dağıtılmamış anında
- * önizlenir. Puantaj toplamı ve taşeron her zaman satırlardan (backend).
+ * önizlenir — görünen taslak hücreleri + başka disiplin payı (`hiddenAllocated`),
+ * böylece kısıtlı kullanıcıda temiz ve dokunulup geri alınmış taslak AYNI değeri gösterir.
+ * Puantaj toplamı ve taşeron her zaman satırlardan (backend).
  */
 export function stripValues(view: EvDayView, draft: AllocationDraft, isDirty: boolean): StripValues {
   const source = toCenti(view.totals.source_hours);
@@ -159,7 +171,7 @@ export function stripValues(view: EvDayView, draft: AllocationDraft, isDirty: bo
       subcontractor,
     };
   }
-  const allocated = view.rows.reduce((sum, row) => sum + rowAllocated(draft, row), 0);
+  const allocated = view.rows.reduce((sum, row) => sum + rowAllocated(draft, row), 0) + hiddenAllocated(view);
   return { source, allocated, unallocated: source - allocated, subcontractor };
 }
 

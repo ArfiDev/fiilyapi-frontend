@@ -10,6 +10,7 @@ import {
   rowRemaining,
   setCell,
   setRule,
+  hiddenAllocated,
   stripValues,
   toggleCode,
 } from "./allocation-model";
@@ -121,6 +122,60 @@ describe("önizleme toplamları (yalnız düzenlenen hücreler; motor değerleri
       unallocated: 1000,
       subcontractor: 5600,
     });
+  });
+});
+
+describe("stripValues — kısıtlı kullanıcı (backend allocated_hours TÜM disiplinleri içerir, tablo yalnız görünen hücreleri)", () => {
+  // Kaynak 84 a-s; görünen hücreler 9 + 9 = 18; başka disiplin 12 → sunucu allocated 30, unallocated 54.
+  const restricted = () =>
+    dayView({ totals: { source_hours: "84.00", allocated_hours: "30.00", unallocated_hours: "54.00" } });
+
+  it("hiddenAllocated = allocated_hours − Σ görünen sunucu hücreleri", () => {
+    expect(hiddenAllocated(restricted())).toBe(1200);
+  });
+
+  it("atamasız (tutarlı veri): hidden 0 ve stripValues davranışı DEĞİŞMEZ", () => {
+    const view = dayView();
+    expect(hiddenAllocated(view)).toBe(0);
+    const clean = draftFromView(view);
+    expect(stripValues(view, clean, false)).toEqual({ source: 8400, allocated: 1800, unallocated: 6600, subcontractor: 5600 });
+    expect(stripValues(view, clean, true)).toEqual({ source: 8400, allocated: 1800, unallocated: 6600, subcontractor: 5600 });
+  });
+
+  it("atamasız + puantajdan düşmüş satırın hücresi (view.rows'ta yok): hidden 0, değerler eskisiyle aynı", () => {
+    const orphan = { kind: "personnel" as const, ref_id: "dddddddd-0000-4000-8000-0000000000ff", node_id: LEAF_KALIP, hours: "3.00" };
+    const base = dayView();
+    const view = dayView({
+      cells: [...base.cells, orphan],
+      totals: { source_hours: "84.00", allocated_hours: "21.00", unallocated_hours: "63.00" },
+    });
+    expect(hiddenAllocated(view)).toBe(0);
+    const clean = draftFromView(view);
+    // Temiz: sunucu değerleri; kirli: yalnız satırı olan hücreler (eski davranış, yetim hücre sayılmaz).
+    expect(stripValues(view, clean, false)).toMatchObject({ allocated: 2100, unallocated: 6300 });
+    expect(stripValues(view, clean, true)).toMatchObject({ allocated: 1800, unallocated: 6600 });
+  });
+
+  it("veri tutarsızsa (allocated < görünen) hidden negatif OLMAZ", () => {
+    const view = dayView({ totals: { source_hours: "84.00", allocated_hours: "10.00", unallocated_hours: "74.00" } });
+    expect(hiddenAllocated(view)).toBe(0);
+  });
+
+  it("temiz taslak sunucu değerleri; dokunulup AYNI değere dönen kirli taslakta Dağıtılmamış AYNI", () => {
+    const view = restricted();
+    const clean = draftFromView(view);
+    const cleanStrip = stripValues(view, clean, false);
+    expect(cleanStrip).toMatchObject({ allocated: 3000, unallocated: 5400 });
+    const touched = setCell(setCell(clean, MEHMET, LEAF_KALIP, "10"), MEHMET, LEAF_KALIP, "9");
+    expect(stripValues(view, touched, true)).toEqual(cleanStrip);
+  });
+
+  it("bir hücre +1 a-s değişince Dağıtılmamış tam 1 a-s azalır (Dağıtılan 1 artar)", () => {
+    const view = restricted();
+    const clean = stripValues(view, draftFromView(view), false);
+    const plusOne = stripValues(view, setCell(draftFromView(view), MEHMET, LEAF_KALIP, "10"), true);
+    expect(plusOne.unallocated).toBe(clean.unallocated - 100);
+    expect(plusOne.allocated).toBe(clean.allocated + 100);
   });
 });
 

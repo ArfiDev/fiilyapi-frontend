@@ -104,6 +104,36 @@ describe("buildSubmitState — Gönder kontrol çubuğu (İ:493-510) + submitGat
   });
 });
 
+describe("buildSubmitState — kısıtlı kullanıcıda iki aşım maddesi (DSC-B2: önce kendi, sonra opak 'Başka disiplinde')", () => {
+  const OTHER = { code: "overrun_without_reason", message: "Başka disiplinde 2 satır planlı miktarı aşıyor (gerekçesiz)" };
+
+  it("iki overrun_without_reason → iki uyarı çipi, backend metni AYNEN, sıra korunur, anahtarlar benzersiz", () => {
+    const state = buildSubmitState(input({ submit: withReasons(OVERRUN, OTHER) }));
+    expect(state.checks.map((c) => [c.key, c.tone, c.label])).toEqual([
+      ["quantity", "warn", OVERRUN.message],
+      ["quantity-1", "warn", OTHER.message],
+      ["hours", "ok", "Bütün saatler dağıtıldı"],
+      ["weather", "ok", "Hava girildi"],
+    ]);
+  });
+
+  it("gate iki metni de taşır (sıra: kendi, sonra başka) ve kapı kapalı", () => {
+    const state = buildSubmitState(input({ submit: withReasons(OVERRUN, OTHER) }));
+    expect(state.gate).toEqual({ canSubmit: false, reasons: [OVERRUN.message, OTHER.message], showReasonsInCore: false });
+    expect(state.note).toEqual({ text: "Aşım gerekçesi gönderimi engelliyor", tone: "warn" });
+  });
+
+  it("yalnız opak madde (kendi aşımı yok) tek uyarı çipi olur", () => {
+    const state = buildSubmitState(input({ submit: withReasons(OTHER) }));
+    expect(state.checks[0]).toMatchObject({ key: "quantity", tone: "warn", label: OTHER.message });
+    expect(state.checks.filter((c) => c.key.startsWith("quantity"))).toHaveLength(1);
+  });
+
+  it("madde yoksa mevcut yeşil 'Miktarlar girildi' çipi", () => {
+    expect(buildSubmitState(input()).checks[0]).toMatchObject({ key: "quantity", tone: "ok", label: "Miktarlar girildi" });
+  });
+});
+
 describe("reasonKind — backend gerekçe KODU → çip türü (EV-BORC-2 kapandı, `reason_items`; metne bakılmaz)", () => {
   it.each([
     ["no_quantity", "quantity"],
