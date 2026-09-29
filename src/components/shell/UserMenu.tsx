@@ -54,7 +54,7 @@ export function UserMenu({ me, onLogout, logoutError }: UserMenuProps) {
 
   return (
     <div
-      className="topbar-user"
+      className={isOpen ? "topbar-user topbar-user--open" : "topbar-user"}
       ref={rootRef}
       onBlur={(event) => {
         // Tab ile odak kartın DIŞINA çıkınca kapanır. `relatedTarget` null iken

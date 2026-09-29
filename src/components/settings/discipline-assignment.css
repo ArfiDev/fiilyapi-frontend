@@ -70,6 +70,12 @@
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-8);
+  /* Kaydırma kabı AÇIKÇA kendi compositing katmanına alınır. Aksi hâlde Linux/
+     Chromium (Overlap) kabı VE ardındaki banner+altlığı ayrı ayrı "squash"lar ve
+     hata banner'ı olan karede yuvarlak köşe AA'sı her ekran görüntüsünde ±1
+     oynar (CI ayarlar-disiplin-modal-sunucu-hatasi Δ18px). Ölçüldü: 5 ardışık
+     kare, bu satırla 0 fark. */
+  transform: translateZ(0);
 }
 
 .dsc-row {

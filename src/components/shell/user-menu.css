@@ -1,7 +1,12 @@
 /* DSC-F1.2 · Avatar menüsü — Kullanıcı Disiplin Ataması.dc.html 255-275 */
+/* `position: relative` YALNIZ menü açıkken: kapalı hâlde konumlanmış sarmalayıcı
+   kendi PaintLayer'ını alır ve Linux/Chromium'da (Overlap) ayrı compositing
+   katmanına çıkıp sekme şeridinin LCD antialias'ını bozar (görsel RET kök nedeni). */
 .topbar-user {
-  position: relative;
   display: flex;
+}
+.topbar-user--open {
+  position: relative;
 }
 .user-menu {
   position: absolute;
