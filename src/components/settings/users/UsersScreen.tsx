@@ -15,6 +15,9 @@ import { useDeleteUser } from "@/lib/api/hooks/useUserMutations";
 import { UserFormModal } from "@/components/settings/UserFormModal";
 import { PasswordResetModal } from "@/components/settings/PasswordResetModal";
 import { ProjectAccessModal } from "@/components/settings/ProjectAccessModal";
+import { DisciplineAssignmentModal } from "@/components/settings/DisciplineAssignmentModal";
+import { DisciplineCell } from "./DisciplineCell";
+import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { backendErrorMessage } from "@/lib/api/error-message";
@@ -43,6 +46,7 @@ type ModalState =
   | { type: "edit"; user: UserResponse }
   | { type: "password"; user: UserResponse }
   | { type: "project"; user: UserResponse }
+  | { type: "discipline"; user: UserResponse }
   | { type: "delete"; user: UserResponse }
   | null;
 
@@ -83,6 +87,8 @@ export function UsersScreen() {
   const rolesQuery = useRoles();
   const projectsQuery = useProjects(); // proje adı çözümü (ref §C.1)
   const deleteUser = useDeleteUser();
+  // Yazma kapısı: backend PUT `user_management` `full` ister (user_discipline_router.py).
+  const canEditDisciplines = useModulePermission("user_management").canWrite;
 
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -173,6 +179,11 @@ export function UsersScreen() {
               <th>E-posta</th>
               <th className="users-table__center">Rol</th>
               <th>Proje Erişimi</th>
+              <th>
+                <span className="users-th-new">
+                  Disiplin<span className="users-new-tag">YENİ</span>
+                </span>
+              </th>
               <th className="users-table__center">Durum</th>
               <th aria-label="İşlemler" />
             </tr>
@@ -196,6 +207,13 @@ export function UsersScreen() {
                   <td>
                     <ProjectAccessCell userId={user.id} projects={projectsQuery.data?.items} />
                   </td>
+                  <td>
+                    <DisciplineCell
+                      userId={user.id}
+                      canEdit={canEditDisciplines}
+                      onOpen={() => setModal({ type: "discipline", user })}
+                    />
+                  </td>
                   <td className="users-table__center">
                     <StatusBadge status={user.status} />
                   </td>
@@ -210,6 +228,16 @@ export function UsersScreen() {
                       <Button variant="ghost" size="sm" onClick={() => setModal({ type: "project", user })}>
                         Projeler
                       </Button>
+                      {canEditDisciplines && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label="Disiplin ataması"
+                          onClick={() => setModal({ type: "discipline", user })}
+                        >
+                          Disiplin
+                        </Button>
+                      )}
                       <Button variant="danger" size="sm" onClick={() => setModal({ type: "delete", user })}>
                         Sil
                       </Button>
@@ -245,6 +273,15 @@ export function UsersScreen() {
       {modal?.type === "edit" && <UserFormModal mode="edit" user={modal.user} onClose={closeModal} />}
       {modal?.type === "password" && <PasswordResetModal user={modal.user} onClose={closeModal} />}
       {modal?.type === "project" && <ProjectAccessModal user={modal.user} onClose={closeModal} />}
+      {modal?.type === "discipline" && (
+        <DisciplineAssignmentModal
+          user={modal.user}
+          // Rol çözülemezse ("" — roller yüklenmedi/hata) yönetici uyarısı gösterilmez.
+          // Uyarı bir UI UYARISIDIR, güvenlik değil: backend zorlamaz (Ü10 "uyarır, engellemez").
+          roleKey={role(rolesQuery.data, modal.user.role_id)?.key ?? ""}
+          onClose={closeModal}
+        />
+      )}
       {modal?.type === "delete" && (
         <ConfirmDialog
           title="Kullanıcıyı Sil"

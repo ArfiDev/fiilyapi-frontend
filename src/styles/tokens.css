@@ -410,6 +410,7 @@
   --color-info-soft: #e0f2fe; /* "eksik gün" hücresi zemini (E5 204) */
   --color-info-border-soft: #7dd3fc; /* aynı hücrenin kenarlığı (E5 204) */
   --color-info-strong: #0369a1; /* aynı hücrenin metni (E5 204) */
+  --color-info-deep-text: #1e40af; /* DSC-F1.2: Disiplin Ataması modalı bilgi kutusu metni (Kullanıcı Disiplin Ataması.dc.html:23) */
   --color-warning-tint: #fffbeb; /* Cumartesi sütunu zemini (E5 222) */
   --color-danger-tint-weak: #fff7f7; /* Pazar sütunu zemini (E5 223) */
   --size-timesheet-hin-w: 52px; /* saat kutusu (E5 `.hin`) */

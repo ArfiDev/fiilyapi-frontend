@@ -3,12 +3,12 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ArrowRightIcon, BellIcon } from "@/components/ui/icons";
-import { initials } from "@/lib/shell/initials";
 import { isActivePath } from "@/lib/shell/isActive";
 import { routes } from "@/lib/routes";
 import { useLogout } from "@/lib/shell/useLogout";
 import { TopbarBreadcrumb } from "./breadcrumb/TopbarBreadcrumb";
 import { useSession } from "./SessionProvider";
+import { UserMenu } from "./UserMenu";
 import { WorkspaceTabsBar } from "./workspace-tabs/WorkspaceTabsBar";
 import "./topbar.css";
 
@@ -21,7 +21,6 @@ const SETTINGS_ROOT = routes.settings.root();
 
 export default function Topbar() {
   const { me } = useSession();
-  const avatar = me ? initials(me.full_name) : "";
   const pathname = usePathname() ?? "/";
   const inSettings = isActivePath(pathname, SETTINGS_ROOT);
   const { logout, error: logoutError } = useLogout();
@@ -79,7 +78,7 @@ export default function Topbar() {
             )}
           </>
         )}
-        <span className="topbar-avatar" aria-hidden="true">{avatar}</span>
+        <UserMenu me={me} onLogout={logout} logoutError={inSettings ? null : logoutError} />
       </div>
     </header>
   );

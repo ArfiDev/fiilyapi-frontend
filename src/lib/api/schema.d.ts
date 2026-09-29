@@ -14151,7 +14151,7 @@ export interface components {
         /** MeResponse */
         MeResponse: {
             /** Disciplines */
-            disciplines: string[];
+            disciplines: components["schemas"]["DisciplineRef"][];
             /**
              * Email
              * Format: email
@@ -23291,6 +23291,8 @@ export interface components {
         UserDisciplinesRead: {
             /** Discipline Ids */
             discipline_ids: string[];
+            /** Disciplines */
+            disciplines: components["schemas"]["DisciplineRef"][];
         };
         /** UserListResponse */
         UserListResponse: {
