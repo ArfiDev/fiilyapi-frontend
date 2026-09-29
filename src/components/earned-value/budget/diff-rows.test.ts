@@ -37,6 +37,7 @@ describe("diffRows — neden KODU metne çevrilir (B1-14), K22 renk dili", () =>
   it.each([
     ["new", "Yeni satır · BOQ bölüm tahsisi eklendi"],
     ["removed", "Satır kaldırıldı · BOQ bölüm tahsisi silindi"],
+    ["moved_out", "Başka disipline taşındı / kapsam dışı"],
     ["qty_and_rate_changed", "BOQ miktar revizyonu · oran değişti"],
   ] as const)("neden %s → %s", (reason, note) => {
     const base = diffOut().leaves[0];
@@ -44,6 +45,25 @@ describe("diffRows — neden KODU metne çevrilir (B1-14), K22 renk dili", () =>
     expect(out[0].note).toBe(note);
     expect(out[0].oldQty).toBe("—");
   });
+
+  it.each(["removed", "moved_out"] as const)(
+    "%s: backend qty/oran null döner → yeni oran '—' (Oran yok DEĞİL), fark eksi (yeşil)",
+    (reason) => {
+      const base = diffOut().leaves[0];
+      const [row] = diffRows(
+        diffOut({ leaves: [{ ...base, reason, qty: null, unit_mhr: null, budget_mhr: "0", prev_budget_mhr: "100", delta_mhr: "-100" }] }),
+      );
+      expect(row).toMatchObject({
+        newQty: "—",
+        newRate: "—",
+        rateMissing: false,
+        qtyChanged: true,
+        rateChanged: true,
+        delta: "−100",
+        tone: "decrease",
+      });
+    },
+  );
 
   it("yeni oran yoksa 'Oran yok' (kırmızı) ve fark '—'", () => {
     const base = diffOut().leaves[0];

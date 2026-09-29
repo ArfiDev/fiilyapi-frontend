@@ -13698,7 +13698,7 @@ export interface components {
              * Reason
              * @enum {string}
              */
-            reason: "new" | "removed" | "qty_changed" | "rate_changed" | "qty_and_rate_changed";
+            reason: "new" | "removed" | "moved_out" | "qty_changed" | "rate_changed" | "qty_and_rate_changed";
             /** Section Name */
             section_name: string | null;
             /** Unit Mhr */

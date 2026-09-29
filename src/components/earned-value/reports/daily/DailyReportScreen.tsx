@@ -30,8 +30,13 @@ import {
   approveGate,
   formatDayMonthDots,
   formatToleranceLabel,
+  isTrendHidden,
   formatWeekRangeDots,
+  directTotalLabel,
   joinWithVe,
+  kpiRowLabel,
+  reconciliationText,
+  trendTitle,
   reportEyebrow,
   weekdayOf,
   reportNoLabel,
@@ -105,6 +110,7 @@ const pct2 = (v: string | null) => (v === null ? EMPTY_CELL : formatPercent01(v,
 const pct1 = (v: string | null) => (v === null ? EMPTY_CELL : formatPercent01(v));
 
 function KpiTable({ report }: { report: EvDailyReport }) {
+  const scope = useDisciplineScope();
   return (
     <div className="ev-daily-kpi">
       {/* GİR:169 — bölüm başlığının yanındaki kapsam/tolerans alt yazısı. */}
@@ -133,9 +139,9 @@ function KpiTable({ report }: { report: EvDailyReport }) {
           {report.kpis.map((row) => {
             const chip = row.contractor_mix === "own" ? "Kendi" : row.contractor_mix === "subcon" ? "Taşeron" : null;
             return (
-              <tr key={row.node_id ?? row.kind} className={kpiRowClass(row.kind)}>
+              <tr key={`${row.kind}:${row.node_id ?? ""}`} className={kpiRowClass(row.kind)}>
                 <td className="ev-daily-kpi__name">
-                  <span>{row.name ?? EMPTY_CELL}</span>
+                  <span>{kpiRowLabel(row, scope.isRestricted)}</span>
                   {chip !== null && <span className="ev-daily-kpi__chip">{chip}</span>}
                 </td>
                 <td>{pct2(row.planned_pct_day)}</td>
@@ -331,7 +337,7 @@ function QuantitySection({ report }: { report: EvDailyReport }) {
           data: {
             node_id: TOTAL_ROW_ID,
             level: 0,
-            name: "Toplam doğrudan",
+            name: directTotalLabel(scope.isRestricted),
             uom: null,
             contractor_type: null,
             is_direct: null,
@@ -397,6 +403,7 @@ function ChipDangerGlyph() {
 
 /** Mutabakat + oransız giriş + PF bant dışı — GİR:273-295. */
 function FooterSection({ report, diaryHref, weeklyHref }: { report: EvDailyReport; diaryHref: string; weeklyHref: string }) {
+  const { isRestricted } = useDisciplineScope();
   const footer = report.footer;
   const outOfBand = pfOutOfBandRows(report.warnings, report.quantities);
   return (
@@ -404,8 +411,8 @@ function FooterSection({ report, diaryHref, weeklyHref }: { report: EvDailyRepor
       {footer !== null && (
         <div className="ev-daily-footer__chips">
           <span className="ev-daily-footer__chip ev-daily-footer__chip--ok">
-            <ChipOkGlyph />Σ harcanan {formatQuantity(footer.spent_total_day)} a-s + dağıtılmamış{" "}
-            {formatQuantity(footer.undistributed_day)} a-s = Σ puantaj {formatQuantity(footer.timesheet_total_day)} a-s
+            <ChipOkGlyph />
+            {reconciliationText(footer, isRestricted)}
           </span>
           {compareDecimalStrings(footer.undistributed_day, "0") > 0 && (
             <span className="ev-daily-footer__chip ev-daily-footer__chip--warn">
@@ -519,6 +526,7 @@ function LoadedDailyReport({
 }: LoadedProps) {
   const permission = useModulePermission("earned_value");
   const approve = useApproveDailyReport(siteId);
+  const scope = useDisciplineScope();
   const eyebrow = reportEyebrow(companyName, projectName, siteName);
   const [view, setView] = useState<ViewMode>("screen");
   const [modalOpen, setModalOpen] = useState(false);
@@ -587,19 +595,18 @@ function LoadedDailyReport({
               {reportNoLabel(report.report_no)} · salt okunur
             </span>
           </div>
-          {overall !== null && (
-            <div className="ev-daily-archive-summary__metrics">
-              <span>
-                Küm. planlı <b>{overall.planned_pct_cum === null ? EMPTY_CELL : formatPercent01(overall.planned_pct_cum)}</b>
-              </span>
-              <span>
-                Küm. gerçek <b>{overall.progress_pct_cum === null ? EMPTY_CELL : formatPercent01(overall.progress_pct_cum)}</b>
-              </span>
-              <span>
-                Sapma <b>{overall.variance === null ? EMPTY_CELL : formatVariancePoints(overall.variance)}</b>
-              </span>
-            </div>
-          )}
+          {/* Kısıtlı onaylı snapshot'ta overall satırı yoktur (DSC-B3 S6): metrikler "—". */}
+          <div className="ev-daily-archive-summary__metrics">
+            <span>
+              Küm. planlı <b>{pct1(overall?.planned_pct_cum ?? null)}</b>
+            </span>
+            <span>
+              Küm. gerçek <b>{pct1(overall?.progress_pct_cum ?? null)}</b>
+            </span>
+            <span>
+              Sapma <b>{overall?.variance === undefined || overall.variance === null ? EMPTY_CELL : formatVariancePoints(overall.variance)}</b>
+            </span>
+          </div>
           <Button variant="secondary" onClick={() => setShowArchiveDetail(true)}>
             Raporu göster
           </Button>
@@ -661,10 +668,12 @@ function LoadedDailyReport({
             <KpiTable report={report} />
           </section>
 
-          <section aria-label="7 günlük trend">
-            <h2 className="ev-daily-section-title">2 · 7 günlük trend · Genel kümülatif</h2>
-            <TrendSection report={report} />
-          </section>
+          {!isTrendHidden(report, scope.isRestricted) && (
+            <section aria-label="7 günlük trend">
+              <h2 className="ev-daily-section-title">{trendTitle(scope.isRestricted)}</h2>
+              <TrendSection report={report} />
+            </section>
+          )}
 
           <section aria-label="Miktar tablosu">
             <h2 className="ev-daily-section-title">3 · Miktar tablosu</h2>

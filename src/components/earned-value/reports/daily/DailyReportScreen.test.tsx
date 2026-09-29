@@ -337,3 +337,19 @@ describe("DailyReportScreen — GİR (S10, S11, S12, S30)", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
 });
+
+describe("DailyReportScreen — KPI Genel etiketleri backend biçiminde (name: null)", () => {
+  it("overall / overall_own / overall_subcon satırları `kind`'dan etiketlenir", () => {
+    const kpis = DAILY_REPORT_FIXTURE_DRAFT.kpis.map((row) =>
+      row.kind.startsWith("overall") ? { ...row, name: null } : row,
+    );
+    vi.mocked(useDailyReportMocked).mockReturnValue(
+      queryStub({ data: { ...DAILY_REPORT_FIXTURE_DRAFT, kpis } }),
+    );
+    const { container } = render(<DailyReportScreen {...baseProps()} />);
+    const names = Array.from(container.querySelectorAll(".ev-daily-kpi__table .ev-daily-kpi__name > span:first-child")).map(
+      (el) => el.textContent,
+    );
+    expect(names.slice(0, 3)).toEqual(["Genel", "Genel – Kendi", "Genel – Taşeron"]);
+  });
+});

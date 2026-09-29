@@ -1,12 +1,16 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { EvQtyTreeRow } from "@/lib/api/models";
 import { formatPf } from "@/lib/earned-value";
 
 import { pct, qty, rate, wholeHours } from "./daily-columns";
 import { DAILY_REPORT_FIXTURE_DRAFT } from "./daily-fixtures";
+import { DAILY_MIXED_DISCIPLINE, DAILY_RESTRICTED_APPROVED, DAILY_RESTRICTED_LIVE } from "./daily-scope-fixtures";
 import { DailyPrintView } from "./DailyPrintView";
+
+const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
+vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 
 /**
  * PLN-F3.4-düzeltme (lider eki 4) · Ondalık kanonu — `footer.undistributed_day`/
@@ -245,5 +249,82 @@ describe("DailyPrintView — paginateByGroup kapasitesi (GİR:301, 12 kolonlu sa
     const report = { ...DAILY_REPORT_FIXTURE_DRAFT, quantities };
     const { container } = render(<DailyPrintView report={report} eyebrow="FİİL Yapı · Güneşkent Konut · A-Blok Şantiyesi" />);
     expect(quantityPageCount(container)).toBe(2);
+  });
+});
+
+describe("DailyPrintView — KPI Genel etiketleri backend biçiminde (name: null)", () => {
+  it("overall satırları `kind`'dan etiketlenir", () => {
+    const kpis = DAILY_REPORT_FIXTURE_DRAFT.kpis.map((row) =>
+      row.kind.startsWith("overall") ? { ...row, name: null } : row,
+    );
+    const { container } = render(
+      <DailyPrintView report={{ ...DAILY_REPORT_FIXTURE_DRAFT, kpis }} eyebrow="FİİL Yapı · Güneşkent Konut · A-Blok Şantiyesi" />,
+    );
+    const names = Array.from(container.querySelectorAll("tr.ev-print-kpi__overall > td:first-child")).map((el) => el.textContent);
+    expect(names).toEqual(["Genel", "Genel – Kendi", "Genel – Taşeron"]);
+  });
+});
+
+describe("DailyPrintView — kısıtlı kullanıcı (DSC-F2 FAZ B)", () => {
+  const EYEBROW = "FİİL Yapı · Güneşkent Konut · A-Blok Şantiyesi";
+
+  it("kısıtlı: overall 'Genel (disiplinlerim)', Kendi/Taşeron eksiz", () => {
+    scope.value = { isRestricted: true, names: ["Civil"] };
+    const { container } = render(<DailyPrintView report={DAILY_RESTRICTED_LIVE} eyebrow={EYEBROW} />);
+    const names = Array.from(container.querySelectorAll("tr.ev-print-kpi__overall > td:first-child")).map((el) => el.textContent);
+    expect(names).toEqual(["Genel (disiplinlerim)", "Genel – Kendi", "Genel – Taşeron"]);
+    scope.value = { isRestricted: false, names: [] };
+  });
+
+  it("kısıtlı: mutabakat 'başka disiplinde 110 a-s'; atamasız: bugünkü metin", () => {
+    scope.value = { isRestricted: true, names: ["Civil"] };
+    const restricted = render(<DailyPrintView report={DAILY_RESTRICTED_LIVE} eyebrow={EYEBROW} />);
+    expect(restricted.container.querySelector(".ev-print-reconciliation__ok")?.textContent).toBe(
+      "Σ harcanan 200 a-s + dağıtılmamış 16 a-s + başka disiplinde 110 a-s = Σ puantaj 326 a-s",
+    );
+    restricted.unmount();
+    scope.value = { isRestricted: false, names: [] };
+    const open = render(<DailyPrintView report={DAILY_REPORT_FIXTURE_DRAFT} eyebrow={EYEBROW} />);
+    expect(open.container.querySelector(".ev-print-reconciliation__ok")?.textContent).toBe(
+      "Σ harcanan 310 a-s + dağıtılmamış 16 a-s = Σ puantaj 326 a-s",
+    );
+  });
+
+  it("kısıtlı onaylı (trend []): trend bölümü basılmaz; atamasız + boş trend: basılır", () => {
+    scope.value = { isRestricted: true, names: ["Civil"] };
+    const restricted = render(<DailyPrintView report={DAILY_RESTRICTED_APPROVED} eyebrow={EYEBROW} />);
+    expect(restricted.container.querySelector('section[aria-label="7 günlük trend"]')).toBeNull();
+    restricted.unmount();
+    scope.value = { isRestricted: false, names: [] };
+    const open = render(<DailyPrintView report={{ ...DAILY_RESTRICTED_APPROVED, trend: [] }} eyebrow={EYEBROW} />);
+    expect(open.container.querySelector('section[aria-label="7 günlük trend"]')).not.toBeNull();
+  });
+});
+
+describe("DailyPrintView — non_direct satır etiketi", () => {
+  it("name null non_direct satırı 'Genel / Dolaylı · bütçe dışı' (kısıtlıda da ek yok)", () => {
+    const nonDirect = { ...DAILY_REPORT_FIXTURE_DRAFT.kpis[0]!, kind: "non_direct" as const, name: null };
+    scope.value = { isRestricted: true, names: ["Civil"] };
+    const { container } = render(
+      <DailyPrintView
+        report={{ ...DAILY_REPORT_FIXTURE_DRAFT, kpis: [...DAILY_REPORT_FIXTURE_DRAFT.kpis, nonDirect] }}
+        eyebrow="FİİL Yapı · Güneşkent Konut · A-Blok Şantiyesi"
+      />,
+    );
+    const rows = container.querySelectorAll("table tbody tr");
+    const last = Array.from(rows).find((r) => r.textContent?.startsWith("Genel / Dolaylı"));
+    expect(last).toBeDefined();
+    scope.value = { isRestricted: false, names: [] };
+  });
+});
+
+describe("DailyPrintView — KPI satır anahtarı (karma disiplin)", () => {
+  it("aynı node_id'li discipline/_own/_subcon satırlarında 'same key' uyarısı yok", () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = render(<DailyPrintView report={DAILY_MIXED_DISCIPLINE} eyebrow="FİİL Yapı · Güneşkent Konut · A-Blok Şantiyesi" />);
+    expect(container.querySelectorAll(".ev-print-kpi tbody tr, table tbody tr").length).toBeGreaterThanOrEqual(DAILY_MIXED_DISCIPLINE.kpis.length);
+    const keyWarnings = errors.mock.calls.filter((call) => String(call[0]).includes("same key"));
+    errors.mockRestore();
+    expect(keyWarnings).toEqual([]);
   });
 });

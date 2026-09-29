@@ -10,7 +10,8 @@ import { compareDecimalStrings, formatPercent01, formatPf, formatVariancePoints 
 import type { EvDailyReport, EvQtyTreeRow } from "@/lib/api/models";
 
 import { contractorChip, isHeaderRow, pct, qty, rate, wholeHours } from "./daily-columns";
-import { formatDayMonthDots, joinWithVe, reportNoLabel } from "./daily-logic";
+import { formatDayMonthDots, isTrendHidden, joinWithVe, kpiRowLabel, reconciliationText, reportNoLabel } from "./daily-logic";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { pfOutOfBandRows } from "./pf-out-of-band";
 import { buildTrendChart } from "./trend-chart";
 
@@ -55,6 +56,7 @@ function pageFooter(report: EvDailyReport, eyebrow: string) {
 
 /** Sayfa 3 (GİR:371-379) — mutabakat özeti + PF bant dışı kalemler, yalnız SON sayfada. */
 function PrintReconciliation({ report }: { report: EvDailyReport }) {
+  const { isRestricted } = useDisciplineScope();
   const footer = report.footer;
   const outOfBand = pfOutOfBandRows(report.warnings, report.quantities);
   // F3.6b lider denetimi (5. tur) — "ekran ≡ baskı": GİR:112 tarih biçimi
@@ -64,8 +66,7 @@ function PrintReconciliation({ report }: { report: EvDailyReport }) {
     <div className="ev-print-reconciliation">
       {footer !== null && (
         <div className="ev-print-reconciliation__ok">
-          Σ harcanan {formatQuantity(footer.spent_total_day)} a-s + dağıtılmamış {formatQuantity(footer.undistributed_day)} a-s = Σ
-          puantaj {formatQuantity(footer.timesheet_total_day)} a-s
+          {reconciliationText(footer, isRestricted)}
         </div>
       )}
       {(footer !== null && compareDecimalStrings(footer.undistributed_day, "0") > 0) ||
@@ -175,6 +176,8 @@ function PrintQuantityRow({ row }: { row: EvQtyTreeRow }) {
 
 /** Sayfa 1 — "2 · 7 günlük trend" (GİR:331-347): tablo + mini çizgi grafiği (opsiyonel DEĞİL). */
 function PrintTrendSection({ report }: { report: EvDailyReport }) {
+  const { isRestricted } = useDisciplineScope();
+  if (isTrendHidden(report, isRestricted)) return null;
   const chart = buildTrendChart(report.trend);
   return (
     <section aria-label="7 günlük trend">
@@ -227,6 +230,7 @@ function PrintTrendSection({ report }: { report: EvDailyReport }) {
  * DFS ön-sıra, ilk satır her grubun L1 başlığıdır).
  */
 export function DailyPrintView({ report, eyebrow }: DailyPrintViewProps) {
+  const { isRestricted } = useDisciplineScope();
   // GİR: L1 disiplin kimliği grup anahtarıdır — L2/L3 satırlar aynı disiplinin
   // devamıdır. `quantities` DFS ön-sıra olduğundan bir L1'den SONRAKİ
   // (level>1) satırlar en son görülen L1'in grubuna girer.
@@ -270,8 +274,8 @@ export function DailyPrintView({ report, eyebrow }: DailyPrintViewProps) {
             </thead>
             <tbody>
               {report.kpis.map((row) => (
-                <tr key={row.node_id ?? row.kind} className={row.kind.startsWith("overall") ? "ev-print-kpi__overall" : ""}>
-                  <td>{row.name ?? EMPTY_CELL}</td>
+                <tr key={`${row.kind}:${row.node_id ?? ""}`} className={row.kind.startsWith("overall") ? "ev-print-kpi__overall" : ""}>
+                  <td>{kpiRowLabel(row, isRestricted)}</td>
                   {/* F3.6b lider denetimi (4. tur) — "ekran ≡ baskı": GİR:169 mockup `dp: this.pct(a.dp, 2)`
                       GÜNLÜK % 2 ondalık basar (KÜM. % gibi 1 DEĞİL); ekrandaki `pct2` ile AYNI hassasiyet. */}
                   <td>{row.planned_pct_day === null ? EMPTY_CELL : formatPercent01(row.planned_pct_day, 2)}</td>

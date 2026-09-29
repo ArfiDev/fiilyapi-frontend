@@ -84,11 +84,14 @@ function hoursCheck(unallocated: Centi, reason: string): SubmitCheck {
 }
 
 function buildChecks(reasons: readonly SubmitReason[], input: SubmitInput): SubmitCheck[] {
-  const quantity = reasons.find((r) => ["quantity", "overrun"].includes(reasonKind(r.code)));
+  const quantity = reasons.filter((r) => ["quantity", "overrun"].includes(reasonKind(r.code)));
   const weather = reasons.find((r) => reasonKind(r.code) === "weather");
   const others = reasons.filter((r) => reasonKind(r.code) === "other");
   return [
-    quantity ? check("quantity", "warn", quantity.message) : check("quantity", "ok", "Miktarlar girildi"),
+    // Kısıtlı kullanıcıda aynı `overrun_without_reason` kodu iki madde döner (DSC-B2: kendi, sonra opak).
+    ...(quantity.length === 0
+      ? [check("quantity", "ok", "Miktarlar girildi")]
+      : quantity.map((r, i) => check(i === 0 ? "quantity" : `quantity-${i}`, "warn", r.message))),
     hoursCheck(input.unallocated, input.reason),
     weather ? check("weather", "warn", "Hava eksik") : check("weather", "ok", "Hava girildi"),
     ...others.map((r, i) => check(`other-${i}`, "warn", r.message)),

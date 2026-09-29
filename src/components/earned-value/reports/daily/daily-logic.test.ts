@@ -6,7 +6,13 @@ import {
   formatReportDateHeader,
   formatToleranceLabel,
   formatWeekRangeDots,
+  isTrendHidden,
+  trendTitle,
   joinWithVe,
+  directTotalLabel,
+  kpiRowLabel,
+  otherDisciplineHours,
+  reconciliationText,
   reportEyebrow,
   reportNoLabel,
   versionSuffix,
@@ -158,5 +164,94 @@ describe("formatToleranceLabel — F3.6b lider denetimi (4. tur): GİR:169 'tole
     // Doğrulandı: eski gövde (Intl.NumberFormat + Number) bu girdide "2,1" üretiyordu
     // (Number() 19 basamaklı dizeyi en yakın double'a — pratikte 2.05'e — yuvarlıyor).
     expect(formatToleranceLabel("2.049999999999999999")).toBe("2,0");
+  });
+});
+
+describe("kpiRowLabel — Genel satır etiketleri `kind`'dan (GİR:462-464; backend overall `name`ini null döner)", () => {
+  it.each([
+    ["overall", "Genel"],
+    ["overall_own", "Genel – Kendi"],
+    ["overall_subcon", "Genel – Taşeron"],
+  ] as const)("%s (name null) → %s", (kind, label) => {
+    expect(kpiRowLabel({ kind, name: null })).toBe(label);
+  });
+
+  it("disiplin satırı backend adını korur; adı yoksa boş hücre", () => {
+    expect(kpiRowLabel({ kind: "discipline", name: "Kaba İnşaat" })).toBe("Kaba İnşaat");
+    expect(kpiRowLabel({ kind: "discipline", name: null })).toBe("—");
+  });
+
+  it("overall satırında backend adı GELSE BİLE etiket kind'dan üretilir (tek kaynak)", () => {
+    expect(kpiRowLabel({ kind: "overall", name: "başka" })).toBe("Genel");
+  });
+});
+
+describe("kpiRowLabel — kısıtlı kullanıcı (DSC-B3 S1: yalnız overall satırı 'Genel (disiplinlerim)')", () => {
+  it("kısıtlıda yalnız overall değişir; overall_own / overall_subcon / disiplin AYNI", () => {
+    expect(kpiRowLabel({ kind: "overall", name: null }, true)).toBe("Genel (disiplinlerim)");
+    expect(kpiRowLabel({ kind: "overall_own", name: null }, true)).toBe("Genel – Kendi");
+    expect(kpiRowLabel({ kind: "overall_subcon", name: null }, true)).toBe("Genel – Taşeron");
+    expect(kpiRowLabel({ kind: "discipline", name: "Civil" }, true)).toBe("Civil");
+  });
+
+  it("kısıtsızda (varsayılan) 'Genel' aynen", () => {
+    expect(kpiRowLabel({ kind: "overall", name: null })).toBe("Genel");
+    expect(kpiRowLabel({ kind: "overall", name: null }, false)).toBe("Genel");
+  });
+});
+
+describe("directTotalLabel", () => {
+  it("kısıtlıda '(disiplinlerim)' eki, kısıtsızda bugünkü metin", () => {
+    expect(directTotalLabel(true)).toBe("Toplam doğrudan (disiplinlerim)");
+    expect(directTotalLabel(false)).toBe("Toplam doğrudan");
+  });
+});
+
+describe("otherDisciplineHours / reconciliationText — Σ harcanan + dağıtılmamış (+ başka disiplinde) = Σ puantaj", () => {
+  const footer = (spent: string, undist: string, total: string) => ({ spent_total_day: spent, undistributed_day: undist, timesheet_total_day: total });
+
+  it("H = T − U − harcanan (ondalık string aritmetiği)", () => {
+    expect(otherDisciplineHours(footer("200", "16", "326"))).toBe("110");
+    expect(otherDisciplineHours(footer("0.1", "0.2", "0.6"))).toBe("0.3");
+  });
+
+  it("H negatif olamaz (max 0)", () => {
+    expect(otherDisciplineHours(footer("320", "16", "326"))).toBe("0");
+  });
+
+  it("kısıtsız: bugünkü metin AYNEN (H terimi yok)", () => {
+    expect(reconciliationText(footer("310", "16", "326"), false)).toBe("Σ harcanan 310 a-s + dağıtılmamış 16 a-s = Σ puantaj 326 a-s");
+  });
+
+  it("kısıtlı: H terimi eklenir", () => {
+    expect(reconciliationText(footer("200", "16", "326"), true)).toBe(
+      "Σ harcanan 200 a-s + dağıtılmamış 16 a-s + başka disiplinde 110 a-s = Σ puantaj 326 a-s",
+    );
+  });
+});
+
+describe("isTrendHidden — yalnız kısıtlı + boş trend", () => {
+  it.each([
+    [true, 0, true],
+    [true, 7, false],
+    [false, 0, false],
+    [false, 7, false],
+  ])("kısıtlı=%s trend=%i → gizli=%s", (restricted, count, hidden) => {
+    const trend = Array.from({ length: count }) as never;
+    expect(isTrendHidden({ trend }, restricted)).toBe(hidden);
+  });
+});
+
+describe("kpiRowLabel — non_direct (Panel S32 metni, backend name null döner)", () => {
+  it("non_direct satırı 'Genel / Dolaylı · bütçe dışı'; kısıtlıda ek YOK", () => {
+    expect(kpiRowLabel({ kind: "non_direct", name: null })).toBe("Genel / Dolaylı · bütçe dışı");
+    expect(kpiRowLabel({ kind: "non_direct", name: null }, true)).toBe("Genel / Dolaylı · bütçe dışı");
+  });
+});
+
+describe("trendTitle — kısıtlı canlı raporda '(disiplinlerim)' eki", () => {
+  it("atamasızda başlık bugünkü metin, kısıtlıda ek", () => {
+    expect(trendTitle(false)).toBe("2 · 7 günlük trend · Genel kümülatif");
+    expect(trendTitle(true)).toBe("2 · 7 günlük trend · Genel kümülatif (disiplinlerim)");
   });
 });

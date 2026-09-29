@@ -6,7 +6,7 @@ import { cx } from "@/lib/cx";
 import type { PfBandSettings } from "@/lib/earned-value";
 import { EMPTY_CELL } from "@/lib/format";
 
-import { draftFromView, stripValues } from "../diary/allocation-model";
+import { draftFromView, hiddenAllocated, stripValues } from "../diary/allocation-model";
 import { AllocationStrip } from "../diary/AllocationStrip";
 import { formatHours, toCenti } from "../diary/hours";
 import { formatEarned } from "../diary/line-progress";
@@ -151,7 +151,8 @@ export function HourSummaryBlock({ view, summary, bands, currentSectionName, ope
                   </>
                 )}
               </th>
-              <td className="ev-detail-hours__num">{formatHours(strip.allocated)}</td>
+              {/* Görünen satırların toplamı: kısıtlıda `allocated` başka disiplin payını da içerir. */}
+              <td className="ev-detail-hours__num">{formatHours(strip.allocated - hiddenAllocated(view))}</td>
               <td className="ev-detail-hours__num ev-detail-hours__earned">{formatEarned(view.progress?.earned_day ?? null)}</td>
               <td className="ev-detail-hours__num ev-detail-hours__pf">
                 <PfBadge value={view.progress?.pf_day ?? null} bands={bands} />

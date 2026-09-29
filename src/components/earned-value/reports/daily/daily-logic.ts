@@ -1,6 +1,8 @@
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
-import { formatFixedDecimal } from "@/lib/earned-value";
-import { TR_WEEKDAYS_LONG, formatDateDots } from "@/lib/format";
+import { compareDecimalStrings, formatFixedDecimal } from "@/lib/earned-value";
+import { subtractDecimalStrings } from "@/lib/decimal";
+import { formatQuantity } from "@/lib/format";
+import { EMPTY_CELL, TR_WEEKDAYS_LONG, formatDateDots } from "@/lib/format";
 import type { EvDailyReport } from "@/lib/api/models";
 
 /**
@@ -129,4 +131,68 @@ export function joinWithVe(items: readonly string[]): string {
  */
 export function formatToleranceLabel(points: string | null): string {
   return formatFixedDecimal(points, 1);
+}
+
+type KpiRow = EvDailyReport["kpis"][number];
+
+/** GİR:462-464 `krow()` etiketleri. Backend overall satırlarının `name`ini null döner (node_id yok). */
+/** Panel S32 (`report_panel.NON_DIRECT_ROW_NAME`, Panel:542-544) — günlük raporda backend adı null döner. */
+export const NON_DIRECT_LABEL = "Genel / Dolaylı · bütçe dışı";
+
+const OVERALL_LABELS: Partial<Record<KpiRow["kind"], string>> = {
+  non_direct: NON_DIRECT_LABEL,
+  overall: "Genel",
+  overall_own: "Genel – Kendi",
+  overall_subcon: "Genel – Taşeron",
+};
+
+/**
+ * KPI satırı etiketi — Genel satırları `kind`'dan (tek kaynak), diğerleri backend adından.
+ * Kısıtlı kullanıcıda (DSC-B3 S1) YALNIZ `overall` "Genel (disiplinlerim)" olur: değeri kendi
+ * disiplinlerinin toplamıdır. `overall_own` / `overall_subcon` eksiz kalır (S1 yalnız "Genel" der).
+ */
+export function kpiRowLabel(row: Pick<KpiRow, "kind" | "name">, isRestricted = false): string {
+  if (isRestricted && row.kind === "overall") return "Genel (disiplinlerim)";
+  return OVERALL_LABELS[row.kind] ?? row.name ?? EMPTY_CELL;
+}
+
+/**
+ * Kısıtlı onaylı snapshot'ta `trend` boştur (DSC-B3 S6, `restrict_snapshot`); boş bölüm gizlenir.
+ * Yalnız kısıtlıda: kısıtsızda backend her üretilen raporda gün aralığını doldurur, davranış değişmez.
+ */
+export function isTrendHidden(report: Pick<EvDailyReport, "trend">, isRestricted: boolean): boolean {
+  return isRestricted && report.trend.length === 0;
+}
+
+/** "2 · 7 günlük trend" başlığı; kısıtlı canlı raporda seri yalnız kendi disiplinlerinin toplamıdır. */
+export function trendTitle(isRestricted: boolean): string {
+  return `2 · 7 günlük trend · Genel kümülatif${isRestricted ? " (disiplinlerim)" : ""}`;
+}
+
+/** Miktar tablosunun "Toplam doğrudan" satırı; kısıtlıda yalnız kendi disiplinlerinin toplamı. */
+export function directTotalLabel(isRestricted: boolean): string {
+  return isRestricted ? "Toplam doğrudan (disiplinlerim)" : "Toplam doğrudan";
+}
+
+type ReportFooter = Pick<NonNullable<EvDailyReport["footer"]>, "spent_total_day" | "undistributed_day" | "timesheet_total_day">;
+
+/**
+ * Kısıtlıda `spent_total_day` yalnız kendi disiplinleri, puantaj ve dağıtılmamış şantiye düzeyidir
+ * (backend `day_footer`); fark başka disiplinlerin harcadığı saattir: H = max(0, T − U − harcanan).
+ */
+export function otherDisciplineHours(footer: ReportFooter): string {
+  const rest = subtractDecimalStrings(
+    subtractDecimalStrings(footer.timesheet_total_day, footer.undistributed_day),
+    footer.spent_total_day,
+  );
+  return compareDecimalStrings(rest, "0") > 0 ? rest : "0";
+}
+
+/** Mutabakat çipi (GİR:273): kısıtsızda bugünkü metin, kısıtlıda "+ başka disiplinde H a-s" terimi. */
+export function reconciliationText(footer: ReportFooter, isRestricted: boolean): string {
+  const other = isRestricted ? ` + başka disiplinde ${formatQuantity(otherDisciplineHours(footer))} a-s` : "";
+  return (
+    `Σ harcanan ${formatQuantity(footer.spent_total_day)} a-s + dağıtılmamış ${formatQuantity(footer.undistributed_day)} a-s` +
+    `${other} = Σ puantaj ${formatQuantity(footer.timesheet_total_day)} a-s`
+  );
 }
