@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 import { Button, Checkbox, Input } from "@/components/ui";
 import { Modal } from "@/components/settings/Modal";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { formatQuantity } from "@/lib/format";
 import { normalizeDecimalInput } from "@/lib/decimal";
 import { siteQuotaOf } from "@/lib/boq-quota";
@@ -110,6 +112,7 @@ export function BoqItemPickerModal({
   onClose,
 }: BoqItemPickerModalProps) {
   const rows = useMemo(() => pickerRows(groups, sectionQuantities), [groups, sectionQuantities]);
+  const scope = useDisciplineScope();
   const [query, setQuery] = useState("");
   const [onlyWithQuota, setOnlyWithQuota] = useState(true);
   // itemId → girilen miktar metni. Taslakla tohumlanır: diyalog ikinci kez
@@ -261,9 +264,14 @@ export function BoqItemPickerModal({
           {visible.length === 0 ? (
             <tr>
               <td colSpan={8} className="sf-boq-ptable__empty">
-                {rows.length === 0
-                  ? "Bu şantiyede henüz iş kalemi yok — önce İş Kalemleri ekranından poz ekleyin."
-                  : "Süzgece uyan poz yok."}
+                {rows.length === 0 && scope.isRestricted ? (
+                  // Disiplini atanmış kullanıcıda backend süzmesi tüm pozları boşaltabilir (DSC-F1.3).
+                  <RestrictedEmptyNotice names={scope.names} />
+                ) : rows.length === 0 ? (
+                  "Bu şantiyede henüz iş kalemi yok — önce İş Kalemleri ekranından poz ekleyin."
+                ) : (
+                  "Süzgece uyan poz yok."
+                )}
               </td>
             </tr>
           ) : (

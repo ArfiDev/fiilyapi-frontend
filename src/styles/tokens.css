@@ -658,6 +658,13 @@
   /* PLN-F2.5 · Bilgi popover'ı (öneri / kilitli hücre) — Planlama - Adam-Saat
      Bütçesi.dc.html:245 · Şantiye - Puantaj (Kilitli Gün).dc.html:340. */
   --width-info-popover: 292px;
+
+  /* DSC-F1.3 · Kısıtlı kullanıcı boş durumu — Ayarlar - Kullanıcı Disiplin
+     Ataması.dc.html:276 (padding 28/16, gap 6). */
+  --space-restricted-empty-y: 28px;
+  --space-restricted-empty-x: 16px;
+  --space-restricted-empty-gap: 6px;
+  --text-restricted-empty-desc: 12px; /* açıklama satırı (277-278) */
 }
 
 @keyframes fadeUp {

@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { ErrorCard, ReadOnlyStrip, Skeleton, SkeletonRows } from "@/components/earned-value/common/state";
 import { Button } from "@/components/ui";
 import { BooksIcon } from "@/components/ui/icons";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { useEvCatalog } from "@/lib/api/hooks/useEvCatalog";
@@ -186,6 +188,7 @@ interface CatalogBodyProps {
 
 /** KAT:362-390 hâl varyantları + tablo. */
 function CatalogBody({ catalog, visible, openIds, canWrite, onToggle, onEdit, onNew, onAdopted }: CatalogBodyProps) {
+  const scope = useDisciplineScope();
   if (catalog.isLoading) {
     return (
       <div className="ev-cat__state">
@@ -204,6 +207,15 @@ function CatalogBody({ catalog, visible, openIds, canWrite, onToggle, onEdit, on
           onRetry={() => void catalog.refetch()}
           retrying={catalog.isFetching}
         />
+      </div>
+    );
+  }
+  if (catalog.data.length === 0 && scope.isRestricted) {
+    // Disiplini atanmış kullanıcıda backend süzmesi kataloğu boşaltabilir (DSC-F1.3);
+    // "Katalog boş / ilk iş tipini ekleyin" yanıltıcı olur.
+    return (
+      <div className="ev-cat__state">
+        <RestrictedEmptyNotice names={scope.names} />
       </div>
     );
   }

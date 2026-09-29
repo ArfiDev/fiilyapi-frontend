@@ -22,6 +22,8 @@ import { EMPTY_CELL, formatDateDots, formatDateTimeDots, formatQuantity, formatW
 import type { EvDailyReport, EvQtyTreeRow } from "@/lib/api/models";
 
 import { QUANTITY_COLUMNS, TOTAL_ROW_ID, isTotalRow, wholeHours } from "./daily-columns";
+import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { DailyApproveModal } from "./DailyApproveModal";
 import { DailyPrintView } from "./DailyPrintView";
 import {
@@ -304,6 +306,16 @@ function TrendSection({ report }: { report: EvDailyReport }) {
 }
 
 function QuantitySection({ report }: { report: EvDailyReport }) {
+  const scope = useDisciplineScope();
+  // Disiplini atanmış kullanıcıda backend süzmesi miktar satırlarını boşaltabilir
+  // (DSC-F1.3); "Toplam doğrudan" satırı tek başına tabloyu boş göstermez.
+  if (scope.isRestricted && report.quantities.length === 0) {
+    return (
+      <div className="ev-daily-qty">
+        <RestrictedEmptyNotice names={scope.names} />
+      </div>
+    );
+  }
   const tree = buildQuantityTree(report.quantities);
   const overall = report.kpis.find((k) => k.kind === "overall") ?? null;
   // Lider denetimi (6. tur, madde 1) — "Toplam doğrudan" artık TreeTable'ın
