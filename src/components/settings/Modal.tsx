@@ -24,6 +24,13 @@ interface ModalProps {
    * DEĞİŞMEZ (additive, F-BLG T2a deseni).
    */
   isDirty?: boolean;
+  /**
+   * DSC-F1.2 · Başlığın altındaki ikincil satır (ör. kullanıcı adı · unvan).
+   * OPSİYONEL — verilmezse başlık kabuğu BİREBİR eskisi gibi çizilir.
+   */
+  subtitle?: React.ReactNode;
+  /** DSC-F1.2 · Başlığın solundaki öğe (ör. avatar). Opsiyonel, `subtitle` ile aynı kural. */
+  leading?: React.ReactNode;
 }
 
 // Odaklanabilir ogeler — `aria-modal` tek basina tarayicida Tab'i hapsetmez,
@@ -46,7 +53,7 @@ function focusableElementsOf(root: HTMLElement): HTMLElement[] {
   );
 }
 
-export function Modal({ title, onClose, children, footer, className, isDirty = false }: ModalProps) {
+export function Modal({ title, onClose, children, footer, className, isDirty = false, subtitle, leading }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useUnsavedChanges(isDirty, "Diyalog");
 
@@ -137,7 +144,17 @@ export function Modal({ title, onClose, children, footer, className, isDirty = f
         onClick={(event) => event.stopPropagation()}
       >
         <header className="modal__head">
-          <h2 className="modal__title">{title}</h2>
+          {subtitle || leading ? (
+            <div className="modal__head-lead">
+              {leading}
+              <div className="modal__head-text">
+                <h2 className="modal__title">{title}</h2>
+                {subtitle && <p className="modal__subtitle">{subtitle}</p>}
+              </div>
+            </div>
+          ) : (
+            <h2 className="modal__title">{title}</h2>
+          )}
           <button type="button" className="modal__close" aria-label="Kapat" onClick={onClose}>
             ×
           </button>

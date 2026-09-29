@@ -50,6 +50,15 @@ describe("UsersScreen", () => {
             { status: 200, headers: { "content-type": "application/json" } },
           );
         }
+        if (url.includes("/earned-value/disciplines")) {
+          return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
+        }
+        if (url.includes("/disciplines")) {
+          return new Response(JSON.stringify({ discipline_ids: [], disciplines: [] }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
         if (url.includes("/project-access")) {
           return new Response(JSON.stringify({ all_projects: true, project_ids: [] }), {
             status: 200,
@@ -104,6 +113,15 @@ describe("UsersScreen", () => {
             }),
             { status: 200, headers: { "content-type": "application/json" } },
           );
+        }
+        if (url.includes("/earned-value/disciplines")) {
+          return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
+        }
+        if (url.includes("/disciplines")) {
+          return new Response(JSON.stringify({ discipline_ids: [], disciplines: [] }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
         }
         if (url.includes("/project-access")) {
           return new Response(JSON.stringify({ all_projects: true, project_ids: [] }), {

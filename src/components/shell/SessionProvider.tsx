@@ -1,13 +1,30 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MeResponse } from "@/lib/auth/types";
 import { routes } from "@/lib/routes";
 
-type SessionValue = { me: MeResponse | null; isLoading: boolean; error?: boolean };
+type SessionValue = {
+  me: MeResponse | null;
+  isLoading: boolean;
+  error?: boolean;
+  /**
+   * DSC-F1.2 · `/auth/me`yi SESSİZCE yeniden çeker (yükleniyor durumuna
+   * dönmez, /login'e yönlendirmez). Başarısızlıkta eski `me` KORUNUR — kabuk
+   * bir yenileme yüzünden boşalmasın. Kullanıcı kendi disiplinini/rolünü
+   * değiştirince avatar menüsü ve izin kapıları taze veriyle çizilsin diye.
+   * OPSİYONEL tip: `useSession`ı sahteleyen mevcut testler değişmesin; sağlayıcı HER ZAMAN verir.
+   */
+  refresh?: () => Promise<void>;
+};
 
-const SessionContext = createContext<SessionValue>({ me: null, isLoading: true, error: false });
+const SessionContext = createContext<SessionValue>({
+  me: null,
+  isLoading: true,
+  error: false,
+  refresh: async () => {},
+});
 
 export function useSession(): SessionValue {
   return useContext(SessionContext);
@@ -25,10 +42,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Sıra bekçisi: SON başlayan `/auth/me` isteği kazanır; daha eski (geç dönen)
+  // bir yanıt yeni `me`yi EZMEZ (mount yüklemesi ile `refresh` yarışabilir).
+  const latestRequest = useRef(0);
 
   // Yalnizca mount'ta calisir. useRouter() App Router'da kararli referans dondurur.
   useEffect(() => {
     let active = true;
+    const seq = ++latestRequest.current;
     fetch("/api/auth/me")
       .then((res) => {
         if (!res.ok) {
@@ -60,7 +81,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         return res.json();
       })
       .then((data) => {
-        if (active && data) {
+        if (active && data && seq === latestRequest.current) {
           setMe(data as MeResponse);
           setIsLoading(false);
         }
@@ -79,8 +100,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const refresh = useCallback(async (): Promise<void> => {
+    const seq = ++latestRequest.current;
+    try {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) return;
+      const data = (await res.json()) as MeResponse;
+      if (seq !== latestRequest.current) return; // daha yeni bir istek başladı: bu yanıt bayat
+      setMe(data);
+      setError(false); // başarılı yenileme önceki geçici hata bayrağını temizler
+    } catch {
+      // Ağ hatası: eski `me` geçerli kalır (oturum geçersizliği KANITLANMADI).
+    }
+  }, []);
+
   return (
-    <SessionContext.Provider value={{ me, isLoading, error }}>
+    <SessionContext.Provider value={{ me, isLoading, error, refresh }}>
       {children}
     </SessionContext.Provider>
   );

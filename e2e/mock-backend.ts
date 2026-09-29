@@ -8405,7 +8405,12 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     const auth = req.headers.authorization ?? "";
     if (!auth.startsWith("Bearer ")) return send(401, { detail: "unauthenticated" });
 
-    if (method === "GET" && path === "/auth/me") return send(200, ME);
+    if (method === "GET" && path === "/auth/me") {
+      // DSC-F1.2: ME'nin disiplinleri kullanıcı listesindeki AYNI kişiden türetilir
+      // (tohum e-postaları farklı — `patron@fiil.com` ↔ `patron@fiilinsaat.com` — ad ortak).
+      const meUser = state.users.find((u) => u.full_name === ME.full_name);
+      return send(200, { ...ME, disciplines: evDisciplineRefs(evState, meUser ? (evState.userDisciplines.get(meUser.id) ?? []) : []) });
+    }
 
     // 🔴 SÖZLEŞME KAPISI — sorgu kısıtları TEK yerde uygulanır (yukarıdaki
     // blok). Kimlik kontrolünden SONRA gelir: gerçek FastAPI'de de 401,
@@ -12545,6 +12550,31 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         };
         state.users.push(user);
         return send(201, user);
+      });
+    }
+
+    // ⚠️ user-disciplines durumu (`evState.userDisciplines`) SUNUCU ÖMRÜ boyunca kalır:
+    // u-1'e (ME'nin kullanıcı satırı) PUT yapan bir spec ME'yi KISITLI yapar → sonraki
+    // spec'ler etkilenir. Böyle bir spec yazılırsa kendi temizliğini yapmalı (boş listeyle PUT).
+    // /users/{id}/disciplines (DSC-B0) — durum `evState.userDisciplines`te (user_count/me türetir)
+    const discMatch = path.match(/^\/users\/([^/]+)\/disciplines$/);
+    if (discMatch && (method === "GET" || method === "PUT")) {
+      const userId = discMatch[1];
+      if (!state.users.some((u) => u.id === userId)) return send(404, { detail: "Kullanıcı bulunamadı" });
+      if (method === "GET") return send(200, evUserDisciplinesRead(evState, evState.userDisciplines.get(userId) ?? []));
+      return withBody((body) => {
+        const ids = body.discipline_ids;
+        if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
+          return send(422, { detail: [{ loc: ["body", "discipline_ids"], msg: "Field required", type: "missing" }] });
+        }
+        const wanted = [...new Set(ids as string[])];
+        const missing = wanted.filter((id) => !evState.disciplines.some((d) => d.id === id)).sort();
+        if (missing.length > 0) return send(404, { detail: `${EV_MSG.disciplineMissing}: ${missing.join(", ")}` });
+        const sorted = wanted.sort(); // backend: id'ye göre sıralı
+        evState.userDisciplines = new Map(evState.userDisciplines);
+        if (sorted.length === 0) evState.userDisciplines.delete(userId);
+        else evState.userDisciplines.set(userId, sorted);
+        return send(200, evUserDisciplinesRead(evState, sorted));
       });
     }
 
@@ -19469,6 +19499,11 @@ interface EvSiteBoq {
 
 interface EvState {
   disciplines: EvDisciplineRecord[];
+  /**
+   * DSC-F1.2 · kullanıcı × disiplin ataması (`user_id` → disiplin id'leri).
+   * Atamasız kullanıcı = kısıtsız (girdi yok). `user_count` buradan TÜRETİLİR.
+   */
+  userDisciplines: Map<string, readonly string[]>;
   catalog: EvCatalogEntry[];
   settings: Map<string, EvSchemas["SettingsRead"]>;
   boq: Map<string, EvSiteBoq>;
@@ -19963,6 +19998,7 @@ function evSeedRevisions(): Map<string, EvRevisionRecord[]> {
 function seedEarnedValueState(): EvState {
   return {
     disciplines: evSeedDisciplines(),
+    userDisciplines: new Map(),
     catalog: evSeedCatalog(),
     settings: new Map([
       ["s-1", evSeedSettings(EV_HOLIDAYS_2026, EV_METRICS_S1, "2026-09-12T14:20:00Z")],
@@ -20395,15 +20431,29 @@ function evDisciplineUsage(state: EvState, disciplineId: string): EvDisciplineUs
   };
 }
 
+/** B0b: `DisciplineRef[]` — id'ye göre sıralı, EV durumundaki disiplinlerden (`/auth/me` + `/users/{id}/disciplines`). */
+function evDisciplineRefs(state: EvState, ids: readonly string[]): EvSchemas["DisciplineRef"][] {
+  return [...ids]
+    .sort()
+    .flatMap((id) => {
+      const d = state.disciplines.find((x) => x.id === id);
+      return d ? [{ id: d.id, code: d.code, name: d.name, color: d.color }] : [];
+    });
+}
+
+function evUserDisciplinesRead(state: EvState, ids: readonly string[]): EvSchemas["UserDisciplinesRead"] {
+  return { discipline_ids: [...ids].sort(), disciplines: evDisciplineRefs(state, ids) };
+}
+
 function evDisciplineReadOut(state: EvState, record: EvDisciplineRecord): EvSchemas["DisciplineRead"] {
   const usage = evDisciplineUsage(state, record.id);
-  // DSC-B0 `user_count`: mock'ta kullanıcı×disiplin ataması tutulmaz (ilk
-  // tüketici DSC-F1.2) → 0.
+  // DSC-B0 `user_count`: atama durumundan türetilir (`PUT /users/{id}/disciplines`).
+  const userCount = [...state.userDisciplines.values()].filter((ids) => ids.includes(record.id)).length;
   return {
     ...record,
     used_by_item_count: usage.itemCount,
     used_by_site_count: usage.siteCount,
-    user_count: 0,
+    user_count: userCount,
   };
 }
 

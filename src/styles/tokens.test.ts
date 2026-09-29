@@ -104,7 +104,11 @@ const tokensCss = readFileSync(
 // #fcfcfd (surface-2 #f8fafc ondan koyu-mavi). Kaynak: Günlük Kayıt (İlerleme)
 // İ 443/469/664/666/670. Gönder çubuğu gölgesi (.10) shadow-menu'den (.12)
 // ayrı değerdir; hex taşımaz, sayacı oynatmaz.
-const EXPECTED_HEX_COUNT = 102;
+// DSC-F1.2 (Kullanıcı Disiplin Ataması modalı): 102 → 103 — bilgi kutusu metni
+// #1e40af (Kullanıcı Disiplin Ataması.dc.html:23); mevcut mavilerle karşılanmadı
+// (--color-primary-900 #1e3a8a ondan koyu, --color-info-strong #0369a1 ondan
+// yeşilimsi). Tek YENİ ton, `--color-info-deep-text`; yorumu hex taşımaz.
+const EXPECTED_HEX_COUNT = 103;
 
 describe("tokens.css", () => {
   it("çekirdek renk token'larını tanımlar (açık tema Slate + Blue)", () => {
