@@ -10,6 +10,8 @@ import type { MetricPlaceholder } from "@/lib/api/scale";
 import { ShareBar } from "./ShareBar";
 import "./projects.css";
 import { routes, routeKeyOf } from "@/lib/routes";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
+import { physicalLabel } from "@/lib/auth/physicalLabel";
 
 type Project = ProjectListItem;
 // NOT: gercek semada tip-basi metrikler duz alanlar degil, ContractingCard /
@@ -378,6 +380,7 @@ function KatKarsiligiKpis({ project }: { project: Project }) {
 // `<a href="Proje - ...dc.html" ... cursor:pointer;text-decoration:none;display:block>`.
 // Yani bu mockup'tan sapma DEGIL, mockup'a donus — geri alma.
 export function ProjectCard({ project }: { project: Project }) {
+  const { isRestricted } = useDisciplineScope();
   const isCompleted = project.status === "completed";
   return (
     <article
@@ -418,7 +421,13 @@ export function ProjectCard({ project }: { project: Project }) {
           {project.project_type === "kendi_yatirim" && <KendiYatirimKpis project={project} />}
           {project.project_type === "kat_karsiligi" && <KatKarsiligiKpis project={project} />}
           <ProgressRow
-            label={PROGRESS_LABELS[project.project_type]}
+            label={
+              // DSC-F3a: YALNIZ taahhüt (`physical_progress`, B4 kapsamı). `İnşaat İlerlemesi`
+              // (boş zarf) ve `Satış Oranı` (fiziksel değil) kısıtlıda DEĞİŞMEZ.
+              project.project_type === "taahhut"
+                ? physicalLabel(PROGRESS_LABELS.taahhut, isRestricted)
+                : PROGRESS_LABELS[project.project_type]
+            }
             metric={progressMetric(project)}
             variant="primary"
           />

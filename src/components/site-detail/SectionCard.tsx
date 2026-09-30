@@ -6,6 +6,8 @@ import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules"
 import { SECTION_STATUS_CLASS_SUFFIX, SECTION_STATUS_LABELS } from "@/lib/section-labels";
 import type { components } from "@/lib/api/schema";
 import { routes, routeKeyOf } from "@/lib/routes";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
+import { physicalLabel } from "@/lib/auth/physicalLabel";
 import type { DeepScale } from "@/lib/api/scale";
 
 export type SectionResponse = DeepScale<components["schemas"]["SectionResponse"]>;
@@ -249,11 +251,12 @@ function ProgressMetricCell({
   progress: SectionResponse["progress_pct"];
   status: SectionStatus;
 }) {
+  const { isRestricted } = useDisciplineScope();
   const isReal = hasRealValue(progress);
   const progressClass = isReal ? statusClass("section-card__metric-progress", status) : undefined;
   return (
     <div className="section-card__metric">
-      <div className="section-card__metric-label">İlerleme</div>
+      <div className="section-card__metric-label">{physicalLabel("İlerleme", isRestricted)}</div>
       {isReal ? (
         <div
           className={cx(

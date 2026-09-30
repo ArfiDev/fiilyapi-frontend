@@ -5,6 +5,8 @@ import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/for
 import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules";
 import type { SiteDetail } from "@/lib/api/hooks/useSites";
 import { routes, routeKeyOf } from "@/lib/routes";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
+import { physicalLabel } from "@/lib/auth/physicalLabel";
 
 const NO_END_DATE_TITLE = "Bitiş tarihi girilmemiş";
 
@@ -64,10 +66,11 @@ function PlaceholderValue({ pendingModule }: { pendingModule: PendingModuleKey }
 // 1. hücre: Fiziksel İlerleme (yer tutucu — progress_payments). Yer tutucuyken
 // mini çubuk çizilmez, sahte %0 izlenimi verilmez (spec §7.1).
 function ProgressCell({ progress }: { progress: SiteDetail["progress_pct"] }) {
+  const { isRestricted } = useDisciplineScope();
   const isReal = progress.available && progress.value !== null && progress.value !== undefined;
   return (
     <div className="site-hero__kpi" data-testid="site-hero-kpi-progress">
-      <div className="site-hero__kpi-label">Fiziksel İlerleme</div>
+      <div className="site-hero__kpi-label">{physicalLabel("Fiziksel İlerleme", isRestricted)}</div>
       {isReal ? (
         // FAZ 2d: `.value` artık DeepScale'in `innerScale: "percent"`
         // eşlemesiyle `Percent` marka'lı geliyor (bkz. `scale-table.ts`
