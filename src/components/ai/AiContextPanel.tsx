@@ -7,6 +7,8 @@ import { formatMonthName, formatPercent } from "@/lib/format";
 import { countCell, metricCell, type PlaceholderCell } from "@/lib/placeholder-cell";
 import type { ProjectListItem } from "@/lib/api/hooks/useProjects";
 import type { SiteListItem } from "@/lib/api/hooks/useSites";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
+import { physicalLabel } from "@/lib/auth/physicalLabel";
 import "./ai-panel.css";
 
 /**
@@ -210,6 +212,7 @@ export function AiContextPanel({
   onSantiyeSec,
   onHizliAnaliz,
 }: AiContextPanelProps) {
+  const { isRestricted } = useDisciplineScope();
   // 🔴 Mockup'ın "Temmuz 2026" sabiti KOPYALANMAZ, TÜRETİLİR: ay adı
   // `formatMonthName` tek kaynağından, dönem `currentPeriod` tek kaynağından
   // (`timesheet/month.ts` — sayının sunucudaki dönem kuralının, yani
@@ -263,7 +266,7 @@ export function AiContextPanel({
                     </dd>
                   </div>
                   <ZarfSatiri
-                    etiket="İlerleme"
+                    etiket={physicalLabel("İlerleme", isRestricted)}
                     testId="ai-baglam-ilerleme"
                     vurgulu
                     hucre={metricCell(seciliSantiye.progress_pct, formatPercent)}

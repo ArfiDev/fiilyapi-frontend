@@ -8,6 +8,8 @@ import type { ProjectType } from "@/lib/api/hooks/useProjects";
 
 import "./project-detail.css";
 import { routes, routeKeyOf } from "@/lib/routes";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
+import { physicalLabel } from "@/lib/auth/physicalLabel";
 
 export interface SiteCardProps {
   /**
@@ -217,6 +219,7 @@ function chipsFor(projectKey: string, site: SiteListItem): ChipDef[] {
 }
 
 export function SiteCard({ projectKey, site, projectType }: SiteCardProps) {
+  const { isRestricted } = useDisciplineScope();
   const isCompleted = site.status === "completed";
   const sub = subtitle(site);
 
@@ -267,7 +270,7 @@ export function SiteCard({ projectKey, site, projectType }: SiteCardProps) {
                 pendingModule={site.progress_pct.pending_module}
               />
             )}
-            <div className="site-card__kpi-label">İlerleme</div>
+            <div className="site-card__kpi-label">{physicalLabel("İlerleme", isRestricted)}</div>
           </div>
 
           <ThirdCell site={site} />

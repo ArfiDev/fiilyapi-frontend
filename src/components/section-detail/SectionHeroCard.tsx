@@ -11,6 +11,8 @@ import { SECTION_STATUS_CLASS_SUFFIX, SECTION_STATUS_LABELS } from "@/lib/sectio
 import type { SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import { remainingDays } from "./remainingDays";
 import { routes } from "@/lib/routes";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
+import { physicalLabel } from "@/lib/auth/physicalLabel";
 
 const NO_END_DATE_TITLE = "Bitiş tarihi girilmemiş";
 // D88: mockup "3 gecikme riski" basıyor ama backend bu veriyi BİLİNÇLİ
@@ -65,10 +67,11 @@ function PlaceholderValue({ pendingModule }: { pendingModule: PendingModuleKey }
 // D71-73 · 1. hücre: Fiziksel İlerleme (yer tutucu — SiteHeroBar.ProgressCell
 // deseniyle aynı; yer tutucuyken sahte %0 dolgusu çizilmez).
 function ProgressCell({ progress }: { progress: SectionDetailResponse["progress_pct"] }) {
+  const { isRestricted } = useDisciplineScope();
   const isReal = progress.available && progress.value !== null && progress.value !== undefined;
   return (
     <div className="section-hero__kpi" data-testid="section-hero-kpi-progress">
-      <div className="section-hero__kpi-label">Fiziksel İlerleme</div>
+      <div className="section-hero__kpi-label">{physicalLabel("Fiziksel İlerleme", isRestricted)}</div>
       {isReal ? (
         // FAZ 2d: `.value` artık Percent marka'lı (bkz. SiteHeroBar
         // ProgressCell yorumu) — kaçış YOK.
