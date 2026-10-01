@@ -19,7 +19,14 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const SRC_DIR = fileURLToPath(new URL("..", import.meta.url));
-const CORE_DIRS = ["components/site-diary", "components/site-diary-detail"];
+// TKL-F1.3 · fiyatlı İş Kalemi Kataloğu (`contracts` kapısı) ve onun KAT ile paylaştığı
+// saf parçalar da çekirdektir: planlama (EV) ithali yasak (TKL-F1-PLAN §2.5).
+const CORE_DIRS = [
+  "components/site-diary",
+  "components/site-diary-detail",
+  "components/work-item-catalog",
+  "components/catalog-shared",
+];
 
 /** Planlama modülünün yolları: bileşenleri, saf kütüphanesi ve `useEv*` sorguları. */
 const PLANNING_IMPORT = /^@\/(components\/earned-value(\/|$)|lib\/earned-value(\/|$)|lib\/api\/hooks\/useEv)/;
@@ -64,7 +71,7 @@ describe("§2.7 bekçisinin kendisi", () => {
   });
 });
 
-describe("§2.7 — çekirdek günlük modülleri planlamayı ithal etmez", () => {
+describe("§2.7 — çekirdek modüller (günlük + katalog) planlamayı ithal etmez", () => {
   for (const dir of CORE_DIRS) {
     it(`${dir}/** planlama yolu ithal etmez`, () => {
       const files = productionSources(path.join(SRC_DIR, dir));

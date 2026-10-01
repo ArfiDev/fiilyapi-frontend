@@ -58,6 +58,19 @@ function rowOf(name: string): HTMLElement {
   return row;
 }
 
+describe("poz no (ÜS-12)", () => {
+  it("İş tipi hücresinde adın ÜSTÜNDE poz no gösterilir; kolon sayısı 10 kalır", async () => {
+    renderScreen();
+    await screen.findByRole("button", { name: "Beton döküm" });
+    const row = rowOf("Beton döküm");
+    const cell = within(row).getByText("KAB-0001").closest("td");
+    expect(cell).toBe(screen.getByRole("button", { name: "Beton döküm" }).closest("td"));
+    const text = cell?.textContent ?? "";
+    expect(text.indexOf("KAB-0001")).toBeLessThan(text.indexOf("Beton döküm"));
+    expect(screen.getAllByRole("columnheader")).toHaveLength(10);
+  });
+});
+
 describe("liste (KAT:129-176)", () => {
   it("başlık, üst çipler ve satır hücreleri — B1'de gerçekleşen boş: 'veri yok' ve '—'", async () => {
     renderScreen();

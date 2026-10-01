@@ -39,6 +39,10 @@ const URUN_TARIH_ENVANTERI: Record<string, number> = {
   // PLN-F1.4 — Takvim kartı "şu an 21.09–27.09" hafta ipucu (Ek:117). Görsel spec
   // (PLN-F1 sonraki alt görev) `page.clock.setFixedTime` ile sabitlemeli.
   "components/earned-value/settings/PlanningSettingsForm.tsx": 1,
+  // TKL-F1.3 — İş Kalemi Kataloğu "Fiyat güncelleme" turuncu eşiği (182 gün) İSTEMCİ SAATİNE
+  // bağlıdır (`isPriceStale(…, now)`); ekranda görünen renk saatle değişir. Görsel spec (F1.5)
+  // `page.clock.setFixedTime` ile sabitlemeli.
+  "components/work-item-catalog/WorkItemCatalogScreen.tsx": 1,
   // PLN-F1.6 — Bütçe Adım 2 Gantt + Adım 3 S-eğrisi "bugün" çizgisi (BÜT:292, 349)
   // `localTodayIso()`. Görsel spec `page.clock.setFixedTime` ile sabitlemeli.
   "components/earned-value/budget/budget-format.ts": 1,

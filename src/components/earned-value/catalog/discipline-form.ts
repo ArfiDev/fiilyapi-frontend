@@ -37,6 +37,11 @@ export function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
+/** TKL ÜS-13(b) — kalemi olan disiplinde kod değişince gösterilen uyarı. */
+export function codeChangeWarning(itemCount: number): string {
+  return `Kod değişirse bu disiplinin ${itemCount} kaleminin poz no'su yeni önekle yeniden numaralanır`;
+}
+
 /** 11.+ disiplinde palet başa döner (KAT-F1b · KARARLAR.md 2026-09-27, palet 5→10). */
 export function suggestedPaletteColor(existingCount: number): string {
   return DISCIPLINE_PALETTE[existingCount % DISCIPLINE_PALETTE.length];

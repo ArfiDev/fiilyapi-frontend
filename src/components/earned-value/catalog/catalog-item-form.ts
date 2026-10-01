@@ -6,6 +6,8 @@
  * Düzenlemede yalnız DEĞİŞEN alanlar PATCH edilir (backend kısmi günceller;
  * oran değişmezse `standard_updated_at` yenilenmez).
  */
+import { CATALOG_UNIT_OPTIONS, unitOptions } from "@/components/catalog-shared/catalog-units";
+import { standardRateError } from "@/components/catalog-shared/standard-rate";
 import { compareDecimalStrings, normalizeDecimalInput } from "@/lib/decimal";
 import type {
   EvCatalogItemCreate,
@@ -30,12 +32,12 @@ export interface CatalogFormErrors {
   discipline?: string;
 }
 
-/**
- * KAT:417-432 örnek verisindeki birimler (m², m³, ton, m, adet). Backend'de
- * birim serbest metindir (≤50); açılır listeye katalogdaki mevcut birimler
- * ve düzenlenen kaydın birimi de eklenir ki eski değer kaybolmasın.
- */
-export const CATALOG_UNIT_OPTIONS: readonly string[] = ["m³", "m²", "m", "ton", "adet"];
+/** TKL-F1.3 · birim listesi TEK KAYNAK çekirdekte (`catalog-shared/catalog-units.ts`); KAT bu adla ithal eder. */
+export { CATALOG_UNIT_OPTIONS, unitOptions };
+
+/** TKL ÜS-13(a) — düzenlemede disiplin değişince gösterilen uyarı. */
+export const DISCIPLINE_CHANGE_WARNING =
+  "Disiplin değişirse yeni poz no verilir; eski numara sözleşme/teklif kopyalarında kalır";
 /** KAT:528 — yeni iş tipinin varsayılan birimi. */
 export const DEFAULT_UNIT = "m³";
 /** KAT:471 "Maks 120 karakter" — backend sınırı 200, mockup daha sıkı. */
@@ -43,9 +45,6 @@ export const CATALOG_NAME_MAX_LENGTH = 120;
 /** openapi `CatalogItemCreate.description` maxLength. */
 export const CATALOG_DESCRIPTION_MAX_LENGTH = 2000;
 
-/** openapi `standard_unit_mhr` deseni: ≤ 8 tam + ≤ 4 kesir basamağı. */
-const RATE_INTEGER_DIGITS = 8;
-const RATE_FRACTION_DIGITS = 4;
 /** Düzenleme kutusunda gösterim basamağının altına inilmez (KAT:410 `dec`). */
 const RATE_WIDE_FROM = 10;
 const RATE_WIDE_MIN_DIGITS = 1;
@@ -75,12 +74,7 @@ export function catalogFormFromItem(item: EvCatalogItemRead): CatalogFormState {
 }
 
 export function rateError(raw: string): string | undefined {
-  const normalized = normalizeDecimalInput(raw);
-  if (normalized === null || !(Number(normalized) > 0)) return "Standart oran zorunlu · 0'dan büyük olmalı";
-  const [whole = "", fraction = ""] = normalized.replace(/^[-+]/, "").split(".");
-  if (fraction.length > RATE_FRACTION_DIGITS) return "En fazla 4 ondalık";
-  if (whole.replace(/^0+/, "").length > RATE_INTEGER_DIGITS) return "En fazla 8 basamak";
-  return undefined;
+  return standardRateError(raw, "Standart oran zorunlu · 0'dan büyük olmalı");
 }
 
 export function validateCatalogForm(form: CatalogFormState): CatalogFormErrors {
@@ -125,10 +119,6 @@ export function buildCatalogUpdateBody(
     ...(form.own !== initial.own ? { default_contractor_type: form.own } : {}),
     ...(description !== descriptionValue(initial.description) ? { description } : {}),
   };
-}
-
-export function unitOptions(catalogUnits: readonly string[], current: string): string[] {
-  return Array.from(new Set([...CATALOG_UNIT_OPTIONS, ...catalogUnits, current].filter(Boolean)));
 }
 
 /**

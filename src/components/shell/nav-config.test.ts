@@ -25,7 +25,7 @@ describe("NAV_GROUPS", () => {
   // öğe konmaz). PLN-F3.6b'de Panel · Günlük İlerleme Raporu · Haftalık QURR
   // eklendi — K21 sırasında (Panel · Bütçe · Günlük Rapor · QURR · Katalog),
   // beşi de artık GERÇEK ekranlara düşer.
-  it("Planlama grubu BEŞ ogeyi K21 sirasinda tasir (PLN-F3.6b)", () => {
+  it("Planlama grubu ALTI ogeyi K21 sirasinda tasir (PLN-F3.6b + TKL-F1.3)", () => {
     const planning = NAV_GROUPS.find((g) => g.heading === "Planlama");
     expect(planning!.items.map((i) => i.label)).toEqual([
       "Planlama Paneli",
@@ -33,6 +33,7 @@ describe("NAV_GROUPS", () => {
       "Günlük İlerleme Raporu",
       "Haftalık QURR",
       "Birim Oran Kataloğu",
+      "İş Kalemi Kataloğu",
     ]);
     const tree = buildRouteTree();
     for (const item of planning!.items) {

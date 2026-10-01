@@ -13,11 +13,13 @@ import { EMPTY_CELL, formatDateDots, toIstanbulDateOnly } from "@/lib/format";
 import { useCreateEvCatalogItem, useUpdateEvCatalogItem } from "@/lib/api/hooks/useEvCatalog";
 import type { EvCatalogItemRead, EvDisciplineRead } from "@/lib/api/models";
 
-import { CONTRACTOR_LABEL, CONTRACTOR_OPTIONS, DiffBadge } from "./CatalogBits";
+import { CONTRACTOR_LABEL, CONTRACTOR_OPTIONS } from "@/components/catalog-shared/CatalogBits";
+import { DiffBadge } from "./CatalogBits";
 import { FormErrorBanner, groupProps } from "./FormErrorBanner";
 import {
   CATALOG_DESCRIPTION_MAX_LENGTH,
   CATALOG_NAME_MAX_LENGTH,
+  DISCIPLINE_CHANGE_WARNING,
   buildCatalogCreateBody,
   buildCatalogUpdateBody,
   catalogFormFromItem,
@@ -101,6 +103,7 @@ export function CatalogItemFormModal({
     form.own,
   );
   const rateHasChanged = mode.kind === "edit" && catalogRateChanged(mode.item, form);
+  const disciplineHasChanged = mode.kind === "edit" && form.disciplineId !== initial.disciplineId;
   const normalizedRate = normalizeDecimalInput(form.rate);
 
   function patch(changes: Partial<CatalogFormState>) {
@@ -152,6 +155,9 @@ export function CatalogItemFormModal({
     >
       <div className="ev-cat-modal__body">
         <p className="ev-cat-modal__subtitle">Şirket kataloğu · bütün şantiyelerde öneri olarak görünür</p>
+        {mode.kind === "edit" && (
+          <p className="ev-cat-modal__subtitle ev-cat-mono">{`Poz no ${mode.item.poz_no}`}</p>
+        )}
         {errorCount > 0 && (
           <FormErrorBanner
             lead={`${errorCount} alan eksik ya da hatalı.`}
@@ -283,6 +289,12 @@ export function CatalogItemFormModal({
             )}
           </Field>
         </div>
+
+        {disciplineHasChanged && (
+          <Alert variant="warning" className="ev-cat-use-warn">
+            {DISCIPLINE_CHANGE_WARNING}
+          </Alert>
+        )}
 
         <div className="ev-cat-form__pair">
           <div className={cx("ev-cat-rate", errors.rate && "ev-cat-rate--error")}>

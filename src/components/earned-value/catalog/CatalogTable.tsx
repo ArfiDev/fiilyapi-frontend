@@ -7,7 +7,8 @@ import { EMPTY_CELL, formatDateDots, toIstanbulDateOnly } from "@/lib/format";
 import type { EvCatalogItemRead } from "@/lib/api/models";
 
 import { AdoptActualControl } from "./AdoptActualControl";
-import { ContractorBadge, DiffBadge } from "./CatalogBits";
+import { ContractorBadge } from "@/components/catalog-shared/CatalogBits";
+import { DiffBadge } from "./CatalogBits";
 import { canAdoptActual } from "./catalog-model";
 import { CatalogRowDetail } from "./CatalogRowDetail";
 
@@ -94,6 +95,8 @@ export function CatalogTable({ items, openIds, canWrite, onToggle, onEdit, onAdo
                   </td>
                   <td>
                     <div className="ev-cat-name">
+                      {/* ÜS-12 — poz no adın üstünde (yeni kolon yok); mevcut mono/küçük-soluk sınıfları. */}
+                      <span className="ev-cat-name__desc ev-cat-mono">{item.poz_no}</span>
                       <button type="button" className="ev-cat-name__btn" onClick={() => onEdit(item)}>
                         {item.name}
                       </button>

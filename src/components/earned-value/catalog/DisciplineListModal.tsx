@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { cx } from "@/lib/cx";
 import type { EvDisciplineRead } from "@/lib/api/models";
 
-import { ContractorBadge, DisciplineSwatch } from "./CatalogBits";
+import { ContractorBadge, DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 
 interface DisciplineListModalProps {
   disciplines: readonly EvDisciplineRead[] | undefined;

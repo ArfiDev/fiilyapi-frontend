@@ -114,6 +114,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Günlük İlerleme Raporu", href: routes.planning.dailyReport(), Icon: FileTextIcon },
       { label: "Haftalık QURR", href: routes.planning.weeklyReport(), Icon: BarChartIcon },
       { label: "Birim Oran Kataloğu", href: routes.planning.catalog(), Icon: BooksIcon },
+      // TKL-F1.3 · ÜS-14: rozet YOK, izinle süzülmez; simge settedeki `ListIcon` (Bordro ile paylaşılır).
+      { label: "İş Kalemi Kataloğu", href: routes.planning.workItemCatalog(), Icon: ListIcon },
     ],
   },
   {

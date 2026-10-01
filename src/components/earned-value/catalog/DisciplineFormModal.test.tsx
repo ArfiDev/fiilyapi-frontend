@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 
 import { DisciplineFormModal } from "./DisciplineFormModal";
 import { useCreateEvDiscipline, useUpdateEvDiscipline } from "@/lib/api/hooks/useEvDisciplines";
+import { DUV, INC, KAB } from "./catalog-test-utils";
+import type { EvDisciplineRead } from "@/lib/api/models";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 vi.mock("@/lib/api/hooks/useEvDisciplines", () => ({
@@ -56,5 +58,44 @@ describe("DisciplineFormModal — kaydedilmemiş değişiklik kaydı", () => {
     expect(create).toHaveBeenCalled();
     unmount();
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+});
+
+function renderEdit(discipline: EvDisciplineRead) {
+  return render(
+    <DisciplineFormModal discipline={discipline} existing={[KAB, DUV, INC]} onClose={onClose} onSaved={onSaved} />,
+  );
+}
+
+/** TKL-F1.4 · ÜS-13(b) kod değişimi uyarısı. */
+describe("DisciplineFormModal — kod değişimi uyarısı", () => {
+  const warning = (n: number) =>
+    `Kod değişirse bu disiplinin ${n} kaleminin poz no'su yeni önekle yeniden numaralanır`;
+
+  it("kalemi olan disiplinde kod değişince uyarı çıkar, N doğru", () => {
+    renderEdit(KAB);
+    expect(screen.queryByText(warning(6))).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Kod"), { target: { value: "KABX" } });
+    expect(screen.getByText(warning(6))).toBeInTheDocument();
+  });
+
+  it("kod değişmediyse (eski değere dönüldüyse) uyarı yok", () => {
+    renderEdit(DUV);
+    fireEvent.change(screen.getByLabelText("Kod"), { target: { value: "DUVX" } });
+    expect(screen.getByText(warning(4))).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Kod"), { target: { value: "DUV" } });
+    expect(screen.queryByText(/Kod değişirse/)).not.toBeInTheDocument();
+  });
+
+  it("kalemsiz disiplinde kod değişse de uyarı YOK", () => {
+    renderEdit(INC);
+    fireEvent.change(screen.getByLabelText("Kod"), { target: { value: "INCX" } });
+    expect(screen.queryByText(/Kod değişirse/)).not.toBeInTheDocument();
+  });
+
+  it("yeni disiplinde uyarı yok", () => {
+    renderModal();
+    fireEvent.change(screen.getByLabelText("Kod"), { target: { value: "KAB" } });
+    expect(screen.queryByText(/Kod değişirse/)).not.toBeInTheDocument();
   });
 });

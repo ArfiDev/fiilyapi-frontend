@@ -6,7 +6,7 @@ import { AnchoredPopover, Button, Input } from "@/components/ui";
 import { CheckIcon, ChevronDownIcon, SearchIcon } from "@/components/ui/icons";
 import type { EvDisciplineRead } from "@/lib/api/models";
 
-import { DisciplineSwatch } from "./CatalogBits";
+import { DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 
 /** M6:118 — "Disiplinleri yönet" düğmesindeki renk karesi sayısı. */
 const MANAGE_SWATCH_COUNT = 3;

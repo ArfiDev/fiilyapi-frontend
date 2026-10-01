@@ -466,6 +466,8 @@ export const routes = {
      */
     budget: (params: GeneralPlanningParams = {}) => `/planlama/adam-saat-butcesi${qs({ site: params.site })}`,
     catalog: () => "/planlama/birim-oran-katalogu",
+    /** TKL-F1.3 · fiyatlı İş Kalemi Kataloğu (`contracts` kapısı; KAT fiyatsızdır). */
+    workItemCatalog: () => "/planlama/is-kalemi-katalogu",
     /** Panel/GİR/QURR'un KÖK İKİZLERİ (`budget` deseni). */
     panel: (params: GeneralPlanningParams = {}) => `/planlama/panel${qs({ site: params.site })}`,
     dailyReport: (params: GeneralEvDailyReportRootParams = {}) =>
