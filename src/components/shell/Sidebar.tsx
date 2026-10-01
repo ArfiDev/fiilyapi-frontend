@@ -11,6 +11,10 @@ import { useSession } from "./SessionProvider";
 import { UnsavedTabGuardModal } from "./workspace-tabs/UnsavedTabGuardModal";
 import { useWorkspaceTabsController } from "./workspace-tabs/useWorkspaceTabsController";
 import "./sidebar.css";
+// GLS-F1 GEÇİCİ — Geliştirme sayfası silinince kaldır
+import { canSeeGelistirme, GELISTIRME_NAV_LABEL, gelistirmeHref } from "@/app/(app)/gelistirme/erisim";
+import { isActivePath } from "@/lib/shell/isActive";
+import { ListIcon } from "@/components/ui/icons";
 import { routes } from "@/lib/routes";
 
 /** Tarayıcının kendi davranışına bırakılan tıklar (yeni pencere, indirme, orta tuş). */
@@ -54,6 +58,21 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav">
+        {/* GLS-F1 GEÇİCİ — Geliştirme sayfası silinince kaldır. Yalnız system_admin;
+            değilse DOM'a HİÇBİR şey eklenmez. NAV_GROUPS dışındadır (bekçiler etkilenmez). */}
+        {canSeeGelistirme(me) && (
+          <div className="sidebar-group">
+            <Link
+              href={gelistirmeHref()}
+              className={cx("sidebar-item", isActivePath(pathname, gelistirmeHref()) && "sidebar-item--active")}
+              aria-current={isActivePath(pathname, gelistirmeHref()) ? "page" : undefined}
+              onClick={(event) => handleNavClick(event, gelistirmeHref())}
+            >
+              <ListIcon width={16} height={16} className="sidebar-item__icon" />
+              <span>{GELISTIRME_NAV_LABEL}</span>
+            </Link>
+          </div>
+        )}
         {NAV_GROUPS.map((group) => (
           <div key={group.heading} className="sidebar-group">
             <div className="sidebar-group__heading">{group.heading}</div>

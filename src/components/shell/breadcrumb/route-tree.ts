@@ -356,6 +356,8 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
     },
 
     asistan: { label: "FİİL AI", href: () => routes.assistant() },
+    // GLS-F1 GEÇİCİ — Geliştirme sayfası silinince kaldır
+    gelistirme: { label: "Geliştirme", href: () => routes.development() },
 
     "onay-kutusu": { label: "Onay Kutusu", href: () => routes.approvalInbox() },
 

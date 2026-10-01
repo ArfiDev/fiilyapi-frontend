@@ -1,0 +1,18 @@
+/* GLS-F1 GEÇİCİ — Geliştirme sayfası silinince kaldır */
+.gls { display: flex; flex-direction: column; gap: var(--space-6); max-width: 1100px; }
+.gls-h1 { font-size: var(--text-section); font-weight: var(--weight-semibold); color: var(--color-text); margin: 0; }
+.gls-h2 { font-size: var(--text-section); font-weight: var(--weight-semibold); color: var(--color-text); margin: 0 0 var(--space-3); }
+.gls-updated { margin: 0; color: var(--color-text-muted); font-size: var(--text-body); }
+.gls-queues { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.gls-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.gls-queue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.gls-queue__row { display: flex; align-items: center; gap: var(--space-3); }
+.gls-queue__text { flex: 1; color: var(--color-text-secondary); }
+.gls-code { font-family: var(--font-mono); font-weight: var(--weight-semibold); }
+.gls-task-desc { margin: 0 0 var(--space-3); color: var(--color-text-secondary); }
+.gls-table { width: 100%; border-collapse: collapse; }
+.gls-table th, .gls-table td { text-align: left; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-divider); }
+.gls-table th { color: var(--color-text-muted); font-size: var(--text-small); font-weight: var(--weight-medium); }
+.gls-sub { margin: var(--space-4) 0 var(--space-2); font-size: var(--text-body); font-weight: var(--weight-semibold); }
+.gls-list { margin: 0; padding-left: var(--space-6); color: var(--color-text-secondary); }
+.gls-empty { margin: 0; color: var(--color-text-muted); }

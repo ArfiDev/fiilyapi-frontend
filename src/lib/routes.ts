@@ -266,6 +266,8 @@ export const routes = {
   // `src/app/(app)/asistan/page.tsx` başlığı — `ai` kökü açılırsa BFF
   // rotasındaki üst-kaynak yol sabiti kaçak URL sayılırdı.
   assistant: () => "/asistan",
+  // GLS-F1 GEÇİCİ — Geliştirme sayfası silinince kaldır
+  development: () => "/gelistirme",
 
   projects: {
     list: () => PROJECTS,
