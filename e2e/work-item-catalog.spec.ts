@@ -211,7 +211,9 @@ test("409 ad+birim cakismasi sunucu metniyle satirda kalir, satir acik, yazma yo
   await expect(editRow(page)).toHaveCount(1);
   await expect(page.locator(".wik-toast")).toHaveCount(0);
   expect(fake.postBodies).toHaveLength(1);
-  await expect(page.getByTestId("wik-count")).toContainText(`${SEED_ITEM_COUNT} kalem`);
+  // Açık yeni satır listenin parçasıdır ve "N kalem"e girer (mockup KIK:277-279, TKL-F1.3.1
+  // madde 12); 409 sonrası satır açık kaldığı için sayı tohum + 1 — sunucuya kayıt EKLENMEDİ.
+  await expect(page.getByTestId("wik-count")).toContainText(`${SEED_ITEM_COUNT + 1} kalem`);
 });
 
 test("istemci dogrulamasi: bos tarif istek GONDERMEDEN satir hatasi verir", async ({ page }) => {
