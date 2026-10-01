@@ -67,16 +67,45 @@ test.describe("çalışma sekmeleri — 1440", () => {
     for (const label of modules) await openViaSidebar(page, label);
     await expect(tabByName(page, "Planlama Paneli")).toHaveAttribute("aria-selected", "true");
 
-    // Üretimdeki `WorkspaceTabsStrip` aktif sekme değiştiğinde zaten
-    // `scrollIntoView` çağırır (bkz. `active?.scrollIntoView?.(...)`) — burada
-    // AYNI çağrı tekrarlanır ki kadraj hazırlığından (aşağıda) ÖNCE, ölçülebilir
-    // bir "sona kaydırılmış" durum kurulmuş olsun.
-    await page
-      .locator(".workspace-tab--active")
-      .evaluate((el) => el.scrollIntoView({ block: "nearest", inline: "nearest" }));
+    // FLK-F1: testin kendi `scrollIntoView` çağrısı KALDIRILDI — native çağrı
+    // sticky paneli bilmez ve bileşenin kendi kaydırmasıyla yarışıyordu
+    // (aralıklı: scrollLeft ≈ maxScrollLeft − 38px). Üretimin kaydırması
+    // ölçülür; "oturdu" açıkça doğrulanır.
+    await page.evaluate(() => document.fonts.ready);
 
     const list = tabsList(page);
-    await expect.poll(() => list.evaluate((el) => Math.round(el.scrollLeft) > 0)).toBe(true);
+    await expect
+      .poll(
+        () =>
+          list.evaluate((el) => {
+            const active = el.querySelector(".workspace-tab--active");
+            if (!active) return false;
+            // Şeridin sağ `padding-inline-end`i (8px) kaydırılabilir alana dahil:
+            // aktif sekme sarmalayıcısı (× dahil) şerit sağına hizalanınca
+            // scrollLeft = max − padding olur (ölçüldü 1440px: 190 / 198).
+            const padEnd = parseFloat(getComputedStyle(el).paddingInlineEnd) || 0;
+            const atEnd =
+              Math.abs(el.scrollLeft - (el.scrollWidth - el.clientWidth)) <= padEnd + 1;
+            const activeVisible =
+              active.getBoundingClientRect().right <= el.getBoundingClientRect().right + 1;
+            return atEnd && activeVisible;
+          }),
+        { message: "şerit sona oturmalı ve aktif sekme tam görünmeli" },
+      )
+      .toBe(true);
+    await expect
+      .poll(() =>
+        list.evaluate(
+          (el) =>
+            new Promise<boolean>((resolve) => {
+              const before = el.scrollLeft;
+              requestAnimationFrame(() =>
+                requestAnimationFrame(() => resolve(el.scrollLeft === before)),
+              );
+            }),
+        ),
+      )
+      .toBe(true);
     await expect(page.locator(".workspace-tabs")).toHaveClass(/workspace-tabs--fade-left/);
 
     // CEO kararı "d" (2026-09-28): kanon DEĞİŞMEDİ — `prepareFrame` yine

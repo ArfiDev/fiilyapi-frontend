@@ -307,6 +307,44 @@ describe("WorkspaceTabsStrip", () => {
     rectSpy.mockRestore();
   });
 
+  it("FLK-F1: hit öğesi görünür olsa da × (dış sarmalayıcı) şerit sağından taşıyorsa ve sığıyorsa sarmalayıcı sağa hizalanır", () => {
+    // Mutasyon: `if (wrapperRight > contentRight) contentRight = wrapperRight;`
+    // satırını sil → kırmızı (38px kaynağı: × + iç boşluk kırpılı kalıyordu).
+    const rectSpy = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: Element) {
+        if (this.getAttribute("role") === "tab" && this.closest(".workspace-tab--active")) {
+          return { left: 60, width: 40 } as DOMRect; // sağ 100 ≤ 120: görünür
+        }
+        if (this.classList.contains("workspace-tab--active")) {
+          return { left: 58, width: 70 } as DOMRect; // sağ 128 > 120, 70 ≤ 120-50
+        }
+        if (this.classList.contains("workspace-tab--pinned")) {
+          return { left: 0, width: 50 } as DOMRect;
+        }
+        if (this.classList.contains("workspace-tabs__list")) {
+          return { left: 0, width: 120 } as DOMRect;
+        }
+        return { left: 0, width: 0 } as DOMRect;
+      });
+
+    const { container, rerender, props } = renderStrip({ activeId: "a" });
+    const list = container.querySelector(".workspace-tabs__list") as HTMLDivElement;
+    const scrollToSpy = vi.fn();
+    Object.defineProperty(list, "scrollTo", { value: scrollToSpy, configurable: true });
+    Object.defineProperty(list, "clientWidth", { value: 120, configurable: true });
+    Object.defineProperty(list, "scrollWidth", { value: 600, configurable: true });
+    Object.defineProperty(list, "scrollLeft", { value: 0, configurable: true, writable: true });
+
+    act(() => {
+      rerender(<WorkspaceTabsStrip {...props} activeId="b" />);
+    });
+
+    // Sarmalayıcı sağı 58+70 = 128 → hedef 128 - 120 = 8.
+    expect(scrollToSpy).toHaveBeenCalledWith({ left: 8, behavior: "auto" });
+    rectSpy.mockRestore();
+  });
+
   it("SEKME-F2 O1: aktif sekme ZATEN tam görünürse `scrollTo` ÇAĞRILMAZ (gereksiz kaydırma yok)", () => {
     const rectSpy = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
@@ -576,6 +614,75 @@ describe("WorkspaceTabsStrip", () => {
     // Panelden artan alan (100-50=50) sekmeden (80) DAR → başlığın BAŞI
     // panelin sağına hizalanır: 60-50 = 10 (sağ kenara hizalamak başlığın
     // başını panelin arkasına saklardı).
+    expect(scrollToSpy).toHaveBeenCalledWith({ left: 10, behavior: "auto" });
+
+    rectSpy.mockRestore();
+    globalThis.ResizeObserver = originalRO;
+  });
+
+  it("FLK-F1 bekçisi: AKTİF sekme ölçümden SONRA genişlerse (liste kutusu değişmese de) yeniden kaydırılır", () => {
+    // Mutasyon: `observer?.observe(activeHitEl)` satırını sil → bu iddia
+    // kırmızı olur (aktif sekme gözlemlenmez, geri çağrı hiç tetiklenmez).
+    //
+    // Kök neden (görsel kare ~6 koşuda 1 farklı çıkıyordu): ResizeObserver
+    // yalnız panel + liste KUTUSUNU izliyordu; geç başlık / × / font ile
+    // AKTİF SEKME ölçümden sonra genişlerse liste kutusu değişmediği için
+    // yeniden kaydırma olmuyor, sekme yarım görünür kalıyordu.
+    type Observer = { cb: ResizeObserverCallback; targets: Element[] };
+    const observers: Observer[] = [];
+    class FakeResizeObserver {
+      private readonly entry: Observer;
+      constructor(cb: ResizeObserverCallback) {
+        this.entry = { cb, targets: [] };
+        observers.push(this.entry);
+      }
+      observe(el: Element) {
+        this.entry.targets.push(el);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const originalRO = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = FakeResizeObserver as unknown as typeof ResizeObserver;
+
+    let activeWidth = 40;
+    const rectSpy = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: Element) {
+        if (this.getAttribute("role") === "tab" && this.closest(".workspace-tab--active")) {
+          return { left: 60, width: activeWidth } as DOMRect;
+        }
+        if (this.classList.contains("workspace-tab--pinned")) {
+          return { left: 0, width: 50 } as DOMRect;
+        }
+        return { left: 0, width: 0 } as DOMRect;
+      });
+
+    const { container } = renderStrip({ activeId: "b" });
+    const list = container.querySelector(".workspace-tabs__list") as HTMLDivElement;
+    const activeHit = container.querySelector(
+      ".workspace-tab--active [role='tab']",
+    ) as HTMLElement;
+    const scrollToSpy = vi.fn();
+    Object.defineProperty(list, "scrollTo", { value: scrollToSpy, configurable: true });
+    Object.defineProperty(list, "clientWidth", { value: 150, configurable: true });
+    Object.defineProperty(list, "scrollWidth", { value: 600, configurable: true });
+    Object.defineProperty(list, "scrollLeft", { value: 0, configurable: true, writable: true });
+
+    // Aktif sekmenin KENDİSİ gözlemlenmeli.
+    expect(observers.some((o) => o.targets.includes(activeHit))).toBe(true);
+    // Mount'ta aktif sekme (60..100) tam görünür → kaydırma yok.
+    expect(scrollToSpy).not.toHaveBeenCalled();
+
+    // Aktif sekme genişler (60..180 > clientWidth 150); liste/panel kutusu AYNI.
+    activeWidth = 120;
+    act(() => {
+      observers
+        .filter((o) => o.targets.includes(activeHit))
+        .forEach((o) => o.cb([], {} as ResizeObserver));
+    });
+
+    // Panelden artan alan (150-50=100) sekmeden (120) DAR → başı panelin sağına: 60-50=10.
     expect(scrollToSpy).toHaveBeenCalledWith({ left: 10, behavior: "auto" });
 
     rectSpy.mockRestore();
