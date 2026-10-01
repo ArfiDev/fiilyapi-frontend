@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-01 20:45",
+  guncellendi: "2026-10-01 20:55",
   gorevler: [
     {
       kod: "BLF",
@@ -82,7 +82,7 @@ export const VERI: GelistirmeVerisi = {
       dilimler: [
         { kod: "P0", aciklama: "Mimari plan: katalog yeri, veri modeli, son fiyat, dönüştürme, dilimler", durum: "bitti", hat: "backend" },
         { kod: "B1", aciklama: "Katalog ana modüle taşınır (veritabanı değişmez)", durum: "devam", hat: "backend" },
-        { kod: "B2", aciklama: "Poz no (MIM-001, otomatik) + referans fiyat + katalog uçları", durum: "sirada", hat: "backend", bagimlilik: "B1" },
+        { kod: "B2", aciklama: "Poz no (MIM-0001, otomatik) + referans fiyat + katalog uçları", durum: "sirada", hat: "backend", bagimlilik: "B1" },
         { kod: "F1", aciklama: "İş Kalemi Kataloğu ekranı", durum: "sirada", hat: "frontend", bagimlilik: "B2" },
         { kod: "B3 / F2", aciklama: "Sözleşmeye katalogdan çoklu seçimle poz ekleme + son fiyat", durum: "sirada", hat: "backend", bagimlilik: "B2" },
         { kod: "B4 / F3", aciklama: "Teklif çekirdeği + Liste / Yeni / Detay ekranları", durum: "sirada", hat: "backend", bagimlilik: "B3" },
@@ -96,7 +96,7 @@ export const VERI: GelistirmeVerisi = {
         "Kâr/gider teklif geneli + kalemde; teklif B.F. girilince kâr geri hesaplanır; fiyat farkı koşulu; şablonlar.",
         "Çoklu seçici ve PDF mevcut ekranlardan türetilir, onaya sunulur.",
         "Kazanıldı ile dönüştürme ayrı; gruplar sözleşmeye taşınır; durum revizyon başına.",
-        "Poz no: disiplin kodu + 3 hane (MIM-001), otomatik sıradaki; mevcut 28 kaleme otomatik numara.",
+        "Poz no: disiplin kodu + 4 hane (MIM-0001), otomatik sıradaki; disiplin kodu değişirse yeniden numaralanır; mevcut 28 kaleme otomatik numara.",
       ],
     },
     {
