@@ -16,6 +16,7 @@ import { SITE_CONTRACT_DEFAULTS } from "@/lib/api/hooks/site-fixtures";
 // oradadır; ikizin kendi paralel veri seti İCAT EDİLMEZ (K-MKD2'nin tersi:
 // burada risk İKİ kaynağın AYRIŞMASIdır, ekran fikstürünü aynen dönerek
 // önlenir).
+import { SECTION_DISTRIBUTION_FIXTURE } from "@/components/boq-section-distribution/section-distribution.fixture";
 import { panelReportFixture } from "@/components/earned-value/reports/panel/panel-fixtures";
 import {
   DAILY_REPORT_FIXTURE_APPROVED,
@@ -9146,6 +9147,38 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     //   3. BOŞALAN GRUPLAR listeden DÜŞER,
     // ama `allocated_quantity`/`unallocated_quantity` HER ZAMAN pozun GERÇEK
     // kotasından türer (K2 iki anlam tuzağı — maskelenmez).
+    /* ══ BDG-F1.4 · /sites/{site_id}/boq/section-distribution ═════════════
+     * Yanıt EKRAN FİKSTÜRÜNDEN (`section-distribution.fixture.ts`) gelir —
+     * birim testleri ile e2e TEK kaynaktan beslenir (Playwright globalSetup'i
+     * tsconfig `paths` eslemesini çözer, bu dosya zaten `@/components/...`
+     * fikstürleri ithal eder). Yalnız `site_id` istek yolundakiyle değiştirilir;
+     * mevcut `/boq` ucu ve BOQ kareleri DOKUNULMAZ.
+     *
+     * 🔒 PUT KALICI YAZMAZ: gerçek backend'in reddedeceği gövdeleri reddeden
+     * bir KAPIDIR (`allocations` zorunlu, `quantity` ANAHTARI zorunlu, `0` ve
+     * negatif 422) ve değişmemiş fikstürü döner. Paylaşılan mock durumu
+     * paralel görsel karelerle paylaşıldığı için e2e PUT'u ayrıca
+     * `page.route` ile yakalar; bu handler yalnız yedek/geçit.
+     * ══════════════════════════════════════════════════════════════════ */
+    const boqDistributionMatch = path.match(/^\/sites\/([^/]+)\/boq\/section-distribution$/);
+    if (boqDistributionMatch) {
+      const site = state.sites.find((s) => s.id === boqDistributionMatch[1]);
+      if (!site) return send(404, { detail: "santiye yok" });
+      const response = { ...SECTION_DISTRIBUTION_FIXTURE, site_id: site.id };
+      if (method === "GET") return send(200, response);
+      return withBody((body) => {
+        const allocations = body.allocations;
+        if (!Array.isArray(allocations)) return send(422, { detail: "allocations zorunludur." });
+        for (const entry of allocations as Array<Record<string, unknown>>) {
+          if (!("quantity" in entry)) return send(422, { detail: "quantity anahtari zorunludur." });
+          if (entry.quantity !== null && !(Number(entry.quantity) > 0)) {
+            return send(422, { detail: "Miktar 0 veya negatif olamaz; bosaltmak icin null gonderin." });
+          }
+        }
+        return send(200, response);
+      });
+    }
+
     const boqMatch = path.match(/^\/sites\/([^/]+)\/boq$/);
     if (method === "GET" && boqMatch) {
       const site = state.sites.find((s) => s.id === boqMatch[1]);

@@ -134,6 +134,8 @@ describe("gorsel kadraj kanonu — prepareFrame HER zaman toHaveScreenshot'tan h
 const PRESERVE_SCROLL_LEFT_ALLOWLIST: Record<string, string> = {
   "workspace-tabs-visual.spec.ts":
     "fullPage şerit scrollLeft'ini sıfırlıyor; kaydırılmış kare için şerit korunur (CEO K5/(d))",
+  "boq-section-distribution-visual.spec.ts":
+    "12 bölümlü tablo kabı (.bdg-scroll) yatay kaydırılmış karede yapışkan Poz No/Poz Adı kolonları kadrajın konusudur; prepareFrame scrollLeft'i sıfırlardı (BDG-F1.4)",
   "visual-scroll.spec.ts":
     "prepareFrame'in preserveScrollLeft davranışını doğrudan sınayan birim testi — hiçbir toHaveScreenshot çağrısı YOK, kare bekçisi kapsamı dışında",
 };
@@ -378,6 +380,7 @@ const ROUTE_GRAPH_CLEAN =
   "tarih fikstur/echo alani, yani gun SUNUCUDAN gelir";
 
 const KASTEN_DISARIDA: Record<string, Muafiyet> = {
+  "boq-section-distribution-visual.spec.ts": { kadraj: 3, gerekce: ROUTE_GRAPH_CLEAN },
   "boq-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
   "bordro-visual.spec.ts": { kadraj: 6, gerekce: ROUTE_GRAPH_CLEAN },
   "contract-distribution-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
