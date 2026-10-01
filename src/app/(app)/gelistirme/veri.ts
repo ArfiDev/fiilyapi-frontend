@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-01 20:08",
+  guncellendi: "2026-10-01 20:45",
   gorevler: [
     {
       kod: "BLF",
@@ -62,7 +62,8 @@ export const VERI: GelistirmeVerisi = {
       spec: "GUNLUK-KAYIT-ONIZLEME-SPEC.md",
       dilimler: [
         { kod: "B1", aciklama: "Önizleme ucu + tek istekte kayıt + Bölümsüz satır açığı", durum: "devam", hat: "backend", pr: "backend #153 (hazır, bekliyor)", bagimlilik: "F1 ile art arda merge" },
-        { kod: "F1", aciklama: "Bölüm seçilince kalemler gelir, tek kayıt (plan hazırlanıyor)", durum: "devam", hat: "frontend" },
+        { kod: "B1.1", aciklama: "Kayıtsız günde puantaj ekibi önizlemede gelir", durum: "devam", hat: "backend", pr: "#153'e ek" },
+        { kod: "F1", aciklama: "Bölüm seçilince kalemler gelir, tek kayıt (plan onaylı; sözleşme + saf katman bitti, ekran yapılıyor)", durum: "devam", hat: "frontend" },
       ],
       kararlar: [
         "Önizleme + tek kayıt; seçim kayıt açmaz.",
@@ -79,7 +80,14 @@ export const VERI: GelistirmeVerisi = {
       durum: "devam",
       spec: "TEKLIF-KATALOG-HAZIRLIK.md",
       dilimler: [
-        { kod: "P0", aciklama: "Mimari plan: katalog yeri, veri modeli, son fiyat, dönüştürme, dilimler", durum: "devam", hat: "backend" },
+        { kod: "P0", aciklama: "Mimari plan: katalog yeri, veri modeli, son fiyat, dönüştürme, dilimler", durum: "bitti", hat: "backend" },
+        { kod: "B1", aciklama: "Katalog ana modüle taşınır (veritabanı değişmez)", durum: "devam", hat: "backend" },
+        { kod: "B2", aciklama: "Poz no (MIM-001, otomatik) + referans fiyat + katalog uçları", durum: "sirada", hat: "backend", bagimlilik: "B1" },
+        { kod: "F1", aciklama: "İş Kalemi Kataloğu ekranı", durum: "sirada", hat: "frontend", bagimlilik: "B2" },
+        { kod: "B3 / F2", aciklama: "Sözleşmeye katalogdan çoklu seçimle poz ekleme + son fiyat", durum: "sirada", hat: "backend", bagimlilik: "B2" },
+        { kod: "B4 / F3", aciklama: "Teklif çekirdeği + Liste / Yeni / Detay ekranları", durum: "sirada", hat: "backend", bagimlilik: "B3" },
+        { kod: "B5 / F4", aciklama: "Şablonlar, Excel, PDF (yazdırma görünümü)", durum: "sirada", hat: "backend", bagimlilik: "B4" },
+        { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0", durum: "sirada", hat: "backend", bagimlilik: "B4" },
       ],
       kararlar: [
         "Veri düzeyinde tek katalog; Planlama'da fiyatsız Birim Oran Kataloğu, teklif/sözleşmede fiyatlı İş Kalemi Kataloğu.",
@@ -88,15 +96,16 @@ export const VERI: GelistirmeVerisi = {
         "Kâr/gider teklif geneli + kalemde; teklif B.F. girilince kâr geri hesaplanır; fiyat farkı koşulu; şablonlar.",
         "Çoklu seçici ve PDF mevcut ekranlardan türetilir, onaya sunulur.",
         "Kazanıldı ile dönüştürme ayrı; gruplar sözleşmeye taşınır; durum revizyon başına.",
+        "Poz no: disiplin kodu + 3 hane (MIM-001), otomatik sıradaki; mevcut 28 kaleme otomatik numara.",
       ],
     },
     {
       kod: "TMP",
       acilim: "Test Geçici Dizini",
       aciklama: "Paralel test koşuları aynı geçici dizini paylaşıp birbirinin dosyalarını siliyordu (bugünkü kararsız test kırmızılarının kökü).",
-      durum: "devam",
+      durum: "bitti",
       spec: "-",
-      dilimler: [{ kod: "B1", aciklama: "Koşu başına ayrı geçici dizin", durum: "devam", hat: "backend", pr: "backend #154 (CI)" }],
+      dilimler: [{ kod: "B1", aciklama: "Koşu başına ayrı geçici dizin", durum: "bitti", hat: "backend", pr: "backend #154" }],
       kararlar: [],
     },
     {
