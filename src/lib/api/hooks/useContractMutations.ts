@@ -157,10 +157,14 @@ export function useUpdateEmployerContractItem(
           body,
         }),
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_ITEMS_QUERY_KEY, projectId] });
-      queryClient.invalidateQueries({ queryKey: [CONTRACT_DISTRIBUTION_QUERY_KEY, projectId] });
-      queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_QUERY_KEY, projectId] });
-    },
+    // Söz DÖNER: mutasyon tazelenmiş önbellek gelene dek "bitmez". Hücre kilidi
+    // (`EmployerContractItemsTable`) bu sayede sunucu değeri GÜNCELLENMEDEN
+    // açılmaz — aksi hâlde bayat değerle karşılaştırma yanlış "noop" üretirdi.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_ITEMS_QUERY_KEY, projectId] }),
+        queryClient.invalidateQueries({ queryKey: [CONTRACT_DISTRIBUTION_QUERY_KEY, projectId] }),
+        queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_QUERY_KEY, projectId] }),
+      ]),
   });
 }

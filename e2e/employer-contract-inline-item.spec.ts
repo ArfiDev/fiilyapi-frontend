@@ -112,6 +112,48 @@ test("birim fiyat hücresi ayrı PATCH'lenir; miktar gövdeye karışmaz", async
   expect(writes[0].body).toEqual({ unit_price: "2250.50" });
 });
 
+// SZK-F1 · var olan satırın poz no / ad / birim hücreleri
+test("poz no hücresi düzenlenir; PATCH gövdesi YALNIZ {code} taşır", async ({ page }) => {
+  const writes = await captureWrites(page);
+  await gotoLoadedItems(page);
+
+  const code = page.locator("main").getByLabel("03.001 poz no");
+  await expect(code).toBeEditable();
+  await code.fill("03.001-A");
+  await code.blur();
+
+  await expect.poll(() => writes.length).toBe(1);
+  expect(writes[0].method).toBe("PATCH");
+  expect(writes[0].pathname).toBe(`${PATCH_PREFIX}ci-1`);
+  expect(writes[0].body).toEqual({ code: "03.001-A" });
+});
+
+test("şantiye BOQ çakışması (409): sunucu metni AYNEN hata bandında görünür", async ({ page }) => {
+  const detail = "Bu poz numarası hedef şantiyede zaten kullanılıyor: Şantiye A · 03.777";
+  // Mock durumuna YAZILMAZ: istek `page.route` ile karşılanır.
+  await page.route(
+    (url) => url.pathname === `${PATCH_PREFIX}ci-1`,
+    async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ detail }),
+      });
+    },
+  );
+  await gotoLoadedItems(page);
+
+  const code = page.locator("main").getByLabel("03.001 poz no");
+  await code.fill("03.777");
+  await code.blur();
+
+  await expect(page.getByTestId("ecd-items-error-line")).toHaveText(`03.001 · Poz No: ${detail}`);
+});
+
 // ---------------------------------------------------------------------------
 // 2) 🔴 KISIT KORKULUĞU — tipte YAŞAMAYAN kural, tarayıcıda bekçilenir
 // ---------------------------------------------------------------------------
@@ -125,7 +167,7 @@ test("miktar SIFIR: istek HİÇ UÇMAZ, sebep görünür basılır, hücre eski 
   await quantity.fill("0");
   await quantity.blur();
 
-  await expect(page.getByTestId("ecd-items-error")).toHaveText(
+  await expect(page.getByTestId("ecd-items-error")).toContainText(
     "Miktar sıfırdan büyük olmalıdır.",
   );
   await expect(quantity).toHaveValue("3200");
@@ -140,7 +182,7 @@ test("negatif birim fiyat: istek HİÇ UÇMAZ", async ({ page }) => {
   await price.fill("-1");
   await price.blur();
 
-  await expect(page.getByTestId("ecd-items-error")).toHaveText("Birim Fiyat negatif olamaz.");
+  await expect(page.getByTestId("ecd-items-error")).toContainText("Birim Fiyat negatif olamaz.");
   expect(writes).toEqual([]);
 });
 

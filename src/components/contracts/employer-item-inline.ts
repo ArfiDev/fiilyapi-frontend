@@ -17,8 +17,11 @@
  */
 
 import {
+  validateCodeField,
+  validateDescriptionField,
   validateEmployerUnitPriceField,
   validateQuantityField,
+  validateUnitField,
 } from "@/components/contract-item-form/validate";
 // Ondalık gösterim yardımcısı taşeron emsalinden PAYLAŞILIR — ikinci bir
 // kopya yazmak "aynı formül iki yerde YAŞAMAZ" kuralını çiğnerdi.
@@ -31,12 +34,15 @@ export { decimalInputValue };
 export type EmployerItemUpdateBody = DeepScale<components["schemas"]["EmployerContractItemUpdate"]>;
 
 /** Hücrede düzenlenebilen iki alan (E14 kolonları 80 ve 81). */
-export type InlineCellField = "quantity" | "unitPrice";
+export type InlineCellField = "quantity" | "unitPrice" | "code" | "description" | "unit";
 
 /** Bir satırın kirli hücreleri; tanımsız alan "dokunulmadı" demektir. */
 export interface InlineRowDraft {
   quantity?: string;
   unitPrice?: string;
+  code?: string;
+  description?: string;
+  unit?: string;
 }
 
 export type InlineCommit =
@@ -64,16 +70,44 @@ export function commitInlineCell(
 ): InlineCommit {
   if (draft === undefined) return { kind: "noop" };
   const next = draft.trim();
-  if (next === decimalInputValue(serverValue)) return { kind: "noop" };
+  const isText = field === "code" || field === "description" || field === "unit";
+  const shown = isText ? (serverValue ?? "").trim() : decimalInputValue(serverValue);
+  if (next === shown) return { kind: "noop" };
 
-  const problem =
-    field === "quantity" ? validateQuantityField(next) : validateEmployerUnitPriceField(next);
+  const problem = validateCell(field, next);
   if (problem) return { kind: "error", message: problem.message };
 
   // 🔴 Metin AYNEN gider: `Number()` turu yoktur (hassasiyet kaybı önlemi,
   // openapi `anyOf: [number, string]` buna izin verir).
-  return {
-    kind: "patch",
-    body: field === "quantity" ? { quantity: next } : { unit_price: next },
-  };
+  return { kind: "patch", body: bodyFor(field, next) };
+}
+
+function validateCell(field: InlineCellField, next: string) {
+  switch (field) {
+    case "quantity":
+      return validateQuantityField(next);
+    case "unitPrice":
+      return validateEmployerUnitPriceField(next);
+    case "code":
+      return validateCodeField(next);
+    case "description":
+      return validateDescriptionField(next);
+    case "unit":
+      return validateUnitField(next);
+  }
+}
+
+function bodyFor(field: InlineCellField, next: string): EmployerItemUpdateBody {
+  switch (field) {
+    case "quantity":
+      return { quantity: next };
+    case "unitPrice":
+      return { unit_price: next };
+    case "code":
+      return { code: next };
+    case "description":
+      return { description: next };
+    case "unit":
+      return { unit: next };
+  }
 }

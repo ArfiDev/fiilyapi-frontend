@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 
 import { Button, Input, Select } from "@/components/ui";
@@ -28,6 +28,7 @@ import {
   commitInlineCell,
   decimalInputValue,
   type EmployerItemUpdateBody,
+  type InlineCellField,
   type InlineRowDraft,
 } from "./employer-item-inline";
 import { employerContractDistributionHref } from "./employer-contract-tabs";
@@ -92,17 +93,81 @@ export interface EmployerContractItemsTableProps {
    * olarak yerinde kalır.
    */
   onAddItem: () => void;
-  /** Hücre kaydetme — kısmi `PATCH` gövdesi zaten elenmiş/doğrulanmış gelir. */
-  onCommitItem: (itemId: string, body: EmployerItemUpdateBody) => void;
+  /**
+   * Hücre kaydetme — kısmi `PATCH` gövdesi zaten elenmiş/doğrulanmış gelir.
+   * Dönen söz istek BİTİNCE (ASLA reddetmez) çözülür: `null` = başarı,
+   * metin = sunucu hata mesajı (tablo onu HÜCRE hatası olarak tutar/basar): tablo uçuştaki HÜCREYİ (kalem+alan) o ana kadar
+   * kilitler — aynı alana iki PATCH'in sunucuya ters sırada ulaşması önlenir.
+   */
+  onCommitItem: (itemId: string, body: EmployerItemUpdateBody) => Promise<string | null>;
   /** Satır-içi ekleme; `true` dönerse taslak satır kapanır. */
   onCreateItem: (body: EmployerItemCreateBody) => Promise<boolean>;
-  /** Bir yazma uçuşta — hücreler kilitlenir (emsal `isBusy`). */
-  isBusy: boolean;
+  /**
+   * YENİ SATIR oluşturma uçuşta — yalnız yeni-satır kontrolleri ve ekleme
+   * düğmeleri kilitlenir. Var olan satır hücreleri update PATCH'i uçarken
+   * KİLİTLENMEZ (Tab ile komşu hücreye geçişte odak korunur).
+   */
+  isCreating: boolean;
   /** Sunucu hatası (`backendErrorMessage`); istemci hatasıyla aynı yerde basılır. */
   saveError: string | null;
 }
 
 const COLUMN_COUNT = 7;
+
+/** Hücre kaydetmenin okuduğu kalem alanları. */
+interface CellItem {
+  id: string;
+  code: string;
+  description: string;
+  unit: string;
+  quantity: string | null;
+  unit_price: string | null;
+}
+
+const SERVER_FIELD: Record<InlineCellField, keyof Omit<CellItem, "id">> = {
+  code: "code",
+  description: "description",
+  unit: "unit",
+  quantity: "quantity",
+  unitPrice: "unit_price",
+};
+
+/** Bandın hücre satırı: etiket "poz kodu · alan adı". */
+interface CellError {
+  label: string;
+  message: string;
+}
+
+// Alan adları doğrulama mesajlarındaki başlıklarla (`validate.ts`) aynıdır.
+const FIELD_LABEL: Record<InlineCellField, string> = {
+  code: "Poz No",
+  description: "Poz Adı",
+  unit: "Birim",
+  quantity: "Miktar",
+  unitPrice: "Birim Fiyat",
+};
+
+function cellLabel(code: string, field: InlineCellField): string {
+  return `${code} · ${FIELD_LABEL[field]}`;
+}
+
+function cellKey(itemId: string, field: InlineCellField): string {
+  return `${itemId}:${field}`;
+}
+
+function serverValueOf(item: CellItem, field: InlineCellField): string | null {
+  return item[SERVER_FIELD[field]];
+}
+
+/**
+ * Birim seçicisinin seçenekleri. Kalemin MEVCUT birimi `UNIT_OPTIONS`ta yoksa
+ * (eski/serbest metin) ayrı bir seçenek olarak eklenir — yoksa seçici değeri
+ * sessizce kaybeder ve blur'da yanlış birim yazılırdı.
+ */
+function unitChoices(currentUnit: string): readonly string[] {
+  const known: readonly string[] = UNIT_OPTIONS;
+  return known.includes(currentUnit) ? known : [...known, currentUnit];
+}
 
 /**
  * Satır-içi taslağın alanları. `group_id` ve `sort_order` YOKTUR: grup
@@ -136,7 +201,7 @@ export function EmployerContractItemsTable({
   onAddItem,
   onCommitItem,
   onCreateItem,
-  isBusy,
+  isCreating,
   saveError,
 }: EmployerContractItemsTableProps) {
   const groups = data?.groups;
@@ -150,6 +215,20 @@ export function EmployerContractItemsTable({
   const [addingGroupId, setAddingGroupId] = useState<string | null>(null);
   const [newRow, setNewRow] = useState<NewRowValues>(EMPTY_NEW_ROW);
   const [clientError, setClientError] = useState<string | null>(null);
+  // Uçuştaki PATCH'lerin hücre anahtarları (`kalemId:alan`). Yalnız O hücre
+  // kilitlenir; komşu hücreler açık kalır (Tab akışı + farklı alana paralel PATCH).
+  const [pendingCells, setPendingCells] = useState<ReadonlySet<string>>(new Set());
+  // Koruma bayrağı yeniden-girişte (kuyruktaki seçim) bayat kapanıştan değil
+  // buradan okunur; `pendingCells` yalnız GÖRÜNÜM içindir.
+  const pendingRef = useRef(new Set<string>());
+  // Uçuşta seçilen birim ("son seçim kazanır"): hücre anahtarı → değer.
+  const queuedRef = useRef(new Map<string, string>());
+  // Uçuş bitince TAZE kalemi okumak için (kapanıştaki `item` bayattır).
+  const latestItemsRef = useRef<CellItem[]>([]);
+  latestItemsRef.current = (groups ?? []).flatMap((group) => group.items);
+  // Hücre hataları: anahtar `kalemId:alan`. Başka hücrenin kaydı/hatası bir
+  // hücrenin hatasını SİLMEZ; yalnız o hücrenin kendi başarısı/yeni sonucu siler.
+  const [cellErrors, setCellErrors] = useState<Readonly<Record<string, CellError>>>({});
 
   // SEKME-F1.3b — hücre-içi `drafts` (odak çıkışında ANINDA kaydolur) DIŞARI
   // BIRAKILIR (kanon); yalnız YENİ SATIR taslağı commit edilmemiştir.
@@ -174,34 +253,74 @@ export function EmployerContractItemsTable({
     });
   }
 
+  function setCellPending(key: string, isPending: boolean) {
+    if (isPending) pendingRef.current.add(key);
+    else pendingRef.current.delete(key);
+    setPendingCells(new Set(pendingRef.current));
+  }
+
+  function setCellError(key: string, error: CellError | null) {
+    setCellErrors((prev) => {
+      if (error === null) {
+        if (!(key in prev)) return prev;
+        return Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key));
+      }
+      return { ...prev, [key]: error };
+    });
+  }
+
   /**
-   * Odak çıkışında kaydetme (emsal tetikleyicisi). Taslak HER hâlde temizlenir:
-   * kısıt ihlalinde hücre sunucu değerine geri döner ve sebebi basılır —
-   * geçersiz metnin ekranda "kaydedilmiş gibi" durması yasaktır.
+   * Hücre kaydetme (odak çıkışı; birim seçicide değişim anı).
+   * - `noop`: taslak temizlenir, hücrenin eski hatası silinir (no 52).
+   * - `error` (istemci kısıt ihlali): taslak temizlenir, hücre sunucu değerine
+   *   döner ve sebep O HÜCRENİN hatası olarak basılır.
+   * - `patch`: taslak uçuş boyunca GÖRÜNÜR kalır (sunucu değeri tazelenene dek
+   *   eski değere sıçrama olmasın); bitince temizlenir — hatada hücre sunucu
+   *   değerine döner ve sunucu mesajı hücre hatası olur, başarıda hata silinir.
+   * - Uçuştaki hücrede (yalnız birim seçici ulaşır) seçim "son seçim" olarak
+   *   tutulur ve gösterilir; uçuş bitince sunucudan farklıysa TEK ek istek gider.
    */
-  function commitCell(
+  async function commitCell(
     // 🔴 KAPSAM MASKESİ (2026-09-19): metraj/fiyat `null` gelebilir; gösterim
     //    `decimalInputValue` ile "" olur, kaydetme kararı ise `commitInlineCell`
     //    içinde ham metinle verilir.
-    item: { id: string; quantity: string | null; unit_price: string | null },
-    field: "quantity" | "unitPrice",
+    item: CellItem,
+    field: InlineCellField,
+    // Seçici değişiminde yeni değer taslağa YAZILMADAN doğrudan verilir.
+    valueOverride?: string,
   ) {
-    const draft = drafts[item.id]?.[field];
-    const serverValue = field === "quantity" ? item.quantity : item.unit_price;
-    const result = commitInlineCell(field, draft, serverValue);
-    clearDraft(item.id, field);
+    const key = cellKey(item.id, field);
+    if (pendingRef.current.has(key)) {
+      if (valueOverride !== undefined) {
+        queuedRef.current.set(key, valueOverride);
+        setDraft(item.id, { [field]: valueOverride });
+      }
+      return;
+    }
+    const draft = valueOverride ?? drafts[item.id]?.[field];
+    const result = commitInlineCell(field, draft, serverValueOf(item, field));
+    if (result.kind !== "patch") clearDraft(item.id, field);
     if (result.kind === "noop") {
-      // no 52 · noop = "değer değişmedi/dokunulmadı", önceki bir hücrenin
-      // ihlal hatası buna rağmen ekranda ASILI kalmamalı.
-      setClientError(null);
+      setCellError(key, null);
       return;
     }
     if (result.kind === "error") {
-      setClientError(result.message);
+      setCellError(key, { label: cellLabel(item.code, field), message: result.message });
       return;
     }
-    setClientError(null);
-    onCommitItem(item.id, result.body);
+    setDraft(item.id, { [field]: draft });
+    setCellPending(key, true);
+    const failure = await onCommitItem(item.id, result.body);
+    setCellError(key, failure === null ? null : { label: cellLabel(item.code, field), message: failure });
+    setCellPending(key, false);
+    const queued = queuedRef.current.get(key);
+    queuedRef.current.delete(key);
+    const fresh = latestItemsRef.current.find((candidate) => candidate.id === item.id);
+    if (queued !== undefined && fresh) {
+      await commitCell(fresh, field, queued);
+      return;
+    }
+    clearDraft(item.id, field);
   }
 
   function openAddRow(groupId: string) {
@@ -232,7 +351,13 @@ export function EmployerContractItemsTable({
     if (await onCreateItem(body)) closeAddRow();
   }
 
-  const errorMessage = clientError ?? saveError;
+  // Bant: hücre hataları (her biri hücre etiketli) + yeni-satır istemci hatası
+  // + yeni-satır oluşturma hatası. Hiçbiri ötekini ezmez.
+  const errorLines: ReadonlyArray<{ label: string | null; message: string }> = [
+    ...Object.values(cellErrors),
+    ...(clientError ? [{ label: null, message: clientError }] : []),
+    ...(saveError ? [{ label: null, message: saveError }] : []),
+  ];
 
   return (
     <section className="ecd-items" aria-labelledby="ecd-items-title">
@@ -265,10 +390,19 @@ export function EmployerContractItemsTable({
         </p>
       )}
 
-      {errorMessage && (
-        <p className="ecd-items__notice ecd-items__notice--error" data-testid="ecd-items-error">
-          {errorMessage}
-        </p>
+      {errorLines.length > 0 && (
+        <div className="ecd-items__notice ecd-items__notice--error" data-testid="ecd-items-error">
+          {errorLines.map((line) => (
+            <span
+              className="ecd-items__error-line"
+              data-testid="ecd-items-error-line"
+              key={`${line.label ?? ""}|${line.message}`}
+            >
+              {line.label && <strong>{line.label}: </strong>}
+              <span data-testid="ecd-items-error-message">{line.message}</span>
+            </span>
+          ))}
+        </div>
       )}
 
       {isError ? (
@@ -297,7 +431,8 @@ export function EmployerContractItemsTable({
                   key={group.id}
                   group={group}
                   drafts={drafts}
-                  isBusy={isBusy}
+                  isCreating={isCreating}
+                  pendingCells={pendingCells}
                   isAdding={addingGroupId === group.id}
                   newRow={newRow}
                   onDraft={setDraft}
@@ -337,7 +472,7 @@ export function EmployerContractItemsTable({
 interface GroupRowsProps {
   group: EmployerContractItemsResponse["groups"][number];
   drafts: Record<string, InlineRowDraft>;
-  isBusy: boolean;
+  isCreating: boolean;
   isAdding: boolean;
   newRow: NewRowValues;
   onDraft: (itemId: string, patch: InlineRowDraft) => void;
@@ -345,9 +480,11 @@ interface GroupRowsProps {
     // 🔴 KAPSAM MASKESİ (2026-09-19): metraj/fiyat `null` gelebilir; gösterim
     //    `decimalInputValue` ile "" olur, kaydetme kararı ise `commitInlineCell`
     //    içinde ham metinle verilir.
-    item: { id: string; quantity: string | null; unit_price: string | null },
-    field: "quantity" | "unitPrice",
-  ) => void;
+    item: CellItem,
+    field: InlineCellField,
+    valueOverride?: string,
+  ) => Promise<void>;
+  pendingCells: ReadonlySet<string>;
   onOpenAddRow: () => void;
   onChangeNewRow: (patch: Partial<NewRowValues>) => void;
   onCancelAddRow: () => void;
@@ -357,7 +494,8 @@ interface GroupRowsProps {
 function GroupRows({
   group,
   drafts,
-  isBusy,
+  isCreating,
+  pendingCells,
   isAdding,
   newRow,
   onDraft,
@@ -387,9 +525,52 @@ function GroupRows({
         const draft = drafts[item.id] ?? {};
         return (
           <tr className="ecd-items__row" key={item.id}>
-            <td className="ecd-items__td ecd-items__td--code">{item.code}</td>
-            <td className="ecd-items__td ecd-items__td--name">{item.description}</td>
-            <td className="ecd-items__td ecd-items__td--center">{item.unit}</td>
+            <td className="ecd-items__td ecd-items__td--text-input">
+              <Input
+                size="row"
+                maxLength={MAX_LENGTH.code}
+                className="ecd-items__cell-input ecd-items__cell-input--code"
+                aria-label={`${item.code} poz no`}
+                disabled={pendingCells.has(cellKey(item.id, "code"))}
+                value={draft.code ?? item.code}
+                onChange={(event) => onDraft(item.id, { code: event.target.value })}
+                onBlur={() => onCommitCell(item, "code")}
+              />
+            </td>
+            <td className="ecd-items__td ecd-items__td--text-input">
+              <Input
+                size="row"
+                maxLength={MAX_LENGTH.description}
+                className="ecd-items__cell-input ecd-items__cell-input--name"
+                title={item.description}
+                aria-label={`${item.code} poz adı`}
+                disabled={pendingCells.has(cellKey(item.id, "description"))}
+                value={draft.description ?? item.description}
+                onChange={(event) => onDraft(item.id, { description: event.target.value })}
+                onBlur={() => onCommitCell(item, "description")}
+              />
+            </td>
+            <td className="ecd-items__td ecd-items__td--text-input ecd-items__td--text-input-narrow">
+              <Select
+                size="row"
+                className="ecd-items__cell-input ecd-items__cell-input--unit"
+                aria-label={`${item.code} birimi`}
+                // Odaktaki seçiciyi `disabled` yapmak odağı <body>'ye düşürürdü:
+                // uçuşta seçim "son seçim" olarak tutulur ve gösterilir (uçuş
+                // bitince tek ek istek); uçuş işareti `aria-busy` (CSS'te soluk).
+                aria-busy={pendingCells.has(cellKey(item.id, "unit")) || undefined}
+                value={draft.unit ?? item.unit}
+                // Seçici: değişiklik ANINDA kaydolur (taslak + blur beklenmez).
+                // Blur'da taslak yoktur → ikinci istek ATILMAZ.
+                onChange={(event) => onCommitCell(item, "unit", event.target.value)}
+              >
+                {unitChoices(item.unit).map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </Select>
+            </td>
             <td className="ecd-items__td ecd-items__td--input">
               <Input
                 size="row"
@@ -402,7 +583,7 @@ function GroupRows({
                 min={0}
                 className="ecd-items__cell-input"
                 aria-label={`${item.code} birim fiyatı`}
-                disabled={isBusy}
+                disabled={pendingCells.has(cellKey(item.id, "unitPrice"))}
                 value={draft.unitPrice ?? decimalInputValue(item.unit_price)}
                 onChange={(event) => onDraft(item.id, { unitPrice: event.target.value })}
                 onBlur={() => onCommitCell(item, "unitPrice")}
@@ -416,7 +597,7 @@ function GroupRows({
                 min={0}
                 className="ecd-items__cell-input"
                 aria-label={`${item.code} miktar`}
-                disabled={isBusy}
+                disabled={pendingCells.has(cellKey(item.id, "quantity"))}
                 value={draft.quantity ?? decimalInputValue(item.quantity)}
                 onChange={(event) => onDraft(item.id, { quantity: event.target.value })}
                 onBlur={() => onCommitCell(item, "quantity")}
@@ -458,10 +639,10 @@ function GroupRows({
             <Input
               size="row"
               maxLength={MAX_LENGTH.code}
-              className="ecd-items__cell-input"
+              className="ecd-items__cell-input ecd-items__cell-input--code"
               aria-label="Yeni poz no"
               placeholder={EMPLOYER_ITEM_TEXT.codePlaceholder}
-              disabled={isBusy}
+              disabled={isCreating}
               value={newRow.code}
               onChange={(event) => onChangeNewRow({ code: event.target.value })}
             />
@@ -470,9 +651,9 @@ function GroupRows({
             <Input
               size="row"
               maxLength={MAX_LENGTH.description}
-              className="ecd-items__cell-input"
+              className="ecd-items__cell-input ecd-items__cell-input--name"
               aria-label="Yeni poz adı"
-              disabled={isBusy}
+              disabled={isCreating}
               value={newRow.description}
               onChange={(event) => onChangeNewRow({ description: event.target.value })}
             />
@@ -480,9 +661,9 @@ function GroupRows({
           <td className="ecd-items__td ecd-items__td--input">
             <Select
               size="row"
-              className="ecd-items__cell-input"
+              className="ecd-items__cell-input ecd-items__cell-input--unit"
               aria-label="Yeni poz birimi"
-              disabled={isBusy}
+              disabled={isCreating}
               value={newRow.unit}
               onChange={(event) => onChangeNewRow({ unit: event.target.value })}
             >
@@ -503,7 +684,7 @@ function GroupRows({
               className="ecd-items__cell-input"
               aria-label="Yeni poz birim fiyatı"
               placeholder={EMPLOYER_ITEM_TEXT.unitPricePlaceholder}
-              disabled={isBusy}
+              disabled={isCreating}
               value={newRow.unitPrice}
               onChange={(event) => onChangeNewRow({ unitPrice: event.target.value })}
             />
@@ -517,7 +698,7 @@ function GroupRows({
               className="ecd-items__cell-input"
               aria-label="Yeni poz miktarı"
               placeholder={EMPLOYER_ITEM_TEXT.quantityPlaceholder}
-              disabled={isBusy}
+              disabled={isCreating}
               value={newRow.quantity}
               onChange={(event) => onChangeNewRow({ quantity: event.target.value })}
             />
@@ -526,7 +707,7 @@ function GroupRows({
             <Button
               variant="primary"
               className="ecd-items__row-submit"
-              disabled={isBusy}
+              disabled={isCreating}
               onClick={onSubmitNewRow}
               data-testid="ecd-new-row-submit"
             >
@@ -535,7 +716,7 @@ function GroupRows({
             <Button
               variant="ghost"
               className="ecd-items__row-cancel"
-              disabled={isBusy}
+              disabled={isCreating}
               onClick={onCancelAddRow}
               data-testid="ecd-new-row-cancel"
             >
@@ -551,7 +732,7 @@ function GroupRows({
             <Button
               variant="ghost"
               className="ecd-items__add-row-btn"
-              disabled={isBusy}
+              disabled={isCreating}
               onClick={onOpenAddRow}
               data-testid={`ecd-add-row-${group.id}`}
             >
