@@ -6,3 +6,19 @@
   /* Kanon: tum mockup'larin icerik alani padding:28px 32px (Ekran 1 satir 181). */
   padding: 28px 32px;
 }
+
+/* YZD-F1 — Yazdırma yalıtımı: çıktıda yalnız içerik basılır; kabuk (yan menü,
+   üst bar, çalışma sekmeleri `.topbar` içinde) basılmaz, sabit üst/sol boşluklar
+   sıfırlanır. YALNIZ `@media print` — ekran görünümü değişmez. */
+@media print {
+  .topbar,
+  .sidebar {
+    display: none !important;
+  }
+
+  .app-content {
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+  }
+}

@@ -294,3 +294,21 @@
   border-bottom: 1px solid var(--color-border);
   font-size: 9px;
 }
+
+/* YZD-F1 — gerçek yazdırmada ekran kromu (başlık, araç çubuğu, bantlar) basılmaz;
+   yalnız yazdırma görünümü. QURR `.qurr-no-print` emsali. */
+@media print {
+  .ev-daily-page-title,
+  .ev-daily-toolbar,
+  .ev-daily-report > .ev-readonly-strip,
+  .ev-daily-missing-band {
+    display: none !important;
+  }
+
+  .ev-daily-print {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+}
