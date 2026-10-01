@@ -44,6 +44,29 @@ describe("parseQuantityInput — fiyatla AYNI Türkçe kural, kesir tamamlanmaz"
   });
 });
 
+describe("TKL-F2.4.1 YÜKSEK-1 — Türkçede geçerli binlik olamayan noktalı yazımlar belirsizdir", () => {
+  const cases = ["1234.567", "0.500", "0.250", "00.500", "12345.678", "1234.567.890", "0.500.000"];
+
+  it.each(cases)("fiyat '%s' → ambiguous", (raw) => {
+    expect(value(parseRefPriceInput, raw)).toBe("ambiguous");
+  });
+
+  it.each(cases)("miktar '%s' → ambiguous", (raw) => {
+    expect(value(parseQuantityInput, raw)).toBe("ambiguous");
+  });
+
+  it("geçerli yazımlar aynen okunur", () => {
+    for (const parse of [parseRefPriceInput, parseQuantityInput]) {
+      expect(value(parse, "28.500")).toBe("28500");
+      expect(value(parse, "1.000")).toBe("1000");
+      expect(value(parse, "999.999")).toBe("999999");
+      expect(value(parse, "28500")).toBe("28500");
+      expect(value(parse, "0,5")).toBe(parse === parseRefPriceInput ? "0.50" : "0.5");
+    }
+    expect(value(parseRefPriceInput, "1.234.567,8")).toBe("1234567.80");
+  });
+});
+
 describe("parseRefPriceInput (taşınan T30 ayrıştırıcısı) — fiyat kuralı DEĞİŞMEDİ", () => {
   const p = (raw: string) => value(parseRefPriceInput, raw);
 

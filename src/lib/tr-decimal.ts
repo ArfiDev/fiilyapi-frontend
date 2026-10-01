@@ -2,7 +2,7 @@
  * 🔴 TÜRKÇE ONDALIK OKUMA KURALI — TEK YER (TKL-F2.3 · T30; ürün kararı değişirse yalnız burası çevrilir).
  *
  * Türkçe yazım: nokta = BİNLİK ayıracı, virgül = ondalık. Noktayla ayrılan her grup (ilk grup
- * hariç) TAM 3 hane değilse girdi BELİRSİZDİR ("28.5", "1.50", "28.5000") ve KAYDEDİLMEZ —
+ * hariç) TAM 3 hane, ilk grup 1–3 haneli ve "0"sız değilse girdi BELİRSİZDİR ("28.5", "1.50", "28.5000") ve KAYDEDİLMEZ —
  * sessizce 28,50 ya da 2850 okumak yerine kullanıcıdan virgül istenir. Dönen değer kayıpsız
  * ondalık dizedir; `Number()` YOK.
  *
@@ -14,8 +14,14 @@
 /** Belirsiz nokta kullanımında satır hatası (kullanıcı onaylı metin). */
 export const REF_PRICE_AMBIGUOUS_DOT = "Ondalık için virgül kullanın (ör. 28,50)";
 
-/** Binlik gruplu tamsayı: ilk grup serbest, sonrakiler TAM 3 hane ("28.500"). */
-const THOUSANDS_GROUPED = /^\d+(\.\d{3})*$/;
+/**
+ * Noktasız tamsayı ("28500", "0") ya da binlik gruplu tamsayı: ilk grup 1–3 hane ve "0" ile
+ * BAŞLAMAZ, sonrakiler TAM 3 hane ("28.500"). TKL-F2.4.1 YÜKSEK-1: eski `^\d+(\.\d{3})*$`
+ * "1234.567", "0.500", "00.500" gibi Türkçede hiçbir zaman geçerli binlik olamayan yazımları
+ * sessizce 1234567 / 500 okuyordu → artık belirsiz (kullanıcıdan virgül istenir).
+ */
+const PLAIN_INTEGER = /^\d+$/;
+const THOUSANDS_GROUPED = /^[1-9]\d{0,2}(\.\d{3})+$/;
 const DIGITS_AND_DOTS = /^[\d.]+$/;
 const DIGITS_ONLY = /^\d+$/;
 /** Fiyat virgüllü girdide en az bu kadar kesir hanesine tamamlanır ("28,5" → "28.50"). */
@@ -43,7 +49,7 @@ function parseTurkishDecimal(raw: string, minFraction: number): TrDecimalParse {
   const [integerText = "", fractionText] = parts;
   if (fractionText !== undefined && !DIGITS_ONLY.test(fractionText)) return { kind: "invalid" };
   if (!DIGITS_AND_DOTS.test(integerText)) return { kind: "invalid" };
-  if (!THOUSANDS_GROUPED.test(integerText)) return { kind: "ambiguous" };
+  if (!PLAIN_INTEGER.test(integerText) && !THOUSANDS_GROUPED.test(integerText)) return { kind: "ambiguous" };
   const whole = integerText.replace(/\./g, "").replace(/^0+(?=\d)/, "");
   if (fractionText === undefined) return { kind: "ok", value: whole };
   const fraction = trimFraction(fractionText, minFraction);
