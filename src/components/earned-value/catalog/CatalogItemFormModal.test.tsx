@@ -120,6 +120,13 @@ describe("CatalogItemFormModal — poz no ve numara uyarıları", () => {
     expect(screen.getByText(DISC_WARNING)).toBeInTheDocument();
   });
 
+  it("disiplin uyarısı role=\"alert\" BASMAZ (dinamik bilgi notu: status)", () => {
+    renderEdit();
+    fireEvent.click(screen.getByRole("button", { name: /DUV/ }));
+    expect(screen.getByText(DISC_WARNING).closest(".alert")).toHaveAttribute("role", "status");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("disiplin değişmezse (ya da eskiye dönülürse) uyarı yok", () => {
     renderEdit();
     fireEvent.click(screen.getByRole("button", { name: /KAB/ }));

@@ -291,7 +291,7 @@ export function CatalogItemFormModal({
         </div>
 
         {disciplineHasChanged && (
-          <Alert variant="warning" className="ev-cat-use-warn">
+          <Alert variant="warning" role="status" className="ev-cat-use-warn">
             {DISCIPLINE_CHANGE_WARNING}
           </Alert>
         )}

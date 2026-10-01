@@ -16,7 +16,12 @@ import type {
   WorkItemUpdate,
 } from "@/lib/api/models";
 
-import { CATALOG_ITEMS_QUERY_KEY, EV_CATALOG_QUERY_KEY } from "./catalog-query-keys";
+import {
+  CATALOG_DISCIPLINES_QUERY_KEY,
+  CATALOG_ITEMS_QUERY_KEY,
+  EV_CATALOG_QUERY_KEY,
+  EV_DISCIPLINES_QUERY_KEY,
+} from "./catalog-query-keys";
 
 /**
  * TKL-F1.2 · Çekirdek İş Kalemi Kataloğu (`/catalog/*`) — FİYATLI, `contracts` kapısı.
@@ -30,8 +35,7 @@ import { CATALOG_ITEMS_QUERY_KEY, EV_CATALOG_QUERY_KEY } from "./catalog-query-k
  * backend `extra="forbid"` → 422). PATCH gövdesi çağıranca (F1.3 gövde kurucusu)
  * yalnız DEĞİŞEN alanlarla kurulur; hook gövdeyi olduğu gibi gönderir.
  */
-export { CATALOG_ITEMS_QUERY_KEY };
-export const CATALOG_DISCIPLINES_QUERY_KEY = "catalog-disciplines";
+export { CATALOG_DISCIPLINES_QUERY_KEY, CATALOG_ITEMS_QUERY_KEY };
 
 /** Tüm liste tek istekte; süzgeç/arama istemcide (KAT deseni). */
 export function useCatalogItems(): UseQueryResult<WorkItemRead[], Error> {
@@ -49,11 +53,15 @@ export function useCatalogDisciplines(): UseQueryResult<WorkDisciplineRead[], Er
   });
 }
 
-/** Aynı satır KAT'ta da görünür → iki ekranın önbelleği birlikte tazelenir. */
+/**
+ * Aynı satır KAT'ta da görünür → iki ekranın önbelleği birlikte tazelenir. KAT disiplin
+ * listesi `used_by_item_count` taşır (ÜS-13b kod uyarısı) → o da tazelenir.
+ */
 function invalidateCatalogViews(qc: QueryClient): Promise<unknown> {
   return Promise.all([
     qc.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] }),
     qc.invalidateQueries({ queryKey: [EV_CATALOG_QUERY_KEY] }),
+    qc.invalidateQueries({ queryKey: [EV_DISCIPLINES_QUERY_KEY] }),
   ]);
 }
 

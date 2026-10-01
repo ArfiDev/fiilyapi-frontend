@@ -161,7 +161,7 @@ export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: 
         </div>
 
         {hasCodeChanged && discipline.used_by_item_count > 0 && (
-          <Alert variant="warning" className="ev-cat-use-warn">
+          <Alert variant="warning" role="status" className="ev-cat-use-warn">
             {codeChangeWarning(discipline.used_by_item_count)}
           </Alert>
         )}

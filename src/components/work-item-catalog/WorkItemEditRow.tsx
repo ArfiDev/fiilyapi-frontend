@@ -1,25 +1,16 @@
 "use client";
 
-import { useState } from "react";
-
 import { CONTRACTOR_OPTIONS } from "@/components/catalog-shared/CatalogBits";
 import { unitOptions } from "@/components/catalog-shared/catalog-units";
 import { Button, Input, Segmented, Select } from "@/components/ui";
 import { AlertIcon } from "@/components/ui/icons";
 import { EMPTY_CELL } from "@/lib/format";
-import { backendErrorMessage } from "@/lib/api/error-message";
-import { useCreateCatalogItem, useUpdateCatalogItem } from "@/lib/api/hooks/useCatalogItems";
-import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
-import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
+import type { WorkDisciplineRead } from "@/lib/api/models";
 
 import { NO_LAST_PRICE_SOURCE } from "./WorkItemRow";
+import type { WorkItemDraft } from "./work-item-drafts";
 import {
-  buildWorkItemCreateBody,
-  buildWorkItemUpdateBody,
-  emptyWorkItemForm,
   firstWorkItemError,
-  isWorkItemFormDirty,
-  workItemFormFromItem,
   WORK_ITEM_NAME_MAX_LENGTH,
   type ContractorType,
   type WorkItemFormState,
@@ -36,88 +27,54 @@ const POZ_PENDING_LABEL = "Otomatik";
 /** ÜS-2 — mockup'taki "GG.NNN · grup + sıra" ipucunun yerine. */
 const POZ_HINT = "Poz no otomatik verilir · disiplin kodu + sıra (MIM-0001) · şirket genelinde tekil";
 
-export type WorkItemEditMode =
-  | { kind: "new"; discipline: WorkDisciplineRead | null }
-  | { kind: "edit"; item: WorkItemRead };
+/** Satırın disiplin alt satırı ve kimliği için gereken en az alan. */
+export type WorkItemDisciplineLabel = Pick<WorkDisciplineRead, "id" | "code" | "name">;
 
 interface WorkItemEditRowProps {
-  mode: WorkItemEditMode;
+  /** Taslak EKRAN düzeyindedir (KIK:233-236); bu bileşen yalnız çizer. */
+  draft: WorkItemDraft;
+  /** Düzenlemede kalemin poz no'su; yeni satırda null (ÜS-1). */
+  pozNo: string | null;
+  /** Düzenlemede kalemin, yeni satırda ŞİMDİKİ listeden çözülen disiplin (yoksa null). */
+  discipline: WorkItemDisciplineLabel | null;
   testId: string;
   /** Katalogdaki mevcut birimler (açılır listeye eklenir). */
   catalogUnits: readonly string[];
-  onCancel: () => void;
-  onSaved: (saved: WorkItemRead) => void;
-}
-
-function initialForm(mode: WorkItemEditMode): WorkItemFormState {
-  return mode.kind === "edit"
-    ? workItemFormFromItem(mode.item)
-    : emptyWorkItemForm(mode.discipline?.default_contractor_type ?? "own");
-}
-
-/** ÜS-4 — disiplin alt satırı ("KOD · Ad"); yeni kalemde disiplin yoksa boş. */
-function disciplineSubline(mode: WorkItemEditMode): string {
-  const discipline = mode.kind === "edit" ? mode.item.discipline : mode.discipline;
-  return discipline ? `${discipline.code} · ${discipline.name}` : "";
+  onPatch: (key: string, change: Partial<WorkItemFormState>) => void;
+  onCancel: (key: string) => void;
+  onSave: (key: string) => void;
 }
 
 /**
  * KIK:149-176 — SATIR İÇİ düzenleme / yeni satır (modal değil). Poz no salt okunur;
  * mevcut kalemin disiplini bu ekrandan değişmez (ÜS-5).
  */
-export function WorkItemEditRow({ mode, testId, catalogUnits, onCancel, onSaved }: WorkItemEditRowProps) {
-  const [initial] = useState(() => initialForm(mode));
-  const [form, setForm] = useState<WorkItemFormState>(initial);
-  const [hasTried, setHasTried] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const createItem = useCreateCatalogItem();
-  const updateItem = useUpdateCatalogItem();
-  const isSaving = createItem.isPending || updateItem.isPending;
-
-  useUnsavedChanges(isWorkItemFormDirty(initial, form), "İş kalemi");
-
-  const disciplineId = mode.kind === "edit" ? mode.item.discipline.id : (mode.discipline?.id ?? "");
-  const clientError = firstWorkItemError(form, disciplineId);
-  const shownError = serverError ?? (hasTried ? (clientError?.message ?? null) : null);
-  const errorField = hasTried ? clientError?.field : undefined;
-
-  function patch(change: Partial<WorkItemFormState>) {
-    setServerError(null);
-    setForm((current) => ({ ...current, ...change }));
-  }
-
-  async function save() {
-    setServerError(null);
-    if (clientError) {
-      setHasTried(true);
-      return;
-    }
-    try {
-      if (mode.kind === "new") {
-        onSaved(await createItem.mutateAsync(buildWorkItemCreateBody(form, disciplineId)));
-        return;
-      }
-      const body = buildWorkItemUpdateBody(initial, form);
-      if (Object.keys(body).length === 0) {
-        onCancel();
-        return;
-      }
-      onSaved(await updateItem.mutateAsync({ id: mode.item.id, body }));
-    } catch (error) {
-      setServerError(backendErrorMessage(error));
-    }
-  }
+export function WorkItemEditRow({
+  draft,
+  pozNo,
+  discipline,
+  testId,
+  catalogUnits,
+  onPatch,
+  onCancel,
+  onSave,
+}: WorkItemEditRowProps) {
+  const { form, isSaving } = draft;
+  const clientError = firstWorkItemError(form, discipline?.id ?? "");
+  const shownError = draft.serverError ?? (draft.hasTried ? (clientError?.message ?? null) : null);
+  const errorField = draft.hasTried ? clientError?.field : undefined;
+  const patch = (change: Partial<WorkItemFormState>) => onPatch(draft.key, change);
 
   const units = unitOptions(catalogUnits, form.uom);
-  const subline = disciplineSubline(mode);
+  const subline = discipline ? `${discipline.code} · ${discipline.name}` : "";
 
   return (
     <div role="rowgroup" className="wik-edit" data-testid={testId}>
       <div role="row" className="wik-grid wik-edit__grid">
         <div role="cell" className="wik-cell wik-cell--edit-poz">
-          {mode.kind === "edit" ? (
+          {pozNo !== null ? (
             <span className="wik-poz" data-testid="wik-poz">
-              {mode.item.poz_no}
+              {pozNo}
             </span>
           ) : (
             <span className="wik-poz wik-poz--pending">{POZ_PENDING_LABEL}</span>
@@ -203,10 +160,10 @@ export function WorkItemEditRow({ mode, testId, catalogUnits, onCancel, onSaved 
         )}
         </div>
         <div role="cell" className="wik-edit__actions">
-          <Button variant="secondary" size="sm" disabled={isSaving} onClick={onCancel}>
+          <Button variant="secondary" size="sm" disabled={isSaving} onClick={() => onCancel(draft.key)}>
             Vazgeç
           </Button>
-          <Button size="sm" disabled={isSaving} onClick={() => void save()}>
+          <Button size="sm" disabled={isSaving} onClick={() => onSave(draft.key)}>
             Kaydet
           </Button>
         </div>

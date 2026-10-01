@@ -6,10 +6,12 @@ import {
   emptyWorkItemForm,
   firstWorkItemError,
   isWorkItemFormDirty,
+  parseRefPriceInput,
   workItemFormFromItem,
   type WorkItemFormState,
 } from "./work-item-form";
 import { BETON, D_KAB, SIVA } from "./work-item-fixtures";
+import { formatPrice } from "./work-item-model";
 
 const VALID: WorkItemFormState = {
   name: "Kolon kalıbı",
@@ -168,5 +170,83 @@ describe("isWorkItemFormDirty", () => {
     expect(isWorkItemFormDirty(initial, { ...initial, name: "Başka" })).toBe(true);
     expect(isWorkItemFormDirty(initial, { ...initial, own: "subcon" })).toBe(true);
     expect(isWorkItemFormDirty(initial, { ...initial, refPrice: "" })).toBe(true);
+  });
+});
+
+describe("parseRefPriceInput — Türkçe kural: nokta binlik, virgül ondalık; belirsiz girdi REDDEDİLİR", () => {
+  const value = (raw: string) => {
+    const parsed = parseRefPriceInput(raw);
+    return parsed.kind === "ok" ? parsed.value : parsed.kind;
+  };
+
+  it("kullanıcı onaylı örnekler (birebir)", () => {
+    expect(value("28.500")).toBe("28500");
+    expect(value("28.500,75")).toBe("28500.75");
+    expect(value("1.234.567,8")).toBe("1234567.80");
+    expect(value("28,5")).toBe("28.50");
+    expect(value("28500")).toBe("28500");
+    expect(value("28.5")).toBe("ambiguous");
+    expect(value("1.50")).toBe("ambiguous");
+    expect(value("28.5000")).toBe("ambiguous");
+  });
+
+  it("noktalı gruplar (ilk hariç) TAM 3 hane olmalı; diğer her nokta kullanımı belirsiz", () => {
+    expect(value("1.234.567")).toBe("1234567");
+    expect(value("1234.567")).toBe("1234567");
+    expect(value("1.2.3")).toBe("ambiguous");
+    expect(value("28.")).toBe("ambiguous");
+    expect(value(".500")).toBe("ambiguous");
+    expect(value("1.234.5,00")).toBe("ambiguous");
+  });
+
+  it("boş / anlamsız / negatif / çift virgül → invalid", () => {
+    for (const raw of ["", "  ", "abc", "-5", "1,2,3", "28,", ",5", "1 000"]) expect(value(raw)).toBe("invalid");
+  });
+
+  it("virgüllü kesir en az 2 haneye tamamlanır; 2'yi aşan SIFIRLAR kayıpsız atılır, anlamlı hane atılmaz", () => {
+    expect(value("650,00")).toBe("650.00");
+    expect(value("1250,5000")).toBe("1250.50");
+    expect(value("1,234")).toBe("1.234");
+  });
+
+  it("hata önceliği (tek satır): belirsiz/anlamsız → 2 ondalık → 16 basamak", () => {
+    const message = (refPrice: string) => firstWorkItemError({ ...VALID, refPrice }, D_KAB.id)?.message;
+    expect(message("28.5")).toBe("Ondalık için virgül kullanın (ör. 28,50)");
+    expect(message("1.50")).toBe("Ondalık için virgül kullanın (ör. 28,50)");
+    expect(message("28.5000")).toBe("Ondalık için virgül kullanın (ör. 28,50)");
+    expect(message("x")).toBe("Referans fiyat girin");
+    expect(message("")).toBe("Referans fiyat girin");
+    expect(message("1,234")).toBe("En fazla 2 ondalık");
+    expect(message("12345678901234567")).toBe("En fazla 16 basamak");
+    expect(message("28.500")).toBeUndefined();
+  });
+
+  it("gövde (create) kayıpsız ondalık dize taşır", () => {
+    const body = (refPrice: string) => buildWorkItemCreateBody({ ...VALID, refPrice }, D_KAB.id).ref_price;
+    expect(body("28.500")).toBe("28500");
+    expect(body("28.500,75")).toBe("28500.75");
+    expect(body("1.234.567,8")).toBe("1234567.80");
+    expect(body("28,5")).toBe("28.50");
+  });
+
+  it("PATCH da aynı kuralı kullanır", () => {
+    const initial = workItemFormFromItem(BETON);
+    expect(buildWorkItemUpdateBody(initial, { ...initial, refPrice: "28.500" })).toEqual({ ref_price: "28500" });
+  });
+
+  it("A-s kuralı DEĞİŞMEDİ: nokta ondalıktır", () => {
+    expect(buildWorkItemCreateBody({ ...VALID, rate: "1.5" }, D_KAB.id).standard_unit_mhr).toBe("1.5");
+  });
+
+  it("gidiş-dönüş kayıpsız: görünüm (28.500,00) ve alan metni (28500,00) aynı sayı; değişmeden = istek YOK", () => {
+    for (const price of ["1250.50", "28500.00", "1234567890123456.78", "0.50", "7.00", "999.00", "1000.00"]) {
+      const form = workItemFormFromItem({ ...BETON, ref_price: price });
+      expect(form.refPrice.includes(".")).toBe(false);
+      expect(buildWorkItemUpdateBody(form, { ...form })).toEqual({});
+      expect(isWorkItemFormDirty(form, { ...form })).toBe(false);
+      expect(value(form.refPrice)).toBe(price);
+      // tablodaki görünüm metni de aynı sayıyı okur
+      expect(buildWorkItemUpdateBody(form, { ...form, refPrice: formatPrice(price) })).toEqual({});
+    }
   });
 });

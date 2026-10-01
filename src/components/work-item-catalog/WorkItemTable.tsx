@@ -2,39 +2,41 @@ import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 
 import { WorkItemEditRow } from "./WorkItemEditRow";
 import { WorkItemRow } from "./WorkItemRow";
+import { resolveNewDraftDiscipline, type WorkItemDraft } from "./work-item-drafts";
+import type { WorkItemFormState } from "./work-item-form";
 
-/** Yeni (henüz kaydedilmemiş) satır: sıra anahtarı + açıldığı andaki disiplin. */
-export interface NewWorkItemRow {
-  key: number;
-  discipline: WorkDisciplineRead | null;
-}
-
-interface WorkItemTableProps {
+export interface WorkItemTableProps {
+  /** Süzgeçten GEÇEN kalemler (taslağı olsa da olmasa da). */
   items: readonly WorkItemRead[];
-  newRows: readonly NewWorkItemRow[];
-  editingIds: ReadonlySet<string>;
+  /** Süzgeçten geçen YENİ satır taslakları (en üstte, KIK:247). */
+  newDrafts: readonly WorkItemDraft[];
+  /** Düzenleme taslakları kalem kimliğine göre; taslağı olan kalem düzenleme satırı olarak çizilir. */
+  editDrafts: ReadonlyMap<string, WorkItemDraft>;
+  disciplines: readonly WorkDisciplineRead[];
   now: Date;
   canWrite: boolean;
   catalogUnits: readonly string[];
   onEdit: (item: WorkItemRead) => void;
-  onCloseEdit: (id: string) => void;
-  onCloseNew: (key: number) => void;
-  onSaved: (saved: WorkItemRead) => void;
+  onPatch: (key: string, change: Partial<WorkItemFormState>) => void;
+  onCancel: (key: string) => void;
+  onSave: (key: string) => void;
 }
 
 /** KIK:128-181 — 9 kolon, `min-width:960px`, yatay kaydırma; yeni satırlar en üstte (KIK:247). */
 export function WorkItemTable({
   items,
-  newRows,
-  editingIds,
+  newDrafts,
+  editDrafts,
+  disciplines,
   now,
   canWrite,
   catalogUnits,
   onEdit,
-  onCloseEdit,
-  onCloseNew,
-  onSaved,
+  onPatch,
+  onCancel,
+  onSave,
 }: WorkItemTableProps) {
+  const rowHandlers = { catalogUnits, onPatch, onCancel, onSave };
   return (
     <div className="wik-scroll">
       <div role="table" aria-label="İş kalemleri" className="wik-table">
@@ -52,36 +54,31 @@ export function WorkItemTable({
           </div>
         </div>
         <div role="rowgroup">
-          {newRows.map((row) => (
+          {newDrafts.map((draft) => (
             <WorkItemEditRow
-              key={`new-${row.key}`}
-              mode={{ kind: "new", discipline: row.discipline }}
-              testId={`wik-edit-new-${row.key}`}
-              catalogUnits={catalogUnits}
-              onCancel={() => onCloseNew(row.key)}
-              onSaved={(saved) => {
-                onCloseNew(row.key);
-                onSaved(saved);
-              }}
+              key={draft.key}
+              draft={draft}
+              pozNo={null}
+              discipline={resolveNewDraftDiscipline(draft, disciplines)}
+              testId={`wik-edit-${draft.key}`}
+              {...rowHandlers}
             />
           ))}
-          {items.map((item) =>
-            editingIds.has(item.id) ? (
+          {items.map((item) => {
+            const draft = editDrafts.get(item.id);
+            return draft ? (
               <WorkItemEditRow
                 key={item.id}
-                mode={{ kind: "edit", item }}
+                draft={draft}
+                pozNo={item.poz_no}
+                discipline={item.discipline}
                 testId={`wik-edit-${item.id}`}
-                catalogUnits={catalogUnits}
-                onCancel={() => onCloseEdit(item.id)}
-                onSaved={(saved) => {
-                  onCloseEdit(item.id);
-                  onSaved(saved);
-                }}
+                {...rowHandlers}
               />
             ) : (
               <WorkItemRow key={item.id} item={item} now={now} canWrite={canWrite} onEdit={onEdit} />
-            ),
-          )}
+            );
+          })}
         </div>
       </div>
     </div>

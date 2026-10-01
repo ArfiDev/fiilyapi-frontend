@@ -50,10 +50,17 @@ export function filterWorkItems(items: readonly WorkItemRead[], { query, discipl
   );
 }
 
-/** KIK:277 — çip sayaçları TÜM katalogdan, istemcide. */
-export function countByDiscipline(items: readonly WorkItemRead[]): ReadonlyMap<string, number> {
+/**
+ * KIK:277 — çip sayaçları TÜM katalogdan, istemcide; henüz kaydedilmemiş yeni satırlar da
+ * listenin parçasıdır (`extraDisciplineIds`: her yeni satırın disiplin kimliği).
+ */
+export function countByDiscipline(
+  items: readonly WorkItemRead[],
+  extraDisciplineIds: readonly string[] = [],
+): ReadonlyMap<string, number> {
   const counts = new Map<string, number>();
-  for (const item of items) counts.set(item.discipline.id, (counts.get(item.discipline.id) ?? 0) + 1);
+  const ids = [...items.map((item) => item.discipline.id), ...extraDisciplineIds];
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
   return counts;
 }
 
@@ -110,10 +117,14 @@ export interface TabCounts {
   units: number;
 }
 
-/** ÜS-9 — sekme sayaçları; "İçe aktarım geçmişi" sayaçsızdır. */
-export function tabCounts(items: readonly WorkItemRead[], disciplines: readonly WorkDisciplineRead[]): TabCounts {
+/** ÜS-9 — sekme sayaçları; "İçe aktarım geçmişi" sayaçsızdır. `newRowCount`: kaydedilmemiş yeni satırlar (KIK:279). */
+export function tabCounts(
+  items: readonly WorkItemRead[],
+  disciplines: readonly WorkDisciplineRead[],
+  newRowCount = 0,
+): TabCounts {
   return {
-    items: items.length,
+    items: items.length + newRowCount,
     disciplines: disciplines.length,
     units: new Set(items.map((item) => item.uom)).size,
   };

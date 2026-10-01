@@ -103,6 +103,18 @@ describe("biçimleyiciler — kayıpsız, tr-TR", () => {
   });
 });
 
+describe("kaydedilmemiş yeni satırlar sayaçlara girer (KIK:277-279)", () => {
+  it("countByDiscipline ek disiplin kimliklerini sayar", () => {
+    const counts = countByDiscipline([BETON, SIVA], ["d-kab", "d-kab", "d-duv"]);
+    expect(counts.get("d-kab")).toBe(3);
+    expect(counts.get("d-duv")).toBe(2);
+  });
+
+  it("tabCounts kalem sayacına yeni satırları ekler; birim/disiplin sayacı değişmez", () => {
+    expect(tabCounts([BETON, DEMIR, SIVA], [D_KAB, D_DUV], 2)).toEqual({ items: 5, disciplines: 2, units: 3 });
+  });
+});
+
 describe("tabCounts — ÜS-9 sayaçları", () => {
   it("İş Kalemleri = kalem sayısı · Disiplinler = disiplin sayısı · Birimler = farklı birim", () => {
     expect(tabCounts([BETON, DEMIR, SIVA], [D_KAB, D_DUV])).toEqual({ items: 3, disciplines: 2, units: 3 });

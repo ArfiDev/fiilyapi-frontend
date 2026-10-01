@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { backendClient } from "@/lib/api/client";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { BETON, DEMIR, D_DUV, D_KAB, SIVA } from "./work-item-fixtures";
-import { fail, getCalls, mockGets, mockItemsFailure, ok, renderScreen } from "./work-item-test-utils";
+import { fail, getCalls, mockGets, mockItemsFailure, ok, renderScreen, type ApiState } from "./work-item-test-utils";
 
 const perm = vi.hoisted(() => ({ level: "full" as string | undefined }));
 const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
@@ -429,5 +429,317 @@ describe("düzenleme (satır içi)", () => {
     await user.click(row.getByRole("button", { name: "Kaydet" }));
     expect(await row.findByText("Bu işlem için yetkiniz yok")).toBeInTheDocument();
     expect(screen.getByTestId("wik-edit-i-bet")).toBeInTheDocument();
+  });
+});
+
+/** Çözülmesi testin elinde bir söz (yarım kalmış istek). */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+describe("F1.3.1-1 · taslaklar EKRAN düzeyindedir (süzgeç satırı düşürse de taslak yaşar)", () => {
+  it("Düzenle → Tarif değiştir → DUV çipi → Tüm disiplinler → satır AÇIK, Tarif değişmiş, kirli kayıt var", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+    const tarif = within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif");
+    await user.clear(tarif);
+    await user.type(tarif, "Beton döküm C35");
+
+    await user.click(screen.getByRole("button", { name: /Duvar & Sıva/ }));
+    expect(screen.queryByTestId("wik-edit-i-bet")).not.toBeInTheDocument();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: /Tüm disiplinler/ }));
+    const reopened = within(screen.getByTestId("wik-edit-i-bet"));
+    expect(reopened.getByLabelText("Tarif")).toHaveValue("Beton döküm C35");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("arama satırı düşürürken de aynı: taslak ve kirli kayıt korunur", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+    const tarif = within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif");
+    await user.type(tarif, "x");
+    await user.type(screen.getByPlaceholderText("Poz no ya da tarif ara"), "duv");
+    expect(screen.queryByTestId("wik-edit-i-bet")).not.toBeInTheDocument();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await user.clear(screen.getByPlaceholderText("Poz no ya da tarif ara"));
+    expect(within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif")).toHaveValue("Beton dökümx");
+  });
+
+  it("yeni satır taslağı da çip değişince silinmez (KAB'a açıldı → DUV çipi → Tüm)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: "+ Kalem Ekle" }));
+    await user.type(within(screen.getByTestId("wik-edit-new-1")).getByLabelText("Tarif"), "Kolon");
+    await user.click(screen.getByRole("button", { name: /Duvar & Sıva/ }));
+    expect(screen.queryByTestId("wik-edit-new-1")).not.toBeInTheDocument();
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await user.click(screen.getByRole("button", { name: /Tüm disiplinler/ }));
+    expect(within(screen.getByTestId("wik-edit-new-1")).getByLabelText("Tarif")).toHaveValue("Kolon");
+  });
+
+  it("kayıt sürerken süzgeç değişirse 409 metni KAYBOLMAZ", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<never>();
+    vi.mocked(backendClient.PATCH).mockReturnValue(pending.promise as never);
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+    const tarif = within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif");
+    await user.type(tarif, "x");
+    await user.click(within(screen.getByTestId("wik-edit-i-bet")).getByRole("button", { name: "Kaydet" }));
+    await user.click(screen.getByRole("button", { name: /Duvar & Sıva/ }));
+
+    await act(async () => {
+      pending.resolve(fail(409, "Bu disiplinde aynı ad ve birimle bir iş kalemi zaten var"));
+    });
+    await user.click(screen.getByRole("button", { name: /Tüm disiplinler/ }));
+    const row = within(screen.getByTestId("wik-edit-i-bet"));
+    expect(row.getByText("Bu disiplinde aynı ad ve birimle bir iş kalemi zaten var")).toBeInTheDocument();
+    expect(row.getByLabelText("Tarif")).toHaveValue("Beton dökümx");
+    expect(row.getByRole("button", { name: "Kaydet" })).toBeEnabled();
+  });
+
+  it("kayıt süren satırda Kaydet/Vazgeç pasiftir", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<never>();
+    vi.mocked(backendClient.PATCH).mockReturnValue(pending.promise as never);
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+    const row = within(screen.getByTestId("wik-edit-i-bet"));
+    await user.type(row.getByLabelText("Tarif"), "x");
+    await user.click(row.getByRole("button", { name: "Kaydet" }));
+    expect(row.getByRole("button", { name: "Kaydet" })).toBeDisabled();
+    expect(row.getByRole("button", { name: "Vazgeç" })).toBeDisabled();
+    await act(async () => {
+      pending.resolve(ok({ ...BETON, name: "Beton dökümx" }));
+    });
+  });
+});
+
+describe("F1.3.1-3 · arka plan tazelemesi hatası veri varken tabloyu SİLMEZ", () => {
+  it("satır açıkken GET 500 → satır + taslak durur, tablonun üstünde onaylı metin + Tekrar dene (role=alert YOK)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok({ ...DEMIR, name: "Demir bağlama 2" }));
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+    await user.type(within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif"), "x");
+    await user.click(screen.getByRole("button", { name: /KAB-0002.*düzenle/i }));
+    const demir = within(screen.getByTestId("wik-edit-i-dem"));
+    await user.type(demir.getByLabelText("Tarif"), " 2");
+
+    asGet().mockImplementation((async (path: string) => {
+      if (path === "/catalog/disciplines") return ok({ items: [D_KAB, D_DUV] });
+      return fail(500, "Sunucu hatası");
+    }) as never);
+    await user.click(demir.getByRole("button", { name: "Kaydet" }));
+
+    expect(await screen.findByText("Katalog yüklenemedi")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tekrar dene" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif")).toHaveValue("Beton dökümx");
+    expect(screen.getByRole("table", { name: "İş kalemleri" })).toBeInTheDocument();
+  });
+
+  it("Tekrar dene her iki sorguyu yeniden çeker ve band kalkar", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok({ ...DEMIR }));
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: /KAB-0002.*düzenle/i }));
+    asGet().mockImplementation((async () => fail(500, "Sunucu hatası")) as never);
+    await user.type(within(screen.getByTestId("wik-edit-i-dem")).getByLabelText("Tarif"), "!");
+    await user.click(within(screen.getByTestId("wik-edit-i-dem")).getByRole("button", { name: "Kaydet" }));
+    await screen.findByText("Katalog yüklenemedi");
+
+    mockGets({ disciplines: [D_KAB, D_DUV], items: [BETON, DEMIR, SIVA] });
+    const before = getCalls().length;
+    await user.click(screen.getByRole("button", { name: "Tekrar dene" }));
+    await waitFor(() => expect(screen.queryByText("Katalog yüklenemedi")).not.toBeInTheDocument());
+    expect(getCalls().slice(before).sort()).toEqual(["/catalog/disciplines", "/catalog/items"]);
+  });
+
+  it("veri HİÇ yokken tam kutu (eski davranış) korunur", async () => {
+    mockItemsFailure(500, "Sunucu hatası", [D_KAB]);
+    renderScreen();
+    expect(await screen.findByText("Katalog yüklenemedi")).toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: "İş kalemleri" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Katalog yüklenemedi")).toHaveLength(1);
+  });
+});
+
+function asGet() {
+  return vi.mocked(backendClient.GET);
+}
+
+describe("F1.3.1-4 · disiplinler yüklenmeden '+ Kalem Ekle' pasif; disiplin hatası bandı", () => {
+  it("disiplinler bekliyor → buton pasif; gelince etkin ve satır disiplinli", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<never>();
+    asGet().mockImplementation((async (path: string) => {
+      if (path === "/catalog/disciplines") return pending.promise;
+      return ok({ items: [BETON, DEMIR, SIVA] });
+    }) as never);
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    expect(screen.getByRole("button", { name: "+ Kalem Ekle" })).toBeDisabled();
+
+    await act(async () => {
+      pending.resolve(ok({ items: [D_KAB, D_DUV] }));
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "+ Kalem Ekle" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "+ Kalem Ekle" }));
+    const row = within(screen.getByTestId("wik-edit-new-1"));
+    expect(row.getByText("KAB · Kaba İnşaat")).toBeInTheDocument();
+    await user.type(row.getByLabelText("Tarif"), "x");
+    await user.type(row.getByLabelText("Referans fiyat"), "1");
+    await user.type(row.getByLabelText("A-s / birim"), "1");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok({ ...BETON, id: "i-n", poz_no: "KAB-0003" }, 201));
+    await user.click(row.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(backendClient.POST).toHaveBeenCalled());
+    expect(postBody().discipline_id).toBe("d-kab");
+    expect(screen.queryByText("Önce disiplin ekleyin")).not.toBeInTheDocument();
+  });
+
+  it("boş katalogdaki '+ Kalem Ekle' de disiplin yüklenene dek pasif", async () => {
+    asGet().mockImplementation((async (path: string) => {
+      if (path === "/catalog/disciplines") return new Promise(() => undefined);
+      return ok({ items: [] });
+    }) as never);
+    renderScreen();
+    await screen.findByText("Katalog boş");
+    for (const button of screen.getAllByRole("button", { name: "+ Kalem Ekle" })) expect(button).toBeDisabled();
+  });
+
+  it("disiplin isteği hata verirse band (aynı onaylı metin) + Tekrar dene; buton pasif; kalem tablosu durur", async () => {
+    const user = userEvent.setup();
+    asGet().mockImplementation((async (path: string) => {
+      if (path === "/catalog/disciplines") return fail(500, "Sunucu hatası");
+      return ok({ items: [BETON, DEMIR, SIVA] });
+    }) as never);
+    renderScreen();
+    expect(await screen.findByText("Katalog yüklenemedi")).toBeInTheDocument();
+    expect(screen.getByText("Beton döküm")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Kalem Ekle" })).toBeDisabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    mockGets({ disciplines: [D_KAB, D_DUV], items: [BETON, DEMIR, SIVA] });
+    await user.click(screen.getByRole("button", { name: "Tekrar dene" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "+ Kalem Ekle" })).toBeEnabled());
+    expect(screen.queryByText("Katalog yüklenemedi")).not.toBeInTheDocument();
+  });
+});
+
+describe("F1.3.1-12 · yeni satır listenin PARÇASIDIR (KIK:244, :277-279)", () => {
+  it("sayaçlar yeni satırı sayar: 'N kalem', çip, 'Tüm', sekme", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: "+ Kalem Ekle" }));
+    expect(screen.getByTestId("wik-count")).toHaveTextContent("4 kalem");
+    expect(screen.getByRole("button", { name: /Tüm disiplinler/ })).toHaveTextContent("4");
+    expect(screen.getByRole("button", { name: /Kaba İnşaat/ })).toHaveTextContent("3");
+    expect(screen.getByRole("button", { name: /Duvar & Sıva/ })).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /^İş Kalemleri/ })).toHaveTextContent("4");
+    await user.click(within(screen.getByTestId("wik-edit-new-1")).getByRole("button", { name: "Vazgeç" }));
+    expect(screen.getByTestId("wik-count")).toHaveTextContent("3 kalem");
+    expect(screen.getByRole("button", { name: /^İş Kalemleri/ })).toHaveTextContent("3");
+  });
+
+  it("çip süzgeci yeni satıra da uygulanır: KAB'a açılan satır DUV çipinde görünmez, 1 kalem", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: "+ Kalem Ekle" }));
+    await user.click(screen.getByRole("button", { name: /Duvar & Sıva/ }));
+    expect(screen.queryByTestId("wik-edit-new-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("wik-count")).toHaveTextContent("1 kalem");
+    await user.click(screen.getByRole("button", { name: /Kaba İnşaat/ }));
+    expect(screen.getByTestId("wik-edit-new-1")).toBeInTheDocument();
+    expect(screen.getByTestId("wik-count")).toHaveTextContent("3 kalem");
+  });
+
+  it("arama yeni satırın yazılan tarifine uygulanır (boş tarif eşleşmez); '+ Kalem Ekle' aramayı temizler", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    const search = screen.getByPlaceholderText("Poz no ya da tarif ara");
+    await user.type(search, "duv");
+    await user.click(screen.getByRole("button", { name: "+ Kalem Ekle" }));
+    expect(search).toHaveValue("");
+    await user.type(within(screen.getByTestId("wik-edit-new-1")).getByLabelText("Tarif"), "Kolon kalıbı");
+    await user.type(search, "kolon");
+    expect(screen.getByTestId("wik-edit-new-1")).toBeInTheDocument();
+    expect(screen.getByTestId("wik-count")).toHaveTextContent("1 kalem");
+    await user.clear(search);
+    await user.type(search, "beton");
+    expect(screen.queryByTestId("wik-edit-new-1")).not.toBeInTheDocument();
+  });
+
+  it("kayıt sonrası sayaç çifte saymaz (taslak düşer, sunucu satırı gelir)", async () => {
+    const user = userEvent.setup();
+    const state: ApiState = { disciplines: [D_KAB, D_DUV], items: [BETON, DEMIR, SIVA] };
+    mockGets(state);
+    vi.mocked(backendClient.POST).mockImplementation((async () => {
+      const created = { ...BETON, id: "i-new", poz_no: "KAB-0003", name: "Kolon kalıbı" };
+      state.items = [...state.items, created];
+      return ok(created, 201);
+    }) as never);
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: "+ Kalem Ekle" }));
+    const row = within(screen.getByTestId("wik-edit-new-1"));
+    await user.type(row.getByLabelText("Tarif"), "Kolon kalıbı");
+    await user.type(row.getByLabelText("Referans fiyat"), "650,00");
+    await user.type(row.getByLabelText("A-s / birim"), "1");
+    await user.click(row.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(screen.getByTestId("wik-count")).toHaveTextContent("4 kalem"));
+    expect(screen.getByRole("button", { name: /^İş Kalemleri/ })).toHaveTextContent("4");
+    expect(screen.queryByTestId("wik-edit-new-1")).not.toBeInTheDocument();
+  });
+});
+
+describe("F1.3.1-13 · aynı bildirim iki kez gelirse 2800 ms sayacı sıfırlanır (KIK:237)", () => {
+  it("ikinci aynı toast, ilkinin zamanlayıcısıyla erken kapanmaz", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok({ ...BETON }));
+    renderScreen();
+    await screen.findByText("Beton döküm");
+
+    const saveOnce = async () => {
+      await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+      const row = within(screen.getByTestId("wik-edit-i-bet"));
+      await user.clear(row.getByLabelText("Tarif"));
+      await user.type(row.getByLabelText("Tarif"), "Beton");
+      await user.click(row.getByRole("button", { name: "Kaydet" }));
+      await screen.findByRole("status");
+    };
+    await saveOnce();
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    await saveOnce();
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("KAB-0001 · Beton döküm kaydedildi");
+    await act(async () => {
+      vi.advanceTimersByTime(1400);
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

@@ -296,3 +296,55 @@ describe("disiplin KODU değişimi (T22) — EV ucundan", () => {
     expect((await listItems()).map((item) => item.poz_no)).toEqual(before);
   });
 });
+
+// TKL-F1.3.1-8 · KAT (EV) yolu da gerçek backend'in UZUN `CATALOG_ITEM_TAKEN_AS` metnini döner
+// (`earned_value/catalog_service.py` aynı sabiti kullanır); kısa eski metin gerçeği saklıyordu.
+describe("KAT 409 metni gerçek backend'le aynı (VAR OLAN kaydın yazımı gösterilir)", () => {
+  const taken = (name: string, uom: string) =>
+    `Ad: bu disiplinde aynı ad ve birimle bir iş tipi zaten var — «${name}» (${uom}). ` +
+    "Büyük/küçük harf, İ/I ve boşluk farkı ayrı iş tipi sayılmaz";
+
+  it("POST /earned-value/catalog tekrarı → uzun metin, VAR OLAN kaydın yazımıyla", async () => {
+    const existing = await create(KAB, "EV tekrar Deneme");
+    expect(existing.status).toBe(201);
+    const duplicate = await call<{ detail: string }>("POST", "/earned-value/catalog", {
+      discipline_id: KAB,
+      name: " ev TEKRAR deneme ",
+      uom: "ADET",
+      standard_unit_mhr: "1",
+      default_contractor_type: "own",
+    });
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.json.detail).toBe(taken("EV tekrar Deneme", "adet"));
+  });
+
+  it("PATCH /earned-value/catalog/{id} çakışması → aynı uzun metin", async () => {
+    const other = await create(KAB, "EV çakışma deneme");
+    const response = await call<{ detail: string }>("PATCH", `/earned-value/catalog/${other.json.id}`, {
+      name: "ev tekrar deneme",
+      uom: "adet",
+    });
+    expect(response.status).toBe(409);
+    expect(response.json.detail).toBe(taken("EV tekrar Deneme", "adet"));
+  });
+});
+
+// TKL-F1.3.1-9 · `ref_price` KAYIPSIZ ondalık dize (`Number(raw).toFixed(2)` 16+2 haneli fiyatı bozuyordu).
+describe("ref_price kayıpsız ondalık dize olarak saklanır", () => {
+  it("16 tam + 2 kesir hane aynen; tamsayı '.00'a, tek kesir hane '0'a tamamlanır", async () => {
+    const big = await create(KAB, "Kayıpsız fiyat A", { ref_price: "1234567890123456.78" });
+    expect(big.json.ref_price).toBe("1234567890123456.78");
+    expect((await create(KAB, "Kayıpsız fiyat B", { ref_price: "28500" })).json.ref_price).toBe("28500.00");
+    expect((await create(KAB, "Kayıpsız fiyat C", { ref_price: "28.5" })).json.ref_price).toBe("28.50");
+    expect((await create(KAB, "Kayıpsız fiyat D", { ref_price: "0.05" })).json.ref_price).toBe("0.05");
+  });
+
+  it("PATCH de kayıpsız; aynı büyük değer tekrar gönderilince price_updated_at DEĞİŞMEZ", async () => {
+    const item = await byName("Kayıpsız fiyat A");
+    const same = await call<WorkItemRead>("PATCH", `/catalog/items/${item.id}`, { ref_price: "1234567890123456.78" });
+    expect(same.json.ref_price).toBe("1234567890123456.78");
+    expect(same.json.price_updated_at).toBe(item.price_updated_at);
+    const near = await call<WorkItemRead>("PATCH", `/catalog/items/${item.id}`, { ref_price: "1234567890123456.79" });
+    expect(near.json.ref_price).toBe("1234567890123456.79");
+  });
+});

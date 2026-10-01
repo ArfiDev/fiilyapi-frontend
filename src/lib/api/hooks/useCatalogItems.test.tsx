@@ -12,6 +12,7 @@ import {
   useUpdateCatalogItem,
 } from "./useCatalogItems";
 import { EV_CATALOG_QUERY_KEY } from "./useEvCatalog";
+import * as keys from "./catalog-query-keys";
 import { backendClient } from "@/lib/api/client";
 import { BackendError } from "@/lib/api/unwrap";
 import type { WorkDisciplineRead, WorkItemCreate, WorkItemRead } from "@/lib/api/models";
@@ -187,5 +188,43 @@ describe("useUpdateCatalogItem", () => {
     const keys = spy.mock.calls.map((call) => (call[0] as { queryKey: unknown[] }).queryKey);
     expect(keys).toContainEqual(["catalog-items"]);
     expect(keys).toContainEqual([EV_CATALOG_QUERY_KEY]);
+  });
+});
+
+// TKL-F1.3.1-5/6 · anahtar sabitleri TEK dosyada; çapraz geçersizleme döngüsüz.
+describe("anahtar sabitleri catalog-query-keys'te tekildir", () => {
+  it("useCatalogItems aynı sabitleri yeniden ihraç eder", () => {
+    expect(CATALOG_DISCIPLINES_QUERY_KEY).toBe(keys.CATALOG_DISCIPLINES_QUERY_KEY);
+    expect(CATALOG_ITEMS_QUERY_KEY).toBe(keys.CATALOG_ITEMS_QUERY_KEY);
+    expect(keys.EV_DISCIPLINES_QUERY_KEY).toBe("ev-disciplines");
+  });
+});
+
+describe("çekirdek katalog yazmaları disiplin listesini (ev-disciplines) tazeler", () => {
+  it("ekleme ve güncelleme", async () => {
+    const spy = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(ITEM, 201));
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok(ITEM));
+    const create = renderHook(() => useCreateCatalogItem(), { wrapper });
+    const update = renderHook(() => useUpdateCatalogItem(), { wrapper });
+    act(() =>
+      create.result.current.mutate({
+        discipline_id: "d-kab",
+        name: "X",
+        uom: "m",
+        ref_price: "1",
+        standard_unit_mhr: "1",
+        default_contractor_type: "own",
+      }),
+    );
+    act(() => update.result.current.mutate({ id: "i-bet", body: { name: "Y" } }));
+    await waitFor(() => {
+      expect(create.result.current.isSuccess).toBe(true);
+      expect(update.result.current.isSuccess).toBe(true);
+    });
+    const calls = spy.mock.calls.filter(
+      ([filters]) => JSON.stringify(filters) === JSON.stringify({ queryKey: [keys.EV_DISCIPLINES_QUERY_KEY] }),
+    );
+    expect(calls).toHaveLength(2);
   });
 });

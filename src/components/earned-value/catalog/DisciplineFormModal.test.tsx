@@ -79,6 +79,14 @@ describe("DisciplineFormModal — kod değişimi uyarısı", () => {
     expect(screen.getByText(warning(6))).toBeInTheDocument();
   });
 
+  it("uyarı role=\"alert\" BASMAZ (dinamik bilgi notu: status) — ekran okuyucuyu bölmez", () => {
+    renderEdit(KAB);
+    fireEvent.change(screen.getByLabelText("Kod"), { target: { value: "KABX" } });
+    const notice = screen.getByText(warning(6)).closest(".alert");
+    expect(notice).toHaveAttribute("role", "status");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("kod değişmediyse (eski değere dönüldüyse) uyarı yok", () => {
     renderEdit(DUV);
     fireEvent.change(screen.getByLabelText("Kod"), { target: { value: "DUVX" } });

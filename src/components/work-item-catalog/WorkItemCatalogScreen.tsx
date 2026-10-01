@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui";
@@ -17,7 +17,9 @@ import { WorkItemCatalogTabs } from "./WorkItemCatalogTabs";
 import { WorkItemDisciplineChips } from "./WorkItemDisciplineChips";
 import { WorkItemLegend } from "./WorkItemLegend";
 import { WorkItemSearchBar } from "./WorkItemSearchBar";
-import { WorkItemTable, type NewWorkItemRow } from "./WorkItemTable";
+import { WorkItemTable, type WorkItemTableProps } from "./WorkItemTable";
+import { useWorkItemDrafts } from "./useWorkItemDrafts";
+import { filterNewDrafts, isNewDraft, type WorkItemDraft } from "./work-item-drafts";
 import { countByDiscipline, filterWorkItems, sortByPozNo, tabCounts } from "./work-item-model";
 import "./work-item-catalog.css";
 
@@ -55,10 +57,8 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
 
   const [query, setQuery] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [editingIds, setEditingIds] = useState<ReadonlySet<string>>(new Set());
-  const [newRows, setNewRows] = useState<readonly NewWorkItemRow[]>([]);
-  const [newSequence, setNewSequence] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
+  /** `id` her bildirimde artar → AYNI metin tekrar gelse de 2800 ms sayacı sıfırlanır (KIK:237). */
+  const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
 
   useEffect(() => {
     if (toast === null) return;
@@ -66,46 +66,49 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  const disciplines: readonly WorkDisciplineRead[] = useMemo(
+    () =>
+      [...(disciplineQuery.data ?? [])].sort(
+        (a, b) => a.sort_order - b.sort_order || a.code.localeCompare(b.code, "tr-TR"),
+      ),
+    [disciplineQuery.data],
+  );
+  const drafts = useWorkItemDrafts({
+    disciplines,
+    onSaved: (saved) => setToast((current) => ({ text: `${saved.poz_no} · ${saved.name} kaydedildi`, id: (current?.id ?? 0) + 1 })),
+  });
+
   if (isForbidden(catalog.error)) return <AccessDenied />;
 
   const items = catalog.data ?? [];
-  const disciplines: readonly WorkDisciplineRead[] = [...(disciplineQuery.data ?? [])].sort(
-    (a, b) => a.sort_order - b.sort_order || a.code.localeCompare(b.code, "tr-TR"),
+  const allNewDrafts = drafts.drafts.filter(isNewDraft);
+  const editDrafts: ReadonlyMap<string, WorkItemDraft> = new Map(
+    drafts.drafts.filter((draft) => !isNewDraft(draft)).map((draft) => [draft.key, draft]),
   );
-  const counts = countByDiscipline(items);
-  const visible = sortByPozNo(filterWorkItems(items, { query, disciplineId: activeId }));
+  const filter = { query, disciplineId: activeId };
+  // KIK:244, :277-279 — yeni satırlar listenin parçası: süzgece, "N kalem"e, çip ve sekme sayaçlarına girer.
+  const visibleNew = filterNewDrafts(allNewDrafts, filter);
+  const counts = countByDiscipline(items, allNewDrafts.map((draft) => draft.disciplineId));
+  const visible = sortByPozNo(filterWorkItems(items, filter));
   const catalogUnits = Array.from(new Set(items.map((item) => item.uom)));
+  const canAddRow = disciplineQuery.data !== undefined;
 
   function openNew() {
-    // KIK:285 — aktif çipin disiplini, "Tüm disiplinler"de İLK disiplin (sessizce).
-    const discipline = disciplines.find((d) => d.id === activeId) ?? disciplines[0] ?? null;
-    const key = newSequence + 1;
-    setNewSequence(key);
-    setNewRows((current) => [{ key, discipline }, ...current]);
+    // KIK:285 — aktif çipin disiplini, "Tüm disiplinler"de İLK disiplin (sessizce); yalnız KİMLİĞİ saklanır.
+    drafts.openNew(disciplines.find((d) => d.id === activeId) ?? disciplines[0] ?? null);
     setQuery("");
   }
 
-  function openEdit(item: WorkItemRead) {
-    setEditingIds((current) => new Set(current).add(item.id));
-  }
-
-  function closeEdit(id: string) {
-    setEditingIds((current) => new Set([...current].filter((openId) => openId !== id)));
-  }
-
-  function closeNew(key: number) {
-    setNewRows((current) => current.filter((row) => row.key !== key));
-  }
-
-  function handleSaved(saved: WorkItemRead) {
-    setToast(`${saved.poz_no} · ${saved.name} kaydedildi`);
+  function retryLoad() {
+    void catalog.refetch();
+    void disciplineQuery.refetch();
   }
 
   const readOnlyText = canWrite ? "" : readOnlyMessage(level, scope.isRestricted);
 
   return (
     <div className="wik">
-      <WorkItemCatalogTabs counts={catalog.data ? tabCounts(items, disciplines) : null} />
+      <WorkItemCatalogTabs counts={catalog.data ? tabCounts(items, disciplines, allNewDrafts.length) : null} />
 
       <header className="wik__head">
         <div className="wik__titles">
@@ -121,7 +124,11 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
           <Button variant="secondary" disabled title={EXCEL_SOON_TITLE}>
             Excel&apos;den İçe Aktar
           </Button>
-          {canWrite && <Button onClick={openNew}>+ Kalem Ekle</Button>}
+          {canWrite && (
+            <Button onClick={openNew} disabled={!canAddRow}>
+              + Kalem Ekle
+            </Button>
+          )}
         </div>
       </header>
 
@@ -134,7 +141,7 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
 
       {toast && (
         <div className="wik-toast" role="status">
-          {toast}
+          {toast.text}
         </div>
       )}
 
@@ -142,29 +149,35 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
         <WorkItemDisciplineChips
           disciplines={disciplines}
           counts={counts}
-          total={items.length}
+          total={items.length + allNewDrafts.length}
           activeId={activeId}
           onChange={setActiveId}
           canWrite={canWrite}
         />
-        <WorkItemSearchBar query={query} onQueryChange={setQuery} count={visible.length} />
+        <WorkItemSearchBar query={query} onQueryChange={setQuery} count={visible.length + visibleNew.length} />
         <WorkItemCatalogBody
           catalog={catalog}
+          hasDisciplineError={disciplineQuery.isError}
+          isRetrying={catalog.isFetching || disciplineQuery.isFetching}
+          onRetry={retryLoad}
           isRestricted={scope.isRestricted}
           restrictedNames={scope.names}
           canWrite={canWrite}
+          canAddRow={canAddRow}
           onNew={openNew}
+          newDraftCount={allNewDrafts.length}
           table={{
             now: new Date(),
             items: visible,
-            newRows,
-            editingIds,
+            newDrafts: visibleNew,
+            editDrafts,
+            disciplines,
             canWrite,
             catalogUnits,
-            onEdit: openEdit,
-            onCloseEdit: closeEdit,
-            onCloseNew: closeNew,
-            onSaved: handleSaved,
+            onEdit: drafts.openEdit,
+            onPatch: drafts.patch,
+            onCancel: drafts.cancel,
+            onSave: (key) => void drafts.save(key),
           }}
         />
         <WorkItemLegend />
@@ -173,43 +186,61 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
   );
 }
 
-type TableProps = Parameters<typeof WorkItemTable>[0];
-
 interface WorkItemCatalogBodyProps {
   catalog: ReturnType<typeof useCatalogItems>;
+  /** Disiplin isteği hata verdi (kalem verisi olsa da bant gösterilir). */
+  hasDisciplineError: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   isRestricted: boolean;
   restrictedNames: string[];
   canWrite: boolean;
+  /** Disiplinler yüklendi mi — yüklenmeden satır eklenmez. */
+  canAddRow: boolean;
   onNew: () => void;
-  table: TableProps;
+  /** Süzgeçten bağımsız TÜM yeni satır taslakları (boş katalogda tablo açık kalsın). */
+  newDraftCount: number;
+  table: WorkItemTableProps;
+}
+
+/** "Katalog yüklenemedi" + "Tekrar dene" — tam kutu (veri yok) ve veri varken BANT aynı onaylı metni kullanır. */
+function LoadFailure({ isRetrying, onRetry }: { isRetrying: boolean; onRetry: () => void }) {
+  return (
+    <div className="wik-state">
+      <p>Katalog yüklenemedi</p>
+      <Button variant="secondary" size="sm" onClick={onRetry} disabled={isRetrying}>
+        Tekrar dene
+      </Button>
+    </div>
+  );
 }
 
 /** KIK:128-181 hâl varyantları: yükleniyor · hata · boş · filtre boş · tablo. */
-function WorkItemCatalogBody({
-  catalog,
+function WorkItemCatalogBody(props: WorkItemCatalogBodyProps) {
+  const { catalog, hasDisciplineError, isRetrying, onRetry } = props;
+  if (catalog.isLoading) return <p className="wik-state">Katalog yükleniyor</p>;
+  // Tam kutu YALNIZ veri yokken; veri varken (arka plan tazelemesi / disiplin hatası) tablo ve taslaklar kalır.
+  if (!catalog.data) return <LoadFailure isRetrying={isRetrying} onRetry={onRetry} />;
+  const hasBand = catalog.isError || hasDisciplineError;
+  return (
+    <>
+      {hasBand && <LoadFailure isRetrying={isRetrying} onRetry={onRetry} />}
+      <WorkItemCatalogRows {...props} data={catalog.data} />
+    </>
+  );
+}
+
+function WorkItemCatalogRows({
+  data,
   isRestricted,
   restrictedNames,
   canWrite,
+  canAddRow,
   onNew,
+  newDraftCount,
   table,
-}: WorkItemCatalogBodyProps) {
-  if (catalog.isLoading) return <p className="wik-state">Katalog yükleniyor</p>;
-  if (catalog.isError || !catalog.data) {
-    return (
-      <div className="wik-state">
-        <p>Katalog yüklenemedi</p>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => void catalog.refetch()}
-          disabled={catalog.isFetching}
-        >
-          Tekrar dene
-        </Button>
-      </div>
-    );
-  }
-  if (catalog.data.length === 0 && table.newRows.length === 0) {
+}: WorkItemCatalogBodyProps & { data: readonly WorkItemRead[] }) {
+  if (data.length === 0 && newDraftCount === 0) {
     if (isRestricted) {
       // Disiplini atanmış kullanıcıda backend süzmesi kataloğu boşaltabilir;
       // "Katalog boş / ilk kalemlerinizi ekleyin" yanıltıcı olur (KAT emsali).
@@ -226,7 +257,7 @@ function WorkItemCatalogBody({
           <div className="wik-empty__title">Katalog boş</div>
           <p className="wik-empty__text">İlk iş kalemlerinizi ekleyin; teklif ve sözleşme buradan kalem çeker.</p>
           {canWrite && (
-            <Button size="sm" onClick={onNew}>
+            <Button size="sm" onClick={onNew} disabled={!canAddRow}>
               + Kalem Ekle
             </Button>
           )}
@@ -234,7 +265,7 @@ function WorkItemCatalogBody({
       </div>
     );
   }
-  if (table.items.length === 0 && table.newRows.length === 0) {
+  if (table.items.length === 0 && table.newDrafts.length === 0) {
     return <div className="wik-no-rows">Filtreye uyan kalem yok.</div>;
   }
   return <WorkItemTable {...table} />;

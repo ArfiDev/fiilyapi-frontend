@@ -16,7 +16,7 @@ import type {
 } from "@/lib/api/models";
 
 // Yalnız anahtar SABİTİ (saf dize) — çekirdek katalog hook'una davranış bağı YOK.
-import { CATALOG_ITEMS_QUERY_KEY, EV_CATALOG_QUERY_KEY } from "./catalog-query-keys";
+import { CATALOG_ITEMS_QUERY_KEY, EV_CATALOG_QUERY_KEY, EV_DISCIPLINES_QUERY_KEY } from "./catalog-query-keys";
 
 /**
  * PLN-F1.5 · Birim Oran Kataloğu (şirket geneli, K2/K4) — okuma + yazma uçları.
@@ -59,11 +59,15 @@ export function useEvCatalog(filters: EvCatalogFilters = {}): UseQueryResult<EvC
   });
 }
 
-/** KAT yazması sonrası: KAT'ın kendi önbelleği + çekirdek katalog (çapraz). */
+/**
+ * KAT yazması sonrası: KAT'ın kendi önbelleği + çekirdek katalog (çapraz) + disiplin
+ * listesi (`used_by_item_count` — ÜS-13b kod uyarısı bayat kalem sayısına bakmasın).
+ */
 function invalidateCatalogViews(qc: QueryClient): Promise<unknown> {
   return Promise.all([
     qc.invalidateQueries({ queryKey: [EV_CATALOG_QUERY_KEY] }),
     qc.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] }),
+    qc.invalidateQueries({ queryKey: [EV_DISCIPLINES_QUERY_KEY] }),
   ]);
 }
 

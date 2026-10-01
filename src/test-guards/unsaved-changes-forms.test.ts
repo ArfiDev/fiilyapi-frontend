@@ -86,6 +86,11 @@ const EXEMPT: Record<string, string> = {
   // "tek tıkla eylem" EXEMPT emsaliyle (PeriodClosingView, PermissionMatrix)
   // aynı gerekçe.
   "components/earned-value/catalog/DisciplineDeleteDialog.tsx": "yalnız silme onayı, düzenlenebilir alan yok",
+  // TKL-F1.3.1: taslaklar EKRAN düzeyine taşındı (KIK:233-236). Satır yalnız çizer; kirli kaydı
+  // `useUnsavedChanges(drafts.some(isDraftDirty))` ile `useWorkItemDrafts.ts` (.ts → taranmaz)
+  // TÜM taslaklardan besler. Satır bileşeninde bağlamak süzgeçten düşen satırı kayıttan silerdi.
+  "components/work-item-catalog/WorkItemEditRow.tsx":
+    "saf çizim: taslak ve kirli kayıt ekran düzeyindeki useWorkItemDrafts'ta (useUnsavedChanges orada)",
   "components/earned-value/reports/daily/DailyApproveModal.tsx": "yalnız onay eylemi, düzenlenebilir alan yok",
 };
 

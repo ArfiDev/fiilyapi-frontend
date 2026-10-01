@@ -11,6 +11,7 @@ import {
   useUpdateEvCatalogItem,
 } from "./useEvCatalog";
 import { CATALOG_ITEMS_QUERY_KEY } from "./useCatalogItems";
+import { EV_DISCIPLINES_QUERY_KEY } from "./catalog-query-keys";
 import { backendClient } from "@/lib/api/client";
 import { BackendError } from "@/lib/api/unwrap";
 import type { EvCatalogItemRead } from "@/lib/api/models";
@@ -175,5 +176,39 @@ describe("KAT yazması çekirdek katalog önbelleğini tazeler", () => {
     act(() => result.current.mutate("i-bet"));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
+  });
+});
+
+// TKL-F1.3.1-6 · disiplin listesi `used_by_item_count` taşır (ÜS-13b kod uyarısı): kalem
+// yazması `["ev-disciplines"]`i tazelemezse uyarı bayat kalem sayısına bakar.
+describe("KAT kalem yazmaları disiplin listesini (ev-disciplines) tazeler", () => {
+  it("ekleme, güncelleme ve standart yap", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(ITEM, 201));
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok(ITEM));
+    const create = renderHook(() => useCreateEvCatalogItem(), { wrapper });
+    const update = renderHook(() => useUpdateEvCatalogItem(), { wrapper });
+    const adopt = renderHook(() => useAdoptEvCatalogActual(), { wrapper });
+    act(() =>
+      create.result.current.mutate({
+        discipline_id: "d-kab",
+        name: "X",
+        uom: "m",
+        standard_unit_mhr: "1",
+        default_contractor_type: "own",
+      }),
+    );
+    act(() => update.result.current.mutate({ id: "i-bet", body: { name: "Y" } }));
+    act(() => adopt.result.current.mutate("i-bet"));
+    await waitFor(() => {
+      expect(create.result.current.isSuccess).toBe(true);
+      expect(update.result.current.isSuccess).toBe(true);
+      expect(adopt.result.current.isSuccess).toBe(true);
+    });
+    const calls = invalidate.mock.calls.filter(
+      ([filters]) => JSON.stringify(filters) === JSON.stringify({ queryKey: [EV_DISCIPLINES_QUERY_KEY] }),
+    );
+    expect(calls).toHaveLength(3);
+    expect(EV_DISCIPLINES_QUERY_KEY).toBe("ev-disciplines");
   });
 });

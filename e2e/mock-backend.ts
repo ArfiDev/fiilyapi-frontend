@@ -19478,7 +19478,6 @@ const EV_MSG = {
   disciplineCodeTaken: "Bu disiplin kodu zaten kayıtlı",
   disciplineInUse: "Disiplin kullanımda (BOQ grubu eşlemesi, katalog ya da baseline); silinemez",
   catalogMissing: "Katalog iş tipi bulunamadı",
-  catalogTaken: "Bu disiplinde aynı ad ve birimle bir iş tipi zaten var",
   catalogNoActual: "Bu iş tipi için tamamlanmış şantiye gerçekleşeni yok",
   holidayRangeInvalid: "Tatil bitişi başlangıçtan önce olamaz",
   holidayRangeOverlap: "Tatil aralıkları çakışıyor",
@@ -19668,6 +19667,19 @@ function evDec(value: number, places = 4): string {
 /** Kolon ölçeğine sabitleme (`Numeric(4,2)` → `"9.00"`) — backend `defaults.py` kuralı. */
 function evScale(raw: unknown, places: number): string {
   return Number(raw).toFixed(places);
+}
+
+/**
+ * Kayıpsız ondalık dize (`Numeric(18,2)` → `"1234567890123456.78"`): dize girdi `Number()`
+ * ÜZERİNDEN GEÇMEZ (16+2 haneli fiyat float'ta bozulur); kesir `places` haneye tamamlanır.
+ * Sayı girdisi (gövde sayı gönderirse) `toFixed` yoluna düşer. Şema deseni ≤ `places` kesir
+ * hanesini zaten doğrular (`bodySchemaViolation`).
+ */
+function evDecimalText(raw: unknown, places: number): string {
+  if (typeof raw !== "string") return evScale(raw, places);
+  const [whole = "0", fraction = ""] = raw.trim().replace(/^\+/, "").split(".");
+  const integer = whole.replace(/^(-?)0+(?=\d)/, "$1") || "0";
+  return `${integer}.${fraction.padEnd(places, "0").slice(0, places)}`;
 }
 
 function evNum(raw: string | null | undefined): number | null {
@@ -21530,16 +21542,6 @@ function evListCatalog(state: EvState, query: URLSearchParams): EvSchemas["Catal
     .map(({ entry }) => evCatalogOut(state, entry));
 }
 
-function evCatalogTaken(state: EvState, disciplineId: string, name: string, uom: string, exceptId: string | null): boolean {
-  return state.catalog.some(
-    (entry) =>
-      entry.id !== exceptId &&
-      entry.disciplineId === disciplineId &&
-      evNormalizeLabel(entry.name) === evNormalizeLabel(name) &&
-      evNormalizeLabel(entry.uom) === evNormalizeLabel(uom),
-  );
-}
-
 function evCreateCatalogItem(state: EvState, req: EvRequest, body: EvBody): void {
   const violation = bodySchemaViolation(EV_BODY.catalogCreate, body);
   if (violation !== null) return req.send(422, violation);
@@ -21547,7 +21549,8 @@ function evCreateCatalogItem(state: EvState, req: EvRequest, body: EvBody): void
   if (!state.disciplines.some((d) => d.id === disciplineId)) return req.send(404, { detail: EV_MSG.disciplineMissing });
   const name = String(body.name).trim();
   const uom = String(body.uom).trim();
-  if (evCatalogTaken(state, disciplineId, name, uom, null)) return req.send(409, { detail: EV_MSG.catalogTaken });
+  const taken = evWorkItemTaken(state, disciplineId, name, uom, null);
+  if (taken !== undefined) return req.send(409, { detail: evWorkItemTakenMessage(taken) });
   const entry: EvCatalogEntry = {
     id: evNextId(state),
     disciplineId,
@@ -21575,7 +21578,8 @@ function evUpdateCatalogItem(state: EvState, req: EvRequest, id: string, body: E
   if (!state.disciplines.some((d) => d.id === disciplineId)) return req.send(404, { detail: EV_MSG.disciplineMissing });
   const name = typeof body.name === "string" ? body.name.trim() : current.name;
   const uom = typeof body.uom === "string" ? body.uom.trim() : current.uom;
-  if (evCatalogTaken(state, disciplineId, name, uom, id)) return req.send(409, { detail: EV_MSG.catalogTaken });
+  const taken = evWorkItemTaken(state, disciplineId, name, uom, id);
+  if (taken !== undefined) return req.send(409, { detail: evWorkItemTakenMessage(taken) });
   const rate = body.standard_unit_mhr === undefined || body.standard_unit_mhr === null
     ? current.standardUnitMhr
     : evDec(Number(body.standard_unit_mhr));
@@ -21703,7 +21707,7 @@ function evCreateWorkItem(state: EvState, req: EvRequest, body: EvBody): void {
   const uom = String(body.uom).trim();
   const taken = evWorkItemTaken(state, disciplineId, name, uom, null);
   if (taken !== undefined) return req.send(409, { detail: evWorkItemTakenMessage(taken) });
-  const refPrice = body.ref_price === undefined || body.ref_price === null ? null : evScale(body.ref_price, 2);
+  const refPrice = body.ref_price === undefined || body.ref_price === null ? null : evDecimalText(body.ref_price, 2);
   const entry: EvCatalogEntry = {
     id: evNextId(state),
     disciplineId,
@@ -21741,8 +21745,9 @@ function evUpdateWorkItem(state: EvState, req: EvRequest, id: string, body: EvBo
   const rate = typeof body.standard_unit_mhr === "string" || typeof body.standard_unit_mhr === "number"
     ? evDec(Number(body.standard_unit_mhr))
     : current.standardUnitMhr;
-  const nextPrice = !("ref_price" in body) ? current.refPrice : body.ref_price === null ? null : evScale(body.ref_price, 2);
-  const priceChanged = (nextPrice === null ? null : Number(nextPrice)) !== (current.refPrice === null ? null : Number(current.refPrice));
+  const nextPrice = !("ref_price" in body) ? current.refPrice : body.ref_price === null ? null : evDecimalText(body.ref_price, 2);
+  // Kanonik 2 kesir haneli dizeler → metin eşitliği = sayı eşitliği (Number() büyük fiyatı birleştirirdi).
+  const priceChanged = nextPrice !== current.refPrice;
   const updated: EvCatalogEntry = {
     ...current,
     disciplineId,
