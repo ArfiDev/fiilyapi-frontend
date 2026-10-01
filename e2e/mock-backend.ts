@@ -19549,6 +19549,8 @@ const EV_BODY = {
   disciplineUpdate: loadBodySchema("DisciplineUpdate"),
   catalogCreate: loadBodySchema("CatalogItemCreate"),
   catalogUpdate: loadBodySchema("CatalogItemUpdate"),
+  workItemCreate: loadBodySchema("WorkItemCreate"),
+  workItemUpdate: loadBodySchema("WorkItemUpdate"),
   settingsSave: loadBodySchema("SettingsSave"),
   pfBands: loadBodySchema("PfBands-Input"),
   dailyBands: loadBodySchema("DailyPfBands-Input"),
@@ -19730,6 +19732,15 @@ interface EvCatalogEntry {
   defaultContractorType: EvContractor;
   description: string | null;
   standardUpdatedAt: string;
+  /**
+   * TKL-B2 · KALICI poz no (`KOD-NNNN`) — konumdan TÜREMEZ. Sunucu üretir:
+   * disiplin sayacından (`EvState.pozCounters`); disiplin KODU değişince önek yenilenir.
+   */
+  pozNo: string;
+  /** TKL-B2.2 · KDV hariç TL birim fiyat (yalnız çekirdek `/catalog/*` ucu döner; KAT ucu ASLA). */
+  refPrice: string | null;
+  /** Yalnız `refPrice` DEĞİŞİNCE ilerler (ilk atama ve temizleme dahil). */
+  priceUpdatedAt: string | null;
 }
 
 interface EvLeafInput {
@@ -19815,6 +19826,12 @@ interface EvState {
    */
   userDisciplines: Map<string, readonly string[]>;
   catalog: EvCatalogEntry[];
+  /**
+   * TKL-B2 · disiplin başına MONOTON poz sayacı (backend `ev_disciplines.poz_counter`):
+   * verilen SON sıra no. `max+1` DEĞİL — kalem taşınınca eski numara boşa düşer, sayaç geri gelmez.
+   * Kod değişince sayaç değişmez (disiplin kimliğine bağlı).
+   */
+  pozCounters: Readonly<Record<string, number>>;
   settings: Map<string, EvSchemas["SettingsRead"]>;
   boq: Map<string, EvSiteBoq>;
   revisions: Map<string, EvRevisionRecord[]>;
@@ -19899,17 +19916,49 @@ function evCatalogId(code: string): string {
   return evId("ca7", index + 1);
 }
 
+/**
+ * TKL-B2.2 · tohum referans fiyatları (KDV hariç TL) — [fiyat, tarih]. Kalan kalemler fiyatsız
+ * (null). Tarihler EV_NOW (24.09.2026) göre: `Demir` ve `Pis su borusu` 182 günden ESKİ
+ * (F1.3 "eski fiyat" görseli); `Kalıp`/`Beton döküm`/`Tuğla duvar` yakın.
+ */
+const EV_CATALOG_PRICES: Readonly<Record<string, readonly [string, string]>> = {
+  "KAB-KAL": ["185.00", "2026-09-10"],
+  "KAB-DEM": ["28500.00", "2025-12-10"],
+  "KAB-BET": ["2450.00", "2026-08-20"],
+  "DUV-TUG": ["310.50", "2026-09-02"],
+  "MEK-PIS": ["96.75", "2026-02-01"],
+};
+
+function evPozNo(disciplineCode: string, seq: number): string {
+  return `${disciplineCode}-${String(seq).padStart(4, "0")}`;
+}
+
 function evSeedCatalog(): EvCatalogEntry[] {
-  return EV_CATALOG_ROWS.map(([code, disc, name, uom, rate, own, updated, description]) => ({
-    id: evCatalogId(code),
-    disciplineId: EV_DISCIPLINE_IDS[disc],
-    name,
-    uom,
-    standardUnitMhr: rate,
-    defaultContractorType: own,
-    description,
-    standardUpdatedAt: `${updated}T09:00:00Z`,
-  }));
+  const issued: Record<string, number> = {};
+  return EV_CATALOG_ROWS.map(([code, disc, name, uom, rate, own, updated, description]) => {
+    issued[disc] = (issued[disc] ?? 0) + 1;
+    const price = EV_CATALOG_PRICES[code];
+    return {
+      id: evCatalogId(code),
+      disciplineId: EV_DISCIPLINE_IDS[disc],
+      name,
+      uom,
+      standardUnitMhr: rate,
+      defaultContractorType: own,
+      description,
+      standardUpdatedAt: `${updated}T09:00:00Z`,
+      pozNo: evPozNo(disc, issued[disc]),
+      refPrice: price?.[0] ?? null,
+      priceUpdatedAt: price === undefined ? null : `${price[1]}T09:00:00Z`,
+    };
+  });
+}
+
+/** Tohumda her disiplinin sayacı = o disiplinin kalem sayısı (numaralar 0001'den boşluksuz). */
+function evSeedPozCounters(catalog: readonly EvCatalogEntry[]): Record<string, number> {
+  const counters: Record<string, number> = {};
+  for (const entry of catalog) counters[entry.disciplineId] = (counters[entry.disciplineId] ?? 0) + 1;
+  return counters;
 }
 
 /**
@@ -20306,10 +20355,12 @@ function evSeedRevisions(): Map<string, EvRevisionRecord[]> {
 }
 
 function seedEarnedValueState(): EvState {
+  const catalog = evSeedCatalog();
   return {
     disciplines: evSeedDisciplines(),
     userDisciplines: new Map(),
-    catalog: evSeedCatalog(),
+    catalog,
+    pozCounters: evSeedPozCounters(catalog),
     settings: new Map([
       ["s-1", evSeedSettings(EV_HOLIDAYS_2026, EV_METRICS_S1, "2026-09-12T14:20:00Z")],
       [
@@ -20775,6 +20826,7 @@ function evCatalogOut(state: EvState, entry: EvCatalogEntry): EvSchemas["Catalog
   ).length;
   return {
     id: entry.id,
+    poz_no: entry.pozNo,
     discipline: {
       id: entry.disciplineId,
       code: discipline?.code ?? "",
@@ -21127,6 +21179,7 @@ type EvBody = Record<string, unknown>;
  */
 function handleEarnedValue(state: EvState, req: EvRequest): boolean {
   if (req.path.startsWith("/earned-value/")) return evCompanyRoute(state, req);
+  if (req.path.startsWith("/catalog/")) return evCoreCatalogRoute(state, req);
   const site = /^\/sites\/([^/]+)\/earned-value\/(.+)$/.exec(req.path);
   if (site === null) return false;
   const record = req.findSite(site[1]);
@@ -21416,7 +21469,7 @@ function evUpdateDiscipline(state: EvState, req: EvRequest, id: string, body: Ev
   if (typeof body.code === "string" && evCodeTaken(state, body.code, id)) {
     return req.send(409, { detail: EV_MSG.disciplineCodeTaken });
   }
-  // §3.10 F0-7: kod kullanımdayken de değişebilir; `null` alan = dokunma.
+  // §3.10 F0-7 + T22: kod kullanımdayken de değişir (poz no önekleri yenilenir); `null` alan = dokunma.
   const updated: EvDisciplineRecord = {
     ...current,
     ...(typeof body.code === "string" ? { code: body.code.trim() } : {}),
@@ -21428,6 +21481,7 @@ function evUpdateDiscipline(state: EvState, req: EvRequest, id: string, body: Ev
     ...(typeof body.sort_order === "number" ? { sort_order: body.sort_order } : {}),
   };
   state.disciplines = state.disciplines.map((d) => (d.id === id ? updated : d));
+  evRenumberForCodeChange(state, id, current.code, updated.code);
   req.send(200, evDisciplineReadOut(state, updated));
 }
 
@@ -21438,6 +21492,30 @@ function evDeleteDiscipline(state: EvState, req: EvRequest, id: string): void {
   if (usage.itemCount > 0 || usage.siteCount > 0) return req.send(409, { detail: EV_MSG.disciplineInUse });
   state.disciplines = state.disciplines.filter((d) => d.id !== id);
   req.send(204);
+}
+
+/**
+ * TKL-B2 · SIRADAKİ poz no — disiplin sayacı +1, numara `KOD-NNNN`. Çağıran TÜM doğrulamalardan
+ * SONRA çağırır (başarısız istek sayacı ilerletmez; backend'de işlem geri alınır).
+ */
+function evIssuePozNo(state: EvState, disciplineId: string): string {
+  const seq = (state.pozCounters[disciplineId] ?? 0) + 1;
+  state.pozCounters = { ...state.pozCounters, [disciplineId]: seq };
+  return evPozNo(state.disciplines.find((d) => d.id === disciplineId)?.code ?? "", seq);
+}
+
+/**
+ * T22 · disiplin KODU değişti: o disiplinin TÜM kalemlerinin öneki yeni koda göre yeniden yazılır,
+ * SAYI KISMI korunur, sayaç değişmez (backend `renumber_for_code_change`).
+ */
+function evRenumberForCodeChange(state: EvState, disciplineId: string, oldCode: string, newCode: string): void {
+  if (oldCode === newCode) return;
+  const oldPrefix = `${oldCode}-`;
+  state.catalog = state.catalog.map((entry) =>
+    entry.disciplineId === disciplineId && entry.pozNo.startsWith(oldPrefix)
+      ? { ...entry, pozNo: `${newCode}-${entry.pozNo.slice(oldPrefix.length)}` }
+      : entry,
+  );
 }
 
 function evListCatalog(state: EvState, query: URLSearchParams): EvSchemas["CatalogItemRead"][] {
@@ -21479,6 +21557,10 @@ function evCreateCatalogItem(state: EvState, req: EvRequest, body: EvBody): void
     defaultContractorType: body.default_contractor_type as EvContractor,
     description: typeof body.description === "string" && body.description.trim() !== "" ? body.description : null,
     standardUpdatedAt: EV_NOW,
+    // Doğrulamalar GEÇTİ → sayaç şimdi ilerler (backend: aynı işlemde, hata = geri alma).
+    pozNo: evIssuePozNo(state, disciplineId),
+    refPrice: null,
+    priceUpdatedAt: null,
   };
   state.catalog = [...state.catalog, entry];
   req.send(201, evCatalogOut(state, entry));
@@ -21500,6 +21582,8 @@ function evUpdateCatalogItem(state: EvState, req: EvRequest, id: string, body: E
   const updated: EvCatalogEntry = {
     ...current,
     disciplineId,
+    // T22: disiplin DEĞİŞİRSE yeni disiplinin sayacından yeni numara (eski boşa düşer).
+    pozNo: disciplineId === current.disciplineId ? current.pozNo : evIssuePozNo(state, disciplineId),
     name,
     uom,
     standardUnitMhr: rate,
@@ -21512,6 +21596,172 @@ function evUpdateCatalogItem(state: EvState, req: EvRequest, id: string, body: E
   };
   state.catalog = state.catalog.map((entry) => (entry.id === id ? updated : entry));
   req.send(200, evCatalogOut(state, updated));
+}
+
+/* ---- TKL-B2.2 · çekirdek İş Kalemi Kataloğu (`/catalog/*`, fiyatlı) ---- */
+
+/**
+ * ⚠️ İZİN: bu mock'ta modül izni (`contracts:none` → 403) MODELLENMİYOR (dosyada izin/rol
+ * mekanizması yok — bkz. "MODÜL İZNİ" notu). Disiplin kapsamı (V5) de uygulanmaz: `GET` her
+ * zaman TÜM kalemleri döner. Kapılar backend'dedir (T25: GET `contracts:view`, yazma
+ * `contracts:full` + kısıtsız); ekran testleri izin dallarını kendi mock'uyla kurar.
+ *
+ * Veri KAT ile TEK KAYNAK (`state.catalog`): iki uç aynı kalıcı poz no / sayaçtan beslenir.
+ */
+const WORK_ITEM_NOT_NULL_FIELDS = ["discipline_id", "name", "uom", "standard_unit_mhr", "default_contractor_type"] as const;
+
+/** Backend `guards.CATALOG_ITEM_TAKEN_AS` — BİREBİR (VAR OLAN kaydın yazımı gösterilir). */
+function evWorkItemTakenMessage(existing: EvCatalogEntry): string {
+  return (
+    `Ad: bu disiplinde aynı ad ve birimle bir iş tipi zaten var — «${existing.name}» (${existing.uom}). ` +
+    "Büyük/küçük harf, İ/I ve boşluk farkı ayrı iş tipi sayılmaz"
+  );
+}
+
+function evWorkItemTaken(state: EvState, disciplineId: string, name: string, uom: string, exceptId: string | null): EvCatalogEntry | undefined {
+  return state.catalog.find(
+    (entry) =>
+      entry.id !== exceptId &&
+      entry.disciplineId === disciplineId &&
+      evNormalizeLabel(entry.name) === evNormalizeLabel(name) &&
+      evNormalizeLabel(entry.uom) === evNormalizeLabel(uom),
+  );
+}
+
+function evWorkItemOut(state: EvState, entry: EvCatalogEntry): EvSchemas["WorkItemRead"] {
+  const discipline = state.disciplines.find((d) => d.id === entry.disciplineId);
+  return {
+    id: entry.id,
+    poz_no: entry.pozNo,
+    discipline: {
+      id: entry.disciplineId,
+      code: discipline?.code ?? "",
+      name: discipline?.name ?? "",
+      color: discipline?.color ?? "",
+    },
+    name: entry.name,
+    uom: entry.uom,
+    description: entry.description,
+    standard_unit_mhr: entry.standardUnitMhr,
+    default_contractor_type: entry.defaultContractorType,
+    ref_price: entry.refPrice,
+    price_updated_at: entry.priceUpdatedAt,
+    standard_updated_at: entry.standardUpdatedAt,
+    created_at: entry.standardUpdatedAt,
+    updated_at: entry.priceUpdatedAt !== null && entry.priceUpdatedAt > entry.standardUpdatedAt ? entry.priceUpdatedAt : entry.standardUpdatedAt,
+  };
+}
+
+function evCoreCatalogRoute(state: EvState, req: EvRequest): boolean {
+  const { method, path } = req;
+  if (path === "/catalog/disciplines") {
+    if (method !== "GET") return evMethodNotAllowed(req);
+    const sorted = [...state.disciplines].sort((a, b) => a.sort_order - b.sort_order || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+    req.send(200, {
+      items: sorted.map(
+        (d): EvSchemas["WorkDisciplineRead"] => ({
+          id: d.id,
+          code: d.code,
+          name: d.name,
+          color: d.color,
+          default_contractor_type: d.default_contractor_type,
+          sort_order: d.sort_order,
+        }),
+      ),
+    });
+    return true;
+  }
+  if (path === "/catalog/items") {
+    if (method === "GET") {
+      // Backend `order_by(poz_no, id)`; süzgeçler istemcide (q/discipline_id gönderilmez).
+      const ordered = [...state.catalog].sort((a, b) => (a.pozNo < b.pozNo ? -1 : a.pozNo > b.pozNo ? 1 : a.id < b.id ? -1 : 1));
+      req.send(200, { items: ordered.map((entry) => evWorkItemOut(state, entry)) });
+      return true;
+    }
+    if (method === "POST") {
+      req.readBody((body) => evCreateWorkItem(state, req, body));
+      return true;
+    }
+    return evMethodNotAllowed(req);
+  }
+  const item = /^\/catalog\/items\/([^/]+)$/.exec(path);
+  if (item !== null) {
+    if (method !== "PATCH") return evMethodNotAllowed(req);
+    req.readBody((body) => evUpdateWorkItem(state, req, item[1], body));
+    return true;
+  }
+  return false;
+}
+
+function evCreateWorkItem(state: EvState, req: EvRequest, body: EvBody): void {
+  // `poz_no` / `price_updated_at` gövdede → `extra_forbidden` 422 (şema `additionalProperties:false`).
+  const violation = bodySchemaViolation(EV_BODY.workItemCreate, body);
+  if (violation !== null) return req.send(422, violation);
+  const disciplineId = String(body.discipline_id);
+  if (!state.disciplines.some((d) => d.id === disciplineId)) return req.send(404, { detail: EV_MSG.disciplineMissing });
+  const name = String(body.name).trim();
+  const uom = String(body.uom).trim();
+  const taken = evWorkItemTaken(state, disciplineId, name, uom, null);
+  if (taken !== undefined) return req.send(409, { detail: evWorkItemTakenMessage(taken) });
+  const refPrice = body.ref_price === undefined || body.ref_price === null ? null : evScale(body.ref_price, 2);
+  const entry: EvCatalogEntry = {
+    id: evNextId(state),
+    disciplineId,
+    name,
+    uom,
+    standardUnitMhr: evDec(Number(body.standard_unit_mhr)),
+    defaultContractorType: body.default_contractor_type as EvContractor,
+    description: typeof body.description === "string" && body.description !== "" ? body.description : null,
+    standardUpdatedAt: EV_NOW,
+    pozNo: evIssuePozNo(state, disciplineId),
+    refPrice,
+    priceUpdatedAt: refPrice === null ? null : EV_NOW,
+  };
+  state.catalog = [...state.catalog, entry];
+  req.send(201, evWorkItemOut(state, entry));
+}
+
+function evUpdateWorkItem(state: EvState, req: EvRequest, id: string, body: EvBody): void {
+  const current = state.catalog.find((entry) => entry.id === id);
+  if (current === undefined) return req.send(404, { detail: EV_MSG.catalogMissing });
+  const violation = bodySchemaViolation(EV_BODY.workItemUpdate, body);
+  if (violation !== null) return req.send(422, violation);
+  // NOT NULL kolona AÇIK `null` → 422 (backend `_reject_null`); `description`/`ref_price` null = temizle.
+  for (const field of WORK_ITEM_NOT_NULL_FIELDS) {
+    if (field in body && body[field] === null) {
+      return req.send(422, evViolation("value_error", [field], "Value error, Alan boşaltılamaz; değiştirmemek için gövdeden çıkarın.", null));
+    }
+  }
+  const disciplineId = typeof body.discipline_id === "string" ? body.discipline_id : current.disciplineId;
+  if (!state.disciplines.some((d) => d.id === disciplineId)) return req.send(404, { detail: EV_MSG.disciplineMissing });
+  const name = typeof body.name === "string" ? body.name.trim() : current.name;
+  const uom = typeof body.uom === "string" ? body.uom.trim() : current.uom;
+  const taken = evWorkItemTaken(state, disciplineId, name, uom, id);
+  if (taken !== undefined) return req.send(409, { detail: evWorkItemTakenMessage(taken) });
+  const rate = typeof body.standard_unit_mhr === "string" || typeof body.standard_unit_mhr === "number"
+    ? evDec(Number(body.standard_unit_mhr))
+    : current.standardUnitMhr;
+  const nextPrice = !("ref_price" in body) ? current.refPrice : body.ref_price === null ? null : evScale(body.ref_price, 2);
+  const priceChanged = (nextPrice === null ? null : Number(nextPrice)) !== (current.refPrice === null ? null : Number(current.refPrice));
+  const updated: EvCatalogEntry = {
+    ...current,
+    disciplineId,
+    // T22: disiplin DEĞİŞİRSE yeni disiplinin sayacından yeni numara (doğrulamalar geçti → sayaç ilerler).
+    pozNo: disciplineId === current.disciplineId ? current.pozNo : evIssuePozNo(state, disciplineId),
+    name,
+    uom,
+    standardUnitMhr: rate,
+    standardUpdatedAt: Number(rate) === Number(current.standardUnitMhr) ? current.standardUpdatedAt : EV_NOW,
+    refPrice: nextPrice,
+    // `price_updated_at` YALNIZ `ref_price` DEĞİŞİNCE (ilk atama ve temizleme dahil) şimdi olur.
+    priceUpdatedAt: priceChanged ? EV_NOW : current.priceUpdatedAt,
+    ...(typeof body.default_contractor_type === "string"
+      ? { defaultContractorType: body.default_contractor_type as EvContractor }
+      : {}),
+    ...("description" in body ? { description: typeof body.description === "string" ? body.description : null } : {}),
+  };
+  state.catalog = state.catalog.map((entry) => (entry.id === id ? updated : entry));
+  req.send(200, evWorkItemOut(state, updated));
 }
 
 /* ---- şantiye: ayarlar ---- */

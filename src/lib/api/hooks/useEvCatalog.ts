@@ -2,6 +2,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
   type UseMutationResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
@@ -14,14 +15,21 @@ import type {
   EvCatalogItemUpdate,
 } from "@/lib/api/models";
 
+// Yalnız anahtar SABİTİ (saf dize) — çekirdek katalog hook'una davranış bağı YOK.
+import { CATALOG_ITEMS_QUERY_KEY, EV_CATALOG_QUERY_KEY } from "./catalog-query-keys";
+
 /**
  * PLN-F1.5 · Birim Oran Kataloğu (şirket geneli, K2/K4) — okuma + yazma uçları.
  *
  * Anahtar ÖNEKİ `["ev-catalog"]`: süzgeçli her okuma bunun altına düşer, yazma
  * sonrası tek `invalidateQueries` hepsini tazeler. Disiplin mutasyonları da
  * bu öneki tazeler (katalog satırı disiplin adını/rengini gömer).
+ *
+ * TKL-F1.2: her yazma çekirdek `["catalog-items"]` önbelleğini de tazeler — aynı
+ * kayıtlar yeni İş Kalemi Kataloğu'nda poz no + fiyatla görünür ve KAT'tan disiplin
+ * değiştiren PATCH yeni poz no üretir (T22); tazelenmezse eski numara kalır.
  */
-export const EV_CATALOG_QUERY_KEY = "ev-catalog";
+export { EV_CATALOG_QUERY_KEY };
 
 export interface EvCatalogFilters {
   disciplineId?: string;
@@ -51,6 +59,14 @@ export function useEvCatalog(filters: EvCatalogFilters = {}): UseQueryResult<EvC
   });
 }
 
+/** KAT yazması sonrası: KAT'ın kendi önbelleği + çekirdek katalog (çapraz). */
+function invalidateCatalogViews(qc: QueryClient): Promise<unknown> {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: [EV_CATALOG_QUERY_KEY] }),
+    qc.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] }),
+  ]);
+}
+
 export interface UpdateEvCatalogItemVars {
   id: string;
   body: EvCatalogItemUpdate;
@@ -61,7 +77,7 @@ export function useCreateEvCatalogItem(): UseMutationResult<EvCatalogItemRead, E
   return useMutation({
     mutationFn: async (body: EvCatalogItemCreate) =>
       unwrap(await backendClient.POST("/earned-value/catalog", { body })),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [EV_CATALOG_QUERY_KEY] }),
+    onSuccess: () => invalidateCatalogViews(qc),
   });
 }
 
@@ -79,7 +95,7 @@ export function useUpdateEvCatalogItem(): UseMutationResult<
           body,
         }),
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [EV_CATALOG_QUERY_KEY] }),
+    onSuccess: () => invalidateCatalogViews(qc),
   });
 }
 
@@ -96,6 +112,6 @@ export function useAdoptEvCatalogActual(): UseMutationResult<EvCatalogItemRead, 
           params: { path: { item_id: id } },
         }),
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [EV_CATALOG_QUERY_KEY] }),
+    onSuccess: () => invalidateCatalogViews(qc),
   });
 }

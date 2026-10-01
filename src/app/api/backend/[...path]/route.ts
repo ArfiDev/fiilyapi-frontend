@@ -316,6 +316,12 @@ const ALLOWED_ROOTS = new Set([
   // buna YETMEZ. Eksikse bölüm formunun tip seçicisi (ve "+ Yeni tip ekle")
   // YALNIZ CANLIDA 404 alır; jsdom ve e2e mock-backend bunu GÖRMEZ.
   "section-types",
+  // TKL-F1.2 — Is Kalemi Katalogu (`GET /catalog/disciplines`, `GET/POST
+  // /catalog/items`, `PATCH /catalog/items/{id}`). Kok "catalog" ne "earned-value"
+  // ne "sites" altinda: sirket geneli cekirdek katalog (fiyatli, `contracts`
+  // kapisi). Eksikse yeni ekran YALNIZ CANLIDA 404 alir; jsdom ve e2e mock-backend
+  // BFF'yi atladigi icin GORMEZ.
+  "catalog",
 ]);
 
 // JSON/metin sayilan icerik tipleri: govde metne cozulup JSON olarak islenir.

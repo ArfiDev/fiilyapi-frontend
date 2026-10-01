@@ -59,6 +59,22 @@ describe("BFF /api/backend/[...path]", () => {
     expect((await res.json()).total).toBe(0);
   });
 
+  // TKL-F1.2 — Is kalemi katalogu (`/catalog/items`, `/catalog/disciplines`) kendi
+  // kokunden gecer. Eksikse YALNIZ CANLIDA 404 (mock-backend BFF'yi atlar).
+  it("catalog koku — /catalog/items istegi 404 DEGIL, backend'e proxylenir", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await GET(
+      req("/api/backend/catalog/items", "GET", { [ACCESS_COOKIE]: "acc", [REFRESH_COOKIE]: "ref" }),
+      ctx(["catalog", "items"]),
+    );
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toBe("http://backend:8000/catalog/items");
+  });
+
   it("izinsiz kok — 404 doner, backend cagrilmaz", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

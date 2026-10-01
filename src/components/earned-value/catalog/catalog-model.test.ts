@@ -16,6 +16,7 @@ import {
 function item(overrides: Partial<EvCatalogItemRead> = {}): EvCatalogItemRead {
   return {
     id: "i-1",
+    poz_no: "KAB-0001",
     discipline: { id: "d-kab", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" },
     name: "Beton döküm",
     uom: "m³",

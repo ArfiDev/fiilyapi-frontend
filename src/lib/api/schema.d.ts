@@ -718,6 +718,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog/disciplines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Work Disciplines Endpoint
+         * @description Disiplin seçici listesi (salt okunur; CRUD EV'de kalır) — `sort_order`, `code` sırası.
+         */
+        get: operations["list_work_disciplines_endpoint_catalog_disciplines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Work Items Endpoint
+         * @description İş kalemi kataloğu — poz no sırasıyla. `q` ad veya poz no içinde arar.
+         */
+        get: operations["list_work_items_endpoint_catalog_items_get"];
+        put?: never;
+        /**
+         * Create Work Item Endpoint
+         * @description Kalem ekler; poz no sunucuda otomatik üretilir (gövdede gönderilemez).
+         */
+        post: operations["create_work_item_endpoint_catalog_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Work Item Endpoint
+         * @description Kısmi güncelleme; geçmeyen alan dokunulmaz, `description`/`ref_price` `null` = temizle.
+         *
+         *     Denetim satırı YALNIZ bir alan FİİLEN değiştiyse yazılır (boş `{}` PATCH ya da aynı
+         *     değerlerle PATCH satır yazmaz; 200 + mevcut kayıt döner). `ref_price` değiştiyse metne
+         *     `eski → yeni` fiyat girer.
+         */
+        patch: operations["update_work_item_endpoint_catalog_items__item_id__patch"];
+        trace?: never;
+    };
     "/chart-of-accounts": {
         parameters: {
             query?: never;
@@ -9451,6 +9519,8 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Poz No */
+            poz_no: string;
             /** Standard Unit Mhr */
             standard_unit_mhr: string;
             /**
@@ -23971,6 +24041,126 @@ export interface components {
             /** Windows */
             windows: components["schemas"]["WindowIn"][];
         };
+        /** WorkDisciplineListResponse */
+        WorkDisciplineListResponse: {
+            /** Items */
+            items: components["schemas"]["WorkDisciplineRead"][];
+        };
+        /**
+         * WorkDisciplineRead
+         * @description Disiplin listesi satiri (secici). `poz_counter` DONMEZ (ic sayac).
+         */
+        WorkDisciplineRead: {
+            /** Code */
+            code: string;
+            /** Color */
+            color: string;
+            /**
+             * Default Contractor Type
+             * @enum {string}
+             */
+            default_contractor_type: "own" | "subcon";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** WorkItemCreate */
+        WorkItemCreate: {
+            /**
+             * Default Contractor Type
+             * @enum {string}
+             */
+            default_contractor_type: "own" | "subcon";
+            /** Description */
+            description?: string | null;
+            /**
+             * Discipline Id
+             * Format: uuid
+             */
+            discipline_id: string;
+            /** Name */
+            name: string;
+            /** Ref Price */
+            ref_price?: number | string | null;
+            /** Standard Unit Mhr */
+            standard_unit_mhr: number | string;
+            /** Uom */
+            uom: string;
+        };
+        /** WorkItemListResponse */
+        WorkItemListResponse: {
+            /** Items */
+            items: components["schemas"]["WorkItemRead"][];
+        };
+        /** WorkItemRead */
+        WorkItemRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Default Contractor Type
+             * @enum {string}
+             */
+            default_contractor_type: "own" | "subcon";
+            /** Description */
+            description: string | null;
+            discipline: components["schemas"]["DisciplineRef"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Poz No */
+            poz_no: string;
+            /** Price Updated At */
+            price_updated_at: string | null;
+            /** Ref Price */
+            ref_price: string | null;
+            /** Standard Unit Mhr */
+            standard_unit_mhr: string;
+            /**
+             * Standard Updated At
+             * Format: date-time
+             */
+            standard_updated_at: string;
+            /** Uom */
+            uom: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * WorkItemUpdate
+         * @description Kismi guncelleme. `description` ve `ref_price` `null` = temizle; digerleri 422.
+         */
+        WorkItemUpdate: {
+            /** Default Contractor Type */
+            default_contractor_type?: ("own" | "subcon") | null;
+            /** Description */
+            description?: string | null;
+            /** Discipline Id */
+            discipline_id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Ref Price */
+            ref_price?: number | string | null;
+            /** Standard Unit Mhr */
+            standard_unit_mhr?: number | string | null;
+            /** Uom */
+            uom?: string | null;
+        };
         /**
          * WorkLogCreate
          * @description `POST /equipment/work-logs` — M3 kaydı.
@@ -25743,6 +25933,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CashFlowStatementResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_work_disciplines_endpoint_catalog_disciplines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkDisciplineListResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_work_items_endpoint_catalog_items_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                discipline_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkItemListResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_work_item_endpoint_catalog_items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkItemRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_work_item_endpoint_catalog_items__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkItemRead"];
                 };
             };
             /** @description Yetkisiz işlem */

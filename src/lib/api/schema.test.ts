@@ -459,3 +459,57 @@ describe("Günlük iskelet önizlemesi tip üretimi (GKS-F1.1 kapısı)", () => 
     >().not.toBeNever();
   });
 });
+
+describe("İş kalemi kataloğu tip üretimi (TKL-F1.1 kapısı)", () => {
+  type WorkItemRead = components["schemas"]["WorkItemRead"];
+  type WorkItemCreate = components["schemas"]["WorkItemCreate"];
+  type WorkDisciplineRead = components["schemas"]["WorkDisciplineRead"];
+
+  it("WorkItemRead poz_no ve fiyat alanlarını kaynağa göre taşır", () => {
+    expectTypeOf<WorkItemRead["poz_no"]>().toEqualTypeOf<string>();
+    expectTypeOf<WorkItemRead["ref_price"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<WorkItemRead["price_updated_at"]>().toEqualTypeOf<
+      string | null
+    >();
+    expectTypeOf<WorkItemRead["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<WorkItemRead["standard_unit_mhr"]>().toEqualTypeOf<string>();
+    expectTypeOf<WorkItemRead["default_contractor_type"]>().toEqualTypeOf<
+      "own" | "subcon"
+    >();
+    expectTypeOf<WorkItemRead>().toHaveProperty("discipline");
+    expectTypeOf<WorkItemRead>().toHaveProperty("standard_updated_at");
+  });
+
+  it("WorkItemCreate poz_no TAŞIMAZ (sunucu üretir)", () => {
+    expectTypeOf<
+      "poz_no" extends keyof WorkItemCreate ? true : false
+    >().toEqualTypeOf<false>();
+    expectTypeOf<WorkItemCreate["discipline_id"]>().toEqualTypeOf<string>();
+  });
+
+  it("WorkDisciplineRead seçici alanlarını taşır, poz_counter taşımaz", () => {
+    expectTypeOf<WorkDisciplineRead["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<WorkDisciplineRead["code"]>().toEqualTypeOf<string>();
+    expectTypeOf<WorkDisciplineRead["name"]>().toEqualTypeOf<string>();
+    expectTypeOf<WorkDisciplineRead["color"]>().toEqualTypeOf<string>();
+    expectTypeOf<WorkDisciplineRead["default_contractor_type"]>().toEqualTypeOf<
+      "own" | "subcon"
+    >();
+    expectTypeOf<WorkDisciplineRead["sort_order"]>().toEqualTypeOf<number>();
+    expectTypeOf<
+      "poz_counter" extends keyof WorkDisciplineRead ? true : false
+    >().toEqualTypeOf<false>();
+  });
+
+  it("CatalogItemRead.poz_no zorunlu string'dir", () => {
+    type CatalogItem = components["schemas"]["CatalogItemRead"];
+    expectTypeOf<CatalogItem["poz_no"]>().toEqualTypeOf<string>();
+  });
+
+  it("katalog uçları tanımlıdır", () => {
+    expectTypeOf<paths["/catalog/disciplines"]["get"]>().not.toBeNever();
+    expectTypeOf<paths["/catalog/items"]["get"]>().not.toBeNever();
+    expectTypeOf<paths["/catalog/items"]["post"]>().not.toBeNever();
+    expectTypeOf<paths["/catalog/items/{item_id}"]["patch"]>().not.toBeNever();
+  });
+});
