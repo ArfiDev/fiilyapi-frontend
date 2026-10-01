@@ -42,12 +42,12 @@ test("gunluk kayit gir ekrani (bos gun) gorsel", async ({ page }) => {
 
   await page.goto(SITE_DIARY_URL);
   await expect(page.getByRole("heading", { level: 1, name: "Günlük Kayıt & Planlama" })).toBeVisible();
-  // Kayıt açılmamış gün: satır iskeleti yok, dürüst boş durum basılır.
+  // Kayıt açılmamış gün (GKS-F1): satırlar kaydı beklemeden iskelet önizlemesinden
+  // gelir — kare ÖNİZLEME satırları görününce çekilir (yükleme durumu dondurulmasın).
   // S:0 gizli SSR kopyası riski (React 19 streaming, bkz. streaming-duplicate-guard.spec.ts):
   // locator'lar `main` kapsamına daraltılır, yoksa strict-mode iki öğe bulabilir.
-  await expect(
-    page.locator("main").getByText("İş kalemi satırları, gün için kayıt açıldığında", { exact: false }),
-  ).toBeVisible();
+  await expect(page.locator("main").getByLabel("01.001 bugün yapılan miktar", { exact: true })).toBeVisible();
+  await expect(page.locator("main").getByText("İş kalemleri yükleniyor…")).toHaveCount(0);
   // Sağ panel GERÇEK veriyle doldu (yükleme durumu dondurulmasın).
   await expect(page.locator("main .diary-recent__list")).toContainText("16 Temmuz");
   // Gömülü planlama bloğu (day-summary) geldi.
