@@ -8,6 +8,8 @@ import "./contract-distribution.css";
  *
  * `role="alert"` KULLANILMAZ (F-P6 dersi; e2e'de yasak) — görünür metin yeter.
  */
+const DEFAULT_SAVED_TEXT = "Poz dağılımı kaydedildi.";
+
 export interface ContractDistributionSaveStatusProps {
   dirtyCount: number;
   isSaving: boolean;
@@ -18,6 +20,8 @@ export interface ContractDistributionSaveStatusProps {
   rejectionMessages: readonly string[];
   /** Sunucu hatası (422 dahil) — backend `detail`i olduğu gibi basılır. */
   saveError: string | null;
+  /** BDG: başarı metni ekrana göre değişir; verilmezse sözleşme ekranının metni. */
+  savedText?: string;
 }
 
 export function ContractDistributionSaveStatus({
@@ -27,6 +31,7 @@ export function ContractDistributionSaveStatus({
   noticeMessages = [],
   rejectionMessages,
   saveError,
+  savedText = DEFAULT_SAVED_TEXT,
 }: ContractDistributionSaveStatusProps) {
   const lines: { text: string; isFailure: boolean }[] = [];
 
@@ -38,7 +43,7 @@ export function ContractDistributionSaveStatus({
       isFailure: false,
     });
   } else if (isSaved) {
-    lines.push({ text: "Poz dağılımı kaydedildi.", isFailure: false });
+    lines.push({ text: savedText, isFailure: false });
   }
 
   for (const message of noticeMessages) lines.push({ text: message, isFailure: false });

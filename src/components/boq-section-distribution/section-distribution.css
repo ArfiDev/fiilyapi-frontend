@@ -1,0 +1,97 @@
+/* BDG · Bölüm Dağılımı (BDG-F1.3). Prefix `bdg`. K1: yerleşim ve bileşen dili
+   sözleşme Poz Dağılımı ekranıyla AYNIDIR — `cdist-*` (contract-distribution.css)
+   ve `.ecd-items__*` (employer-contract-detail.css) sınıfları import edilip
+   kullanılır, BURADA yeniden türetilmez. Bu dosya yalnız bölüm ekranına özgü
+   olanı taşır: yapışkan kalem kolonları (.bdg-grid / .bdg-scroll) ve gerekçe
+   satırı.
+
+   🔴 PAYLAŞILAN `.ecd-items__*` kuralları DEĞİŞMEZ (sözleşme/taşeron karelerinin
+   DOM ve boyası aynı kalmalı): her `.ecd-items__*` seçicisi burada `.bdg-grid`
+   ya da `.bdg-scroll` ile DARALTILIR (css testi bekçilidir). */
+
+/* Yapışkan kolon ölçüleri tek yerde: scroll-padding ve sol ofsetler bunlardan
+   türer. Poz No SABİT genişliktedir ki Poz Adı'nın `left` ofseti bilinsin. */
+.ecd-items__scroll.bdg-scroll {
+  --bdg-code-width: 96px;
+  --bdg-name-width: 220px;
+  /* Klavyeyle odaklanan hücre yapışkan kolonların ALTINA kaymasın. */
+  scroll-padding-left: calc(var(--bdg-code-width) + var(--bdg-name-width));
+}
+
+/* `border-collapse: collapse` ile `position: sticky` hücre kenarlıkları
+   kayıtlı kalmaz (kenarlık kaydırmayla ayrılır) → separate + spacing 0. */
+.ecd-items__table.bdg-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+/* ── Poz No ───────────────────────────────────────────────────────────────── */
+.bdg-grid .bdg-sticky-code {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--bdg-code-width);
+  min-width: var(--bdg-code-width);
+  max-width: var(--bdg-code-width);
+  overflow-wrap: break-word;
+}
+/* ── Poz Adı: Poz No genişliği kadar içeriden yapışır ─────────────────────── */
+.bdg-grid .bdg-sticky-name {
+  position: sticky;
+  left: var(--bdg-code-width);
+  z-index: 2;
+  width: var(--bdg-name-width);
+  min-width: var(--bdg-name-width);
+  max-width: var(--bdg-name-width);
+  overflow-wrap: break-word;
+  /* Kaydırılan kolonlarla sınırı belli eden ince çizgi (collapse kalktı). */
+  box-shadow: inset -1px 0 0 var(--color-divider);
+}
+/* Başlık hücreleri gövde hücrelerinin ÜSTÜNDE: ikisi de yapışkan, kesişimde
+   başlık kazanır. */
+.bdg-grid th.bdg-sticky-code {
+  z-index: 3;
+  background: var(--color-surface-2);
+}
+.bdg-grid th.bdg-sticky-name {
+  z-index: 3;
+  background: var(--color-surface-2);
+}
+
+/* Opak zemin: şeffaf yapışkan hücre altından kayan kolonları gösterir.
+   Satır zemini tr'de olduğundan her satır türünün zemini AYRI yazılır. */
+.bdg-grid .bdg-sticky-cell {
+  background: var(--color-surface);
+}
+.bdg-grid .cdist-grid__row--undistributed .bdg-sticky-cell {
+  background: var(--color-audit-danger-row-bg);
+}
+
+/* Satır ayırıcı: separate modunda `tr` kenarlığı çizilmez → td'ye taşınır. */
+.bdg-grid .ecd-items__td {
+  border-bottom: 1px solid var(--color-divider);
+}
+.bdg-grid .ecd-items__group-cell {
+  border-bottom: 1px solid var(--color-primary-ring);
+}
+
+/* Grup satırı: colSpan'li td yapışkan OLAMAZ (tüm tablo genişliğinde); etiket
+   span'i yapışır ve kendi opak zeminini taşır. */
+.bdg-grid .ecd-items__group-row .bdg-group-label {
+  position: sticky;
+  left: 0;
+  display: inline-block;
+  background: var(--color-nav-active-bg);
+}
+
+/* Bölüm kolonları dar sıkışmasın: 10+ bölümde yatay kayar. */
+.bdg-grid .cdist-grid__th-site,
+.bdg-grid .cdist-cell {
+  min-width: 140px;
+}
+
+/* ── Tek satırlık yazma gerekçesi ─────────────────────────────────────────── */
+.bdg-write-reason {
+  margin-bottom: var(--space-4);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

@@ -35,6 +35,7 @@ const BOUND_SOURCES = [
   "components/earned-value/diary/DayLockBanner.tsx",
   "components/site-diary/SiteDiaryEntryView.tsx",
   "components/contracts/ContractDistributionView.tsx",
+  "components/boq-section-distribution/SectionDistributionView.tsx",
   "components/progress-payments/ProgressPaymentForm.tsx",
   "components/payroll/PayrollLineRow.tsx",
   "components/land-share-allocation/LandShareAllocationView.tsx",

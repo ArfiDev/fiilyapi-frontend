@@ -281,6 +281,8 @@ export const routes = {
       new: (p: ProjectParams) => `${projectBase(p)}/${SITES_SEGMENT}/yeni`,
       detail: (p: SiteParams) => siteBase(p),
       boq: (p: SiteParams) => `${siteBase(p)}/is-kalemleri`,
+      /** BDG · kalem x bölüm dağılım matrisi; yan menüde ÖĞESİ yok (BOQ başlığından girilir). */
+      boqDistribution: (p: SiteParams) => `${siteBase(p)}/is-kalemleri/bolum-dagilimi`,
       documents: (p: SiteParams) => `${siteBase(p)}/belgeler`,
       progressPayments: (p: SiteParams) => `${siteBase(p)}/hakedisler`,
       stock: ({ section, ...p }: SiteStockParams) => `${siteBase(p)}/stok${qs({ section })}`,

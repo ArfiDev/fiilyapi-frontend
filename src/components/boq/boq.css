@@ -50,6 +50,11 @@
   font-weight: var(--weight-regular);
   border-radius: var(--radius-8);
 }
+/* "Bölüm Dağılımı" bir bağlantıdır (Link) — düğme görünümünü `.btn` verir,
+   altçizgiyi burada söndürürüz. */
+a.boq-action {
+  text-decoration: none;
+}
 .boq-action.btn--secondary {
   color: var(--color-text-secondary);
   border-color: var(--color-border);

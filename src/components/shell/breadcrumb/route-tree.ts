@@ -79,6 +79,13 @@ const SITE_NODE: TrailNode = {
     "is-kalemleri": {
       label: "İş Kalemleri",
       href: (k) => routes.projects.sites.boq({ projectId: k.projectId, siteId: k.siteId }),
+      children: {
+        "bolum-dagilimi": {
+          label: "Bölüm Dağılımı",
+          href: (k) =>
+            routes.projects.sites.boqDistribution({ projectId: k.projectId, siteId: k.siteId }),
+        },
+      },
     },
     belgeler: {
       label: "Belgeler",

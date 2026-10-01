@@ -89,6 +89,15 @@ export default function BoqPage() {
         {/* "Excel Indir" okuma ucudur (`boq:view` yeter) → HER ZAMAN gorunur;
             "+ Is Kalemi" yazma yuzeyidir → izin kapisinin arkasinda (§2.5). */}
         <div className="boq__actions">
+          {/* BDG · K2: kalem x bölüm dağılımı AYRI sayfadır, okuma yüzeyidir
+              (`boq:view` yeter) → "Excel İndir" gibi HER ZAMAN görünür. Adres
+              ADRES anahtarlarından kurulur (site yüklenmeden de çalışır). */}
+          <Link
+            className="btn btn--secondary btn--md boq-action"
+            href={routes.projects.sites.boqDistribution({ projectId: projectKey, siteId: siteKey })}
+          >
+            Bölüm Dağılımı
+          </Link>
           <Button
             variant="secondary"
             className="boq-action"

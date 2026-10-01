@@ -33,6 +33,9 @@ describe("routes — uretilen URL bicimi (elle yazilmis beklentiler)", () => {
     expect(routes.projects.sites.boq({ projectId: P, siteId: S })).toBe(
       "/projeler/p-1/santiyeler/s-9/is-kalemleri",
     );
+    expect(routes.projects.sites.boqDistribution({ projectId: P, siteId: S })).toBe(
+      "/projeler/p-1/santiyeler/s-9/is-kalemleri/bolum-dagilimi",
+    );
     expect(routes.projects.sites.stockEntry({ projectId: P, siteId: S })).toBe(
       "/projeler/p-1/santiyeler/s-9/stok/giris",
     );
@@ -253,6 +256,7 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     ["sites.new", routes.projects.sites.new({ projectId: P })],
     ["sites.detail", routes.projects.sites.detail({ projectId: P, siteId: S })],
     ["sites.boq", routes.projects.sites.boq({ projectId: P, siteId: S })],
+    ["sites.boqDistribution", routes.projects.sites.boqDistribution({ projectId: P, siteId: S })],
     ["sites.documents", routes.projects.sites.documents({ projectId: P, siteId: S })],
     ["sites.progressPayments", routes.projects.sites.progressPayments({ projectId: P, siteId: S })],
     ["sites.stock", routes.projects.sites.stock({ projectId: P, siteId: S })],

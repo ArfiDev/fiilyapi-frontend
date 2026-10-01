@@ -168,6 +168,16 @@ describe("BoqPage — başlık şeridi ve breadcrumb (mockup 62–67)", () => {
     expect(within(titleBar).getByRole("button", { name: "+ İş Kalemi" })).toBeInTheDocument();
   });
 
+  // BDG-F1.3 · K2: Bölüm Dağılımı ayrı sayfadır; başlıktaki bağlantı.
+  it("Bölüm Dağılımı bağlantısı başlık şeridinde, doğru adrese gider", () => {
+    const { container } = render(<BoqPage />);
+    const titleBar = container.querySelector(".boq__title-bar") as HTMLElement;
+    expect(within(titleBar).getByRole("link", { name: "Bölüm Dağılımı" })).toHaveAttribute(
+      "href",
+      `/projeler/${PROJECT_ID}/santiyeler/${SITE_ID}/is-kalemleri/bolum-dagilimi`,
+    );
+  });
+
   it("veri geldiğinde poz tablosunu basar", () => {
     render(<BoqPage />);
     expect(screen.getByText("İş kalemleri listesi")).toBeInTheDocument();
@@ -206,7 +216,7 @@ describe("BoqPage — başlık şeridi ve breadcrumb (mockup 62–67)", () => {
   it("şantiye yüklenmemişken breadcrumb hiç basılmaz (uydurma etiket yok)", () => {
     mockSite({ isLoading: true });
     render(<BoqPage />);
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /←/ })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "İş Kalemleri (BOQ)" })).toBeInTheDocument();
   });
 });
@@ -222,6 +232,13 @@ describe("BoqPage — istemci izin kapısı (spec §2.5)", () => {
     mockPermission("view");
     render(<BoqPage />);
     expect(screen.queryByRole("button", { name: "+ İş Kalemi" })).not.toBeInTheDocument();
+  });
+
+  // Bölüm Dağılımı bağlantısı da okuma yüzeyidir (`boq:view` yeter) — gizlenmez.
+  it("canWrite false iken Bölüm Dağılımı bağlantısı görünür kalır", () => {
+    mockPermission("view");
+    render(<BoqPage />);
+    expect(screen.getByRole("link", { name: "Bölüm Dağılımı" })).toBeInTheDocument();
   });
 
   // "Excel İndir" okuma ucudur (`boq:view` yeter) — gizlenmez.
@@ -420,7 +437,7 @@ describe("BoqPage — a11y (spec §10)", () => {
     mockBoq({ data: FULL_BOQ });
   });
 
-  it("odak sırası okuma yönünü izler: sekme şeridi → breadcrumb → Excel İndir → + İş Kalemi → satır", async () => {
+  it("odak sırası okuma yönünü izler: sekme şeridi → breadcrumb → Bölüm Dağılımı → Excel İndir → + İş Kalemi → satır", async () => {
     mockPermission("full");
     const user = userEvent.setup();
     render(<BoqPage />);
@@ -435,6 +452,7 @@ describe("BoqPage — a11y (spec §10)", () => {
       "Günlük Kayıt",
       "Belgeler",
       "← A-Blok Şantiyesi",
+      "Bölüm Dağılımı",
       "Excel İndir",
       "+ İş Kalemi",
       "01.001",
@@ -445,7 +463,7 @@ describe("BoqPage — a11y (spec §10)", () => {
     }
   });
 
-  it("salt-okunur kullanıcıda gövde yalnız breadcrumb ve Excel İndir odağı bırakır", async () => {
+  it("salt-okunur kullanıcıda gövde yalnız breadcrumb, Bölüm Dağılımı ve Excel İndir odağı bırakır", async () => {
     mockPermission("view");
     const user = userEvent.setup();
     render(<BoqPage />);
@@ -464,6 +482,8 @@ describe("BoqPage — a11y (spec §10)", () => {
     }
     await user.tab();
     expect(document.activeElement).toHaveTextContent("← A-Blok Şantiyesi");
+    await user.tab();
+    expect(document.activeElement).toHaveTextContent("Bölüm Dağılımı");
     await user.tab();
     expect(document.activeElement).toHaveTextContent("Excel İndir");
     // Yazma yüzeyleri hiç basılmadığı için sıradaki Tab sayfadan çıkar (body).
