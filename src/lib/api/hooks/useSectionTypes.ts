@@ -2,7 +2,6 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-  type QueryClient,
   type UseMutationResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
@@ -24,14 +23,11 @@ export const SECTION_TYPES_QUERY_KEY = "section-types";
 const SECTION_TYPES_STALE_MS = 5 * 60 * 1000;
 
 /**
- * 409 gövdesi `{ detail: "Bu bölüm tipi zaten var: <MEVCUT AD>" }` (backend
- * `sites/guards.py::SECTION_TYPE_TAKEN_AS`, `DuplicateError` → 409). Gövde
- * mevcut tipin `id`sini TAŞIMAZ, yalnız saklı adını — mevcut tip bu adla
- * listeden bulunur. İstemci ad normalize ETMEZ (tek kaynak backend); burada
- * yapılan, sunucunun ZATEN normalize edip bulduğu satırın saklı adını birebir
- * eşlemektir.
+ * 409 gövdesi `SectionTypeConflict` (`{ detail, existing: {id, name} }`,
+ * backend `_section_type_taken_handler`) — mevcut tip gövdeden DOĞRUDAN gelir;
+ * istemci metin ayıklamaz, ad eşlemez, liste yeniden okumaz.
  */
-export const SECTION_TYPE_TAKEN_PREFIX = "Bu bölüm tipi zaten var: ";
+export type SectionTypeConflict = DeepScale<components["schemas"]["SectionTypeConflict"]>;
 
 export type CreateSectionTypeOutcome =
   | { kind: "created"; sectionType: SectionTypeRead }
@@ -39,7 +35,7 @@ export type CreateSectionTypeOutcome =
       kind: "duplicate";
       /** Backend'in Türkçe mesajı aynen (yoksa yedek metin). */
       message: string;
-      /** Çakışan mevcut tip; listede bulunamazsa `null`. */
+      /** Çakışan mevcut tip (gövdeden); gövdede yoksa (beklenmez) `null`. */
       existing: SectionTypeRead | null;
     };
 
@@ -61,25 +57,9 @@ function duplicateMessage(body: unknown): string {
   return typeof detail === "string" && detail.trim() ? detail : "Bu bölüm tipi zaten var.";
 }
 
-function findByName(list: readonly SectionTypeRead[] | undefined, name: string) {
-  return list?.find((item) => item.name === name) ?? null;
-}
-
-async function resolveExisting(
-  queryClient: QueryClient,
-  message: string,
-): Promise<SectionTypeRead | null> {
-  if (!message.startsWith(SECTION_TYPE_TAKEN_PREFIX)) return null;
-  const name = message.slice(SECTION_TYPE_TAKEN_PREFIX.length);
-  const cached = findByName(queryClient.getQueryData<SectionTypeRead[]>([SECTION_TYPES_QUERY_KEY]), name);
-  if (cached) return cached;
-  // Başka biri (ya da başka sekme) tipi eklemiş olabilir: listeyi tazele.
-  const fresh = await queryClient.fetchQuery({
-    queryKey: [SECTION_TYPES_QUERY_KEY],
-    queryFn: fetchSectionTypes,
-    staleTime: 0,
-  });
-  return findByName(fresh, name);
+function conflictExisting(body: unknown): SectionTypeRead | null {
+  const existing = (body as Partial<SectionTypeConflict> | null | undefined)?.existing;
+  return existing && typeof existing.id === "string" && typeof existing.name === "string" ? existing : null;
 }
 
 /**
@@ -104,8 +84,14 @@ export function useCreateSectionType(): UseMutationResult<
         return { kind: "created", sectionType: created };
       } catch (err) {
         if (!(err instanceof BackendError) || err.status !== 409) throw err;
-        const message = duplicateMessage(err.body);
-        return { kind: "duplicate", message, existing: await resolveExisting(queryClient, message) };
+        const existing = conflictExisting(err.body);
+        // Başka biri tipi eklemiş olabilir: gövdedeki mevcut tip listede yoksa ekle.
+        if (existing) {
+          queryClient.setQueryData<SectionTypeRead[]>([SECTION_TYPES_QUERY_KEY], (prev) =>
+            prev === undefined || prev.some((item) => item.id === existing.id) ? prev : [...prev, existing],
+          );
+        }
+        return { kind: "duplicate", message: duplicateMessage(err.body), existing };
       }
     },
   });

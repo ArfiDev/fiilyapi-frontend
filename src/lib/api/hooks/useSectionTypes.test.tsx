@@ -70,10 +70,10 @@ describe("useSectionTypes / useCreateSectionType (BLF-F1.2)", () => {
     expect(backendClient.GET).not.toHaveBeenCalled();
   });
 
-  it("409: hata FIRLATMAZ, duplicate sonucu döner; mevcut tip önbellekteki listeden AD ile bulunur", async () => {
+  it("409: hata FIRLATMAZ; gövdedeki existing DOĞRUDAN döner (liste okunmaz, GET yok)", async () => {
     client.setQueryData([SECTION_TYPES_QUERY_KEY], [FOUNDATION, FINISHING]);
     vi.mocked(backendClient.POST).mockResolvedValue(
-      fail(409, { detail: "Bu bölüm tipi zaten var: İnce İşler" }),
+      fail(409, { detail: "Bu bölüm tipi zaten var: İnce İşler", existing: FINISHING }),
     );
 
     const { result } = renderHook(() => useCreateSectionType(), { wrapper });
@@ -87,16 +87,35 @@ describe("useSectionTypes / useCreateSectionType (BLF-F1.2)", () => {
       message: "Bu bölüm tipi zaten var: İnce İşler",
       existing: FINISHING,
     });
-    // Liste DEĞİŞMEZ — kopya eklenmez.
     expect(client.getQueryData([SECTION_TYPES_QUERY_KEY])).toEqual([FOUNDATION, FINISHING]);
+    expect(backendClient.GET).not.toHaveBeenCalled();
   });
 
-  it("409: mevcut tip önbellekte yoksa liste yeniden okunur ve orada bulunur", async () => {
+  it("🔴 409: detail metni BAŞKA önek taşısa da existing'den seçilir (metin ayıklama yok)", async () => {
+    client.setQueryData([SECTION_TYPES_QUERY_KEY], [FOUNDATION, FINISHING]);
+    vi.mocked(backendClient.POST).mockResolvedValue(
+      fail(409, { detail: "Tamamen farklı bir mesaj: Hayalet", existing: FINISHING }),
+    );
+
+    const { result } = renderHook(() => useCreateSectionType(), { wrapper });
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.mutateAsync({ name: "ince işler" });
+    });
+
+    expect(outcome).toEqual({
+      kind: "duplicate",
+      message: "Tamamen farklı bir mesaj: Hayalet",
+      existing: FINISHING,
+    });
+    expect(backendClient.GET).not.toHaveBeenCalled();
+  });
+
+  it("🔴 409: existing önbellekte yoksa önbelleğe EKLENİR (refetch yok)", async () => {
     client.setQueryData([SECTION_TYPES_QUERY_KEY], [FOUNDATION]);
     vi.mocked(backendClient.POST).mockResolvedValue(
-      fail(409, { detail: "Bu bölüm tipi zaten var: İnce İşler" }),
+      fail(409, { detail: "Bu bölüm tipi zaten var: İnce İşler", existing: FINISHING }),
     );
-    vi.mocked(backendClient.GET).mockResolvedValue(ok([FOUNDATION, FINISHING]));
 
     const { result } = renderHook(() => useCreateSectionType(), { wrapper });
     let outcome: { kind: string; existing: unknown } | undefined;
@@ -104,29 +123,28 @@ describe("useSectionTypes / useCreateSectionType (BLF-F1.2)", () => {
       outcome = (await result.current.mutateAsync({ name: "ince işler" })) as never;
     });
 
-    expect(backendClient.GET).toHaveBeenCalledTimes(1);
-    expect(outcome?.kind).toBe("duplicate");
+    expect(backendClient.GET).not.toHaveBeenCalled();
     expect(outcome?.existing).toEqual(FINISHING);
     expect(client.getQueryData([SECTION_TYPES_QUERY_KEY])).toEqual([FOUNDATION, FINISHING]);
   });
 
-  it("409 ama ad listede de bulunamazsa existing null döner (mesaj yine görünür kalır)", async () => {
+  it("409 ama gövdede existing YOK (beklenmez): existing null, mesaj görünür, refetch YOK", async () => {
     client.setQueryData([SECTION_TYPES_QUERY_KEY], [FOUNDATION]);
     vi.mocked(backendClient.POST).mockResolvedValue(
-      fail(409, { detail: "Bu bölüm tipi zaten var: Hayalet" }),
+      fail(409, { detail: "Bu bölüm tipi zaten var: İnce İşler" }),
     );
-    vi.mocked(backendClient.GET).mockResolvedValue(ok([FOUNDATION]));
 
     const { result } = renderHook(() => useCreateSectionType(), { wrapper });
     let outcome: unknown;
     await act(async () => {
-      outcome = await result.current.mutateAsync({ name: "hayalet" });
+      outcome = await result.current.mutateAsync({ name: "ince işler" });
     });
     expect(outcome).toEqual({
       kind: "duplicate",
-      message: "Bu bölüm tipi zaten var: Hayalet",
+      message: "Bu bölüm tipi zaten var: İnce İşler",
       existing: null,
     });
+    expect(backendClient.GET).not.toHaveBeenCalled();
   });
 
   it("409 dışı hata (422/403) BackendError olarak yükselir", async () => {

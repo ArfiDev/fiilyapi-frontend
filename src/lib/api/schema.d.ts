@@ -18838,6 +18838,16 @@ export interface components {
             unit: string;
         };
         /**
+         * SectionTypeConflict
+         * @description `POST /section-types` 409 govdesi: `existing` = ayni adli MEVCUT tip (yaristaki
+         *     kazanan dahil). Yalniz OpenAPI sozlesmesi icindir — govdeyi handler uretir.
+         */
+        SectionTypeConflict: {
+            /** Detail */
+            detail: string;
+            existing: components["schemas"]["SectionTypeRead"];
+        };
+        /**
          * SectionTypeCreate
          * @description `POST /section-types` govdesi. Ad kirpilir; bos/yalniz-bosluk 422.
          */
@@ -37294,6 +37304,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionTypeConflict"];
+                };
             };
             /** @description Validation Error */
             422: {

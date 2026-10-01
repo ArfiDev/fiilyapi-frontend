@@ -8989,7 +8989,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     // YANIT döner (yeni satır, id sunucu sırasından); "yeni tip seç + bölümü
     // kaydet" akışı testte `page.route` ile kurulur. 409 dalı TOHUMLARA karşı
     // çalışır; gövde gerçek backend gibi `{detail: "Bu bölüm tipi zaten var:
-    // <MEVCUT AD>"}` (id YOK).
+    // <MEVCUT AD>", existing: {id, name}}`.
     if (path === "/section-types") {
       if (method === "GET") return send(200, state.sectionTypes);
       if (method === "POST") {
@@ -8999,7 +8999,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
             return send(422, { detail: [{ type: "string_length", loc: ["body", "name"], msg: "Ad 1-100 karakter olmalıdır" }] });
           }
           const taken = state.sectionTypes.find((type) => normalizeTypeName(type.name) === normalizeTypeName(name));
-          if (taken) return send(409, { detail: `Bu bölüm tipi zaten var: ${taken.name}` });
+          if (taken) return send(409, { detail: `Bu bölüm tipi zaten var: ${taken.name}`, existing: { id: taken.id, name: taken.name } });
           const created: MockSectionType = {
             id: `5ec70000-0000-4000-8000-${String(state.sectionTypes.length + 1).padStart(12, "0")}`,
             name,
