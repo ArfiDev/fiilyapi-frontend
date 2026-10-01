@@ -149,3 +149,28 @@ test("secici-768: dar ekran (tablo yatay kaydırılır)", async ({ page }) => {
   await picker(page).getByLabel(`${items[0]?.poz_no} miktar`).fill("25");
   await snap(page, "secici-768");
 });
+
+// F2.4.1 yerleşimi: tablo kabı (`.wip-table-scroll`) kayar, başlık satırı kabın üstüne YAPIŞIK kalır.
+// Kısa pencere (kayma garantisi) + kap aşağı kaydırılmış hâl; başlığın kabın üstünde durduğu ölçülür.
+const SHORT = { width: 1440, height: 600 } as const;
+const SCROLL_OFFSET_PX = 240;
+const STICKY_TOLERANCE_PX = 2;
+
+test("secici-kaydirilmis: tablo kabı kaydırılmış, başlık satırı yapışık", async ({ page }) => {
+  const items = await realCatalog(page);
+  await serveCatalog(page, items);
+  await page.setViewportSize(SHORT);
+  await openPicker(page);
+  const scroller = picker(page).locator(".wip-table-scroll");
+  await expect(picker(page).getByText(items[0]?.poz_no ?? "").first()).toBeVisible();
+  await scroller.evaluate((element, top) => {
+    element.scrollTop = top;
+  }, SCROLL_OFFSET_PX);
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+  const head = picker(page).locator(".wip-th").first();
+  const headTop = (await head.boundingBox())?.y ?? Number.NaN;
+  const scrollerTop = (await scroller.boundingBox())?.y ?? Number.NaN;
+  expect(Math.abs(headTop - scrollerTop)).toBeLessThanOrEqual(STICKY_TOLERANCE_PX);
+  await snap(page, "secici-kaydirilmis");
+});

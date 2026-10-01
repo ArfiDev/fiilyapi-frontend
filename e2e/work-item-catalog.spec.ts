@@ -239,3 +239,47 @@ test("view rolunde yazma yuzeyi YOK: Kalem Ekle ve Duzenle gizli, salt okunur se
   expect(fake.postBodies).toHaveLength(0);
   expect(fake.patchCalls).toHaveLength(0);
 });
+
+// TKL-F2.5 · "Son fiyat" kolonu (mock tohumu: KAB-0001 SZL, KAB-0003 HK, DİĞERLERİ kaynaksız).
+test("son fiyat kolonu: SZL ve HK kaynaklari, fark yuzdesi, kaynaksiz kalem", async ({ page }) => {
+  await openWorkItemCatalog(page);
+  await expect(page.getByRole("columnheader", { name: "Son fiyat" })).toBeVisible();
+
+  const lastBox = (pozNo: string) => rowOf(page, pozNo).locator(".wik-lastbox");
+
+  // SZL: sözleşme kalemi (03.010) — son fiyat = referans → fark "%0,0", kırmızı DEĞİL.
+  const szl = lastBox("KAB-0001");
+  await expect(szl).toContainText("₺185,00");
+  await expect(szl.locator(".wik-last__diff")).toHaveText("%0,0");
+  await expect(szl.locator(".wik-last__diff--high")).toHaveCount(0);
+  await expect(szl).toContainText("Sözleşme · PRJ-1 · 15.09");
+
+  // HK: onaylı hakediş — referansın ALTINDA → negatif işaretli (−), kırmızı DEĞİL.
+  const hk = lastBox("KAB-0003");
+  await expect(hk).toContainText("₺24.553,00");
+  await expect(hk.locator(".wik-last__diff")).toHaveText("−%13,8");
+  await expect(hk.locator(".wik-last__diff--high")).toHaveCount(0);
+  await expect(hk).toContainText("Hakediş · HK-PRJ-1-7 · 12.09");
+
+  // Kaynaksız: referans fiyatı VAR → "—" + "henüz kaynak yok".
+  const noSource = lastBox("KAB-0004");
+  await expect(noSource.locator(".wik-last--empty")).toHaveText("—");
+  await expect(noSource).toContainText("henüz kaynak yok");
+  // Referans fiyatı da yok → maskeli sayılır: yalnız "—", "henüz kaynak yok" YALAN olurdu.
+  const masked = lastBox("KAB-0002");
+  await expect(masked.locator(".wik-last--empty")).toHaveText("—");
+  await expect(masked).not.toContainText("henüz kaynak yok");
+});
+
+test("dipnot UC maddeyi basar: kaynaklar, +% esigi, turuncu tarih", async ({ page }) => {
+  await openWorkItemCatalog(page);
+
+  const legend = page.locator("main .wik-legend");
+  await expect(legend).toBeVisible();
+  await expect(legend.locator(":scope > span")).toHaveCount(3);
+  await expect(legend.locator(":scope > span").nth(0)).toHaveText(
+    "Referans fiyat elle girilir; son fiyat işveren sözleşmeleri ve onaylı hakedişlerden gelir",
+  );
+  await expect(legend.locator(":scope > span").nth(1)).toHaveText("+%son fiyat referansın %5 üstünde");
+  await expect(legend.locator(":scope > span").nth(2)).toHaveText("turuncu tarih 6 aydan eski fiyat");
+});

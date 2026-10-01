@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { login, prepareFrame } from "./contracts-visual-helpers";
+import { openManualItemForm } from "./employer-catalog-picker-helpers";
 
 // F-POZGRUP T4 · "Yeni bir işveren sözleşmesine İLK poz eklenemiyor"
 // kusurunun düzeltmesinin GÖRSEL kadrajları.
@@ -170,10 +171,9 @@ test("grupsuz isveren sozlesmesi is kalemleri sekmesi gorsel", async ({ page }) 
 test("poz ekle isveren diyalogu yeni grup kipi gorsel", async ({ page }) => {
   await gotoLoadedEmptyContract(page);
 
-  await page.getByTestId("ecd-add-item").click();
-
-  const dialog = page.getByRole("dialog", { name: "İşveren Sözleşmesine Poz Ekle" });
-  await expect(dialog).toBeVisible();
+  // "+ Poz Ekle" katalog seçicisini açar; kadraj eski tekli formdur → "Elle poz ekle" köprüsü.
+  // Dönüşte seçici KAPALI (kareye girmez), tekli form AÇIK.
+  const dialog = await openManualItemForm(page);
   // 🔴 Kadrajın ASIL konusu: grup açılırı boş yer tutucuda DEĞİL, doğrudan
   // "+ Yeni Grup" sentinel'inde; grup adı alanı da bu yüzden görünür.
   await expect(dialog.getByLabel("Poz Grubu", { exact: true })).toHaveValue(NEW_GROUP_SENTINEL);
