@@ -212,7 +212,18 @@ export function WorkspaceTabsStrip({
       // `getBoundingClientRect` VIEWPORT koordinatı verir — şeridin KAYDIRILAN
       // İÇERİK koordinatına çevirmek için mevcut `scrollLeft` eklenir.
       const contentLeft = activeRect.left - listRect.left + list.scrollLeft;
-      const contentRight = contentLeft + activeRect.width;
+      let contentRight = contentLeft + activeRect.width;
+      // FLK-F1 (38px kaynağı, ÖLÇÜLDÜ 1440px: dış sarmalayıcı sağı − hit sağı
+      // = 38px = × düğmesi + iç boşluk): yalnız hit öğesi görünür kılınınca
+      // × şeridin sağında KIRPILI kalıyordu. Panelden artan alan dış
+      // sarmalayıcıyı BARINDIRIYORSA (geniş ekran) sağ kenar sarmalayıcıya
+      // göre hesaplanır; barındırmıyorsa (768px, bkz. yukarıdaki 3. bulgu)
+      // davranış DEĞİŞMEZ: hedef yalnız hit öğesidir.
+      const wrapperRect = tabRefs.current.get(activeId)?.getBoundingClientRect();
+      if (wrapperRect && wrapperRect.width <= list.clientWidth - pinnedWidthPx) {
+        const wrapperRight = wrapperRect.left - listRect.left + list.scrollLeft + wrapperRect.width;
+        if (wrapperRight > contentRight) contentRight = wrapperRight;
+      }
       const viewLeft = list.scrollLeft + pinnedWidthPx;
       const viewRight = list.scrollLeft + list.clientWidth;
 
@@ -257,6 +268,11 @@ export function WorkspaceTabsStrip({
     const observer = ResizeObserverCtor ? new ResizeObserverCtor(measureAndScroll) : undefined;
     observer?.observe(pinnedEl);
     observer?.observe(list);
+    // FLK-F1: AKTİF sekmenin (hit öğesi) genişliği ölçümden SONRA değişirse
+    // (geç başlık, ×, font) liste kutusu aynı kalır — yeniden kaydırma yalnız
+    // bu gözlemle tetiklenir.
+    const activeHitEl = tabHitRefs.current.get(activeId);
+    if (activeHitEl) observer?.observe(activeHitEl);
 
     return () => {
       cancelled = true;
