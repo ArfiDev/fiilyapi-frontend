@@ -4,11 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge/Badge";
+import { Button } from "@/components/ui/button/Button";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { formatCurrencyPrecise } from "@/lib/format";
 import type { SiteDiaryEntryDetail } from "@/lib/api/hooks/useSiteDiary";
 
+import type { DiaryPreviewStatus } from "./useDiaryPreview";
 import type { DiaryItemMeta, DiaryLineColumns, DiaryLineRef } from "./diary-extension";
 import type { DiaryItemGroup, DiaryLeafRow, DiaryTreeSection } from "./diary-lines-tree";
 import { DiaryItemHeaderRow, DiaryLeafRowView } from "./DiaryLineRows";
@@ -18,8 +20,15 @@ import type { DiaryAddedLine, DiaryFormState } from "./form-state";
 import "./site-diary-progress.css";
 
 export interface DiaryLinesCardProps {
-  /** Kayıt henüz açılmadıysa `undefined` — satır iskeleti sunucudan gelir. */
+  /** Kayıt henüz açılmadıysa `undefined` — ağaç önizleme iskeletinden gelir (GKS-F1.3). */
   entry: SiteDiaryEntryDetail | undefined;
+  /** Tfoot "Bugünkü Hakediş Katkısı": kayıtta `entry.lines_total`, önizlemede `skeleton.lines_total`. */
+  linesTotal?: string;
+  /** Önizleme sorgusunun durumu (kayıt yokken); verilmezse hazır sayılır. */
+  previewStatus?: DiaryPreviewStatus;
+  onRetryPreview?: () => void;
+  /** Kayıtsız günde bölüm seçili (Ü1: o bölüme tahsisli kalem yoksa tahsis yönlendirmesi). */
+  hasSection?: boolean;
   /** Kalem ağacı (`buildDiaryLineTree`). */
   groups: readonly DiaryItemGroup[];
   sections: readonly DiaryTreeSection[];
@@ -69,6 +78,10 @@ function isAddExhausted(group: DiaryItemGroup, sections: readonly DiaryTreeSecti
  */
 export function DiaryLinesCard({
   entry,
+  linesTotal,
+  previewStatus = "ready",
+  onRetryPreview,
+  hasSection = false,
   groups,
   sections,
   form,
@@ -92,7 +105,11 @@ export function DiaryLinesCard({
   const [pendingRemoval, setPendingRemoval] = useState<{ group: DiaryItemGroup; leaf: DiaryLeafRow } | null>(null);
   const extraHeaders = lineColumns?.headers ?? [];
   const columnCount = CORE_COLUMN_COUNT + extraHeaders.length;
-  const hasRows = entry !== undefined && groups.length > 0;
+  const hasRows = groups.length > 0;
+  const isPreview = entry === undefined;
+  const isPreviewPending = isPreview && previewStatus !== "ready";
+  const hasLeaves = groups.some((group) => group.leaves.length > 0);
+  const isSectionEmpty = isPreview && hasSection && !hasLeaves && !isPreviewPending;
   const scope = useDisciplineScope();
   const canMutateRows = canEditRows && !disabled && !isLocked;
 
@@ -105,6 +122,43 @@ export function DiaryLinesCard({
     }
     onRemoveLine(leaf.key);
   }
+
+  const showTable = !isPreviewPending && hasRows;
+  const emptyState = isPreviewPending ? (
+    // Ü11 · önizleme gelmeden satır uydurulmaz.
+    previewStatus === "error" ? (
+      <div className="diary__error">
+        <div className="diary__error-reasons">
+          <span>İş kalemleri yüklenemedi</span>
+        </div>
+        <Button variant="ghost" size="sm" className="diary__error-action" onClick={onRetryPreview}>
+          Tekrar dene
+        </Button>
+      </div>
+    ) : (
+      <p className="diary-lines__empty">İş kalemleri yükleniyor…</p>
+    )
+  ) : !hasRows && scope.isRestricted ? (
+    // Disiplini atanmış kullanıcıda backend süzmesi kalemleri boşaltabilir
+    // (DSC-F1.3); kayıt ya da önizleme tamamen boşsa ortak kısıtlı bildirim.
+    <RestrictedEmptyNotice names={scope.names} />
+  ) : isSectionEmpty ? (
+    // Ü1 · seçili bölüme tahsisli kalem yok. BOQ başlıkları (varsa) aşağıda
+    // kalır: "+ Bölüm" yolunun tek girişi (Ü2).
+    <>
+      <p className="diary-lines__empty">Bu bölüme tahsis edilmiş iş kalemi yok.</p>
+      {boqHref !== null && (
+        <Link href={boqHref} className="diary-picker__allocate">
+          İş Kalemleri&apos;nde tahsis et →
+        </Link>
+      )}
+    </>
+  ) : !hasRows ? (
+    // Dürüst boş durum: sahte satır uydurulmaz.
+    <p className="diary-lines__empty">
+      Bu şantiyede sözleşme BOQ pozu tanımlı değil — iş kalemi satırı üretilemedi.
+    </p>
+  ) : null;
 
   return (
     <section className="diary-card" aria-labelledby="diary-lines-title">
@@ -124,19 +178,9 @@ export function DiaryLinesCard({
         </Badge>
       </div>
 
-      {!hasRows && entry && scope.isRestricted ? (
-        // Disiplini atanmış kullanıcıda backend süzmesi kalemleri boşaltabilir
-        // (DSC-F1.3); kayıt açıkken tüm liste boşsa ortak kısıtlı bildirim.
-        <RestrictedEmptyNotice names={scope.names} />
-      ) : !hasRows ? (
-        // Dürüst boş durum: satırlar kayıt AÇILDIĞINDA sunucudan gelir; sahte
-        // satır uydurulmaz (spec §2, backend sözleşmesi).
-        <p className="diary-lines__empty">
-          {entry
-            ? "Bu şantiyede sözleşme BOQ pozu tanımlı değil — iş kalemi satırı üretilemedi."
-            : "İş kalemi satırları, gün için kayıt açıldığında sözleşme BOQ pozlarından otomatik gelir. Önce “Taslak Kaydet” deyin."}
-        </p>
-      ) : (
+      {emptyState}
+
+      {showTable && (
         <div className="diary-lines__scroll">
           <table className="diary-lines diary-lines--tree">
             <thead>
@@ -240,6 +284,7 @@ export function DiaryLinesCard({
                       }
                       columnCount={columnCount}
                       isIndirect={isIndirect(group.boqItemId)}
+                      isPreview={isPreview}
                       subRow={lineColumns?.renderSubRow && ref ? lineColumns.renderSubRow(ref) : null}
                     />
                   );
@@ -255,7 +300,7 @@ export function DiaryLinesCard({
               {/* K16 · GK255-258 — Hakediş katkısı KALIR. */}
               <tr className="diary-lines__total-row">
                 <td colSpan={columnCount - 2}>Bugünkü Hakediş Katkısı</td>
-                <td className="diary-lines__total-amount">{formatCurrencyPrecise(entry?.lines_total ?? "0")}</td>
+                <td className="diary-lines__total-amount">{formatCurrencyPrecise(linesTotal ?? entry?.lines_total ?? "0")}</td>
                 <td />
               </tr>
             </tfoot>

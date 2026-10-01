@@ -64,9 +64,14 @@ vi.mock("@/lib/api/hooks/useSiteDiary", () => ({
   useSiteDiaryEntries: vi.fn(),
   useSiteDiaryEntry: vi.fn(),
 }));
+// GKS-F1.3 · kayıtsız gün önizlemesi: istenen gün/bölüm için boş, güncel iskelet.
+vi.mock("@/lib/api/hooks/useSiteDiarySkeleton", async () => ({
+  useSiteDiarySkeleton: (await import("@/components/site-diary/diary-skeleton.testkit")).echoSkeletonQuery,
+}));
 vi.mock("@/lib/api/hooks/useSiteDiaryMutations", () => ({
   useCreateSiteDiaryEntry: vi.fn(),
   useUpdateSiteDiaryEntry: vi.fn(),
+  useUpdateCreatedSiteDiaryEntry: vi.fn(),
   useSaveSiteDiaryLines: vi.fn(),
   useSubmitSiteDiaryEntry: vi.fn(),
   useReopenSiteDiaryEntry: vi.fn(),
@@ -459,12 +464,12 @@ describe("SiteDiaryEntryView · türev kuralları", () => {
     setSpy.mockRestore();
   });
 
-  it("kayıt açılmadan satır UYDURULMAZ; 'Kaydet & Gönder' gerekçesiyle devre dışıdır", () => {
+  it("kayıt açılmadan satır UYDURULMAZ (iskelet boş); 'Kaydet & Gönder' gerekçesiyle devre dışıdır", () => {
     mockScreen();
     render(<SiteDiaryEntryView />);
 
     expect(
-      screen.getByText(/İş kalemi satırları, gün için kayıt açıldığında/),
+      screen.getByText("Bu şantiyede sözleşme BOQ pozu tanımlı değil — iş kalemi satırı üretilemedi."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Kaydet & Gönder" })).toBeDisabled();
   });
@@ -629,11 +634,13 @@ describe("SiteDiaryEntryView · 409 akışı", () => {
 
     expect(await screen.findByText("Bu güne ait günlük kayıt zaten var.")).toBeInTheDocument();
     const openExisting = screen.getByRole("button", { name: "Var olan kaydı aç" });
+    // GKS-F1.3: çakışma anında liste zaten yenilenir (S5'e düşmek için).
+    const callsAfterError = refetchEntries.mock.calls.length;
 
     await user.click(openExisting);
 
     // Mevcut kayda yönlendirme = ay listesini tazele; hata bandı kapanır.
-    await waitFor(() => expect(refetchEntries).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(refetchEntries.mock.calls.length).toBeGreaterThan(callsAfterError));
     expect(screen.queryByRole("button", { name: "Var olan kaydı aç" })).not.toBeInTheDocument();
   });
 
@@ -860,13 +867,13 @@ describe("SiteDiaryEntryView · işçi dağılımı (G12a)", () => {
     expect(screen.getByText(/Bu gün için puantaj girilmemiş/)).toBeInTheDocument();
   });
 
-  it("kayıt yokken boş hâl + 'önce taslak kaydedin' notu", () => {
+  it("kayıt yokken boş hâl basılır; 'önce taslak kaydedin' notu YOK (GKS-F1.5)", () => {
     mockScreen();
     render(<SiteDiaryEntryView />);
 
     expect(screen.getByText(/Bu gün için puantaj girilmemiş/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Puantaja git/ })).toHaveAttribute("href", timesheetHrefFor(TODAY));
-    expect(screen.getByText(/önce “Taslak Kaydet” deyin/)).toBeInTheDocument();
+    expect(screen.queryByText(/önce “Taslak Kaydet” deyin/)).toBeNull();
   });
 
   it("🔴 TAM KÜME: gizli (sayısı 0) eski satır PATCH gövdesinde korunur; görünen eski satır 'Diğer (eski kayıt)'", async () => {

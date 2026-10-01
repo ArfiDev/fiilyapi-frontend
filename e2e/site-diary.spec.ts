@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { installFakeDiaryServer } from "./site-diary-fake-create";
+
 // F-SD T6 · Şantiye Günlüğü fonksiyonel e2e (görsel DEĞİL).
 // Kapsam: Kayıt Gir akışı (taslak aç → miktar → Taslak Kaydet → Kaydet &
 // Gönder → Yeniden Aç), mod anahtarı geçişleri, Hakediş Özeti ay gezinmesi +
@@ -14,18 +16,16 @@ import { test, expect, type Page } from "@playwright/test";
 // `section-detail-visual.spec.ts`).
 //
 // 🔒 FİKSTÜR İZOLASYONU (P7 dersi): mock backend TÜM spec dosyalarında TEK
-// paylaşılan sunucudur. Günlük fikstürleri TEMMUZ 2026'dadır (d-1/d-2 → s-1,
-// d-3 → s-2) ve görsel spec'ler ile T5'in öneri testleri o aya bakar. Bu
-// dosyadaki TEK mutasyon akışı bilerek EYLÜL 2026'da (s-1) yürür; okuma
-// testleri Temmuz'a bakar ama hiçbir şeyi değiştirmez. Böylece
-// `site-diary-visual` / `site-diary-summary-visual` baseline'ları bu dosyanın
-// `fullyParallel` altında ne zaman koştuğundan yapısal olarak bağımsızdır.
+// paylaşılan sunucudur (fullyParallel). Bu dosya mock durumuna HİÇBİR yazma
+// göndermez: kaydı açan akış (POST + gönder/yeniden aç) `page.route` ile
+// yakalanır (`site-diary-fake-create.ts`), 409 testi de öyle. Okuma testleri
+// Temmuz fikstürlerine bakar, değiştirmez; Eylül yalnız "kayıtsız ay" içindir.
 
 const SITE_DIARY_URL = "/projeler/p-1/santiyeler/s-1/gunluk-kayit";
 
 /** Temmuz fikstürlerinin AYI, ama kayıt OLMAYAN bir gün (409'a takılmaz). */
 const JULY_FREE_DAY = "2026-07-20T09:00:00Z";
-/** Mutasyon akışının ayı — hiçbir fikstür/başka spec Eylül'e bakmaz. */
+/** Kayıt akışının günü — hiçbir fikstür/başka spec Eylül'e bakmaz (mock'a yazılmaz). */
 const SEPTEMBER_FREE_DAY = "2026-09-10T09:00:00Z";
 
 async function login(page: Page) {
@@ -59,10 +59,13 @@ test("günlük kayıt: mod anahtarı, son kayıtlar ve gün seçimi (SALT-OKUR)"
   await expect(recent.getByText("15 Temmuz")).toBeVisible();
   await expect(recent.getByText("Yağışlı")).toBeVisible();
 
-  // 20 Temmuz'da kayıt YOK → satır iskeleti uydurulmaz, dürüst boş durum.
-  await expect(
-    content.getByText("İş kalemi satırları, gün için kayıt açıldığında", { exact: false }),
-  ).toBeVisible();
+  // 20 Temmuz'da kayıt YOK → GKS-F1: satırlar kaydı beklemeden iskelet
+  // önizlemesinden (GET /diary/skeleton) gelir; eski "Önce Taslak Kaydet" boş
+  // metni artık YOK. Bölüm seçili değil → şantiyenin tüm kalemleri, miktar boş.
+  await expect(content.getByLabel("01.001 bugün yapılan miktar")).toHaveValue("");
+  await expect(content.getByLabel("02.002 bugün yapılan miktar")).toBeVisible();
+  await expect(content.getByText("İş kalemi satırları, gün için kayıt açıldığında", { exact: false })).toHaveCount(0);
+  await expect(content.getByText("Önce Taslak Kaydet", { exact: false })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Kaydet & Gönder" })).toBeDisabled();
 
   // Satıra tıklayınca O GÜNÜN kaydı açılır (GK359) — 16 Temmuz taslak kaydı.
@@ -83,12 +86,16 @@ test("günlük kayıt: mod anahtarı, son kayıtlar ve gün seçimi (SALT-OKUR)"
   await expect(page.getByRole("button", { name: "Yeniden Aç" })).toBeVisible();
 });
 
-test("günlük kayıt: taslak aç → miktar gir → Taslak Kaydet → Kaydet & Gönder → Yeniden Aç", async ({
+test("günlük kayıt: önizlemeden miktar gir → Taslak Kaydet (tek POST) → Kaydet & Gönder → Yeniden Aç", async ({
   page,
 }) => {
-  // MUTASYON akışı — bilerek EYLÜL'de (dosya başlığındaki izolasyon notu).
+  // 🔒 MOCK'A YAZMAZ: POST/submit/reopen `page.route` ile yakalanır
+  // (`site-diary-fake-create.ts`); yanıtlar iskelet önizlemesinden + istek
+  // gövdesinden türetilir. Paylaşılan mock durumu (fullyParallel görsel kareler)
+  // değişmez, bu yüzden günün Temmuz/Eylül olması artık yarış doğurmaz.
   await page.clock.setFixedTime(new Date(SEPTEMBER_FREE_DAY));
   await login(page);
+  const fake = await installFakeDiaryServer(page, "s-1");
 
   await page.goto(SITE_DIARY_URL);
   const content = page.locator("main");
@@ -96,22 +103,29 @@ test("günlük kayıt: taslak aç → miktar gir → Taslak Kaydet → Kaydet & 
   await expect(content.getByLabel("Tarih")).toHaveValue("10.09.2026");
   await expect(content.locator(".diary-recent__list")).toContainText("Bu ayda henüz günlük kayıt yok.");
 
-  // 1) Kayıt yokken "Taslak Kaydet" kaydı AÇAR; satır iskeleti sunucudan gelir.
-  await page.getByRole("button", { name: "Taslak Kaydet" }).click();
-  await expect(content.locator(".diary__status-row")).toContainText("Taslak");
+  // 1) Kayıt YOKKEN satırlar önizlemeden gelir; Taslak Kaydet'e BASMADAN miktar girilir.
   const quantity = content.getByLabel("01.001 bugün yapılan miktar");
   await expect(quantity).toBeVisible();
   await expect(quantity).toHaveValue("");
+  await expect(content.locator(".diary__status-row")).not.toContainText("Taslak");
 
-  // 2) Miktar girilir → türev sütunları için görünür "kaydedilmemiş" uyarısı.
+  // 2) Miktar girilir → sağ panelde görünür "kaydedilmemiş değişiklik" uyarısı.
   await quantity.fill("12");
-  await expect(page.getByText("Kaydedilmemiş değişiklik var.", { exact: false })).toBeVisible();
+  await expect(content.locator(".diary-recent__warning")).toBeVisible();
 
-  // 3) "Taslak Kaydet" başlığı + satırları yazar; toplam SUNUCUDAN döner
-  //    (12 × ₺280 = ₺3.360 — ekran bu çarpımı YAPMAZ, yanıttan basar).
+  // 3) "Taslak Kaydet" başlığı + satırları TEK istekte yazar; toplam yanıttan döner
+  //    (12 × ₺280 = ₺3.360 — ekran bu çarpımı YAPMAZ).
   await page.getByRole("button", { name: "Taslak Kaydet" }).click();
+  await expect(content.locator(".diary__status-row")).toContainText("Taslak");
   await expect(page.locator(".diary-lines__total-amount")).toContainText("₺ 3.360");
-  await expect(page.getByText("Kaydedilmemiş değişiklik var.", { exact: false })).toHaveCount(0);
+  await expect(content.locator(".diary-recent__warning")).toHaveCount(0);
+
+  // Gövde: TEK POST, girilen miktar `lines` içinde, PUT lines / PATCH YOK.
+  expect(fake.createBodies).toHaveLength(1);
+  const [body] = fake.createBodies;
+  expect(body.entry_date).toBe("2026-09-10");
+  expect(body.lines).toEqual([expect.objectContaining({ boq_item_id: "bi-1", quantity: 12 })]);
+  expect(fake.writeCalls).toEqual({ putLines: 0, patch: 0 });
 
   // 4) "Kaydet & Gönder" → kayıt gönderilir ve salt-okunur olur.
   await page.getByRole("button", { name: "Kaydet & Gönder" }).click();
@@ -124,6 +138,7 @@ test("günlük kayıt: taslak aç → miktar gir → Taslak Kaydet → Kaydet & 
   await page.getByRole("button", { name: "Yeniden Aç" }).click();
   await expect(page.locator(".diary__status-row")).toContainText("Taslak");
   await expect(page.getByLabel("01.001 bugün yapılan miktar")).toBeEnabled();
+  expect(fake.createBodies).toHaveLength(1);
 });
 
 test("günlük kayıt: aynı güne ikinci kayıt 409 → Türkçe mesaj + mevcut kayda yönlendirme", async ({

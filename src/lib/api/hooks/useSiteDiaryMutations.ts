@@ -41,9 +41,10 @@ function useSiteDiaryInvalidator() {
 
 /**
  * Günlük kayit acma (`POST /sites/{site_id}/diary`). Kayit her zaman `draft`
- * dogar; govde `lines[]`/`worker_counts[]`/`status` TASIMAZ (satir iskeleti
- * BOQ pozlarindan sunucuda uretilir). Ayni güne ikinci kayit backend'de 409
- * doner — cagiran ekran bu hatayi Türkçe mesaja cevirir.
+ * dogar; govde `status`/`worker_counts[]` TASIMAZ. GKS-F1.2a: `lines[]`
+ * ONIZLEMEDE girilen satirlari tasiyabilir (sunucu BIRLESTIRIR, silmez —
+ * iskelet yine BOQ pozlarindan sunucuda kurulur). Ayni güne ikinci kayit
+ * backend'de 409 doner — cagiran ekran bu hatayi Türkçe mesaja cevirir.
  */
 export function useCreateSiteDiaryEntry(
   siteId: string,
@@ -61,6 +62,15 @@ export function useCreateSiteDiaryEntry(
   });
 }
 
+async function patchSiteDiaryEntry(entryId: string, body: SiteDiaryEntryUpdate): Promise<SiteDiaryEntryDetail> {
+  return unwrap(
+    await backendClient.PATCH("/diary/{entry_id}", {
+      params: { path: { entry_id: entryId } },
+      body,
+    }),
+  );
+}
+
 /**
  * Baslik alanlari + isci kirilimi guncelleme (`PATCH /diary/{entry_id}`) —
  * backend YALNIZ `draft` kayitta kabul eder. Hangi santiyenin gecersiz
@@ -71,13 +81,25 @@ export function useUpdateSiteDiaryEntry(
 ): UseMutationResult<SiteDiaryEntryDetail, Error, SiteDiaryEntryUpdate> {
   const invalidate = useSiteDiaryInvalidator();
   return useMutation({
-    mutationFn: async (body) =>
-      unwrap(
-        await backendClient.PATCH("/diary/{entry_id}", {
-          params: { path: { entry_id: entryId } },
-          body,
-        }),
-      ),
+    mutationFn: (body) => patchSiteDiaryEntry(entryId, body),
+    onSuccess: (data) => invalidate(data.site_id, data.id),
+  });
+}
+
+/**
+ * GKS-F1.5 · ayni PATCH, ama kayit kimligi CAGRI ANINDA verilir: kayit yokken
+ * ilk "Taslak Kaydet" POST'tan hemen sonra (kimlik henuz ekranin `matchedId`sine
+ * yansimadan) isci kirilimini ayni kayda yazar. Govde `useUpdateSiteDiaryEntry`
+ * ile ayni `buildDiaryUpdateBody`dir.
+ */
+export function useUpdateCreatedSiteDiaryEntry(): UseMutationResult<
+  SiteDiaryEntryDetail,
+  Error,
+  { entryId: string; body: SiteDiaryEntryUpdate }
+> {
+  const invalidate = useSiteDiaryInvalidator();
+  return useMutation({
+    mutationFn: ({ entryId, body }) => patchSiteDiaryEntry(entryId, body),
     onSuccess: (data) => invalidate(data.site_id, data.id),
   });
 }

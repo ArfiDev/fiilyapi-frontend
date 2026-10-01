@@ -37,7 +37,6 @@ function renderCard(props: Partial<DiaryWorkerCountsCardProps> = {}) {
       form={buildForm()}
       onChange={() => {}}
       disabled={false}
-      isEntryMissing={false}
       {...props}
     />,
   );
@@ -87,11 +86,12 @@ describe("DiaryWorkerCountsCard — kendi ekip (puantajdan, G12a)", () => {
     expect(link.textContent).not.toContain("→");
   });
 
-  it("kayıt yokken de boş hâl basılır; firma notu kalır", () => {
-    renderCard({ ownCrew: [], isEntryMissing: true });
+  it("GKS-F1.5 · kayıtsız günde de boş hâl basılır; 'önce Taslak Kaydet' notu YOKTUR", () => {
+    renderCard({ ownCrew: [] });
 
     expect(screen.getByText(/Bu gün için puantaj girilmemiş/)).toBeInTheDocument();
-    expect(screen.getByText(/önce “Taslak Kaydet” deyin/)).toBeInTheDocument();
+    expect(screen.queryByText(/önce “Taslak Kaydet” deyin/)).toBeNull();
+    expect(screen.queryByText(/kayıt açıldıktan sonra girilebilir/)).toBeNull();
   });
 
   it("puantaj varsa boş hâl basılmaz", () => {
@@ -166,5 +166,46 @@ describe("DiaryWorkerCountsCard — Toplam (G12a)", () => {
     const total = totalRow(container);
     expect(within(total).getByText("9")).toBeInTheDocument();
     expect(within(total).getByText("—")).toBeInTheDocument();
+  });
+});
+
+describe("GKS-F1.5 · kayıtsız günde işçi dağılımı girilebilir", () => {
+  function renderEditable(props: Partial<DiaryWorkerCountsCardProps> = {}) {
+    const onChange = vi.fn();
+    const onHoursChange = vi.fn();
+    const onAddFirm = vi.fn();
+    const onRemoveRow = vi.fn();
+    renderCard({
+      rows: [FIRM],
+      firmNameById: new Map([["firm-1", "Kaya Duvar İnşaat"]]),
+      form: buildForm({ "firm|firm-1": "6" }, { "firm|firm-1": "9" }),
+      onChange,
+      onHoursChange,
+      onAddFirm,
+      onRemoveRow,
+      firmOptions: [{ id: "firm-2", name: "Ay Yapı" }],
+      ...props,
+    });
+    return { onChange, onHoursChange, onAddFirm, onRemoveRow };
+  }
+
+  it("girdiler, firma ekleme ve × AÇIK; devre dışı başlığı yok", () => {
+    renderEditable();
+
+    const count = screen.getByLabelText("Taşeron · Kaya Duvar İnşaat işçi sayısı");
+    expect(count).toBeEnabled();
+    expect(count).not.toHaveAttribute("title");
+    expect(screen.getByLabelText("Taşeron · Kaya Duvar İnşaat kişi başı saat")).toBeEnabled();
+    expect(screen.getByRole("combobox", { name: "Taşeron firma ekle" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kaya Duvar İnşaat satırını kaldır" })).toBeInTheDocument();
+    expect(screen.queryByText(/Önce taslak kaydedin/)).toBeNull();
+  });
+
+  it("salt-okunur (disabled) hâl AYNEN pasif: girdi kilitli, firma ekleme ve × yok", () => {
+    renderEditable({ disabled: true });
+
+    expect(screen.getByLabelText("Taşeron · Kaya Duvar İnşaat işçi sayısı")).toBeDisabled();
+    expect(screen.queryByRole("combobox", { name: "Taşeron firma ekle" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Kaya Duvar İnşaat satırını kaldır" })).toBeNull();
   });
 });

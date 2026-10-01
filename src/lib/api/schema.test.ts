@@ -1,7 +1,7 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 
 import { apiClient } from "@/lib/api/client";
-import type { components } from "@/lib/api/schema";
+import type { components, paths } from "@/lib/api/schema";
 
 describe("API tip üretimi", () => {
   it("apiClient tanımlıdır ve GET/POST metodları vardır", () => {
@@ -408,5 +408,54 @@ describe("Bölüm (section) tip üretimi — P6 sözleşme genişlemesi", () => 
 
     expect(minimalCreate.name).toBe("A Blok");
     expect(minimalUpdate).toEqual({});
+  });
+});
+
+describe("Günlük iskelet önizlemesi tip üretimi (GKS-F1.1 kapısı)", () => {
+  type Skeleton = components["schemas"]["SiteDiarySkeleton"];
+  type SkeletonLine = components["schemas"]["SiteDiarySkeletonLine"];
+  type EntryCreate = components["schemas"]["SiteDiaryEntryCreate"];
+  type LineInput = components["schemas"]["SiteDiaryLineInput"];
+
+  it("SiteDiarySkeleton tüm alanları zorunlu taşır; nullable olanlar null alabilir", () => {
+    expectTypeOf<Skeleton["entry_date"]>().toEqualTypeOf<string>();
+    expectTypeOf<Skeleton["section_id"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Skeleton["section_name"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Skeleton["existing_entry_id"]>().toEqualTypeOf<
+      string | null
+    >();
+    expectTypeOf<Skeleton["locked"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<Skeleton["lock_report_date"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Skeleton["lines"]>().toEqualTypeOf<SkeletonLine[]>();
+    expectTypeOf<Skeleton["lines_total"]>().toEqualTypeOf<string>();
+  });
+
+  it("SiteDiarySkeletonLine 'id' TAŞIMAZ ama hesap alanlarını taşır", () => {
+    expectTypeOf<
+      "id" extends keyof SkeletonLine ? true : false
+    >().toEqualTypeOf<false>();
+    expectTypeOf<SkeletonLine["boq_item_id"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SkeletonLine>().toHaveProperty("section_id");
+    expectTypeOf<SkeletonLine["quantity"]>().toEqualTypeOf<string>();
+    expectTypeOf<SkeletonLine>().toHaveProperty("planned_quantity");
+    expectTypeOf<SkeletonLine>().toHaveProperty("leaf_cumulative_quantity");
+  });
+
+  it("SiteDiaryEntryCreate.lines opsiyonel ve null alabilir satır girdisi dizisidir", () => {
+    expectTypeOf<EntryCreate["lines"]>().toEqualTypeOf<
+      LineInput[] | null | undefined
+    >();
+  });
+
+  it("SiteDiarySkeleton kendi ekibi puantajdan taşır (GKS-B1.1)", () => {
+    expectTypeOf<NonNullable<Skeleton["own_crew_from_timesheet"]>>().toEqualTypeOf<
+      components["schemas"]["OwnCrewFromTimesheet"][]
+    >();
+  });
+
+  it("iskelet ucu GET olarak tanımlıdır", () => {
+    expectTypeOf<
+      paths["/sites/{site_id}/diary/skeleton"]["get"]
+    >().not.toBeNever();
   });
 });

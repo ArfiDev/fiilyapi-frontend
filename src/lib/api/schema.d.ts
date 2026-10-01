@@ -5817,13 +5817,41 @@ export interface paths {
         put?: never;
         /**
          * Create Site Diary Entry Endpoint
-         * @description Satır iskeleti şantiyenin BOQ pozlarından OTOMATİK üretilir; gövdede satır YOK.
+         * @description Satır iskeleti OTOMATİK üretilir (kural A, `skeleton.skeleton_keys`): başlıkta `section_id`
+         *     varsa yalnız o bölüme tahsisli kalemler, yoksa her kalem (tamamen tahsisli kalemde Bölümsüz
+         *     YOK — G4). Gövdede isteğe bağlı `lines[]` (GKS-B1) iskeletle AYNI işlemde birleşir.
          *
          *     Aynı şantiye + aynı gün için ikinci kayıt 409'dur (UQ ön kontrolü, net mesaj).
          *     Yanıt `read.build_detail`den gelir — `get_detail` çağrılsaydı kapsam sorgusu
          *     istek başına İKİ KEZ koşardı.
          */
         post: operations["create_site_diary_entry_endpoint_sites__site_id__diary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sites/{site_id}/diary/skeleton": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Site Diary Skeleton Endpoint
+         * @description GKS-B1 — yeni günlük için KAYDEDİLMEMİŞ satır iskeleti (önizleme).
+         *
+         *     `POST /sites/{id}/diary`in kuracağı iskeletle AYNI saf fonksiyondan gelir (kural A:
+         *     `section_id` verilirse yalnız o bölüme tahsisli kalemler, planlı = pay; verilmezse her
+         *     kalem görünür, tamamen tahsisli kalemde Bölümsüz satır YOKTUR). Kapı `site_diary`
+         *     görüntülemedir (BOQ izni gerekmez); kısıtlı kullanıcıya yalnız görünür kalemler gelir.
+         *     O tarihte günlük ZATEN varsa 409 DEĞİL, `existing_entry_id` döner.
+         */
+        get: operations["get_site_diary_skeleton_endpoint_sites__site_id__diary_skeleton_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -19294,9 +19322,9 @@ export interface components {
          * SiteDiaryEntryCreate
          * @description `POST /sites/{site_id}/diary` gövdesi.
          *
-         *     `lines[]` YOKTUR (bilinçli): satır iskeleti şantiyenin BOQ pozlarından
-         *     OTOMATİK üretilir — GK'de satır ekle/sil yoktur, liste BOQ'dan gelir.
-         *     Miktar girişi `PUT …/lines` ile yapılır (T3).
+         *     Satır iskeleti OTOMATİK üretilir (`skeleton.skeleton_keys`, kural A; başlığın
+         *     `section_id`si iskeleti süzer). `lines[]` (GKS-B1) isteğe bağlıdır: verilirse miktarlar
+         *     AYNI işlemde iskeletle birleşir; verilmezse miktar girişi `PUT …/lines` ile yapılır (T3).
          *
          *     `worker_counts[]` de YOKTUR: işçi kırılımının yazma semantiği T3'ündür.
          *
@@ -19320,6 +19348,8 @@ export interface components {
             has_incident: boolean;
             /** Incident Note */
             incident_note?: string | null;
+            /** Lines */
+            lines?: components["schemas"]["SiteDiaryLineInput"][] | null;
             /**
              * Ppe Checked
              * @default false
@@ -19627,6 +19657,71 @@ export interface components {
         SiteDiaryLinesSave: {
             /** Lines */
             lines?: components["schemas"]["SiteDiaryLineInput"][];
+        };
+        /**
+         * SiteDiarySkeleton
+         * @description `GET /sites/{site_id}/diary/skeleton` — kaydetmeden önizleme (GKS-B1).
+         */
+        SiteDiarySkeleton: {
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /** Existing Entry Id */
+            existing_entry_id: string | null;
+            /** Lines */
+            lines: components["schemas"]["SiteDiarySkeletonLine"][];
+            /** Lines Total */
+            lines_total: string;
+            /** Lock Report Date */
+            lock_report_date: string | null;
+            /** Locked */
+            locked: boolean;
+            /** Own Crew From Timesheet */
+            own_crew_from_timesheet?: components["schemas"]["OwnCrewFromTimesheet"][];
+            /** Section Id */
+            section_id: string | null;
+            /** Section Name */
+            section_name: string | null;
+        };
+        /**
+         * SiteDiarySkeletonLine
+         * @description GKS-B1 — `SiteDiaryLineRead`in KİMLİKSİZ ikizi (kaydedilmemiş iskelet satırı).
+         *
+         *     Alan adları ve anlamları `SiteDiaryLineRead` ile AYNIDIR (yalnız `id` yok); değerler
+         *     detay ucuyla AYNI hesaptan gelir (`read.line_fields`), `quantity` 0'dır. Alan kümesi
+         *     eşitliği bekçilidir (`tests/site_diary/test_gks_b1_onizleme_post_bekcisi.py`).
+         */
+        SiteDiarySkeletonLine: {
+            /** Boq Item Id */
+            boq_item_id: string | null;
+            /** Code */
+            code: string;
+            /** Cumulative Quantity */
+            cumulative_quantity: string;
+            /** Description */
+            description: string;
+            /** Leaf Cumulative Quantity */
+            leaf_cumulative_quantity?: string | null;
+            /** Line Amount */
+            line_amount: string;
+            /** Overrun Reason */
+            overrun_reason?: string | null;
+            /** Planned Quantity */
+            planned_quantity?: string | null;
+            /** Quantity */
+            quantity: string;
+            /** Remaining Quantity */
+            remaining_quantity?: string | null;
+            /** Section Id */
+            section_id?: string | null;
+            /** Section Name */
+            section_name: string | null;
+            /** Unit */
+            unit: string;
+            /** Unit Price */
+            unit_price: string;
         };
         /**
          * SiteDiarySummary
@@ -38405,6 +38500,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SiteDiaryEntryDetail"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_site_diary_skeleton_endpoint_sites__site_id__diary_skeleton_get: {
+        parameters: {
+            query: {
+                entry_date: string;
+                section_id?: string | null;
+            };
+            header?: never;
+            path: {
+                site_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteDiarySkeleton"];
                 };
             };
             /** @description Yetkisiz işlem */

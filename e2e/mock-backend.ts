@@ -3455,9 +3455,9 @@ function validateSectionInput(input: {
 }
 
 // --- F-SD T1 · Şantiye Günlüğü fikstürleri --------------------------------
-// Satır iskeleti BOQ pozlarından üretilir (gerçek backend de öyle yapar:
-// `POST /sites/{id}/diary` gövdesinde `lines[]` YOKTUR). Kayıtlar mevcut
-// evrene bağlanır: proje p-1, şantiyeler s-1 / s-2.
+// Satır iskeleti BOQ pozlarından üretilir. Tohumlu kayıtlar (d-1..d-3) eski
+// "tüm kalem" iskeletini taşır; YENİ kayıt kural A'dır (`buildDiaryKuralALines`,
+// GKS-F1.2b). Kayıtlar mevcut evrene bağlanır: proje p-1, şantiyeler s-1 / s-2.
 
 /**
  * Mock'un günlük→sözleşme köprüsü. Gerçekte köprü BOQ kaleminin sözleşme
@@ -3552,6 +3552,51 @@ interface MockDiaryEntry {
 
 const ALL_BOQ_ITEMS = BOQ_FIXTURE.flatMap((g) => g.items);
 
+/** GKS-F1.2b · kural A girdisi: kalem kimliği + kota. */
+export interface DiarySkeletonItem {
+  readonly id: string;
+  readonly quantity: number;
+}
+/** GKS-F1.2b · kural A çıktısı: (kalem, bölüm | Bölümsüz) + planlı. */
+export interface DiarySkeletonKey {
+  readonly itemId: string;
+  readonly sectionId: string | null;
+  readonly planned: number;
+}
+/**
+ * GKS-F1.2b · günlük satır İSKELETİNİN saf kuralı (backend `site_diary/skeleton.py`
+ * `skeleton_keys` ikizi, CEO kararı 2026-10-01 · kural A). Önizleme (GET skeleton) ve
+ * POST iskeleti AYNI fonksiyonu çağırır.
+ *
+ *  · BÖLÜM SEÇİLİ: yalnız o bölüme tahsisli kalemler; satır bölümü = o bölüm, planlı = pay;
+ *    Bölümsüz YOK.
+ *  · BÖLÜM SEÇİLİ DEĞİL: tahsissiz ya da KISMEN tahsisli kalem → tek Bölümsüz satır
+ *    (planlı = kota − Σpay); TAMAMEN tahsisli kalem (Σpay ≥ kota) → Bölümsüz YOK, tahsisli
+ *    olduğu HER bölüm için bir satır (planlı = pay). Kısmen tahsislinin bölüm satırları AÇILMAZ.
+ *  · Sıra: girdi kalem sırası; bir kalemin bölüm satırları bölüm sırasıyla (eşitlikte kimlik).
+ */
+export function diarySkeletonKeys(
+  items: readonly DiarySkeletonItem[],
+  allocations: Readonly<Record<string, Readonly<Record<string, number>>>>,
+  sectionId: string | null,
+  sectionOrder: Readonly<Record<string, number>> = {},
+): DiarySkeletonKey[] {
+  return items.flatMap((item): DiarySkeletonKey[] => {
+    const shares = allocations[item.id] ?? {};
+    const sectionIds = Object.keys(shares);
+    if (sectionId !== null) {
+      return shares[sectionId] === undefined ? [] : [{ itemId: item.id, sectionId, planned: shares[sectionId] }];
+    }
+    const allocated = sectionIds.reduce((sum, id) => sum + shares[id], 0);
+    if (sectionIds.length === 0 || allocated < item.quantity) {
+      return [{ itemId: item.id, sectionId: null, planned: Math.max(item.quantity - allocated, 0) }];
+    }
+    return [...sectionIds]
+      .sort((left, right) => (sectionOrder[left] ?? 0) - (sectionOrder[right] ?? 0) || left.localeCompare(right))
+      .map((id) => ({ itemId: item.id, sectionId: id, planned: shares[id] }));
+  });
+}
+
 /** Yeni kaydın satır iskeleti: TÜM BOQ pozları, miktar sıfır. */
 function buildDiaryLineSkeleton(entryId: string, quantities: Record<string, number> = {}): MockDiaryLine[] {
   return ALL_BOQ_ITEMS.map((item) => ({
@@ -3566,50 +3611,156 @@ function buildDiaryLineSkeleton(entryId: string, quantities: Record<string, numb
 }
 
 /**
- * Kümülatif miktar: AYNI şantiyede, AYNI poz için, bu güne KADAR (dahil)
- * girilmiş miktarların toplamı. Ekran bu türevi hesaplamaz, yanıttan okur.
+ * GKS-F1.2b · kural A iskeleti (POST + önizleme ORTAK): kalem × bölüm yaprakları, miktar 0.
+ * Kota/tahsis `BOQ_FIXTURE`dan (kayıtlı satırın planlısı `diaryLeafPlanned` ile AYNI kaynak).
+ * `entryId` yalnız satır kimliği içindir; önizleme kimliksizdir.
  */
-function diaryCumulativeQuantity(state: MockState, entry: MockDiaryEntry, boqItemId: string): number {
-  return state.diaryEntries
-    .filter((e) => e.site_id === entry.site_id && e.entry_date <= entry.entry_date)
-    .flatMap((e) => e.lines.filter((l) => l.boq_item_id === boqItemId))
-    .reduce((sum, l) => sum + Number(l.quantity), 0);
+function buildDiaryKuralALines(state: MockState, siteId: string, sectionId: string | null, entryId: string): MockDiaryLine[] {
+  const allocations = Object.fromEntries(
+    ALL_BOQ_ITEMS.map((item) => [
+      item.id,
+      Object.fromEntries(Object.entries(item.allocations ?? {}).map(([id, quantity]) => [id, Number(quantity)])),
+    ]),
+  );
+  const sectionOrder = Object.fromEntries(
+    state.sections.filter((section) => section.site_id === siteId).map((section) => [section.id, section.sort_order]),
+  );
+  const keys = diarySkeletonKeys(
+    ALL_BOQ_ITEMS.map((item) => ({ id: item.id, quantity: Number(item.quantity) })),
+    allocations,
+    sectionId,
+    sectionOrder,
+  );
+  return keys.flatMap((key) => evDiaryLines(entryId, [[key.itemId, key.sectionId, 0]]));
 }
 
-function buildDiaryLineRead(state: MockState, entry: MockDiaryEntry, line: MockDiaryLine): components["schemas"]["SiteDiaryLineRead"] {
+/** `site_diary/guards.py` metinleri — BİREBİR. */
+const DIARY_LINE_SECTION_MISMATCH = "Satırdaki bölüm bu şantiyeye ait değil";
+const DIARY_LINE_SECTION_NOT_ALLOCATED =
+  "Kalemin bu bölüme tahsisi yok; miktarı Bölümsüz satıra yazın ya da önce BOQ'da tahsis edin";
+const DIARY_LINE_ITEM_MISMATCH = "Seçilen poz bu şantiyenin BOQ'suna ait değil";
+const DIARY_DUPLICATE_LINE = "Aynı poz (aynı bölümle) gövdede birden fazla kez gönderildi";
+
+/**
+ * GKS-F1.2b · `POST /diary` gövdesindeki `lines[]` — backend `lines.merge_lines` ikizi:
+ * iskeletle BİRLEŞTİRİR (SİLME YOK). Gövde miktarı/gerekçesi iskelet satırının üstüne yazar,
+ * iskelette olmayan geçerli satır sona eklenir. Önce TÜM doğrulama (gövde-içi çift 409 → poz
+ * 422 → bölüm 422 → yeni bölümlü satırın tahsisi 422), sonra uygulama. `lines` iskeletin
+ * YENİ bir kopyasıdır, girdi değişmez. Hata → `{ status, body }`.
+ *
+ * `zeroUnmatched` (non-EV `PUT …/lines`): gövdede geçmeyen MEVCUT satır silinmez, miktarı 0'a
+ * çekilir (bu ikizin "sıfırlanır" semantiği). Bölüm taşımayan eski tohum satırı (`section_id`
+ * tanımsız) bölümsüz yaprak sayılır ve `overrun_reason` ALMAZ — eski yolla bayt bayt aynı kalır.
+ */
+function mergeDiaryLines(
+  skeleton: readonly MockDiaryLine[],
+  state: MockState,
+  siteId: string,
+  entryId: string,
+  rawLines: readonly Record<string, unknown>[],
+  zeroUnmatched = false,
+): { lines: MockDiaryLine[] } | { status: number; body: unknown } {
+  const inputs = rawLines.map((raw) => ({
+    itemId: String(raw.boq_item_id),
+    sectionId: typeof raw.section_id === "string" ? raw.section_id : null,
+    quantity: Number(raw.quantity ?? 0),
+    overrunReason: typeof raw.overrun_reason === "string" && raw.overrun_reason.trim() !== "" ? raw.overrun_reason : null,
+  }));
+  const keyOf = (itemId: string, sectionId: string | null): string => `${itemId}:${sectionId ?? "none"}`;
+  const keys = inputs.map((input) => keyOf(input.itemId, input.sectionId));
+  if (new Set(keys).size !== keys.length) return { status: 409, body: { detail: DIARY_DUPLICATE_LINE } };
+  if (inputs.some((input) => !ALL_BOQ_ITEMS.some((item) => item.id === input.itemId))) {
+    return { status: 422, body: { detail: DIARY_LINE_ITEM_MISMATCH } };
+  }
+  if (inputs.some((input) => !diarySectionBelongsToSite(state, input.sectionId, siteId))) {
+    return { status: 422, body: { detail: DIARY_LINE_SECTION_MISMATCH } };
+  }
+  const existing = new Set(skeleton.map((line) => keyOf(line.boq_item_id, line.section_id ?? null)));
+  const unallocated = inputs.some(
+    (input, index) =>
+      input.sectionId !== null && !existing.has(keys[index]) && diaryLeafPlanned(input.itemId, input.sectionId) === null,
+  );
+  if (unallocated) return { status: 422, body: { detail: DIARY_LINE_SECTION_NOT_ALLOCATED } };
+
+  const byKey = new Map(inputs.map((input, index) => [keys[index], input] as const));
+  const merged = skeleton.map((line) => {
+    const input = byKey.get(keyOf(line.boq_item_id, line.section_id ?? null));
+    if (input === undefined) return zeroUnmatched ? { ...line, quantity: qty3(0) } : line;
+    const written = { ...line, quantity: qty3(input.quantity) };
+    return line.section_id === undefined ? written : { ...written, overrun_reason: input.overrunReason };
+  });
+  const added = inputs
+    .filter((_, index) => !existing.has(keys[index]))
+    .map((input) => ({
+      ...evDiaryLines(entryId, [[input.itemId, input.sectionId, input.quantity]])[0],
+      overrun_reason: input.overrunReason,
+    }));
+  return { lines: [...merged, ...added] };
+}
+
+/**
+ * GKS-F1.2b · kümülatifin kapsamı: AYNI şantiyede `uptoDate`e KADAR girilmiş günlükler.
+ * Kayıtlı satır günün kendisini DAHİL sayar (`<=`); kaydedilmemiş önizleme satırı günün
+ * mevcut kaydını SAYMAZ (`<`, backend `cumulative_quantities_before`) — kendi miktarı 0'dır.
+ */
+function diaryEntriesUpTo(state: MockState, siteId: string, uptoDate: string, includeSameDate: boolean): MockDiaryEntry[] {
+  return state.diaryEntries.filter(
+    (e) => e.site_id === siteId && (includeSameDate ? e.entry_date <= uptoDate : e.entry_date < uptoDate),
+  );
+}
+
+/**
+ * Kayıtlı satır ile önizleme satırının ORTAK türev alanları (`id` hariç) — backend
+ * `read.line_fields` ikizi; tek hesap, ikinci kopya YOK. Kümülatif: AYNI şantiye, AYNI poz,
+ * `uptoDate`e kadar; ekran bu türevi hesaplamaz, yanıttan okur.
+ */
+function buildDiaryLineFields(
+  state: MockState,
+  siteId: string,
+  entryDate: string,
+  line: MockDiaryLine,
+  includeSameDate = true,
+): Omit<components["schemas"]["SiteDiaryLineRead"], "id"> {
+  const cumulative = diaryEntriesUpTo(state, siteId, entryDate, includeSameDate)
+    .flatMap((e) => e.lines.filter((l) => l.boq_item_id === line.boq_item_id))
+    .reduce((sum, l) => sum + Number(l.quantity), 0);
   return {
-    id: line.id,
     boq_item_id: line.boq_item_id,
     code: line.code,
     description: line.description,
     unit: line.unit,
     unit_price: line.unit_price,
     quantity: line.quantity,
-    cumulative_quantity: qty3(diaryCumulativeQuantity(state, entry, line.boq_item_id)),
+    cumulative_quantity: qty3(cumulative),
     line_amount: money2(Number(line.quantity) * Number(line.unit_price)),
     // DET-1.B · satır bölümünün ANLIK adı; bölümsüz (ya da bölüm taşımayan
     // iskelet) satırda `null` = "Bölümsüz" (backend `DetailContext.section_name`).
     section_name: diarySectionName(state, line.section_id ?? null),
-    ...(line.section_id === undefined ? {} : diaryLeafFields(state, entry, line)),
+    ...(line.section_id === undefined ? {} : diaryLeafFields(state, siteId, entryDate, line, includeSameDate)),
   };
+}
+
+function buildDiaryLineRead(state: MockState, entry: MockDiaryEntry, line: MockDiaryLine): components["schemas"]["SiteDiaryLineRead"] {
+  return { id: line.id, ...buildDiaryLineFields(state, entry.site_id, entry.entry_date, line) };
 }
 
 /**
  * PLN-F2.5a · yaprak türevleri (B2): planlı = BOQ tahsisi (bölümsüz yaprakta
  * tahsis DIŞI kalan), yaprak kümülatifi = aynı şantiye · aynı kalem × bölüm ·
- * bu güne KADAR (dahil). YALNIZ `section_id` taşıyan (EV) satırlarda basılır.
+ * bu güne KADAR (dahil). YALNIZ `section_id` taşıyan (EV + GKS-F1.2b) satırlarda basılır.
  */
 function diaryLeafFields(
   state: MockState,
-  entry: MockDiaryEntry,
+  siteId: string,
+  entryDate: string,
   line: MockDiaryLine,
+  includeSameDate: boolean,
 ): Pick<
   components["schemas"]["SiteDiaryLineRead"],
   "section_id" | "overrun_reason" | "planned_quantity" | "leaf_cumulative_quantity" | "remaining_quantity"
 > {
   const sectionId = line.section_id ?? null;
-  const cumulative = state.diaryEntries
-    .filter((e) => e.site_id === entry.site_id && e.entry_date <= entry.entry_date)
+  const cumulative = diaryEntriesUpTo(state, siteId, entryDate, includeSameDate)
     .flatMap((e) => e.lines.filter((l) => l.boq_item_id === line.boq_item_id && (l.section_id ?? null) === sectionId))
     .reduce((sum, l) => sum + Number(l.quantity), 0);
   const planned = diaryLeafPlanned(line.boq_item_id, sectionId);
@@ -3632,8 +3783,8 @@ function diaryLeafPlanned(boqItemId: string, sectionId: string | null): number |
   return Number(item.quantity) - allocated;
 }
 
-function diaryLinesTotal(entry: MockDiaryEntry): number {
-  return entry.lines.reduce((sum, l) => sum + Number(l.quantity) * Number(l.unit_price), 0);
+function diaryLinesTotal(lines: readonly MockDiaryLine[]): number {
+  return lines.reduce((sum, l) => sum + Number(l.quantity) * Number(l.unit_price), 0);
 }
 
 function diaryWorkerTotal(entry: MockDiaryEntry): number {
@@ -3784,7 +3935,7 @@ function buildDiaryEntryDetail(
       ...row,
       subcontractor_name: diarySubcontractorName(state, row.subcontractor_id ?? null),
     })),
-    lines_total: money2(diaryLinesTotal(entry)),
+    lines_total: money2(diaryLinesTotal(entry.lines)),
     worker_total: diaryWorkerTotal(entry),
     dropped_orphan_count: 0,
     // EV-BORC-2 · puantajdan TÜRER (gerçek backend `site_diary/read.py:227`);
@@ -3813,7 +3964,7 @@ function buildDiaryEntryListItem(
     has_incident: entry.has_incident,
     status: entry.status,
     worker_total: diaryWorkerTotal(entry),
-    lines_total: money2(diaryLinesTotal(entry)),
+    lines_total: money2(diaryLinesTotal(entry.lines)),
     created_by: entry.created_by,
     created_at: entry.created_at,
     section_name: diarySectionName(state, entry.section_id),
@@ -10914,6 +11065,43 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       });
     }
 
+    // GET /sites/{site_id}/diary/skeleton — GKS-F1.2b · kaydetmeden satır önizlemesi
+    // (backend `site_diary/skeleton_read.py`). Satırlar kural A'nın kararıdır ve POST
+    // iskeletiyle AYNI fonksiyondan gelir (`buildDiaryKuralALines`); türevler kayıtlı
+    // satırla AYNI hesaptan (`buildDiaryLineFields`), kimliksiz ve miktarı 0'dır.
+    const diarySkeletonMatch = path.match(/^\/sites\/([^/]+)\/diary\/skeleton$/);
+    if (method === "GET" && diarySkeletonMatch) {
+      const site = state.sites.find((s) => s.id === diarySkeletonMatch[1]);
+      if (!site) return send(404, { detail: "santiye yok" });
+      const entryDate = parsed.searchParams.get("entry_date") ?? "";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
+        return send(422, {
+          detail: [{ type: "missing", loc: ["query", "entry_date"], msg: "Field required", input: null }],
+        });
+      }
+      const sectionId = parsed.searchParams.get("section_id");
+      if (!diarySectionBelongsToSite(state, sectionId, site.id)) {
+        return send(422, { detail: DIARY_SECTION_MISMATCH });
+      }
+      const lines = buildDiaryKuralALines(state, site.id, sectionId, "skeleton");
+      const locks = evDayLocks(evState, site.id, [entryDate]);
+      const existing = state.diaryEntries.find((e) => e.site_id === site.id && e.entry_date === entryDate);
+      const body: components["schemas"]["SiteDiarySkeleton"] = {
+        entry_date: entryDate,
+        section_id: sectionId,
+        section_name: diarySectionName(state, sectionId),
+        existing_entry_id: existing?.id ?? null,
+        locked: locks.length > 0,
+        lock_report_date: locks[0]?.report_date ?? null,
+        lines: lines.map((line) => buildDiaryLineFields(state, site.id, entryDate, line, false)),
+        lines_total: money2(diaryLinesTotal(lines)),
+        // GKS-F1.5 · kayıtlı detayla AYNI türetme (`evOwnCrewFromTimesheet`): puantajlı
+        // günde kayıtsız ekran da kendi ekibi basar.
+        own_crew_from_timesheet: evOwnCrewFromTimesheet(site.id, entryDate),
+      };
+      return send(200, body);
+    }
+
     // GET/POST /sites/{site_id}/diary — liste + kayıt açma.
     const siteDiaryMatch = path.match(/^\/sites\/([^/]+)\/diary$/);
     if (method === "GET" && siteDiaryMatch) {
@@ -10948,7 +11136,12 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       return withBody((body) => {
         const schemaViolation =
           diaryRemovedTemperatureViolation(body) ??
-          bodySchemaViolation(SITE_DIARY_ENTRY_CREATE_SCHEMA, body);
+          bodySchemaViolation(SITE_DIARY_ENTRY_CREATE_SCHEMA, body) ??
+          // GKS-F1.2b · `lines[]` iç içe kapı (`SiteDiaryLineInput` `additionalProperties:false`).
+          (body.lines === undefined || body.lines === null
+            ? null
+            : (evArrayViolation(body.lines, ["lines"], undefined) ??
+              evEachViolation(body.lines as unknown[], SITE_DIARY_LINE_INPUT_SCHEMA, "lines")));
         if (schemaViolation !== null) return send(422, schemaViolation);
         const entryDate = String(body.entry_date ?? "");
         if (!entryDate) return send(422, { detail: "entry_date zorunlu" });
@@ -10959,7 +11152,22 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         if (clash) {
           return send(409, { detail: "Bu güne ait günlük kayıt zaten var." });
         }
+        // Başlık bölümü şantiyeye ait olmalı (`service.validate_section`): önizlemeyle AYNI 422.
+        const headerSectionId = (body.section_id as string | null | undefined) ?? null;
+        if (!diarySectionBelongsToSite(state, headerSectionId, site.id)) {
+          return send(422, { detail: DIARY_SECTION_MISMATCH });
+        }
         const id = `d-${state.diaryEntries.length + 1}`;
+        // GKS-F1.2b · iskelet kural A (önizlemeyle AYNI saf fonksiyon, başlık bölümüne göre) +
+        // gövdedeki `lines[]` BİRLEŞTİRİLİR (silme yok). Reddedilen istek günlük bırakmaz.
+        const merged = mergeDiaryLines(
+          buildDiaryKuralALines(state, site.id, headerSectionId, id),
+          state,
+          site.id,
+          id,
+          (Array.isArray(body.lines) ? body.lines : []) as Record<string, unknown>[],
+        );
+        if (!("lines" in merged)) return send(merged.status, merged.body);
         const now = new Date().toISOString();
         const isEvDay = evHasBaselineDay(evState, site.id, entryDate);
         const entry: MockDiaryEntry = {
@@ -10967,7 +11175,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           site_id: site.id,
           project_id: site.project_id,
           entry_date: entryDate,
-          section_id: (body.section_id as string | null | undefined) ?? null,
+          section_id: headerSectionId,
           weather: enumValue<components["schemas"]["Weather"]>(
             SITE_DIARY_ENTRY_CREATE_SCHEMA,
             "weather",
@@ -10991,8 +11199,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           created_by: "u-1",
           created_at: now,
           updated_at: now,
-          // PLN-F2.5a · EV günü: iskelet YOK, satırlar girildikçe doğar (B2).
-          lines: isEvDay ? [] : buildDiaryLineSkeleton(id),
+          // GKS-F1.2b · iskelet kural A + gövde `lines[]` birleşimi (`mergeDiaryLines`).
+          lines: merged.lines,
           worker_counts: [],
           ...(isEvDay ? { evLines: true, hiddenFromUnfilteredList: true } : {}),
         };
@@ -11050,16 +11258,19 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           entry.updated_at = new Date().toISOString();
           return send(200, buildDiaryEntryDetail(state, evState, entry));
         }
-        const rawLines = Array.isArray(body.lines) ? (body.lines as Array<Record<string, unknown>>) : [];
-        const quantities: Record<string, number> = {};
-        for (const line of rawLines) {
-          const itemId = String(line.boq_item_id ?? "");
-          if (!ALL_BOQ_ITEMS.some((item) => item.id === itemId)) {
-            return send(422, { detail: "bilinmeyen boq kalemi" });
-          }
-          quantities[itemId] = Number(line.quantity ?? 0);
-        }
-        entry.lines = buildDiaryLineSkeleton(entry.id, quantities);
+        // Anahtar (kalem, bölüm): mevcut satırlar korunur (kimlik + bölüm), gövdedeki satır kendi
+        // anahtarındaki satırın miktarını yazar, geçmeyen mevcut satır 0'a çekilir, geçerli yeni
+        // anahtar eklenir; doğrulamalar POST birleştirmesiyle AYNI (`mergeDiaryLines`).
+        const merged = mergeDiaryLines(
+          entry.lines,
+          state,
+          entry.site_id,
+          entry.id,
+          (Array.isArray(body.lines) ? body.lines : []) as Record<string, unknown>[],
+          true,
+        );
+        if (!("lines" in merged)) return send(merged.status, merged.body);
+        entry.lines = merged.lines;
         entry.updated_at = new Date().toISOString();
         return send(200, buildDiaryEntryDetail(state, evState, entry));
       });

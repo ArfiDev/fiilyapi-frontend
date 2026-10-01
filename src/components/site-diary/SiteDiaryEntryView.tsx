@@ -23,6 +23,7 @@ import {
   useReopenSiteDiaryEntry,
   useSaveSiteDiaryLines,
   useSubmitSiteDiaryEntry,
+  useUpdateCreatedSiteDiaryEntry,
   useUpdateSiteDiaryEntry,
 } from "@/lib/api/hooks/useSiteDiaryMutations";
 import {
@@ -43,12 +44,13 @@ import { DiaryModeSwitch } from "./DiaryModeSwitch";
 import { DiaryChiefNoteCard, DiaryWorkDoneCard } from "./DiaryNotesCards";
 import { DiaryPaymentAccrualCard } from "./DiaryPaymentAccrualCard";
 import { DiaryPhotosCard } from "./DiaryPhotosCard";
+import { DiaryPreviewChangeDialog } from "./DiaryPreviewChangeDialog";
 import { DiaryPlanPreviewCard } from "./DiaryPlanPreviewCard";
 import { DiaryRecentEntriesCard } from "./DiaryRecentEntriesCard";
 import { DiarySafetyCard } from "./DiarySafetyCard";
 import { DiaryWorkerCountsCard } from "./DiaryWorkerCountsCard";
 import { DIARY_STATUS_LABELS } from "./diary-labels";
-import { diaryDayParts, isoDate, isoPeriod, parseDiaryDateParam } from "./derive";
+import { diaryDayParts, isoDate, isoPeriod, isValidIsoDate, parseDiaryDateParam } from "./derive";
 import { computeDiaryAccrual } from "./payment-accrual";
 import { buildRecentEntryRows, DIARY_RECENT_ENTRY_LIMIT } from "./recent-entries";
 import { buildDiaryWorkerRows } from "./worker-counts";
@@ -62,10 +64,18 @@ import { buildDiaryExtensionContext, isSameDiaryExtensionContext } from "./diary
 import { buildDiaryLineTree, diaryTreeLeaves } from "./diary-lines-tree";
 import { boqTreeItems, siteTreeSections } from "./diary-tree-sources";
 import { diaryTimesheetHref } from "./diary-timesheet-link";
+import { diaryWorkersPatchFailedMessage, saveNewDiaryEntry } from "./first-save";
+import { classifyDiarySaveError } from "./save-error";
+import {
+  diaryCoreLock,
+  diaryTreeSource,
+  useDiaryPreview,
+  useExistingEntryRaceNotice,
+} from "./useDiaryPreview";
+import { useDiaryPreviewTransitions } from "./useDiaryPreviewTransitions";
 import {
   addDiaryFirm,
   addDiaryLines,
-  buildDiaryCreateBody,
   buildDiaryLinesBody,
   buildDiaryUpdateBody,
   diaryFormFromEntry,
@@ -173,8 +183,18 @@ export function DiaryEntryScreen({
   // (T3'ün "Son Kayıtlar" listesi AYNI önbellek anahtarını kullanır).
   const period = isoPeriod(activeDate);
   const entriesQuery = useSiteDiaryEntries(siteId, period);
-  const matchedId =
+  const listMatchedId =
     entriesQuery.data?.items.find((item) => item.entry_date === activeDate)?.id ?? "";
+  // GKS-F1.3 · kayıtsız günün önizlemesi + `matchedId` (liste ?? existing_entry_id).
+  const preview = useDiaryPreview({
+    siteId,
+    activeDate,
+    sectionId: form.sectionId,
+    listMatchedId,
+    isListLoading: entriesQuery.isLoading,
+    refetchEntries: entriesQuery.refetch,
+  });
+  const matchedId = preview.matchedId;
   const entryQuery = useSiteDiaryEntry(matchedId);
   const entry = matchedId === "" ? undefined : entryQuery.data;
 
@@ -200,6 +220,8 @@ export function DiaryEntryScreen({
 
   const createEntry = useCreateSiteDiaryEntry(siteId);
   const updateEntry = useUpdateSiteDiaryEntry(matchedId);
+  // GKS-F1.5 · kayıt yokken ilk kayıtta işçi PATCH'i: kimlik çağrı anında verilir.
+  const patchCreatedEntry = useUpdateCreatedSiteDiaryEntry();
   const saveLines = useSaveSiteDiaryLines(matchedId);
   const submitEntry = useSubmitSiteDiaryEntry(matchedId);
   const reopenEntry = useReopenSiteDiaryEntry(matchedId);
@@ -317,16 +339,28 @@ export function DiaryEntryScreen({
     return next;
   }
 
+  /**
+   * Kayıt YOKKEN POST başarılı olur olmaz (formu DEĞİŞTİRMEDEN): kaydı ekrana
+   * bağlar ve kirlilik tabanını o kayıt yapar. Bu, ardından gelen işçi PATCH'i
+   * sürerken kayıt detayının yüklenmesi formu kayıttan ezmesin diye şarttır
+   * (aynı kimlik → kirli form korunur).
+   */
+  function adoptCreatedBaseline(created: SiteDiaryEntryDetail) {
+    preview.adoptCreatedEntry(created);
+    setSeeded({ key: `entry:${created.id}`, baseline: created });
+    setNoEntryBaseline(null);
+  }
+
   // ── Kalem ağacı (G1) + uzantı bağlamı (§2.7) ──────────────────────────
   const treeSections = siteTreeSections(siteQuery.data?.sections ?? []);
-  const lineTree = entry
-    ? buildDiaryLineTree({
-        lines: entry.lines,
-        form,
-        boqItems: boqTreeItems(boqQuery.data),
-        sections: treeSections,
-      })
-    : [];
+  const treeSource = diaryTreeSource(entry, preview.skeleton);
+  const lineTree = buildDiaryLineTree({
+    lines: treeSource.lines,
+    form,
+    boqItems: boqTreeItems(boqQuery.data),
+    sections: treeSections,
+    isPreview: treeSource.isPreview,
+  });
   const extensionContext = buildDiaryExtensionContext({
     siteId: siteQuery.data?.id ?? null,
     day: activeDate,
@@ -365,6 +399,31 @@ export function DiaryEntryScreen({
       ? JSON.stringify(form) !== JSON.stringify(noEntryBaseline.form)
       : false;
   useUnsavedChanges(registryDirty, "Şantiye günlüğü");
+  const sectionList = siteQuery.data?.sections ?? [];
+  const isSubmitted = entry?.status === "submitted";
+  // Uzantı yuvası `lock` (rapor onayı): kilitliyse BÜTÜN alanlar salt okunur.
+  // GKS-F1.3 (Ü8): çekirdek kilit de okunur — kayıtta `entry.locked`, kayıtsız
+  // günde `skeleton.locked`; uzantı kilidi yoksa çekirdek bandı basılır.
+  const hasExtensionLock = extension?.lock?.isLocked === true;
+  const coreLock = diaryCoreLock(entry, preview.skeleton);
+  const isLocked = hasExtensionLock || coreLock.isLocked;
+  // Salt-okunur görünüm: yazma izni yok, kayıt gönderilmiş ya da gün kilitli.
+  const isReadOnly = !permission.canWrite || isSubmitted || isLocked;
+  const transitions = useDiaryPreviewTransitions({
+    siteId,
+    activeDate,
+    form,
+    entry,
+    sections: sectionList,
+    isReadOnly,
+    setForm,
+    onLoadError: setErrorMessage,
+  });
+  const hasRaceNotice = useExistingEntryRaceNotice({
+    existingEntryId: preview.existingEntryId,
+    matchedId,
+    isFormDirty: registryDirty,
+  });
 
   if (!permission.canView) return <AccessDenied />;
   if (isForbidden(siteQuery.error) || isForbidden(entriesQuery.error)) return <AccessDenied />;
@@ -397,24 +456,28 @@ export function DiaryEntryScreen({
     );
   }
 
-  const isSubmitted = entry?.status === "submitted";
-  // Uzantı yuvası `lock` (rapor onayı): kilitliyse BÜTÜN alanlar salt okunur.
-  const isLocked = extension?.lock?.isLocked === true;
-  // Salt-okunur görünüm: yazma izni yok, kayıt gönderilmiş ya da gün kilitli.
-  const isReadOnly = !permission.canWrite || isSubmitted || isLocked;
   const canReopen = hasAtLeast(permission.level, "admin");
-  const isDirty = isEntryFormDirty;
+  // Kayıtlı günde `isEntryFormDirty`; kayıtsız günde `noEntryBaseline` kirliliği (GKS-F1.5).
+  const isDirty = registryDirty;
   // Uzantı yuvası `submitGate`: `canSubmit === false` → Gönder pasif + gerekçeler EKRANDA.
   const gate = extension?.submitGate ?? null;
   const isGateClosed = gate !== null && !gate.canSubmit;
   // S4: uzantı gerekçeleri kendisi gösteriyorsa (kontrol çubuğu) çekirdek listeyi basmaz.
   const showGateReasons = gate?.showReasonsInCore !== false;
+  // Yarım/boş tarih kaydedilemez; kayıtsız günde ayrıca yazılan tarih aranan
+  // gün olmalı (aksi hâlde POST başka günün önizlemesiyle gider).
+  const isDateInvalid = !isValidIsoDate(form.entryDate) || (entry === undefined && form.entryDate !== activeDate);
   /**
    * "Kaydet & Gönder" etkinliği — TEK türetilmiş değer (PLN-F2.5e · karar 6):
    * başlık düğmesi de, `fullWidthBlock`a verilen `canSubmit` de BUNU okur.
    */
   const canSubmit =
-    permission.canWrite && !isSubmitted && entry !== undefined && !isLocked && !isGateClosed && !isSaving;
+    permission.canWrite && !isSubmitted && entry !== undefined && !isLocked && !isGateClosed && !isSaving && !isDateInvalid;
+  // Kayıt yokken Taslak Kaydet önizleme GÜNCELken açılır: bayat önizlemenin
+  // satırları yeni başlığın iskeletine eklenirdi (POST birleştirir, silmez).
+  const isCreateBlocked = entry === undefined && (matchedId !== "" || !preview.isCurrent);
+  // Kayıt biliniyor ama detayı yüklenemedi: önizleme durumu değil detay hatası gösterilir.
+  const isEntryLoadFailed = matchedId !== "" && entryQuery.isError;
   const lineRefs = new Map<string, DiaryLineRef>(extensionContext.lines.map((line) => [line.key, line]));
 
   // Sağ panel türevleri — hepsi SAF fonksiyonlarda (ayrı `.ts` dosyaları),
@@ -429,8 +492,9 @@ export function DiaryEntryScreen({
   const firms = subcontractors.data?.items ?? [];
   const firmNameById = new Map(firms.map((firm) => [firm.id, firm.name]));
   const firmOptions = firms.filter((firm) => firm.is_active).map((firm) => ({ id: firm.id, name: firm.name }));
-  // G12a — kendi ekip backend'de türetilir; kayıt yokken (ya da eski yanıtta) boş.
-  const ownCrew = entry?.own_crew_from_timesheet ?? [];
+  // G12a — kendi ekip backend'de türetilir: kayıtta detaydan, kayıtsız günde
+  // iskeletten (GKS-F1.5); alan yoksa (eski yanıt) ya da puantaj yoksa boş.
+  const ownCrew = entry?.own_crew_from_timesheet ?? preview.skeleton?.own_crew_from_timesheet ?? [];
   const timesheetHref = diaryTimesheetHref({ projectKey, siteKey, day: activeDate });
   const accrual = computeDiaryAccrual({
     employerItems: employerPaymentsQuery.data?.items ?? [],
@@ -444,13 +508,15 @@ export function DiaryEntryScreen({
     month: period.month,
   });
 
-  function handleFormChange(patch: Partial<DiaryFormState>) {
+  function applyFormChange(patch: Partial<DiaryFormState>) {
     setForm((prev) => ({ ...prev, ...patch }));
     // Kayıt YOKKEN tarih değiştirilirse aranan gün de değişir; kayıt VARKEN
     // tarih alanı kaydın taşınmasıdır (PATCH), arama günü kayıttan sonra
     // güncellenir.
     if (patch.entryDate !== undefined && !entry) setActiveDate(patch.entryDate);
   }
+
+  const handleFormChange = (patch: Partial<DiaryFormState>) => transitions.requestFormChange(patch, applyFormChange);
 
   function handleQuantityChange(lineKey: string, value: string) {
     setForm((prev) => ({ ...prev, quantities: { ...prev.quantities, [lineKey]: value } }));
@@ -470,10 +536,12 @@ export function DiaryEntryScreen({
 
   /** Satır tıklanınca o günün kaydına geçilir (GK359). */
   function handleSelectDate(entryDate: string) {
-    setErrorMessage(null);
-    setHasDateConflict(false);
-    setActiveDate(entryDate);
-    setForm((prev) => ({ ...prev, entryDate }));
+    transitions.requestSelectDate(entryDate, () => {
+      setErrorMessage(null);
+      setHasDateConflict(false);
+      setActiveDate(entryDate);
+      setForm((prev) => ({ ...prev, entryDate }));
+    });
   }
 
   function reportError(error: unknown, fallback: string) {
@@ -483,12 +551,24 @@ export function DiaryEntryScreen({
       setErrorMessage(backendErrorMessage(error, "Günlük gönderilemedi."));
       return;
     }
-    if (error instanceof BackendError && error.status === 409) {
-      setHasDateConflict(true);
+    const kind = classifyDiarySaveError(error);
+    if (kind === "locked") {
+      // Kilit 409'u "aynı gün kaydı" DEĞİLDİR: "Var olan kaydı aç" basılmaz.
+      setErrorMessage(backendErrorMessage(error, "Bu gün rapor onayıyla kilitlendi."));
+    } else if (kind === "date_conflict") {
+      // "Var olan kaydı aç" yalnız kayıt AÇMA (POST) hatasında; kayıtlı günde 409 başka sebeptir.
+      setHasDateConflict(entry === undefined);
       setErrorMessage(backendErrorMessage(error, "Bu güne ait günlük kayıt zaten var."));
-      return;
+    } else {
+      setErrorMessage(backendErrorMessage(error, fallback));
     }
-    setErrorMessage(backendErrorMessage(error, fallback));
+    // Sunucu gerçeği değişmiş olabilir: kilitte kayıtlı günün detayı, kayıtsız
+    // günün önizlemesi (ve 422'de BOQ/tahsis) yeniden çekilir. Tarih çakışmasında
+    // OTOMATİK çekim YOK — yazılanlar ezilmez; "Var olan kaydı aç" listeyi çeker.
+    if (kind === "locked" && entry !== undefined) void entryQuery.refetch();
+    else if (entry === undefined && (kind === "locked" || (error instanceof BackendError && error.status === 422))) {
+      preview.refetch();
+    }
   }
 
   /** Kaydetmeden önce görünür doğrulama; hata varsa metni basar ve `false` döner. */
@@ -533,8 +613,17 @@ export function DiaryEntryScreen({
     }
     try {
       if (!entry) {
-        const created = await createEntry.mutateAsync(buildDiaryCreateBody(form));
-        setActiveDate(created.entry_date);
+        // POST: başlık + önizlemede dokunulan satırlar (GKS-F1.3); işçi alanları
+        // kirliyse AYNI kayda PATCH (GKS-F1.5, bkz. `first-save.ts`).
+        const result = await saveNewDiaryEntry(form, diaryTreeLeaves(lineTree), {
+          create: createEntry.mutateAsync,
+          patch: (entryId, body) => patchCreatedEntry.mutateAsync({ entryId, body }),
+          onCreated: adoptCreatedBaseline,
+        });
+        // PATCH düştüyse form KİRLİ kalır (işçi değerleri silinmez); kayıt zaten açık.
+        if (result.ok) reseedFromSaved(result.saved, form);
+        else setErrorMessage(diaryWorkersPatchFailedMessage(result.error));
+        setActiveDate(result.created.entry_date);
         return;
       }
       const updated = await updateEntry.mutateAsync(buildDiaryUpdateBody(form, entry));
@@ -636,7 +725,7 @@ export function DiaryEntryScreen({
           {permission.canWrite && !isSubmitted && (
             <>
               {/* E7 66 — kilitli günde yazma yok (İ:121 düğme pasif). */}
-              <Button variant="secondary" disabled={isSaving || isLocked} onClick={handleSaveDraft}>
+              <Button variant="secondary" disabled={isSaving || isLocked || isCreateBlocked || isDateInvalid} onClick={handleSaveDraft}>
                 {isSaving ? "Kaydediliyor…" : "Taslak Kaydet"}
               </Button>
               {/* GK169 — kayıt açılmadan gönderilemez (satır iskeleti sunucudan
@@ -646,7 +735,7 @@ export function DiaryEntryScreen({
               <Button
                 variant="success"
                 disabled={!canSubmit}
-                title={entry ? undefined : "Önce taslak kaydedin — iş kalemi satırları kayıt açılınca gelir"}
+                title={entry ? undefined : "Önce taslak kaydedin"}
                 onClick={handleSaveAndSubmit}
               >
                 Kaydet &amp; Gönder
@@ -687,6 +776,20 @@ export function DiaryEntryScreen({
             <LockIcon width={16} height={16} />
             <div className="diary__lock-banner-body">{extension.lock.banner}</div>
           </div>
+        )}
+        {/* Çekirdek kilit bandı YALNIZ uzantı kilidi yokken (Ü8): EV'li şantiyede
+            bant `topBanner`daki `DayLockBanner`dır, çift basılmaz. */}
+        {!hasExtensionLock && coreLock.bannerText !== null && (
+          <div className="diary__lock-banner" role="status">
+            <LockIcon width={16} height={16} />
+            <div className="diary__lock-banner-body">{coreLock.bannerText}</div>
+          </div>
+        )}
+        {/* Ü6 · kayıtsız günde yazılanlar varken başkasının açtığı kayıt yüklendi. */}
+        {hasRaceNotice && (
+          <span className="diary__status-note">
+            Bu güne ait kayıt başka bir kullanıcı tarafından açıldı; kayıt yüklendi.
+          </span>
         )}
       </div>
 
@@ -751,6 +854,10 @@ export function DiaryEntryScreen({
           />
           <DiaryLinesCard
             entry={entry}
+            linesTotal={treeSource.linesTotal}
+            previewStatus={isEntryLoadFailed ? "error" : preview.status}
+            onRetryPreview={isEntryLoadFailed ? () => void entryQuery.refetch() : preview.refetch}
+            hasSection={form.sectionId !== ""}
             groups={lineTree}
             sections={treeSections}
             form={form}
@@ -805,7 +912,7 @@ export function DiaryEntryScreen({
             isError={entriesQuery.isError}
             activeDate={activeDate}
             onSelectDate={handleSelectDate}
-            hasUnsavedChanges={isDirty}
+            hasUnsavedChanges={registryDirty}
           />
           <DiaryPaymentAccrualCard
             accrual={accrual}
@@ -827,7 +934,6 @@ export function DiaryEntryScreen({
             ownCrew={ownCrew}
             timesheetHref={timesheetHref}
             disabled={isReadOnly}
-            isEntryMissing={!entry}
           />
           <DiarySafetyCard form={form} onChange={handleFormChange} disabled={isReadOnly} />
         </div>
@@ -835,6 +941,7 @@ export function DiaryEntryScreen({
 
       {/* Uzantı yuvası `fullWidthBlock` — kart ızgarasının ALTI (İ:384→386). */}
       {fullWidthBlock && <div className="diary__full-width">{fullWidthBlock}</div>}
+      <DiaryPreviewChangeDialog pending={transitions.pending} onConfirm={transitions.confirm} onCancel={transitions.cancel} />
     </div>
   );
 }

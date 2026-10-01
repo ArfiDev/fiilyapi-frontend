@@ -64,7 +64,7 @@ export function diaryDetailLock(
 ): DiaryDetailLock | null {
   if (!entry.locked) return null;
   if (entry.lock_report_date === null) {
-    return { pillLabel: "Kilitli", bandTitle: "Bu gün kilitlendi." };
+    return { pillLabel: "Kilitli", bandTitle: "Bu gün rapor onayıyla kilitlendi." };
   }
   const date = formatDateDots(entry.lock_report_date);
   return { pillLabel: `Kilitli · ${date} raporu`, bandTitle: `Bu gün ${date} raporuyla kilitlendi.` };

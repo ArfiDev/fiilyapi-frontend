@@ -127,7 +127,7 @@ describe("diaryDetailLock — S9 kilit rozeti", () => {
   it("rapor tarihi yoksa tarih UYDURULMAZ", () => {
     expect(diaryDetailLock(entry({ locked: true, lock_report_date: null }))).toEqual({
       pillLabel: "Kilitli",
-      bandTitle: "Bu gün kilitlendi.",
+      bandTitle: "Bu gün rapor onayıyla kilitlendi.",
     });
   });
 });

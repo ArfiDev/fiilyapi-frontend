@@ -119,7 +119,15 @@ export interface DiaryLeafRowProps {
    * ipucu ve KALAN çipi olmadan basılır (F0-6 — aynı veri, farklı etiket).
    */
   isIndirect?: boolean;
+  /**
+   * GKS-F1.3 · satır kaydedilmemiş önizlemeden geliyor: iskelet satırının ×'i
+   * pasiftir, gerekçesi "İskelet satırıdır…" (POST birleştirmesi silemez).
+   */
+  isPreview?: boolean;
 }
+
+/** Önizleme iskelet satırının pasif × gerekçesi (Ü4). */
+export const PREVIEW_SKELETON_REMOVE_TITLE = "İskelet satırıdır, kaydedilmeden kaldırılamaz";
 
 /** G9 · dolaylı kalemin Bölümsüz satır etiketi (F0-6). */
 export const INDIRECT_UNSECTIONED_LABEL = "Tüm şantiye";
@@ -139,6 +147,7 @@ export function DiaryLeafRowView({
   columnCount,
   isIndirect = false,
   subRow = null,
+  isPreview = false,
 }: DiaryLeafRowProps) {
   const showAsSiteWide = isIndirect && leaf.isUnsectioned;
   const label = showAsSiteWide ? INDIRECT_UNSECTIONED_LABEL : leaf.label;
@@ -222,7 +231,13 @@ export function DiaryLeafRowView({
               className="diary-lines__remove"
               disabled={!leaf.isRemovable}
               aria-label={`${group.code} · ${label} satırını kaldır`}
-              title={leaf.isRemovable ? undefined : "Bölümsüz satırı iskelettir, kaldırılamaz"}
+              title={
+                leaf.isRemovable
+                  ? undefined
+                  : isPreview && !leaf.isAdded
+                    ? PREVIEW_SKELETON_REMOVE_TITLE
+                    : "Bölümsüz satırı iskelettir, kaldırılamaz"
+              }
               onClick={() => onRemove(leaf)}
             >
               <XIcon width={12} height={12} />
