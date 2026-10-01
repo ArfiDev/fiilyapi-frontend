@@ -778,6 +778,8 @@ interface MockBoqItem {
   unit_price: string;
   amount: string;
   sort_order: number;
+  /** SZK-B1: sözleşme kalemine bağ (yanıtta HER ZAMAN var; verilmezse null). */
+  contract_item_id?: string | null;
   /**
    * BOQ-SEC-F — poz kotasının BÖLÜMLERE dağılımı (`section_id` → miktar).
    * Gerçek backend `boq_item_section_allocations` tablosunda tutar; burada
@@ -1433,7 +1435,7 @@ const BOQ_FIXTURE: MockBoqGroup[] = [
   {
     id: "bg-2", name: "BETONARME İŞLERİ", sort_order: 20, group_total: "9250000.00",
     items: [
-      { id: "bi-3", code: "02.001", description: "C25/30 Beton (Döşeme)", unit: "m³", quantity: "3200.000", unit_price: "1850.00", amount: "5920000.00", sort_order: 0, allocations: { "sec-1": "1200.000", "sec-2": "500.000" } },
+      { id: "bi-3", code: "02.001", description: "C25/30 Beton (Döşeme)", unit: "m³", quantity: "3200.000", unit_price: "1850.00", amount: "5920000.00", sort_order: 0, contract_item_id: "cccccccc-0000-4000-8000-000000000003", allocations: { "sec-1": "1200.000", "sec-2": "500.000" } },
       { id: "bi-4", code: "02.002", description: "Demir Donatı (Ø8-Ø20)", unit: "Ton", quantity: "180.000", unit_price: "18500.00", amount: "3330000.00", sort_order: 1, allocations: { "sec-1": "85.000" } },
     ],
   },
@@ -9209,6 +9211,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
             const quantity = sectionId ? (itemAllocations[sectionId] as string) : item.quantity;
             return {
               ...item,
+              contract_item_id: item.contract_item_id ?? null,
               allocations: undefined,
               quantity,
               amount: boqMultiplyMoney(quantity, item.unit_price),
@@ -9266,6 +9269,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         return {
           item: {
             ...item,
+            contract_item_id: item.contract_item_id ?? null,
             allocations: undefined,
             allocated_quantity: allocated,
             unallocated_quantity: boqSubtractQuantities(item.quantity, allocated),

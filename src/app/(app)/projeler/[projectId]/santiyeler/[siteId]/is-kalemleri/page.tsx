@@ -139,6 +139,7 @@ export default function BoqPage() {
       {formMode && (
         <BoqItemFormModal
           siteId={siteId}
+          projectId={siteQuery.data?.project.id ?? ""}
           groups={boqQuery.data?.groups ?? []}
           mode={formMode}
           canDelete={canDelete}

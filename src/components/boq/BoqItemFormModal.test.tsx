@@ -33,6 +33,7 @@ function item(overrides: Partial<BoqItem> = {}): BoqItem {
     unit_price: "280.00",
     amount: "347200.00",
     sort_order: 5,
+    contract_item_id: null,
     allocated_quantity: "0.000",
     unallocated_quantity: "1240.000",
     progress_pct: { available: false, value: null, pending_module: "progress_payments" },
@@ -86,6 +87,7 @@ function renderCreate(groups: BoqGroup[] = GROUPS) {
   render(
     <BoqItemFormModal
       siteId={SITE_ID}
+      projectId="55555555-5555-5555-5555-555555555555"
       groups={groups}
       mode={{ kind: "create" }}
       canDelete
@@ -98,6 +100,7 @@ function renderEdit(mode?: { item: BoqItem; groupId: string; canDelete?: boolean
   render(
     <BoqItemFormModal
       siteId={SITE_ID}
+      projectId="55555555-5555-5555-5555-555555555555"
       groups={GROUPS}
       mode={{ kind: "edit", item: mode?.item ?? item(), groupId: mode?.groupId ?? GROUP_1 }}
       canDelete={mode?.canDelete ?? true}
@@ -586,7 +589,7 @@ describe("BoqItemFormModal — kaydedilmemiş değişiklik kaydı", () => {
 
   it("başarılı kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
     const { unmount } = render(
-      <BoqItemFormModal siteId={SITE_ID} groups={GROUPS} mode={{ kind: "create" }} canDelete onClose={onClose} />,
+      <BoqItemFormModal siteId={SITE_ID} projectId="55555555-5555-5555-5555-555555555555" groups={GROUPS} mode={{ kind: "create" }} canDelete onClose={onClose} />,
     );
     fillValidCreateForm();
     save();

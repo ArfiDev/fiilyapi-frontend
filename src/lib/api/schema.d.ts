@@ -9063,6 +9063,8 @@ export interface components {
             readonly amount: string | null;
             /** Code */
             code: string;
+            /** Contract Item Id */
+            contract_item_id: string | null;
             /** Description */
             description: string;
             /**

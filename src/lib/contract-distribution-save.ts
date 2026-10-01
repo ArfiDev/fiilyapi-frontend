@@ -40,7 +40,7 @@ export type DistributionCellRejectionReason =
 
 export interface DistributionCellRejection {
   edit: DistributionCellEdit;
-  reason: DistributionCellRejectionReason;
+  reason: DigitLimitedRejectionReason;
 }
 
 /**
@@ -55,6 +55,8 @@ export interface DistributionSaveBuild {
   body: DistributionSaveBody;
   /** Gövdeye alınmayan hücreler; boş değilse kaydetme AKIŞI DURDURULUR. */
   rejections: DistributionCellRejection[];
+  /** true ⇒ kirli hücre sayısı tavanı aştı; gövde KURULMADI (`allocations` boş). */
+  cellLimitExceeded: boolean;
 }
 
 /** Izgaranın kirli-hücre haritası için tek anahtar üreticisi. */
@@ -81,6 +83,22 @@ export interface CellDigitLimits {
 /** Hane sınırı verildiğinde eklenen ret gerekçesi (aşım ya da bilimsel gösterim). */
 export type DigitLimitedRejectionReason = DistributionCellRejectionReason | "digits";
 
+/**
+ * Backend miktar sütunları `Numeric(14, 3)` (openapi: max_digits 14, decimal 3)
+ * ⇒ en çok 11 tam + 3 ondalık hane. Bölüm dağılımı, sözleşme POZ dağılımı ve
+ * BOQ tahsis girişi AYNI sınırı paylaşır — TEK kopya burasıdır.
+ */
+export const QUANTITY_DIGIT_LIMITS: CellDigitLimits = {
+  maxWholeDigits: 11,
+  maxDecimalDigits: 3,
+};
+
+/** `QUANTITY_DIGIT_LIMITS` aşımının tek ekran metni (BDG ile aynı). */
+export const QUANTITY_DIGIT_LIMIT_MESSAGE = "En çok 11 tam ve 3 ondalık hane girilebilir.";
+
+/** openapi `ContractDistributionSave.allocations.maxItems` ile AYNI değer (bkz. test). */
+export const CONTRACT_DISTRIBUTION_MAX_CELLS = 20000;
+
 const SCIENTIFIC_PATTERN = /^\d*[.,]?\d*e[+-]?\d+$/i;
 
 function exceedsDigitLimits(normalized: string, limits: CellDigitLimits): boolean {
@@ -90,6 +108,16 @@ function exceedsDigitLimits(normalized: string, limits: CellDigitLimits): boolea
     whole.replace(/^0+/, "").length > limits.maxWholeDigits ||
     fraction.replace(/0+$/, "").length > limits.maxDecimalDigits
   );
+}
+
+/**
+ * `QUANTITY_DIGIT_LIMITS` aşımı — `normalizeDecimalInput` çıktısı gibi ZATEN
+ * normalleşmiş ("1234.5") metin için. `parseCellValue` kullanamayan çağıranlar
+ * (BOQ tahsis kartı: `0` ve işaret kuralı farklıdır) ikinci bir sayaç yazmasın
+ * diye aynı sayaç buradan açılır.
+ */
+export function exceedsQuantityDigitLimits(normalized: string): boolean {
+  return exceedsDigitLimits(normalized.replace(/^[-+]/, ""), QUANTITY_DIGIT_LIMITS);
 }
 
 /**
@@ -143,6 +171,9 @@ export function parseCellValue(
 export function buildDistributionSaveBody(
   edits: readonly DistributionCellEdit[],
 ): DistributionSaveBuild {
+  if (edits.length > CONTRACT_DISTRIBUTION_MAX_CELLS) {
+    return { body: { allocations: [] }, rejections: [], cellLimitExceeded: true };
+  }
   const allocationsByCell = new Map<string, ContractAllocationInput>();
   const rejectionsByCell = new Map<string, DistributionCellRejection>();
 
@@ -152,7 +183,7 @@ export function buildDistributionSaveBody(
     allocationsByCell.delete(key);
     rejectionsByCell.delete(key);
 
-    const parsed = parseCellValue(edit.value);
+    const parsed = parseCellValue(edit.value, QUANTITY_DIGIT_LIMITS);
     if (parsed.kind === "rejected") {
       rejectionsByCell.set(key, { edit, reason: parsed.reason });
       continue;
@@ -168,13 +199,19 @@ export function buildDistributionSaveBody(
   return {
     body: { allocations: [...allocationsByCell.values()] },
     rejections: [...rejectionsByCell.values()],
+    cellLimitExceeded: false,
   };
 }
 
 /** Ekranda basılacak Türkçe ret metni (tek kaynak — kopya cümle yazılmaz). */
-export function distributionRejectionMessage(reason: DistributionCellRejectionReason): string {
+export function distributionRejectionMessage(reason: DigitLimitedRejectionReason): string {
   if (reason === "zero") {
     return "Miktar 0 olamaz — dağılımı kaldırmak için hücreyi boş bırakın.";
   }
+  if (reason === "digits") return QUANTITY_DIGIT_LIMIT_MESSAGE;
   return "Miktar geçerli bir sayı olmalı (negatif değer kabul edilmez).";
+}
+
+export function distributionCellLimitMessage(): string {
+  return `Tek seferde en çok ${CONTRACT_DISTRIBUTION_MAX_CELLS.toLocaleString("tr-TR")} hücre kaydedilebilir.`;
 }

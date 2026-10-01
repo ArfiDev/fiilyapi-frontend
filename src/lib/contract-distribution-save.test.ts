@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 
 import {
   buildDistributionSaveBody,
+  CONTRACT_DISTRIBUTION_MAX_CELLS,
   distributionCellKey,
   distributionRejectionMessage,
 } from "./contract-distribution-save";
@@ -117,5 +120,53 @@ describe("yardımcılar", () => {
   it("ret metinleri Türkçe ve gerekçeye özgüdür", () => {
     expect(distributionRejectionMessage("zero")).toContain("0 olamaz");
     expect(distributionRejectionMessage("invalid")).toContain("geçerli bir sayı");
+  });
+});
+
+// SZK-F2 · sözleşme ucu da BDG ile AYNI hane sınırı (Numeric(14,3) = 11 tam + 3 ondalık)
+// ve hücre tavanı (SZK-B1: ContractDistributionSave 422).
+describe("buildDistributionSaveBody — hane sınırı (SZK-F2)", () => {
+  const edit = (value: string) => ({ contractItemId: "ci-1", siteId: "s-1", value });
+
+  it.each(["1e30", "0.0004", "123456789012", "1,5e3"])(
+    "'%s' görünür 'digits' retidir; gövdeye girmez",
+    (value) => {
+      const { body, rejections } = buildDistributionSaveBody([edit(value)]);
+      expect(rejections.map((r) => r.reason)).toEqual(["digits"]);
+      expect(body.allocations).toEqual([]);
+    },
+  );
+
+  it("11 tam + 3 ondalık sınırda kabul edilir", () => {
+    const { body, rejections } = buildDistributionSaveBody([edit("12345678901.123")]);
+    expect(rejections).toEqual([]);
+    expect(body.allocations[0].quantity).toBe("12345678901.123");
+  });
+
+  it("ret metni BDG ile aynıdır", () => {
+    expect(distributionRejectionMessage("digits")).toBe(
+      "En çok 11 tam ve 3 ondalık hane girilebilir.",
+    );
+  });
+
+  it("20.001 kirli hücre gövde kurmadan reddedilir, 20.000 kabul edilir", () => {
+    const edits = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        contractItemId: `ci-${i}`,
+        siteId: "s-1",
+        value: "1",
+      }));
+    const over = buildDistributionSaveBody(edits(CONTRACT_DISTRIBUTION_MAX_CELLS + 1));
+    expect(over.cellLimitExceeded).toBe(true);
+    expect(over.body.allocations).toEqual([]);
+    const ok = buildDistributionSaveBody(edits(CONTRACT_DISTRIBUTION_MAX_CELLS));
+    expect(ok.cellLimitExceeded).toBe(false);
+    expect(ok.body.allocations).toHaveLength(CONTRACT_DISTRIBUTION_MAX_CELLS);
+  });
+
+  it("CONTRACT_DISTRIBUTION_MAX_CELLS openapi maxItems ile aynıdır", () => {
+    const spec = JSON.parse(readFileSync(resolve(process.cwd(), "openapi/openapi.json"), "utf8"));
+    const save = spec.components.schemas.ContractDistributionSave;
+    expect(save.properties.allocations.maxItems).toBe(CONTRACT_DISTRIBUTION_MAX_CELLS);
   });
 });

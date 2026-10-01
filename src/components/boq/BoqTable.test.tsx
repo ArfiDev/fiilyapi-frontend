@@ -15,6 +15,7 @@ function item(overrides: Partial<BoqItem> = {}): BoqItem {
     unit_price: "280.00",
     amount: "347200.00",
     sort_order: 0,
+    contract_item_id: null,
     allocated_quantity: "0.000",
     unallocated_quantity: "1240.000",
     progress_pct: { available: false, value: null, pending_module: "progress_payments" },

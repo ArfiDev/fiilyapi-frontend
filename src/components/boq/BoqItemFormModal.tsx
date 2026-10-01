@@ -5,7 +5,11 @@ import { useRef, useState } from "react";
 import { Button, Field, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/settings/Modal";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
+import Link from "next/link";
+
 import { formatAmount } from "@/lib/format";
+import { compareDecimalStrings, normalizeDecimalInput } from "@/lib/decimal";
+import { employerContractTabHref } from "@/components/contracts/employer-contract-tabs";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { BackendError } from "@/lib/api/unwrap";
 import {
@@ -26,6 +30,8 @@ export type BoqItemFormMode =
 
 export interface BoqItemFormModalProps {
   siteId: string;
+  /** Kanonik proje UUID'si — kilit gerekçesindeki sözleşme bağlantısı içindir. */
+  projectId: string;
   /** Grup açılırını doldurur; listeden gelir, yeniden çekilmez (spec §7.1). */
   groups: BoqGroup[];
   mode: BoqItemFormMode;
@@ -41,6 +47,10 @@ export interface BoqItemFormModalProps {
 // Native <option> degerlerinde UUID ile cakismayan sentinel (EmployerCard deseni).
 const NEW_GROUP_OPTION = "__new__";
 
+/** SZK-F2 (Z1): sözleşmeye bağlı kalemde dört alan kilitlidir; gerekçe AYNEN bu metindir. */
+const CONTRACT_LOCK_REASON = "Sözleşmeden gelir — sözleşmede düzenleyin";
+const CONTRACT_LOCK_LINK_LABEL = "Sözleşme kalemleri";
+
 const DUPLICATE_CODE_MESSAGE = "Bu poz numarası bu şantiyede zaten kullanılıyor.";
 const DELETE_NOT_FOUND_MESSAGE = "Kalem bulunamadı, listeyi tazeleyin.";
 const DELETE_FALLBACK_MESSAGE = "İş kalemi silinemedi.";
@@ -50,6 +60,19 @@ function toNumberOrNull(text: string): number | null {
   if (!text.trim()) return null;
   const value = Number(text);
   return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Birim fiyat değişti mi? SAYISAL karşılaştırma: "280" == "280.00" (ham metin
+ * karşılaştırması gövdeye sahte değişiklik sokardı). Ayrıştırılamayan girdi
+ * (boş vb.) ham metin farkına düşer; doğrulama zaten onu reddeder.
+ */
+function isUnitPriceChanged(next: string, previous: string | null): boolean {
+  if (previous === null) return true; // maskeli (kapsam) değer: bugünkü davranış
+  const nextDecimal = normalizeDecimalInput(next);
+  const previousDecimal = normalizeDecimalInput(previous);
+  if (nextDecimal === null || previousDecimal === null) return next !== previous;
+  return compareDecimalStrings(nextDecimal, previousDecimal) !== 0;
 }
 
 function maxSortOrder(values: number[]): number {
@@ -101,6 +124,7 @@ function deleteErrorMessage(err: unknown): string {
  */
 export function BoqItemFormModal({
   siteId,
+  projectId,
   groups,
   mode,
   canDelete,
@@ -112,6 +136,10 @@ export function BoqItemFormModal({
   const deleteItem = useDeleteBoqItem(siteId);
 
   const editItem = mode.kind === "edit" ? mode.item : null;
+  // SZK-F2 (Z1): yalnız düzenleme kipinde ve yalnız sözleşmeye bağlı kalemde.
+  // Bağsız kalem (Z3) ve oluşturma kipi bugünkü gibi tamamen açıktır.
+  // Truthy kontrol: alan hiç gelmezse (eski yanıt) kilit KAPALI, backend 422 son söz.
+  const isContractLocked = Boolean(editItem?.contract_item_id);
   // BOQ tamamen bossa modal dogrudan "+ Yeni Grup" secili acilir (spec §7.3).
   const initialGroupId =
     mode.kind === "edit" ? mode.groupId : groups.length > 0 ? "" : NEW_GROUP_OPTION;
@@ -211,11 +239,14 @@ export function BoqItemFormModal({
     const trimmedCode = code.trim();
     const trimmedDescription = description.trim();
     const trimmedUnit = unit.trim();
-    if (trimmedCode !== mode.item.code) body.code = trimmedCode;
-    if (trimmedDescription !== mode.item.description) body.description = trimmedDescription;
-    if (trimmedUnit !== mode.item.unit) body.unit = trimmedUnit;
+    // Kilitli dört alan (Z1) değişmemiş olsalar bile gövdeye HİÇ konmaz.
+    if (!isContractLocked) {
+      if (trimmedCode !== mode.item.code) body.code = trimmedCode;
+      if (trimmedDescription !== mode.item.description) body.description = trimmedDescription;
+      if (trimmedUnit !== mode.item.unit) body.unit = trimmedUnit;
+      if (isUnitPriceChanged(unitPrice, mode.item.unit_price)) body.unit_price = unitPrice;
+    }
     if (quantity !== mode.item.quantity) body.quantity = quantity;
-    if (unitPrice !== mode.item.unit_price) body.unit_price = unitPrice;
     return body;
   }
 
@@ -388,11 +419,20 @@ export function BoqItemFormModal({
             )}
           </Field>
         )}
+        {isContractLocked && (
+          <p className="settings-note boq-modal__lock">
+            <span>{CONTRACT_LOCK_REASON}</span>{" "}
+            <Link href={employerContractTabHref(projectId, "items")}>
+              {CONTRACT_LOCK_LINK_LABEL}
+            </Link>
+          </p>
+        )}
         <Field label="Poz No" required>
           {(control) => (
             <Input
               {...control}
               ref={codeRef}
+              disabled={isContractLocked}
               value={code}
               onChange={(event) => setCode(event.target.value)}
             />
@@ -403,6 +443,7 @@ export function BoqItemFormModal({
             <Input
               {...control}
               ref={descriptionRef}
+              disabled={isContractLocked}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
@@ -413,6 +454,7 @@ export function BoqItemFormModal({
             <Input
               {...control}
               ref={unitRef}
+              disabled={isContractLocked}
               value={unit}
               onChange={(event) => setUnit(event.target.value)}
             />
@@ -435,6 +477,7 @@ export function BoqItemFormModal({
             <Input
               {...control}
               ref={unitPriceRef}
+              disabled={isContractLocked}
               type="number"
               numeric
               value={unitPrice}
