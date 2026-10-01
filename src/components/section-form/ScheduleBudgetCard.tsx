@@ -1,6 +1,7 @@
 import { DateInput, Field, Input, Select } from "@/components/ui";
 import { durationDays } from "@/lib/form/derive";
-import { formatDateDots } from "@/lib/format";
+import { formatCurrency, formatDateDots } from "@/lib/format";
+import type { SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import type { SectionMilestone } from "./build-body";
 import type { SectionFormValues } from "./form-state";
 import type { SectionFormErrors } from "./validate";
@@ -19,6 +20,26 @@ export interface ScheduleBudgetCardProps {
   dependencyOptions: readonly DependencyOption[];
   /** Düzenleme kipinde kayıtlı milestone'lar — ipucu metni bunlardan TÜRER. */
   existingMilestones: readonly SectionMilestone[];
+  /** Yeni bölüm (create): henüz tahsis yok → bedel boş, gerekçe "atanınca hesaplanır". */
+  isNew: boolean;
+  /** Düzenlemede detaydaki türev `budget` (BOQ tahsislerinden); yeni bölümde yok. */
+  derivedBudget?: SectionDetailResponse["budget"];
+}
+
+const DERIVED_EMPTY = "—";
+const BUDGET_HINT_EXISTING = "İş kalemlerinden hesaplanır";
+const BUDGET_HINT_NEW = "İş kalemi atanınca hesaplanır";
+
+/**
+ * Bölüm Bedeli kutusunun gösterim metni. `available` TEK BAŞINA yetmez (bayrak
+ * VE değer — SectionCard ile aynı kural). K-MKD3: tahsisi olmayan bölüm
+ * `available: true` + "0.00" döner ve bu GERÇEK sıfırdır ("₺ 0"), yer tutucu
+ * ("—") DEĞİL.
+ */
+function derivedBudgetText(isNew: boolean, budget: ScheduleBudgetCardProps["derivedBudget"]): string {
+  if (isNew || !budget) return "";
+  const isReal = budget.available && budget.value !== null && budget.value !== undefined;
+  return isReal ? formatCurrency(budget.value) : DERIVED_EMPTY;
 }
 
 /**
@@ -43,6 +64,8 @@ export function ScheduleBudgetCard({
   errors,
   dependencyOptions,
   existingMilestones,
+  isNew,
+  derivedBudget,
 }: ScheduleBudgetCardProps) {
   // Türev alan — gövdede GÖNDERİLMEZ (F109).
   const duration = durationDays(values.startDate, values.endDate);
@@ -85,17 +108,13 @@ export function ScheduleBudgetCard({
           )}
         </Field>
 
-        <Field label="Bölüm Bedeli (₺)" required error={errors?.budgetAmount}>
+        {/* BLF-F1.3 (F-a): Bölüm Bedeli YALNIZ HESAPLANIR — Σ(bölüm payı × birim
+            fiyat). Kilitli (disabled) kutu + gerekçe; elle giriş ve zorunluluk
+            yıldızı YOK, gövdeye `budget_amount` girmez. Kullanıcı onaylı
+            sapma: mockup bu kutuyu elle girilen zorunlu alan çizer. */}
+        <Field label="Bölüm Bedeli" hint={isNew ? BUDGET_HINT_NEW : BUDGET_HINT_EXISTING}>
           {(control) => (
-            <Input
-              {...control}
-              type="number"
-              numeric
-              value={values.budgetAmount}
-              placeholder="2840000"
-              status={errors?.budgetAmount ? "error" : "default"}
-              onChange={(e) => onChange("budgetAmount", e.target.value)}
-            />
+            <Input {...control} disabled numeric value={derivedBudgetText(isNew, derivedBudget)} />
           )}
         </Field>
       </div>

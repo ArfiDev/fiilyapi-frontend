@@ -32,17 +32,16 @@ describe("validateSectionForm — taslak (is_draft: true)", () => {
     expect(errors.endDate).toBe(MESSAGES.endBeforeStart);
   });
 
-  it("section_type/manager/tarih/bütçe boş olsa da taslakta hata YOK", () => {
+  it("section_type/manager/tarih boş olsa da taslakta hata YOK", () => {
     const errors = validateSectionForm(values({ name: "Temel" }), { isDraft: true, ...AVAILABLE });
-    expect(errors.sectionType).toBeUndefined();
+    expect(errors.sectionTypeId).toBeUndefined();
     expect(errors.managerUserId).toBeUndefined();
     expect(errors.startDate).toBeUndefined();
-    expect(errors.budgetAmount).toBeUndefined();
   });
 });
 
 describe("validateSectionForm — taslak dışı (is_draft: false, Bölümü Oluştur)", () => {
-  const base = { name: "Temel", sectionType: "structural" as const, managerUserId: "u1", startDate: "2026-01-01", endDate: "2026-02-01", budgetAmount: "1000" };
+  const base = { name: "Temel", sectionTypeId: "t-1", managerUserId: "u1", startDate: "2026-01-01", endDate: "2026-02-01" };
 
   it("tüm alanlar doluysa hata yok", () => {
     const errors = validateSectionForm(values(base), { isDraft: false, ...AVAILABLE });
@@ -50,8 +49,8 @@ describe("validateSectionForm — taslak dışı (is_draft: false, Bölümü Olu
   });
 
   it("section_type boşsa 'Bölüm tipi seçiniz.'", () => {
-    const errors = validateSectionForm(values({ ...base, sectionType: "" }), { isDraft: false, ...AVAILABLE });
-    expect(errors.sectionType).toBe(MESSAGES.sectionTypeRequired);
+    const errors = validateSectionForm(values({ ...base, sectionTypeId: "" }), { isDraft: false, ...AVAILABLE });
+    expect(errors.sectionTypeId).toBe(MESSAGES.sectionTypeRequired);
   });
 
   it("managerUserId boşsa 'Bölüm sorumlusu seçiniz.' (liste mevcutken)", () => {
@@ -99,14 +98,12 @@ describe("validateSectionForm — taslak dışı (is_draft: false, Bölümü Olu
     expect(errors.startDate).toBe(MESSAGES.datesRequired);
   });
 
-  it("budget_amount boşsa 'Bölüm bedeli zorunludur.'", () => {
-    const errors = validateSectionForm(values({ ...base, budgetAmount: "" }), { isDraft: false, ...AVAILABLE });
-    expect(errors.budgetAmount).toBe(MESSAGES.budgetRequired);
-  });
-
-  it("budget_amount '0' iken GEÇERLİDİR — is None kontrolü, falsy DEĞİL", () => {
-    const errors = validateSectionForm(values({ ...base, budgetAmount: "0" }), { isDraft: false, ...AVAILABLE });
-    expect(errors.budgetAmount).toBeUndefined();
+  it("🔴 BLF-F1.3: bölüm bedeli ARTIK zorunlu değil — alan form durumunda yok, hata üretilemez", () => {
+    const errors = validateSectionForm(values(base), { isDraft: false, ...AVAILABLE });
+    expect(errors).not.toHaveProperty("budgetAmount");
+    expect(Object.keys(values(base))).not.toContain("budgetAmount");
+    expect(MESSAGES).not.toHaveProperty("budgetRequired");
+    expect(MESSAGES).not.toHaveProperty("negativeBudget");
   });
 
   it("tarih sırası ters ise startDate/endDate zorunluluğundan ÖNCE tutarlılık hatası basılır", () => {

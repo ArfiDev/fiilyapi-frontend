@@ -1,24 +1,9 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  SECTION_TYPE_LABELS,
   SECTION_STATUS_LABELS,
   SECTION_STATUS_CLASS_SUFFIX,
 } from "./section-labels";
-
-describe("section-labels — bölüm türü eşlemesi (Form - Bölüm Ekle satır 70, birebir)", () => {
-  it("yedi türün tümü Türkçe etiket taşır", () => {
-    expect(SECTION_TYPE_LABELS).toEqual({
-      foundation_infra: "Temel & Altyapı",
-      structural: "Kaba İnşaat",
-      finishing: "İnce İşler",
-      facade_roof: "Cephe & Çatı",
-      mep: "Mekanik / Elektrik",
-      landscape: "Peyzaj",
-      handover: "Teslimat & Kabul",
-    });
-  });
-});
 
 describe("section-labels — bölüm durumu eşlemesi (4 durum, birebir)", () => {
   it("dört durumun tümü Türkçe etiket taşır", () => {

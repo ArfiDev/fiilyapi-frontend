@@ -27,7 +27,6 @@ const BASE_SECTION: SectionResponse = {
   worker_count: { available: false, count: null, pending_module: "timesheet" },
   // F-BLMKART: BLM-SAY ile LISTE yanitina giren iki kayitli kolon.
   planned_worker_count: null,
-  budget_amount: null,
 };
 
 function renderCard(overrides: Partial<SectionResponse> = {}) {
@@ -135,47 +134,11 @@ describe("SectionCard — 4 metrik hepsi yer tutucu (spec §5.4, §7.1)", () => 
     renderCard();
     const dashes = screen.getAllByText("—");
     expect(dashes).toHaveLength(4);
-    // 🔴 DÖRDÜN ÜÇÜ ipucu taşır, BİRİ TAŞIMAZ (2026-09-20). "Bölüm Bedeli"
-    //    hücresinin `null`u İKİ ANLAMLIDIR (girilmemiş · kapsam maskesi) ve
-    //    ekranın ayırt edecek bilgisi yoktur; uydurma gerekçe yerine susar.
-    //    Gerekçesi `SectionCard.tsx::BudgetMetricCell`de yazılı.
-    const [bedelHucresi, ipuclu] = [
-      dashes.filter((el) => el.classList.contains("section-card__metric-value--money")),
-      dashes.filter((el) => !el.classList.contains("section-card__metric-value--money")),
-    ];
-    expect(bedelHucresi).toHaveLength(1);
-    expect(bedelHucresi[0].hasAttribute("title")).toBe(false);
-    ipuclu.forEach((el) => expect(el).toHaveAttribute("title"));
-  });
-
-  it("gercek deger geldiginde yer tutucu yerine gercek deger basilir", () => {
-    renderCard({
-      boq_item_count: { available: true, count: 14, pending_module: "boq" },
-    });
-    expect(screen.getByText("14")).toBeInTheDocument();
-  });
-
-  // KOD INCELEME BULGUSU: MetricCell yalniz `available` bayragina bakiyordu —
-  // available: true + deger null gelirse hucre BOS kaliyordu. Daldaki diger tum
-  // yer tutucular (SiteCard/SiteHeroBar) bayrak VE deger kontrol eder.
-  it("available: true ama deger null ise em dash basar, hucre bos kalmaz", () => {
-    renderCard({
-      boq_item_count: { available: true, count: null, pending_module: "boq" },
-      budget: { available: true, value: null, pending_module: "boq" },
-    });
-    const dashes = screen.getAllByText("—");
-    expect(dashes).toHaveLength(4);
-    // 🔴 DÖRDÜN ÜÇÜ ipucu taşır, BİRİ TAŞIMAZ (2026-09-20). "Bölüm Bedeli"
-    //    hücresinin `null`u İKİ ANLAMLIDIR (girilmemiş · kapsam maskesi) ve
-    //    ekranın ayırt edecek bilgisi yoktur; uydurma gerekçe yerine susar.
-    //    Gerekçesi `SectionCard.tsx::BudgetMetricCell`de yazılı.
-    const [bedelHucresi, ipuclu] = [
-      dashes.filter((el) => el.classList.contains("section-card__metric-value--money")),
-      dashes.filter((el) => !el.classList.contains("section-card__metric-value--money")),
-    ];
-    expect(bedelHucresi).toHaveLength(1);
-    expect(bedelHucresi[0].hasAttribute("title")).toBe(false);
-    ipuclu.forEach((el) => expect(el).toHaveAttribute("title"));
+    // BLF-F1.3: "Bölüm Bedeli" artık TEK kaynaktan (türev `budget` zarfı) gelir
+    // ve öbür zarf hücreleriyle AYNI yer tutucu yolundan geçer → dördü de
+    // ipucu (title) taşır. (Eski elle `budget_amount` hücresinin "gerekçe
+    // yazılmaz" istisnası kolonla birlikte kalktı.)
+    dashes.forEach((el) => expect(el).toHaveAttribute("title"));
   });
 });
 
@@ -189,7 +152,7 @@ describe("SectionCard — sayilar paylasilan bicimlendiricilerden gecer", () => 
   });
 
   it("bolum bedeli formatCompactCurrency ile basilir", () => {
-    renderCard({ budget_amount: "8400000.00" });
+    renderCard({ budget: { available: true, value: "8400000.00", pending_module: null } });
     expect(screen.getByText("₺ 8,4M")).toBeInTheDocument();
   });
 });
@@ -304,68 +267,35 @@ describe("SectionCard — eylem klavyeyle odaklanabilir (davranissal)", () => {
 // iki kayitli kolonu LISTE yanitina EKLEDI.
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("SectionCard — 'Bölüm Bedeli' kutusu İKİ değeri de gösterir (ürün kararı 2026-08-27)", () => {
-  it("elle girilen budget_amount ASIL değer olarak basılır", () => {
-    renderCard({ budget_amount: "4982030.00" });
-    expect(screen.getByText("₺ 5M")).toBeInTheDocument();
-  });
-
-  it("BOQ türevi budget alt satırda 'BOQ: …' olarak basılır", () => {
+describe("SectionCard — 'Bölüm Bedeli' TEK satır, TEK kaynak: türev `budget` (BLF-F1.3, F-a)", () => {
+  it("BOQ tahsislerinden türeyen `budget` ana değer olarak basılır", () => {
     renderCard({ budget: { available: true, value: "3520000.00", pending_module: null } });
-    expect(screen.getByText("BOQ: ₺ 3,5M")).toBeInTheDocument();
+    expect(screen.getByText("₺ 3,5M")).toBeInTheDocument();
   });
 
-  // 🔴 EKRAN AYRISMAYI SAKLAMAZ: kullanici elle girdigi bedelin BOQ tahsis
-  // toplamindan farkli oldugunu KARTTA gorebilmelidir.
-  it("ikisi ayrıştığında İKİSİ DE aynı anda görünür — biri diğerini gizlemez", () => {
-    renderCard({
-      budget_amount: "4982030.00",
-      budget: { available: true, value: "3520000.00", pending_module: null },
-    });
-    expect(screen.getByText("₺ 5M")).toBeInTheDocument();
-    expect(screen.getByText("BOQ: ₺ 3,5M")).toBeInTheDocument();
+  // 🔴 Eskiden kutu iki satırdı (elle `budget_amount` + "BOQ: …"). Elle kolon
+  // kalktı; "BOQ:" alt satırı KALMAMALI — iki satır = iki kaynak izlenimi.
+  it("🔴 'BOQ: …' alt satırı YOK — kutuda tek satır vardır", () => {
+    renderCard({ budget: { available: true, value: "3520000.00", pending_module: null } });
+    expect(screen.queryByText(/BOQ:/)).not.toBeInTheDocument();
+    expect(document.querySelector(".section-card__metric-note")).toBeNull();
   });
 
-  // 🔴 İDDİA 2026-09-20'de DÜZELTİLDİ — eski hâli bir KUSURU çiviliyordu.
-  //
-  // Eskiden burada `getByTitle("Bölüm bedeli girilmemiş")` vardı. O cümle bir
-  // İDDİADIR ve ekranın onu kanıtlayacak bilgisi YOKTUR: `budget_amount` null
-  // gelmesinin İKİ sebebi var ve ikisi ayırt edilemez —
-  //   (1) gerçekten girilmemiş,
-  //   (2) KAPSAM MASKESİ düşürmüş (`sites = view/limited`, ör. şantiye şefi).
-  // `/auth/me` yükü kapsam TAŞIMAZ, yani ikinci hâl istemcide bilinemez.
-  //
-  // Deponun kanonu bu soruyu zaten yanıtlıyor: gerekçe ancak KANITLIYSA basılır
-  // (`contract-progress.ts::isProvenZeroAmount` emsali) ve `restricted()`
-  // hâlinde "—" basılıp SUSULUR. Burada da öyle yapılır.
-  it("budget_amount null iken sahte sıfır BASILMAZ ve UYDURMA GEREKÇE verilmez", () => {
-    renderCard({
-      budget_amount: null,
-      budget: { available: true, value: "3520000.00", pending_module: null },
-    });
-    const bedel = document.querySelector<HTMLElement>(
-      ".section-card__metric-value--money.section-card__metric-value--pending",
-    );
-    expect(bedel).not.toBeNull();
-    expect(bedel).toHaveTextContent("—");
-    expect(bedel!.hasAttribute("title")).toBe(false);
-    expect(screen.queryByTitle("Bölüm bedeli girilmemiş")).not.toBeInTheDocument();
-    expect(screen.getByText("BOQ: ₺ 3,5M")).toBeInTheDocument();
-  });
-
-  // 🔴 K-MKD3: "satir yok" ≠ "henuz bilinmiyor". Tahsisi olmayan bolum
-  // `available: true` + "0.00" doner; "BOQ: ₺ 0" DOGRU, "BOQ: —" YANLIS olurdu.
-  it("BOQ tahsisi olmayan bölüm 'BOQ: ₺ 0' basar — 'BOQ: —' DEĞİL", () => {
+  // K-MKD3: tahsisi olmayan bölüm `available: true` + "0.00" döner → gerçek
+  // sıfırdır ("₺ 0"), yer tutucu "—" DEĞİL.
+  it("tahsisi olmayan bölüm gerçek sıfır basar ('₺ 0'), '—' DEĞİL", () => {
     renderCard({ budget: { available: true, value: "0.00", pending_module: null } });
-    expect(screen.getByText("BOQ: ₺ 0")).toBeInTheDocument();
-    expect(screen.queryByText("BOQ: —")).not.toBeInTheDocument();
+    const cell = screen.getByText("Bölüm Bedeli").closest(".section-card__metric") as HTMLElement;
+    expect(cell).toHaveTextContent("₺ 0");
+    expect(cell).not.toHaveTextContent("—");
   });
 
-  it("BOQ zarfı gerçekten yer tutucuyken 'BOQ: —' basılır ve sebebi title'da taşınır", () => {
+  it("zarf gerçekten yer tutucuyken '—' basılır ve sebebi title'da taşınır", () => {
     renderCard({ budget: { available: false, value: null, pending_module: "boq" } });
-    const note = screen.getByText("BOQ: —");
-    expect(note).toHaveAttribute("title");
-    expect(note.getAttribute("title")).not.toBe("");
+    const cell = screen.getByText("Bölüm Bedeli").closest(".section-card__metric") as HTMLElement;
+    const dash = cell.querySelector(".section-card__metric-value--pending") as HTMLElement;
+    expect(dash).toHaveTextContent("—");
+    expect(dash.getAttribute("title")).toBeTruthy();
   });
 });
 
@@ -434,11 +364,10 @@ describe("SectionCard — 'İlerleme' YER TUTUCU KALIR (progress_pct'e dokunulma
       status: "active",
       boq_item_count: { available: true, count: 26, pending_module: "boq" },
       budget: { available: true, value: "3520000.00", pending_module: null },
-      budget_amount: "4982030.00",
       worker_count: { available: true, count: 48, pending_module: "timesheet" },
     });
     expect(screen.getByText("26")).toBeInTheDocument();
-    expect(screen.getByText("₺ 5M")).toBeInTheDocument();
+    expect(screen.getByText("₺ 3,5M")).toBeInTheDocument();
     expect(screen.getByText("48")).toBeInTheDocument();
 
     const dashes = screen.getAllByText("—");

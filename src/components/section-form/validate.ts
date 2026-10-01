@@ -13,7 +13,6 @@ export const MESSAGES = {
   sectionTypeRequired: "Bölüm tipi seçiniz.",
   managerRequired: "Bölüm sorumlusu seçiniz.",
   datesRequired: "Başlangıç ve planlanan bitiş tarihi zorunludur.",
-  budgetRequired: "Bölüm bedeli zorunludur.",
   sectionCodeConflict:
     "Bu bölüm kodu bu şantiyede zaten kullanılıyor. Farklı bir kod girin veya kodu boş bırakın.",
   // F-TKV T5 — "Milestone Ekle" satırı YARIM bırakılamaz: backend
@@ -21,15 +20,15 @@ export const MESSAGES = {
   // (422). Yarım satır sessizce DÜŞÜRÜLSEYDİ kullanıcı milestone girdiğini
   // sanır, kayıt hiç oluşmazdı.
   milestoneIncomplete: "Milestone için hem ad hem tarih girilmelidir.",
-  // F-KISIT · üçü de sözleşmede `minimum: 0` — negatif değer 422 döner.
+  // F-KISIT · ikisi de sözleşmede `minimum: 0` — negatif değer 422 döner.
+  // (BLF-F1.3: `budget_amount` kalktı — Bölüm Bedeli yalnız hesaplanır.)
   negativeSortOrder: "Sıra numarası negatif olamaz.",
   negativeWorkerCount: "Planlanan işçi sayısı negatif olamaz.",
-  negativeBudget: "Bölüm bedeli negatif olamaz.",
 } as const;
 
 /**
- * 🔴 `SectionCreate.sort_order` · `planned_worker_count` · `budget_amount`
- * üçünün de sözleşmedeki tabanı **0**dır (`form-limits.contract.test.ts`
+ * 🔴 `SectionCreate.sort_order` · `planned_worker_count`
+ * ikisinin de sözleşmedeki tabanı **0**dır (`form-limits.contract.test.ts`
  * ölçer). İstemcide hiçbiri denetlenmiyordu: negatif bir değer forma
  * girilebiliyor, sunucudan UYARISIZ 422 dönüyordu.
  */
@@ -85,10 +84,6 @@ export function validateSectionForm(
   if (workerCount !== null && workerCount < SECTION_NUMERIC_MIN) {
     errors.plannedWorkerCount = MESSAGES.negativeWorkerCount;
   }
-  const budget = numberOrNull(values.budgetAmount);
-  if (budget !== null && budget < SECTION_NUMERIC_MIN) {
-    errors.budgetAmount = MESSAGES.negativeBudget;
-  }
 
   // Tutarlılık — HER ZAMAN, taslakta da (brief §Doğrulama).
   if (
@@ -108,7 +103,7 @@ export function validateSectionForm(
   }
 
   if (!isDraft) {
-    if (!values.sectionType) errors.sectionType = MESSAGES.sectionTypeRequired;
+    if (!values.sectionTypeId) errors.sectionTypeId = MESSAGES.sectionTypeRequired;
 
     // kalan-9/no287: `isUserListUnavailable` TEK BAŞINA zorunluluğu kaldırmaz.
     // OLUŞTURMA kipinde `hasExistingManagerName` her zaman false'tur ve
@@ -122,11 +117,6 @@ export function validateSectionForm(
 
     if (!errors.endDate && (!values.startDate || !values.endDate)) {
       errors.startDate = MESSAGES.datesRequired;
-    }
-
-    // `budget_amount` — `is None` kontrolü, `0` GEÇERLİDİR (falsy kontrolü DEĞİL).
-    if (numberOrNull(values.budgetAmount) === null) {
-      errors.budgetAmount = MESSAGES.budgetRequired;
     }
   }
 

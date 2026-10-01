@@ -1,23 +1,10 @@
 import type { components } from "@/lib/api/schema";
 
-export type SectionType = components["schemas"]["SectionType"];
 export type SectionStatus = components["schemas"]["SectionStatus"];
 
-// Bölüm türü etiketleri — `Form - Bölüm Ekle.dc.html` satır 70, spec §3.
-// TEK KAYNAK: T2 (Bölüm Detay) ve T3 (tam sayfa form) bunu paylaşır, kopyalamaz
-// (bkz. task-2-brief.md "Türkçe etiket eşlemeleri").
-export const SECTION_TYPE_LABELS: Record<SectionType, string> = {
-  foundation_infra: "Temel & Altyapı",
-  structural: "Kaba İnşaat",
-  finishing: "İnce İşler",
-  facade_roof: "Cephe & Çatı",
-  // Düzeltme turu 1: brifingde backend docstring'inden "Mekanik-Elektrik" alınmıştı;
-  // mockup'un kendisi (`Form - Bolum Ekle.dc.html` F70) "Mekanik / Elektrik" diyor —
-  // 100% mockup sadakati kuralı gereği mockup kazanır.
-  mep: "Mekanik / Elektrik",
-  landscape: "Peyzaj",
-  handover: "Teslimat & Kabul",
-};
+// BLF-F1.3 — Bölüm TİPİ etiketleri BURADAN KALKTI: tip artık sabit enum değil,
+// şirket geneli genişletilebilir liste (`GET /section-types`, ad sunucudan
+// gelir — `useSectionTypes`). 7 tohum adı backend migration'ında yaşar.
 
 // Bölüm durumu etiketleri — `Form - Bölüm Ekle.dc.html` satır 71 + P6 spec §4/§7 S1.
 // TEK KAYNAK: Bölüm Detay hero rozeti (D59) VE T3 formu BUNU kullanır.

@@ -9,16 +9,16 @@ import { test, expect, type Page, type Locator } from "@playwright/test";
  * olduğunu geçen testler söylemez; ölçen tek şey ona ÇARPAN bir istektir.
  *
  * Bu dosya istek yolunu (BFF → ikiz) uçtan uca koşturur ve şunu ölçer:
- *   · "İş Kalemleri" · "Bölüm Bedeli" (+ BOQ alt satırı) GERÇEK sayı basar,
+ *   · "İş Kalemleri" · "Bölüm Bedeli" (TEK satır, türev `budget`) GERÇEK sayı basar,
  *   · KARŞIT KANIT: "İlerleme" AYNI kartta hâlâ "—" basar (yer tutucu kalmalı).
  * İkisi bir arada olmadan test "her şey dolu" ya da "her şey boş" gibi iki
  * yanlıştan birini de geçirebilirdi.
  *
  * Beklenen sayılar ikizin fikstüründen TÜRETİLİR (`mock-backend.ts`):
  *   sec-1 · tahsisler bi-1 400×280 + bi-3 1200×1850 + bi-4 85×18500
- *         = 112.000 + 2.220.000 + 1.572.500 = 3.904.500 → "BOQ: ₺ 3,9M", 3 poz
- *         `budget_amount` = 1.250.000 → "₺ 1,3M"  (ELLE GİRİLEN ile BOQ AYRIŞIR)
- *   sec-3 · hiç tahsis YOK → 0 poz + "BOQ: ₺ 0" (yer tutucu DEĞİL, gerçek sıfır)
+ *         = 112.000 + 2.220.000 + 1.572.500 = 3.904.500 → "₺ 3,9M", 3 poz
+ *         (BLF-F1: elle `budget_amount` KALKTI; kutuda tek satır, "BOQ:" alt satırı YOK)
+ *   sec-3 · hiç tahsis YOK → 0 poz + "₺ 0" (yer tutucu DEĞİL, gerçek sıfır)
  */
 
 async function login(page: Page): Promise<void> {
@@ -45,16 +45,17 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "A-Blok Şantiyesi" })).toBeVisible();
 });
 
-test("aktif bolum karti BOQ turevi sayaci ve elle girilen bedeli birlikte basar", async ({ page }) => {
+test("aktif bolum karti BOQ turevi sayaci ve TEK satir turev bedeli basar", async ({ page }) => {
   const card = sectionCard(page, "Kat 6–10 Kaba İnşaat");
 
   // İş Kalemleri — TEK SAYI (mockup'ın "16 / 26" kesri bilinçli sapma).
   await expect(metric(card, "İş Kalemleri").locator(".section-card__metric-value")).toHaveText("3");
 
-  // Bölüm Bedeli — elle girilen ASIL değer üstte, BOQ türevi altta.
+  // Bölüm Bedeli — BLF-F1: tek kaynak türev `budget` (tahsis toplamı), TEK satır.
   const budget = metric(card, "Bölüm Bedeli");
-  await expect(budget.locator(".section-card__metric-value")).toHaveText("₺ 1,3M");
-  await expect(budget.locator(".section-card__metric-note")).toHaveText("BOQ: ₺ 3,9M");
+  await expect(budget.locator(".section-card__metric-value")).toHaveText("₺ 3,9M");
+  await expect(budget.locator(".section-card__metric-note")).toHaveCount(0);
+  await expect(budget).not.toContainText("BOQ:");
 });
 
 test("KARSIT KANIT — ayni kartta 'İlerleme' hâlâ yer tutucudur", async ({ page }) => {
@@ -72,9 +73,9 @@ test("tahsisi olmayan bolum GERCEK SIFIR basar, yer tutucuya dusmez (K-MKD3)", a
   await expect(metric(card, "İş Kalemleri").locator(".section-card__metric-value")).toHaveText("0");
 
   const budget = metric(card, "Tahmini Bedel");
-  await expect(budget.locator(".section-card__metric-note")).toHaveText("BOQ: ₺ 0");
-  // `budget_amount` GİRİLMEMİŞ — bu ayrı bir hâldir ve "0" DEĞİL "—" basar.
-  await expect(budget.locator(".section-card__metric-value")).toHaveText("—");
+  // Tahsisi olmayan bölüm: türev `budget` `available: true` + "0.00" → GERÇEK sıfır.
+  await expect(budget.locator(".section-card__metric-value")).toHaveText("₺ 0");
+  await expect(budget.locator(".section-card__metric-note")).toHaveCount(0);
 
   // `planned_worker_count` de girilmemiş: sahte sıfır yok.
   await expect(metric(card, "Planlanan İşçi").locator(".section-card__metric-value")).toHaveText("—");
@@ -84,6 +85,6 @@ test("tamamlanmis bolum kendi sayaclarini basar (bolumler ayrisir, karismaz)", a
   const card = sectionCard(page, "Zemin Kat Kaba İnşaat");
   await expect(metric(card, "İş Kalemleri").locator(".section-card__metric-value")).toHaveText("2");
   const budget = metric(card, "Bölüm Bedeli");
-  await expect(budget.locator(".section-card__metric-value")).toHaveText("₺ 480B");
-  await expect(budget.locator(".section-card__metric-note")).toHaveText("BOQ: ₺ 1M");
+  await expect(budget.locator(".section-card__metric-value")).toHaveText("₺ 1M");
+  await expect(budget.locator(".section-card__metric-note")).toHaveCount(0);
 });

@@ -28,7 +28,6 @@ const SECTION: SectionResponse = {
   budget: { available: false, value: null, pending_module: "boq" },
   worker_count: { available: false, count: null, pending_module: "timesheet" },
   planned_worker_count: null,
-  budget_amount: null,
 };
 
 beforeEach(() => {

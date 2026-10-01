@@ -15,7 +15,7 @@ const ALLOWED_KEYS = [
   "name",
   "code",
   "sort_order",
-  "section_type",
+  "section_type_id",
   "status",
   "description",
   "manager_user_id",
@@ -23,7 +23,6 @@ const ALLOWED_KEYS = [
   "planned_worker_count",
   "start_date",
   "end_date",
-  "budget_amount",
   "is_draft",
   // F-TKV T5 — GANTT KİLİDİ AÇILDI: bu iki alan artık gövdenin GERÇEK parçası.
   "depends_on_section_id",
@@ -43,6 +42,10 @@ const FORBIDDEN_KEYS = [
   "gantt_auto_add",
   "documents",
   "boq_items",
+  // BLF-F1.3 — Bölüm Bedeli artık yalnız HESAPLANIR (F-a): gövdede elle bedel
+  // YOKTUR. Eski enum alanı da gider (`section_type_id` gelir).
+  "budget_amount",
+  "section_type",
 ];
 
 const EXISTING: SectionMilestone[] = [
@@ -118,9 +121,19 @@ describe("buildSectionBody", () => {
     expect(body.code).toBe("BLM-06");
   });
 
-  it("budget_amount '0' ise 0 olarak gönderilir — falsy düşürülmez (F110)", () => {
-    const body = buildSectionBody(values({ budgetAmount: "0" }), { isDraft: false });
-    expect(body.budget_amount).toBe(0);
+  it("🔴 BLF-F1.3: gövdeye `budget_amount` ASLA girmez (taslak ve yayın, her değerde)", () => {
+    for (const isDraft of [true, false]) {
+      const body = buildSectionBody(values({ sectionTypeId: "t-1" }), { isDraft });
+      expect(body).not.toHaveProperty("budget_amount");
+    }
+  });
+
+  it("🔴 BLF-F1.3: seçili tip `section_type_id` (uuid string) olarak gider; eski `section_type` YOK", () => {
+    const body = buildSectionBody(values({ sectionTypeId: "11111111-1111-4111-8111-111111111111" }), {
+      isDraft: false,
+    });
+    expect(body.section_type_id).toBe("11111111-1111-4111-8111-111111111111");
+    expect(body).not.toHaveProperty("section_type");
   });
 
   it("is_draft HER ZAMAN gönderilir", () => {
@@ -133,7 +146,7 @@ describe("buildSectionBody", () => {
     expect(body.start_date).toBeNull();
     expect(body.end_date).toBeNull();
     expect(body.planned_worker_count).toBeNull();
-    expect(body.section_type).toBeNull();
+    expect(body.section_type_id).toBeNull();
     expect(body.description).toBeNull();
     expect(body.manager_user_id).toBeNull();
     expect(body.deputy_manager_user_id).toBeNull();

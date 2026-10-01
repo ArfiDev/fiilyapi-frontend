@@ -310,6 +310,12 @@ const ALLOWED_ROOTS = new Set([
   // AYRI bir rota olarak gelir (`src/app/api/ai/chat/route.ts`) ve kendi
   // bekçisini getirmek zorundadır — bu dosyanın bekçisi onu GÖRMEZ.
   "ai",
+  // BLF-F1.2 — Bölüm formunun şirket geneli TİP LİSTESİ (`GET/POST
+  // /section-types`). İlk path segmenti "sites" DEĞİL "section-types"tir (uç
+  // şantiyeye bağlı değil, şirket geneli) — mevcut `sites`/`sections` kökleri
+  // buna YETMEZ. Eksikse bölüm formunun tip seçicisi (ve "+ Yeni tip ekle")
+  // YALNIZ CANLIDA 404 alır; jsdom ve e2e mock-backend bunu GÖRMEZ.
+  "section-types",
 ]);
 
 // JSON/metin sayilan icerik tipleri: govde metne cozulup JSON olarak islenir.

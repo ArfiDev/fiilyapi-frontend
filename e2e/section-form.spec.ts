@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // F-P6 T4 · Bölüm formu (ekleme + düzenleme) e2e. `playwright.config.ts`
 // `fullyParallel: true` — her `test()` bağımsız bir worker'da, KEYFİ SIRADA
@@ -69,11 +69,10 @@ test("ekleme kipi: zorunlu alan hatalari, taslak/tam ayrimi, tam zincir (olustur
   await expect(page.getByLabel("Bölüm Tipi")).toHaveValue("");
 
   // Taslakta boş bırakılan zorunlu alanları doldurup GERÇEK bölüme çevir.
-  await page.getByLabel("Bölüm Tipi").selectOption("structural");
+  await page.getByLabel("Bölüm Tipi").selectOption({ label: "Kaba İnşaat" });
   await page.getByLabel("Bölüm Sorumlusu").selectOption("u-2");
   await page.getByLabel("Başlangıç Tarihi").fill("01.10.2026");
   await page.getByLabel("Planlanan Bitiş").fill("31.03.2027");
-  await page.getByLabel("Bölüm Bedeli (₺)").fill("500000");
   await footerButton(page, "Kaydet").click();
 
   // 5) Kaydetme başarılı: detaya GERİ döner (form → detay bağlantısı da
@@ -89,11 +88,10 @@ test("409 kod cakismasi: Bolum Kodu alaninin altinda tek hata, genel banner basi
   async function fillRequired(code: string) {
     await page.getByLabel("Bölüm Adı").fill("Temel Kazı");
     await page.getByLabel("Bölüm Kodu").fill(code);
-    await page.getByLabel("Bölüm Tipi").selectOption("foundation_infra");
+    await page.getByLabel("Bölüm Tipi").selectOption({ label: "Temel & Altyapı" });
     await page.getByLabel("Bölüm Sorumlusu").selectOption("u-2");
     await page.getByLabel("Başlangıç Tarihi").fill("01.10.2026");
     await page.getByLabel("Planlanan Bitiş").fill("31.03.2027");
-    await page.getByLabel("Bölüm Bedeli (₺)").fill("300000");
   }
 
   // 🔴 KOD DENEME BAŞINA BENZERSİZDİR — "retry zehirlenmesi"ni önler.
@@ -139,4 +137,94 @@ test("409 kod cakismasi: Bolum Kodu alaninin altinda tek hata, genel banner basi
   await expect(page.locator(".pf-form-error")).toHaveCount(0);
   // Form gönderilmedi: hâlâ ekleme sayfasındayız.
   await expect(page.getByRole("heading", { level: 1, name: "Yeni Bölüm (Faz) Ekle" })).toBeVisible();
+});
+
+// ─── BLF-F1.4 · tip listesi + türev bedel ───────────────────────────────────
+// 🔴 Bu testler paylaşılan mock durumuna YAZMAZ (fullyParallel): `POST
+// /section-types` mock'ta kalıcı değildir; "yeni tip" ve bölüm yazmaları
+// `page.route` + `route.fulfill` ile kurulur, `route.continue` ile mock'a
+// yazılmaz. 409 dalı mock'un TOHUM tiplerine karşı doğal çalışır.
+const NEW_TYPE = { id: "5ec70000-0000-4000-8000-0000000000aa", name: "Asansör E2E" };
+const SEED_FINISHING_ID = "5ec70000-0000-4000-8000-000000000003";
+
+async function openNewTypeBox(page: Page) {
+  await page.goto("/projeler/p-1/santiyeler/s-2/bolumler/yeni");
+  await expect(page.getByRole("heading", { level: 1, name: "Yeni Bölüm (Faz) Ekle" })).toBeVisible();
+  await page.getByLabel("Bölüm Tipi").selectOption({ label: "+ Yeni tip ekle" });
+}
+
+test("+ Yeni tip ekle: yeni tip secili olur ve kayit govdesinde section_type_id var, budget_amount YOK", async ({
+  page,
+}) => {
+  await login(page);
+  let typePostBody: unknown = null;
+  await page.route("**/api/backend/section-types", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    typePostBody = route.request().postDataJSON();
+    return route.fulfill({ status: 201, json: NEW_TYPE });
+  });
+  let sectionBody: Record<string, unknown> | null = null;
+  await page.route("**/api/backend/sites/s-2/sections", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    sectionBody = route.request().postDataJSON();
+    return route.fulfill({ status: 201, json: { id: "sec-e2e-fake", slug: null } });
+  });
+
+  await openNewTypeBox(page);
+  await page.getByLabel("Yeni tip adı").fill(NEW_TYPE.name);
+  await page.getByRole("button", { name: "Ekle", exact: true }).click();
+
+  await expect(page.getByLabel("Yeni tip adı")).toHaveCount(0);
+  await expect(page.getByLabel("Bölüm Tipi")).toHaveValue(NEW_TYPE.id);
+  expect(typePostBody).toEqual({ name: NEW_TYPE.name });
+
+  await page.getByLabel("Bölüm Adı").fill("Tip akisi E2E");
+  await footerButton(page, "Taslak Kaydet").click();
+  await expect.poll(() => sectionBody).not.toBeNull();
+  expect(sectionBody).toMatchObject({ name: "Tip akisi E2E", section_type_id: NEW_TYPE.id });
+  expect(sectionBody).not.toHaveProperty("budget_amount");
+  expect(sectionBody).not.toHaveProperty("section_type");
+});
+
+test("+ Yeni tip ekle 409: MEVCUT tip secilir ve gorunur not basilir", async ({ page }) => {
+  await login(page);
+  await openNewTypeBox(page);
+  // Yazım farkı ('ince işler'): normalize backend'de, mock'un tohumuna çarpar.
+  await page.getByLabel("Yeni tip adı").fill("ince işler");
+  await page.getByRole("button", { name: "Ekle", exact: true }).click();
+
+  await expect(page.getByLabel("Bölüm Tipi")).toHaveValue(SEED_FINISHING_ID);
+  await expect(page.getByText("Bu bölüm tipi zaten var: İnce İşler — seçildi")).toBeVisible();
+  await expect(page.getByLabel("Yeni tip adı")).toHaveCount(0);
+});
+
+test("Bolum Bedeli kilitli turev: yeni bolumde 'atanince', duzenlemede 'iş kalemlerinden' gerekcesi", async ({ page }) => {
+  await login(page);
+
+  await page.goto("/projeler/p-1/santiyeler/s-2/bolumler/yeni");
+  const create = page.getByLabel("Bölüm Bedeli");
+  await expect(create).toBeDisabled();
+  await expect(create).toHaveValue("");
+  await expect(create).not.toHaveAttribute("aria-required", "true");
+  await expect(page.getByText("İş kalemi atanınca hesaplanır")).toBeVisible();
+
+  await page.goto("/projeler/p-1/santiyeler/s-1/bolumler/sec-2/duzenle");
+  await expect(page.getByRole("heading", { level: 1, name: "Bölümü Düzenle" })).toBeVisible();
+  const edit = page.getByLabel("Bölüm Bedeli");
+  await expect(edit).toBeDisabled();
+  await expect(edit).toHaveValue(/^₺ \d/);
+  await expect(page.getByText("İş kalemlerinden hesaplanır")).toBeVisible();
+});
+
+test("yayindaki bolumde tipi bosaltmaya backend 422: mesaj bantta AYNEN gorunur", async ({ page }) => {
+  await login(page);
+  // Mock'a yazılmaz: PATCH route ile karşılanır (GET'ler mock'tan okunur).
+  await page.route("**/api/backend/sections/sec-2", async (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    return route.fulfill({ status: 422, json: { detail: "Bölüm tipi seçiniz" } });
+  });
+  await page.goto("/projeler/p-1/santiyeler/s-1/bolumler/sec-2/duzenle");
+  await expect(page.getByRole("heading", { level: 1, name: "Bölümü Düzenle" })).toBeVisible();
+  await footerButton(page, "Kaydet").click();
+  await expect(page.locator(".pf-form-error")).toHaveText("Bölüm tipi seçiniz");
 });

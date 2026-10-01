@@ -136,7 +136,6 @@ describe("SiteDetailPage", () => {
           budget: { available: true, value: "1840000.00", pending_module: null },
           worker_count: { available: false, count: null, pending_module: "timesheet" },
           planned_worker_count: 22,
-          budget_amount: "1840000.00",
         },
       ],
     };

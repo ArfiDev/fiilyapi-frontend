@@ -290,6 +290,8 @@ export function SectionForm(props: SectionFormProps) {
             errors={errors}
             dependencyOptions={dependencyOptions}
             existingMilestones={existingMilestones}
+            isNew={!isEdit}
+            derivedBudget={detail?.budget}
           />
           {/* 🔴 F-BLMPOZ — kart CANLANDIRILDI. Eski hâli tamamen ölü bir yer
               tutucuydu ve gerekçesi ("iş kalemi ↔ bölüm bağı veri katmanında

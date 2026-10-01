@@ -42,6 +42,8 @@ export function numberOrNull(value: string): number | null {
  * - Bölüme Atanacak İş Kalemleri (F131-211) — kalıcı karar 1, veri katmanında
  *   kapalı.
  * - `duration_days` (F109) — türev, saklanmaz.
+ * - `budget_amount` — BLF-F1.3 (F-a): Bölüm Bedeli yalnız HESAPLANIR (iş kalemi
+ *   tahsislerinden türeyen `budget`); elle bedel gövdeye GİRMEZ.
  * - `site_id` — yol parametresidir, gövdeye ayrı alan olarak GİTMEZ.
  */
 export interface BuildSectionBodyOptions {
@@ -93,7 +95,7 @@ export function buildSectionBody(
     // Kod boşsa anahtar HİÇ gönderilmez: sunucu `BLM-NN` üretir (F68).
     ...(code ? { code } : {}),
     sort_order: numberOrNull(values.sortOrder) ?? 0,
-    section_type: values.sectionType || null,
+    section_type_id: values.sectionTypeId || null,
     status: values.status,
     description: textOrNull(values.description),
     manager_user_id: values.managerUserId || null,
@@ -101,7 +103,6 @@ export function buildSectionBody(
     planned_worker_count: numberOrNull(values.plannedWorkerCount),
     start_date: textOrNull(values.startDate),
     end_date: textOrNull(values.endDate),
-    budget_amount: numberOrNull(values.budgetAmount),
     is_draft: isDraft,
   };
 }
