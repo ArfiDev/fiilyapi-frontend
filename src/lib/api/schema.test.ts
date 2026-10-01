@@ -569,3 +569,99 @@ describe("TKL-B3 son fiyat + toplu ekleme tip üretimi (TKL-F2.1 kapısı)", () 
     >().not.toBeNever();
   });
 });
+
+// TKL-B4 teklif çekirdeği — TKL-F3.1 kapısı. Tipler `pnpm gen:api` ile üretilmediyse
+// `tsc` kırmızı olur; elle tip yazmak yasak, eksikse openapi.json yeniden kopyalanır.
+describe("TKL-B4 teklif çekirdeği tip üretimi (TKL-F3.1 kapısı)", () => {
+  type Schemas = components["schemas"];
+  type RevStatus = Schemas["OfferRevisionStatus"];
+  type OfferDetail = Schemas["OfferDetailRead"];
+  type ItemRead = Schemas["OfferItemRead"];
+  type CustomerRead = Schemas["OfferItemCustomerRead"];
+  type InternalRead = Schemas["OfferItemInternalRead"];
+  type BulkBody = Schemas["OfferItemsBulkCreate"];
+  type LoseBody = Schemas["OfferLoseRequest"];
+  type Escalation = Schemas["OfferPriceEscalation"];
+
+  it("OfferRevisionStatus beş durumu kaynaktan taşır", () => {
+    expectTypeOf<RevStatus>().toEqualTypeOf<
+      "draft" | "sent" | "won" | "lost" | "withdrawn"
+    >();
+  });
+
+  it("OfferDetailRead ana alanları ve revizyon/geçmiş dizileri", () => {
+    expectTypeOf<OfferDetail["offer_no"]>().toEqualTypeOf<string>();
+    expectTypeOf<OfferDetail["latest_rev_no"]>().toEqualTypeOf<number>();
+    expectTypeOf<OfferDetail["status"]>().toEqualTypeOf<RevStatus>();
+    expectTypeOf<OfferDetail["revisions"]>().toEqualTypeOf<
+      Schemas["OfferRevisionSummaryRead"][]
+    >();
+    expectTypeOf<OfferDetail["history"]>().toEqualTypeOf<
+      Schemas["OfferHistoryEventRead"][]
+    >();
+  });
+
+  it("OfferItemCustomerRead (işveren görünümü) yalnız B.F. + tutar taşır; maliyet/GG/kâr/adam-saat YOK", () => {
+    expectTypeOf<keyof CustomerRead>().toEqualTypeOf<"unit_price" | "amount">();
+    expectTypeOf<CustomerRead>().not.toHaveProperty("cost");
+    expectTypeOf<CustomerRead>().not.toHaveProperty("overhead");
+    expectTypeOf<CustomerRead>().not.toHaveProperty("profit");
+    expectTypeOf<CustomerRead>().not.toHaveProperty("profit_pct");
+    expectTypeOf<CustomerRead>().not.toHaveProperty("man_hours");
+  });
+
+  it("OfferItemInternalRead (iç görünüm) maliyet/GG/kâr/adam-saat taşır", () => {
+    expectTypeOf<keyof InternalRead>().toEqualTypeOf<
+      "cost" | "overhead" | "profit" | "profit_pct" | "man_hours"
+    >();
+    expectTypeOf<InternalRead["man_hours"]>().toEqualTypeOf<string>();
+    expectTypeOf<InternalRead["cost"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("OfferItemRead: customer maskelenebilir (null), internal zorunludur", () => {
+    expectTypeOf<ItemRead["customer"]>().toEqualTypeOf<CustomerRead | null>();
+    expectTypeOf<ItemRead["internal"]>().toEqualTypeOf<InternalRead>();
+  });
+
+  it("OfferItemsBulkCreate gövdesi kalem dizisi taşır", () => {
+    expectTypeOf<BulkBody["items"]>().toEqualTypeOf<Schemas["OfferItemCreate"][]>();
+    expectTypeOf<Schemas["OfferItemsBulkResponse"]["items"]>().toEqualTypeOf<
+      ItemRead[]
+    >();
+  });
+
+  it("OfferLoseRequest: neden ve kazanan tutar opsiyoneldir", () => {
+    expectTypeOf<
+      Record<string, never> extends LoseBody ? true : false
+    >().toEqualTypeOf<true>();
+    expectTypeOf<LoseBody["lost_reason"]>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    expectTypeOf<LoseBody["winning_amount"]>().toEqualTypeOf<
+      number | string | null | undefined
+    >();
+  });
+
+  it("OfferPriceEscalation tuik | fixed", () => {
+    expectTypeOf<Escalation>().toEqualTypeOf<"tuik" | "fixed">();
+  });
+
+  it("teklif uçlarının metotları tanımlıdır", () => {
+    expectTypeOf<paths["/offers"]["get"]>().not.toBeNever();
+    expectTypeOf<paths["/offers"]["post"]>().not.toBeNever();
+    expectTypeOf<paths["/offers/{offer_id}"]["get"]>().not.toBeNever();
+    expectTypeOf<paths["/offers/{offer_id}/revisions"]["post"]>().not.toBeNever();
+    expectTypeOf<
+      paths["/offers/{offer_id}/revisions/{rev_no}/send"]["post"]
+    >().not.toBeNever();
+    expectTypeOf<
+      paths["/offers/{offer_id}/revisions/{rev_no}/win"]["post"]
+    >().not.toBeNever();
+    expectTypeOf<
+      paths["/offers/{offer_id}/revisions/{rev_no}/lose"]["post"]
+    >().not.toBeNever();
+    expectTypeOf<
+      paths["/offers/{offer_id}/revisions/{rev_no}/withdraw"]["post"]
+    >().not.toBeNever();
+  });
+});

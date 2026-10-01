@@ -3183,6 +3183,311 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Offers Endpoint
+         * @description Teklif listesi (son revizyonun durumu/tutari). `q`: no / is adi / isveren;
+         *     `offer_date_from`/`offer_date_to`: son revizyonun teklif tarihi (dahil-dahil). Zarfta durum
+         *     basina adet + KDV haric toplam, suresi gecmis adedi ve kazanma orani (`status`
+         *     filtresinden bagimsiz).
+         */
+        get: operations["list_offers_endpoint_offers_get"];
+        put?: never;
+        /**
+         * Create Offer Endpoint
+         * @description Teklif + Rev.0 taslak. Kosullar gonderilmezse `offer_settings`ten kopyalanir.
+         */
+        post: operations["create_offer_endpoint_offers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Offer Settings Endpoint
+         * @description Teklif varsayilanlari: GG / kar / KDV yuzdesi, gecerlilik gunu, odeme metni.
+         */
+        get: operations["get_offer_settings_endpoint_offers_settings_get"];
+        /**
+         * Update Offer Settings Endpoint
+         * @description Varsayilanlari TAM degistirir. Yeni revizyonlar bu degerleri KOPYALAR; mevcut teklifler
+         *     degismez.
+         */
+        put: operations["update_offer_settings_endpoint_offers_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Offer Endpoint
+         * @description Kunye + revizyon ozetleri + revizyon gecmisi olaylari.
+         */
+        get: operations["get_offer_endpoint_offers__offer_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Offer Endpoint
+         * @description Yalniz tek revizyonlu ve taslak teklif. Numara geri kullanilmaz.
+         */
+        delete: operations["delete_offer_endpoint_offers__offer_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Offer Endpoint
+         * @description Kunye (isveren, is adi, kapsam ozeti) — yalniz son revizyon taslak iken.
+         */
+        patch: operations["update_offer_endpoint_offers__offer_id__patch"];
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Revision Endpoint
+         * @description Yeni revizyon (onceki revizyonun kopyasi) — yalniz son revizyon gonderilmis/kaybedilmis.
+         */
+        post: operations["create_revision_endpoint_offers__offer_id__revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Revision Endpoint
+         * @description Kosullar + gruplar + kalemler (hesapli) + toplamlar (musteri / ic ayri).
+         */
+        get: operations["get_revision_endpoint_offers__offer_id__revisions__rev_no__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Revision Endpoint
+         * @description Kosullar (tarih, gecerlilik, GG/kar/KDV %, odeme, fiyat farki) — son revizyon taslak.
+         */
+        patch: operations["update_revision_endpoint_offers__offer_id__revisions__rev_no__patch"];
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Group Endpoint */
+        post: operations["create_group_endpoint_offers__offer_id__revisions__rev_no__groups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/groups/{group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Group Endpoint
+         * @description Grubu icindeki kalemlerle birlikte siler (yalniz taslak).
+         */
+        delete: operations["delete_group_endpoint_offers__offer_id__revisions__rev_no__groups__group_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Group Endpoint */
+        patch: operations["update_group_endpoint_offers__offer_id__revisions__rev_no__groups__group_id__patch"];
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Item Endpoint
+         * @description Katalogdan kalem ekler (poz no / ad / birim / adam-saat KOPYALANIR). `cost_unit_price`
+         *     gonderilmezse maliyet = son fiyat → referans → bos (SO-6); acik `null` = bos.
+         */
+        post: operations["create_item_endpoint_offers__offer_id__revisions__rev_no__items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/items/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Items Bulk Endpoint
+         * @description Coklu katalog secicisi: 1..200 kalem, hep-ya-hic, TEK denetim satiri.
+         */
+        post: operations["create_items_bulk_endpoint_offers__offer_id__revisions__rev_no__items_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Item Endpoint */
+        delete: operations["delete_item_endpoint_offers__offer_id__revisions__rev_no__items__item_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Item Endpoint
+         * @description Miktar, maliyet, oranlar (`null` = revizyon geneli), elle B.F. (`null` = kilidi kaldir),
+         *     adam-saat, grup, sira. Katalog bagi ve kopya alanlar degistirilemez (422).
+         */
+        patch: operations["update_item_endpoint_offers__offer_id__revisions__rev_no__items__item_id__patch"];
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/lose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lose Revision Endpoint
+         * @description `sent → lost`; govde istege bagli: `lost_reason`, `winning_amount` (T37).
+         */
+        post: operations["lose_revision_endpoint_offers__offer_id__revisions__rev_no__lose_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Revision Endpoint
+         * @description `draft → sent`.
+         */
+        post: operations["send_revision_endpoint_offers__offer_id__revisions__rev_no__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/win": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Win Revision Endpoint
+         * @description `sent → won` (taslaktan dogrudan kazanma YOK).
+         */
+        post: operations["win_revision_endpoint_offers__offer_id__revisions__rev_no__win_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/{offer_id}/revisions/{rev_no}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw Revision Endpoint
+         * @description `draft | sent → withdrawn` (SON durum).
+         */
+        post: operations["withdraw_revision_endpoint_offers__offer_id__revisions__rev_no__withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/payments/{payment_id}": {
         parameters: {
             query?: never;
@@ -14492,6 +14797,604 @@ export interface components {
         NotificationPrefsUpdate: {
             /** Items */
             items: components["schemas"]["NotificationPrefUpdateItem"][];
+        };
+        /**
+         * OfferCreate
+         * @description `POST /offers`. Kosul alanlari verilmezse `offer_settings`ten KOPYALANIR; `price_escalation`
+         *     varsayilani `fixed` (SO-5); `offer_date` varsayilani bugun (Istanbul).
+         */
+        OfferCreate: {
+            /** Delivery Days */
+            delivery_days?: number | null;
+            /**
+             * Employer Id
+             * Format: uuid
+             */
+            employer_id: string;
+            /** Notes */
+            notes?: string | null;
+            /** Offer Date */
+            offer_date?: string | null;
+            /** Overhead Pct */
+            overhead_pct?: number | string | null;
+            /** Payment Terms */
+            payment_terms?: string | null;
+            /** @default fixed */
+            price_escalation: components["schemas"]["OfferPriceEscalation"];
+            price_index_type?: components["schemas"]["PriceIndexType"] | null;
+            /** Profit Pct */
+            profit_pct?: number | string | null;
+            /** Scope Summary */
+            scope_summary?: string | null;
+            /** Title */
+            title: string;
+            /** Validity Days */
+            validity_days?: number | null;
+            /** Vat Pct */
+            vat_pct?: number | string | null;
+        };
+        /** OfferCustomerTotalsRead */
+        OfferCustomerTotalsRead: {
+            /** Gross */
+            gross: string | null;
+            /** Net */
+            net: string | null;
+            /** Vat */
+            vat: string | null;
+        };
+        /** OfferDetailRead */
+        OfferDetailRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Employer Id
+             * Format: uuid
+             */
+            employer_id: string;
+            /** Employer Name */
+            employer_name: string;
+            /** History */
+            history: components["schemas"]["OfferHistoryEventRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Latest Rev No */
+            latest_rev_no: number;
+            /** Offer No */
+            offer_no: string;
+            /** Prepared By Name */
+            prepared_by_name: string | null;
+            /** Prepared By User Id */
+            prepared_by_user_id: string | null;
+            /** Revisions */
+            revisions: components["schemas"]["OfferRevisionSummaryRead"][];
+            /** Scope Summary */
+            scope_summary: string | null;
+            status: components["schemas"]["OfferRevisionStatus"];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * OfferGroupBasicRead
+         * @description Grup POST/PATCH yaniti (kalemsiz).
+         */
+        OfferGroupBasicRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** OfferGroupCreate */
+        OfferGroupCreate: {
+            /** Name */
+            name: string;
+            /** Sort Order */
+            sort_order?: number | null;
+        };
+        /** OfferGroupRead */
+        OfferGroupRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["OfferItemRead"][];
+            /** Name */
+            name: string;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** OfferGroupUpdate */
+        OfferGroupUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Sort Order */
+            sort_order?: number | null;
+        };
+        /**
+         * OfferHistoryEventRead
+         * @description Revizyon gecmisi olayi: revizyon acilisi + durum damgalari (ayri tablo yok, T32).
+         */
+        OfferHistoryEventRead: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "opened" | "sent" | "won" | "lost" | "withdrawn";
+            /** Rev No */
+            rev_no: number;
+            /** User Id */
+            user_id: string | null;
+            /** User Name */
+            user_name: string | null;
+        };
+        /** OfferInternalTotalsRead */
+        OfferInternalTotalsRead: {
+            /** Cost */
+            cost: string | null;
+            /** Man Hours */
+            man_hours: string;
+            /** Overhead */
+            overhead: string | null;
+            /** Profit */
+            profit: string | null;
+            /** Profit Pct */
+            profit_pct: string | null;
+        };
+        /**
+         * OfferItemCreate
+         * @description Kalem ekleme (tekil govde ve toplu govdenin ogesi).
+         *
+         *     `cost_unit_price` GONDERILMEMISSE maliyet katalogdan onerilir (SO-6: son fiyat → referans
+         *     → bos); ACIK `null` gonderilirse bos kalir. Ayrim `model_fields_set` ile yapilir.
+         */
+        OfferItemCreate: {
+            /**
+             * Catalog Item Id
+             * Format: uuid
+             */
+            catalog_item_id: string;
+            /** Cost Unit Price */
+            cost_unit_price?: number | string | null;
+            /**
+             * Group Id
+             * Format: uuid
+             */
+            group_id: string;
+            /** Offer Unit Price */
+            offer_unit_price?: number | string | null;
+            /** Overhead Pct */
+            overhead_pct?: number | string | null;
+            /** Profit Pct */
+            profit_pct?: number | string | null;
+            /** Quantity */
+            quantity: number | string;
+            /** Sort Order */
+            sort_order?: number | null;
+            /** Unit Mhr */
+            unit_mhr?: number | string | null;
+        };
+        /**
+         * OfferItemCustomerRead
+         * @description Isverene GORUNUR kalem degerleri (B.F. + tutar).
+         */
+        OfferItemCustomerRead: {
+            /** Amount */
+            amount: string | null;
+            /** Unit Price */
+            unit_price: string | null;
+        };
+        /**
+         * OfferItemInternalRead
+         * @description IC kalem degerleri. Fiyatsiz kalemde para alanlari `None`, adam-saat DOLUDUR.
+         */
+        OfferItemInternalRead: {
+            /** Cost */
+            cost: string | null;
+            /** Man Hours */
+            man_hours: string;
+            /** Overhead */
+            overhead: string | null;
+            /** Profit */
+            profit: string | null;
+            /** Profit Pct */
+            profit_pct: string | null;
+        };
+        /** OfferItemRead */
+        OfferItemRead: {
+            /**
+             * Catalog Item Id
+             * Format: uuid
+             */
+            catalog_item_id: string;
+            /** Cost Unit Price */
+            cost_unit_price: string | null;
+            customer: components["schemas"]["OfferItemCustomerRead"] | null;
+            /** Description */
+            description: string;
+            /**
+             * Group Id
+             * Format: uuid
+             */
+            group_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            internal: components["schemas"]["OfferItemInternalRead"];
+            /** Offer Unit Price */
+            offer_unit_price: string | null;
+            /** Overhead Pct */
+            overhead_pct: string | null;
+            /** Poz No */
+            poz_no: string;
+            /** Priced */
+            priced: boolean;
+            /** Profit Pct */
+            profit_pct: string | null;
+            /** Quantity */
+            quantity: string | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Unit */
+            unit: string;
+            /** Unit Mhr */
+            unit_mhr: string;
+        };
+        /**
+         * OfferItemUpdate
+         * @description `PATCH …/items/{id}`. Katalog bagi ve kopya alanlar DEGISTIRILEMEZ (acik 422).
+         */
+        OfferItemUpdate: {
+            /** Cost Unit Price */
+            cost_unit_price?: number | string | null;
+            /** Group Id */
+            group_id?: string | null;
+            /** Offer Unit Price */
+            offer_unit_price?: number | string | null;
+            /** Overhead Pct */
+            overhead_pct?: number | string | null;
+            /** Profit Pct */
+            profit_pct?: number | string | null;
+            /** Quantity */
+            quantity?: number | string | null;
+            /** Sort Order */
+            sort_order?: number | null;
+            /** Unit Mhr */
+            unit_mhr?: number | string | null;
+        };
+        /**
+         * OfferItemsBulkCreate
+         * @description `POST …/items/bulk` govdesi (1..200, hep-ya-hic).
+         */
+        OfferItemsBulkCreate: {
+            /** Items */
+            items: components["schemas"]["OfferItemCreate"][];
+        };
+        /**
+         * OfferItemsBulkResponse
+         * @description Toplu ekleme yaniti (sarmalayici: kapsam maskesi modele uygulanir).
+         */
+        OfferItemsBulkResponse: {
+            /** Items */
+            items: components["schemas"]["OfferItemRead"][];
+        };
+        /** OfferListItem */
+        OfferListItem: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Employer Id
+             * Format: uuid
+             */
+            employer_id: string;
+            /** Employer Name */
+            employer_name: string;
+            /** Gross */
+            gross: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Net */
+            net: string | null;
+            /**
+             * Offer Date
+             * Format: date
+             */
+            offer_date: string;
+            /** Offer No */
+            offer_no: string;
+            /** Rev No */
+            rev_no: number;
+            /** Scope Summary */
+            scope_summary: string | null;
+            status: components["schemas"]["OfferRevisionStatus"];
+            /** Title */
+            title: string;
+            /** Unpriced Count */
+            unpriced_count: number;
+            /**
+             * Valid Until
+             * Format: date
+             */
+            valid_until: string;
+        };
+        /** OfferListResponse */
+        OfferListResponse: {
+            /** Items */
+            items: components["schemas"]["OfferListItem"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            summary: components["schemas"]["OfferListSummaryRead"];
+            /** Total */
+            total: number;
+        };
+        /**
+         * OfferListSummaryRead
+         * @description `status` filtresi UYGULANMAZ (kartlar dagilimi gosterir); `q`, `employer_id` ve teklif
+         *     tarihi araligi uygulanir.
+         */
+        OfferListSummaryRead: {
+            /** By Status */
+            by_status: components["schemas"]["OfferStatusSummaryRead"][];
+            /** Expired Count */
+            expired_count: number;
+            /** Win Rate */
+            win_rate: string | null;
+        };
+        /**
+         * OfferLoseRequest
+         * @description `POST …/lose` govdesi (T37) — ikisi de istege bagli.
+         */
+        OfferLoseRequest: {
+            /** Lost Reason */
+            lost_reason?: string | null;
+            /** Winning Amount */
+            winning_amount?: number | string | null;
+        };
+        /**
+         * OfferPriceEscalation
+         * @description Fiyat farki: `tuik` (endeksli, `price_index_type` dolu) | `fixed` (sabit fiyat).
+         * @enum {string}
+         */
+        OfferPriceEscalation: "tuik" | "fixed";
+        /**
+         * OfferRevisionRead
+         * @description `GET /offers/{id}/revisions/{rev_no}` — kosullar + gruplar + kalemler + toplamlar.
+         */
+        OfferRevisionRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delivery Days */
+            delivery_days: number | null;
+            /** Groups */
+            groups: components["schemas"]["OfferGroupRead"][];
+            /** Is Editable */
+            is_editable: boolean;
+            /** Is Latest */
+            is_latest: boolean;
+            /** Lost At */
+            lost_at: string | null;
+            /** Lost Reason */
+            lost_reason: string | null;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Offer Date
+             * Format: date
+             */
+            offer_date: string;
+            /**
+             * Offer Id
+             * Format: uuid
+             */
+            offer_id: string;
+            /** Offer No */
+            offer_no: string;
+            /** Overhead Pct */
+            overhead_pct: string;
+            /** Payment Terms */
+            payment_terms: string | null;
+            price_escalation: components["schemas"]["OfferPriceEscalation"];
+            price_index_type: components["schemas"]["PriceIndexType"] | null;
+            /** Profit Pct */
+            profit_pct: string;
+            /** Rev No */
+            rev_no: number;
+            /** Sent At */
+            sent_at: string | null;
+            status: components["schemas"]["OfferRevisionStatus"];
+            totals: components["schemas"]["OfferTotalsRead"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Valid Until
+             * Format: date
+             */
+            valid_until: string;
+            /** Validity Days */
+            validity_days: number;
+            /** Vat Pct */
+            vat_pct: string;
+            /** Winning Amount */
+            winning_amount: string | null;
+            /** Withdrawn At */
+            withdrawn_at: string | null;
+            /** Won At */
+            won_at: string | null;
+        };
+        /**
+         * OfferRevisionStatus
+         * @description Revizyon durumu (T16/T31): `draft → sent → won | lost`; `draft | sent → withdrawn`.
+         * @enum {string}
+         */
+        OfferRevisionStatus: "draft" | "sent" | "won" | "lost" | "withdrawn";
+        /**
+         * OfferRevisionSummaryRead
+         * @description Teklif detayindaki revizyon ozeti (kalemsiz).
+         */
+        OfferRevisionSummaryRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Gross */
+            gross: string | null;
+            /** Lost At */
+            lost_at: string | null;
+            /** Lost Reason */
+            lost_reason: string | null;
+            /** Net */
+            net: string | null;
+            /**
+             * Offer Date
+             * Format: date
+             */
+            offer_date: string;
+            /** Rev No */
+            rev_no: number;
+            /** Sent At */
+            sent_at: string | null;
+            status: components["schemas"]["OfferRevisionStatus"];
+            /** Unpriced Count */
+            unpriced_count: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Valid Until
+             * Format: date
+             */
+            valid_until: string;
+            /** Winning Amount */
+            winning_amount: string | null;
+            /** Withdrawn At */
+            withdrawn_at: string | null;
+            /** Won At */
+            won_at: string | null;
+        };
+        /**
+         * OfferRevisionUpdate
+         * @description `PATCH /offers/{id}/revisions/{rev_no}` — kosullar (yalniz son revizyon `draft` iken).
+         */
+        OfferRevisionUpdate: {
+            /** Delivery Days */
+            delivery_days?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Offer Date */
+            offer_date?: string | null;
+            /** Overhead Pct */
+            overhead_pct?: number | string | null;
+            /** Payment Terms */
+            payment_terms?: string | null;
+            price_escalation?: components["schemas"]["OfferPriceEscalation"] | null;
+            price_index_type?: components["schemas"]["PriceIndexType"] | null;
+            /** Profit Pct */
+            profit_pct?: number | string | null;
+            /** Validity Days */
+            validity_days?: number | null;
+            /** Vat Pct */
+            vat_pct?: number | string | null;
+        };
+        /** OfferSettingsRead */
+        OfferSettingsRead: {
+            /** Default Overhead Pct */
+            default_overhead_pct: string;
+            /** Default Payment Terms */
+            default_payment_terms: string;
+            /** Default Profit Pct */
+            default_profit_pct: string;
+            /** Default Validity Days */
+            default_validity_days: number;
+            /** Default Vat Pct */
+            default_vat_pct: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * OfferSettingsUpdate
+         * @description `PUT /offers/settings` — TAM degistirme (bes alanin hepsi zorunlu).
+         */
+        OfferSettingsUpdate: {
+            /** Default Overhead Pct */
+            default_overhead_pct: number | string;
+            /** Default Payment Terms */
+            default_payment_terms: string;
+            /** Default Profit Pct */
+            default_profit_pct: number | string;
+            /** Default Validity Days */
+            default_validity_days: number;
+            /** Default Vat Pct */
+            default_vat_pct: number | string;
+        };
+        /** OfferStatusSummaryRead */
+        OfferStatusSummaryRead: {
+            /** Count */
+            count: number;
+            /** Net */
+            net: string | null;
+            status: components["schemas"]["OfferRevisionStatus"];
+        };
+        /** OfferTotalsRead */
+        OfferTotalsRead: {
+            customer: components["schemas"]["OfferCustomerTotalsRead"];
+            internal: components["schemas"]["OfferInternalTotalsRead"];
+            /** Unpriced Count */
+            unpriced_count: number;
+        };
+        /**
+         * OfferUpdate
+         * @description `PATCH /offers/{id}` — kunye (revizyonlar arasi ortak alanlar).
+         */
+        OfferUpdate: {
+            /** Employer Id */
+            employer_id?: string | null;
+            /** Scope Summary */
+            scope_summary?: string | null;
+            /** Title */
+            title?: string | null;
         };
         /**
          * OverdueKpi
@@ -32277,6 +33180,993 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_offers_endpoint_offers_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["OfferRevisionStatus"] | null;
+                q?: string | null;
+                employer_id?: string | null;
+                offer_date_from?: string | null;
+                offer_date_to?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferListResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_offer_endpoint_offers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_offer_settings_endpoint_offers_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferSettingsRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_offer_settings_endpoint_offers_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferSettingsRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_offer_endpoint_offers__offer_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_offer_endpoint_offers__offer_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_offer_endpoint_offers__offer_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_revision_endpoint_offers__offer_id__revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRevisionRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_revision_endpoint_offers__offer_id__revisions__rev_no__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRevisionRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_revision_endpoint_offers__offer_id__revisions__rev_no__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferRevisionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRevisionRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_group_endpoint_offers__offer_id__revisions__rev_no__groups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferGroupCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferGroupBasicRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_group_endpoint_offers__offer_id__revisions__rev_no__groups__group_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_group_endpoint_offers__offer_id__revisions__rev_no__groups__group_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferGroupUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferGroupBasicRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_item_endpoint_offers__offer_id__revisions__rev_no__items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferItemRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_items_bulk_endpoint_offers__offer_id__revisions__rev_no__items_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferItemsBulkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferItemsBulkResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_item_endpoint_offers__offer_id__revisions__rev_no__items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_item_endpoint_offers__offer_id__revisions__rev_no__items__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferItemRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lose_revision_endpoint_offers__offer_id__revisions__rev_no__lose_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OfferLoseRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_revision_endpoint_offers__offer_id__revisions__rev_no__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    win_revision_endpoint_offers__offer_id__revisions__rev_no__win_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_revision_endpoint_offers__offer_id__revisions__rev_no__withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
