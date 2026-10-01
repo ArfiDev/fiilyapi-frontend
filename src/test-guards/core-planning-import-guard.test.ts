@@ -25,6 +25,8 @@ const CORE_DIRS = [
   "components/site-diary",
   "components/site-diary-detail",
   "components/work-item-catalog",
+  // TKL-F2.3 · katalogdan çoklu seçici (sözleşme + ileride teklif ortak): planlama (EV) ithali yasak.
+  "components/work-item-picker",
   "components/catalog-shared",
 ];
 

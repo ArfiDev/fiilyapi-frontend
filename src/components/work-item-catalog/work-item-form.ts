@@ -10,6 +10,7 @@
  */
 import { standardRateError } from "@/components/catalog-shared/standard-rate";
 import { compareDecimalStrings, normalizeDecimalInput } from "@/lib/decimal";
+import { decimalDigitCounts, parseRefPriceInput, REF_PRICE_AMBIGUOUS_DOT } from "@/lib/tr-decimal";
 import type { WorkItemCreate, WorkItemRead, WorkItemUpdate } from "@/lib/api/models";
 
 export type ContractorType = WorkItemRead["default_contractor_type"];
@@ -33,6 +34,10 @@ export interface WorkItemFormError {
 export const WORK_ITEM_NAME_MAX_LENGTH = 200;
 /** KIK:269 — yeni kalemin varsayılan birimi. */
 export const DEFAULT_UNIT = "m³";
+
+// T30 ayrıştırıcısı çekirdeğe taşındı (`lib/tr-decimal.ts`, TKL-F2.3); F1 ithalleri değişmesin diye yeniden ihraç.
+export { parseRefPriceInput, REF_PRICE_AMBIGUOUS_DOT };
+export type { RefPriceParse } from "@/lib/tr-decimal";
 
 const RATE_REQUIRED = "A-s zorunlu · 0'dan büyük olmalı";
 /** openapi `ref_price` deseni: ≤ 16 tam + ≤ 2 kesir basamağı. */
@@ -60,58 +65,13 @@ export function workItemFormFromItem(item: WorkItemRead): WorkItemFormState {
   };
 }
 
-/** Belirsiz nokta kullanımında satır hatası (kullanıcı onaylı metin). */
-export const REF_PRICE_AMBIGUOUS_DOT = "Ondalık için virgül kullanın (ör. 28,50)";
-
-/**
- * Tamsayı kısmı: noktasız serbest; noktalıysa Türkçe binlik — ilk grup 1-3 hane ve "0" ile
- * başlamaz, sonrakiler TAM 3 hane ("28.500"). "0.500"/"1234.567" belirsizdir (TKL-F1.6-HF).
- */
-const THOUSANDS_GROUPED = /^(\d+|[1-9]\d{0,2}(\.\d{3})+)$/;
-const DIGITS_AND_DOTS = /^[\d.]+$/;
-const DIGITS_ONLY = /^\d+$/;
-const PRICE_MIN_FRACTION = 2;
-
-export type RefPriceParse =
-  | { kind: "ok"; value: string }
-  | { kind: "ambiguous" }
-  | { kind: "invalid" };
-
-/** "1250,5000" → "1250,50": 2'yi aşan SIFIR haneler atılır, anlamlı hane ASLA. */
-function trimPriceFraction(fraction: string): string {
-  const trimmed = fraction.replace(/0+$/, "");
-  return trimmed.padEnd(PRICE_MIN_FRACTION, "0").slice(0, Math.max(trimmed.length, PRICE_MIN_FRACTION));
-}
-
-/**
- * 🔴 REFERANS FİYAT OKUMA KURALI — TEK YER (ürün kararı değişirse yalnız burası çevrilir).
- * Türkçe yazım: nokta = BİNLİK ayıracı, virgül = ondalık. Noktayla ayrılan her grup
- * (ilk grup hariç) TAM 3 hane değilse girdi BELİRSİZDİR ("28.5", "1.50", "28.5000") ve
- * KAYDEDİLMEZ — sessizce 28,50 ya da 2850 okumak yerine kullanıcıdan virgül istenir.
- * Dönen değer kayıpsız ondalık dizedir ("28.500,75" → "28500.75"); virgüllü girdi en az
- * 2 kesir haneye tamamlanır ("28,5" → "28.50"). A-s alanı bu kuralı KULLANMAZ
- * (`normalizeDecimalInput`: nokta ondalıktır).
- */
-export function parseRefPriceInput(raw: string): RefPriceParse {
-  const text = raw.trim();
-  const parts = text.split(",");
-  if (parts.length > 2) return { kind: "invalid" };
-  const [integerText = "", fractionText] = parts;
-  if (fractionText !== undefined && !DIGITS_ONLY.test(fractionText)) return { kind: "invalid" };
-  if (!DIGITS_AND_DOTS.test(integerText)) return { kind: "invalid" };
-  if (!THOUSANDS_GROUPED.test(integerText)) return { kind: "ambiguous" };
-  const whole = integerText.replace(/\./g, "").replace(/^0+(?=\d)/, "");
-  if (fractionText === undefined) return { kind: "ok", value: whole };
-  return { kind: "ok", value: `${whole}.${trimPriceFraction(fractionText)}` };
-}
-
 function refPriceError(raw: string): string | undefined {
   const parsed = parseRefPriceInput(raw);
   if (parsed.kind === "invalid") return "Referans fiyat girin";
   if (parsed.kind === "ambiguous") return REF_PRICE_AMBIGUOUS_DOT;
-  const [whole = "", fraction = ""] = parsed.value.split(".");
-  if (fraction.replace(/0+$/, "").length > PRICE_FRACTION_DIGITS) return "En fazla 2 ondalık";
-  if (whole.replace(/^0+/, "").length > PRICE_INTEGER_DIGITS) return "En fazla 16 basamak";
+  const digits = decimalDigitCounts(parsed.value);
+  if (digits.fraction > PRICE_FRACTION_DIGITS) return "En fazla 2 ondalık";
+  if (digits.integer > PRICE_INTEGER_DIGITS) return "En fazla 16 basamak";
   return undefined;
 }
 
