@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-01 23:45",
+  guncellendi: "2026-10-02 01:45",
   gorevler: [
     {
       kod: "BLF",
@@ -83,9 +83,10 @@ export const VERI: GelistirmeVerisi = {
         { kod: "P0", aciklama: "Mimari plan: katalog yeri, veri modeli, son fiyat, dönüştürme, dilimler", durum: "bitti", hat: "backend" },
         { kod: "B1", aciklama: "Katalog ana modüle taşınır (veritabanı değişmez)", durum: "bitti", hat: "backend", pr: "backend #155" },
         { kod: "B2", aciklama: "Poz no (MIM-0001, otomatik) + referans fiyat + katalog uçları; canlıda 28 kalem numaralandı", durum: "bitti", hat: "backend", pr: "backend #156" },
-        { kod: "F1", aciklama: "İş Kalemi Kataloğu ekranı + Birim Oran Kataloğu'nda poz no", durum: "devam", hat: "frontend" },
-        { kod: "B3 / F2", aciklama: "Sözleşmeye katalogdan çoklu seçimle poz ekleme + son fiyat (sözleşme, onaylı hakediş)", durum: "devam", hat: "backend" },
-        { kod: "B4 / F3", aciklama: "Teklif çekirdeği + Liste / Yeni / Detay ekranları", durum: "sirada", hat: "backend", bagimlilik: "B3" },
+        { kod: "F1", aciklama: "İş Kalemi Kataloğu ekranı + Birim Oran Kataloğu'nda poz no ve kg", durum: "bitti", hat: "frontend", pr: "frontend #161" },
+        { kod: "B3", aciklama: "Sözleşme kalemine katalog bağı + toplu ekleme + son fiyat (sözleşme, onaylı hakediş)", durum: "bitti", hat: "backend", pr: "backend #157" },
+        { kod: "F2", aciklama: "Sözleşmede katalogdan çoklu seçici + katalogda son fiyat kolonu", durum: "devam", hat: "frontend" },
+        { kod: "B4 / F3", aciklama: "Teklif çekirdeği (tablolar, hesap, numara hazır; uçlar yapılıyor) + Liste / Yeni / Detay ekranları", durum: "devam", hat: "backend" },
         { kod: "B5 / F4", aciklama: "Şablonlar, Excel, PDF (yazdırma görünümü)", durum: "sirada", hat: "backend", bagimlilik: "B4" },
         { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0", durum: "sirada", hat: "backend", bagimlilik: "B4" },
       ],
