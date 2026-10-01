@@ -64,10 +64,33 @@ export function distributionCellKey(contractItemId: string, siteId: string): str
 
 const DECIMAL_PATTERN = /^\d+(\.\d+)?$/;
 
-type ParsedCell =
+type ParsedCell<R extends string = DistributionCellRejectionReason> =
   | { kind: "clear" }
   | { kind: "quantity"; quantity: string }
-  | { kind: "rejected"; reason: DistributionCellRejectionReason };
+  | { kind: "rejected"; reason: R };
+
+/**
+ * OPSİYONEL hane sınırı (BDG: `Numeric(14, 3)` = en çok 11 tam + 3 ondalık).
+ * Verilmezse sınır YOK — sözleşme ucunun davranışı aynen kalır.
+ */
+export interface CellDigitLimits {
+  maxWholeDigits: number;
+  maxDecimalDigits: number;
+}
+
+/** Hane sınırı verildiğinde eklenen ret gerekçesi (aşım ya da bilimsel gösterim). */
+export type DigitLimitedRejectionReason = DistributionCellRejectionReason | "digits";
+
+const SCIENTIFIC_PATTERN = /^\d*[.,]?\d*e[+-]?\d+$/i;
+
+function exceedsDigitLimits(normalized: string, limits: CellDigitLimits): boolean {
+  const [whole, fraction = ""] = normalized.split(".");
+  // Backend deseni baştaki ve sondaki sıfırları saymaz (`0*` ... `0*$`).
+  return (
+    whole.replace(/^0+/, "").length > limits.maxWholeDigits ||
+    fraction.replace(/0+$/, "").length > limits.maxDecimalDigits
+  );
+}
 
 /**
  * Ham metni gövde değerine çevirir. Ondalık ayırıcı olarak virgül de kabul
@@ -78,16 +101,35 @@ type ParsedCell =
  * 🔴 KAYIT 426: `decimal.ts::normalizeDecimalInput` ile AYNI kural — virgül
  * VARSA ondan önceki noktalar TR binlik ayıracı sayılır ve silinir
  * ("1.234,56" → "1234.56"); virgül yoksa nokta ondalık ayıracı olarak KALIR.
+ *
+ * `limits` verilmezse sınır yoktur (sözleşme çağrısı). Verilirse aşım ve
+ * bilimsel gösterim ("1e30") tek `"digits"` gerekçesiyle reddedilir.
  */
-function parseCellValue(rawValue: string): ParsedCell {
+export function parseCellValue(rawValue: string): ParsedCell;
+export function parseCellValue(
+  rawValue: string,
+  limits: CellDigitLimits,
+): ParsedCell<DigitLimitedRejectionReason>;
+export function parseCellValue(
+  rawValue: string,
+  limits?: CellDigitLimits,
+): ParsedCell<DigitLimitedRejectionReason> {
   const trimmed = rawValue.trim();
   if (trimmed.length === 0) return { kind: "clear" };
 
   const normalized = trimmed.includes(",")
     ? trimmed.replace(/\./g, "").replace(",", ".")
     : trimmed;
-  if (!DECIMAL_PATTERN.test(normalized)) return { kind: "rejected", reason: "invalid" };
+  if (!DECIMAL_PATTERN.test(normalized)) {
+    if (limits && SCIENTIFIC_PATTERN.test(normalized)) {
+      return { kind: "rejected", reason: "digits" };
+    }
+    return { kind: "rejected", reason: "invalid" };
+  }
   if (Number(normalized) === 0) return { kind: "rejected", reason: "zero" };
+  if (limits && exceedsDigitLimits(normalized, limits)) {
+    return { kind: "rejected", reason: "digits" };
+  }
 
   return { kind: "quantity", quantity: normalized };
 }
