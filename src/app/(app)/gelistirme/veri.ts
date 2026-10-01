@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-01 23:10",
+  guncellendi: "2026-10-01 23:45",
   gorevler: [
     {
       kod: "BLF",
@@ -82,9 +82,9 @@ export const VERI: GelistirmeVerisi = {
       dilimler: [
         { kod: "P0", aciklama: "Mimari plan: katalog yeri, veri modeli, son fiyat, dönüştürme, dilimler", durum: "bitti", hat: "backend" },
         { kod: "B1", aciklama: "Katalog ana modüle taşınır (veritabanı değişmez)", durum: "bitti", hat: "backend", pr: "backend #155" },
-        { kod: "B2", aciklama: "Poz no (MIM-0001, otomatik) + referans fiyat + katalog uçları (son test turunda)", durum: "devam", hat: "backend" },
-        { kod: "F1", aciklama: "İş Kalemi Kataloğu ekranı (plan onaylı)", durum: "sirada", hat: "frontend", bagimlilik: "B2" },
-        { kod: "B3 / F2", aciklama: "Sözleşmeye katalogdan çoklu seçimle poz ekleme + son fiyat", durum: "sirada", hat: "backend", bagimlilik: "B2" },
+        { kod: "B2", aciklama: "Poz no (MIM-0001, otomatik) + referans fiyat + katalog uçları; canlıda 28 kalem numaralandı", durum: "bitti", hat: "backend", pr: "backend #156" },
+        { kod: "F1", aciklama: "İş Kalemi Kataloğu ekranı + Birim Oran Kataloğu'nda poz no", durum: "devam", hat: "frontend" },
+        { kod: "B3 / F2", aciklama: "Sözleşmeye katalogdan çoklu seçimle poz ekleme + son fiyat (sözleşme, onaylı hakediş)", durum: "devam", hat: "backend" },
         { kod: "B4 / F3", aciklama: "Teklif çekirdeği + Liste / Yeni / Detay ekranları", durum: "sirada", hat: "backend", bagimlilik: "B3" },
         { kod: "B5 / F4", aciklama: "Şablonlar, Excel, PDF (yazdırma görünümü)", durum: "sirada", hat: "backend", bagimlilik: "B4" },
         { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0", durum: "sirada", hat: "backend", bagimlilik: "B4" },
