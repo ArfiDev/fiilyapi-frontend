@@ -7,6 +7,8 @@ interface ConfirmDialogProps {
   title: string;
   message: string;
   confirmLabel?: string;
+  /** İptal düğmesinin etiketi (varsayılan "Vazgeç"). */
+  cancelLabel?: string;
   danger?: boolean;
   isPending?: boolean;
   errorText?: string | null;
@@ -18,6 +20,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = "Onayla",
+  cancelLabel = "Vazgeç",
   danger,
   isPending,
   errorText,
@@ -31,7 +34,7 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={isPending}>
-            Vazgeç
+            {cancelLabel}
           </Button>
           <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={isPending}>
             {confirmLabel}

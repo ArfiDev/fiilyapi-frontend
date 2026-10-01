@@ -27,6 +27,25 @@ export interface SiteDiarySkeletonOptions {
 }
 
 /**
+ * Tek kaynak: hook'un `queryFn`i ve onay diyaloglarının `fetchQuery`si (GKS-F1.4)
+ * AYNI isteği atar. `sectionId` boşsa `section_id` parametresi GÖNDERİLMEZ.
+ */
+export async function fetchSiteDiarySkeleton(
+  siteId: string,
+  entryDate: string,
+  sectionId: string,
+): Promise<SiteDiarySkeleton> {
+  return unwrap(
+    await backendClient.GET("/sites/{site_id}/diary/skeleton", {
+      params: {
+        path: { site_id: siteId },
+        query: { entry_date: entryDate, ...(sectionId !== "" ? { section_id: sectionId } : {}) },
+      },
+    }),
+  );
+}
+
+/**
  * Kayıtsız günün iskeleti. `sectionId` boşsa `section_id` parametresi
  * GÖNDERİLMEZ (bölüm seçilmedi → şantiye geneli kural A iskeleti).
  */
@@ -40,14 +59,6 @@ export function useSiteDiarySkeleton(
   return useQuery({
     enabled: enabled && siteId.length > 0 && entryDate.length > 0,
     queryKey: siteDiarySkeletonQueryKey(siteId, entryDate, sectionId),
-    queryFn: async () =>
-      unwrap(
-        await backendClient.GET("/sites/{site_id}/diary/skeleton", {
-          params: {
-            path: { site_id: siteId },
-            query: { entry_date: entryDate, ...(sectionId !== "" ? { section_id: sectionId } : {}) },
-          },
-        }),
-      ),
+    queryFn: () => fetchSiteDiarySkeleton(siteId, entryDate, sectionId),
   });
 }

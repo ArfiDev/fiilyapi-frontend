@@ -43,6 +43,7 @@ import { DiaryModeSwitch } from "./DiaryModeSwitch";
 import { DiaryChiefNoteCard, DiaryWorkDoneCard } from "./DiaryNotesCards";
 import { DiaryPaymentAccrualCard } from "./DiaryPaymentAccrualCard";
 import { DiaryPhotosCard } from "./DiaryPhotosCard";
+import { DiaryPreviewChangeDialog } from "./DiaryPreviewChangeDialog";
 import { DiaryPlanPreviewCard } from "./DiaryPlanPreviewCard";
 import { DiaryRecentEntriesCard } from "./DiaryRecentEntriesCard";
 import { DiarySafetyCard } from "./DiarySafetyCard";
@@ -69,6 +70,7 @@ import {
   useDiaryPreview,
   useExistingEntryRaceNotice,
 } from "./useDiaryPreview";
+import { useDiaryPreviewTransitions } from "./useDiaryPreviewTransitions";
 import {
   addDiaryFirm,
   addDiaryLines,
@@ -382,6 +384,8 @@ export function DiaryEntryScreen({
       ? JSON.stringify(form) !== JSON.stringify(noEntryBaseline.form)
       : false;
   useUnsavedChanges(registryDirty, "Şantiye günlüğü");
+  const sectionList = siteQuery.data?.sections ?? [];
+  const transitions = useDiaryPreviewTransitions({ siteId, activeDate, form, entry, sections: sectionList, setForm, onLoadError: setErrorMessage });
   const hasRaceNotice = useExistingEntryRaceNotice({
     existingEntryId: preview.existingEntryId,
     matchedId,
@@ -473,13 +477,15 @@ export function DiaryEntryScreen({
     month: period.month,
   });
 
-  function handleFormChange(patch: Partial<DiaryFormState>) {
+  function applyFormChange(patch: Partial<DiaryFormState>) {
     setForm((prev) => ({ ...prev, ...patch }));
     // Kayıt YOKKEN tarih değiştirilirse aranan gün de değişir; kayıt VARKEN
     // tarih alanı kaydın taşınmasıdır (PATCH), arama günü kayıttan sonra
     // güncellenir.
     if (patch.entryDate !== undefined && !entry) setActiveDate(patch.entryDate);
   }
+
+  const handleFormChange = (patch: Partial<DiaryFormState>) => transitions.requestFormChange(patch, applyFormChange);
 
   function handleQuantityChange(lineKey: string, value: string) {
     setForm((prev) => ({ ...prev, quantities: { ...prev.quantities, [lineKey]: value } }));
@@ -499,10 +505,12 @@ export function DiaryEntryScreen({
 
   /** Satır tıklanınca o günün kaydına geçilir (GK359). */
   function handleSelectDate(entryDate: string) {
-    setErrorMessage(null);
-    setHasDateConflict(false);
-    setActiveDate(entryDate);
-    setForm((prev) => ({ ...prev, entryDate }));
+    transitions.requestSelectDate(entryDate, () => {
+      setErrorMessage(null);
+      setHasDateConflict(false);
+      setActiveDate(entryDate);
+      setForm((prev) => ({ ...prev, entryDate }));
+    });
   }
 
   function reportError(error: unknown, fallback: string) {
@@ -895,6 +903,7 @@ export function DiaryEntryScreen({
 
       {/* Uzantı yuvası `fullWidthBlock` — kart ızgarasının ALTI (İ:384→386). */}
       {fullWidthBlock && <div className="diary__full-width">{fullWidthBlock}</div>}
+      <DiaryPreviewChangeDialog pending={transitions.pending} onConfirm={transitions.confirm} onCancel={transitions.cancel} />
     </div>
   );
 }
