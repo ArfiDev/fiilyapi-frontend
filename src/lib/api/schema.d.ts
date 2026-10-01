@@ -5744,6 +5744,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sites/{site_id}/boq/section-distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Section Distribution Endpoint
+         * @description BDG-B1 — santiyenin kalem x bolum dagilim matrisi (okuma ucu).
+         *
+         *     `record_audit` CAGIRILMAZ (okumalar denetim gunlugune yazmaz). Gorunmeyen
+         *     santiye **404**; kisitli kullanicida yalniz gorunur kalemler ve onlardan
+         *     tureyen sayaclar doner (`boq/section_distribution.py`).
+         */
+        get: operations["get_section_distribution_endpoint_sites__site_id__boq_section_distribution_get"];
+        /**
+         * Save Section Distribution Endpoint
+         * @description BDG-B1 — matris yazma, BIRLESTIRME semantigi (govdede gecmeyen hucre korunur).
+         *
+         *     Kapi `PUT /boq/items/{id}/allocations` ile AYNI (`_FULL`). Denetim: GERCEKTEN
+         *     DEGISEN her kalem icin `replace_allocations` ile ayni kayit turu; degismeyen
+         *     hucre kayit yazmaz.
+         */
+        put: operations["save_section_distribution_endpoint_sites__site_id__boq_section_distribution_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sites/{site_id}/diary": {
         parameters: {
             query?: never;
@@ -18414,6 +18446,165 @@ export interface components {
              */
             updated_at: string;
             worker_count: components["schemas"]["CountPlaceholder"];
+        };
+        /** SectionDistributionAllocation */
+        SectionDistributionAllocation: {
+            /** Quantity */
+            quantity: string | null;
+            /**
+             * Section Id
+             * Format: uuid
+             */
+            section_id: string;
+        };
+        /**
+         * SectionDistributionCellInput
+         * @description Matristeki TEK hucre. `quantity` `null` ya da `0` hucreyi BOSALTIR (satir silinir).
+         *
+         *     `quantity` ZORUNLUDUR (null KABUL, eksik RED): alan unutulunca sessizce silmek
+         *     niyeti sunucunun uydurmasi olurdu. Kolon `Numeric(14, 3)` ile BIREBIR:
+         *     en cok 14 hane, 3 ondalik (`0.0004` / `1e30` -> 422; sessiz yuvarlama/500 yok).
+         */
+        SectionDistributionCellInput: {
+            /**
+             * Boq Item Id
+             * Format: uuid
+             */
+            boq_item_id: string;
+            /** Quantity */
+            quantity: number | string | null;
+            /**
+             * Section Id
+             * Format: uuid
+             */
+            section_id: string;
+        };
+        /** SectionDistributionGroup */
+        SectionDistributionGroup: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["SectionDistributionItem"][];
+            /** Name */
+            name: string;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** SectionDistributionItem */
+        SectionDistributionItem: {
+            /** Allocated Quantity */
+            allocated_quantity: string | null;
+            /** Allocations */
+            allocations: components["schemas"]["SectionDistributionAllocation"][];
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Quantity */
+            quantity: string | null;
+            /** Unallocated Quantity */
+            unallocated_quantity: string | null;
+            /** Unit */
+            unit: string;
+            /** Unit Price */
+            unit_price: string | null;
+        };
+        /** SectionDistributionResponse */
+        SectionDistributionResponse: {
+            /** Distributed Item Count */
+            distributed_item_count: number;
+            /** Groups */
+            groups: components["schemas"]["SectionDistributionGroup"][];
+            /** Project Name */
+            project_name: string;
+            /** Section Summaries */
+            section_summaries: components["schemas"]["SectionDistributionSectionSummary"][];
+            /** Sections */
+            sections: components["schemas"]["SectionDistributionSection"][];
+            /**
+             * Site Id
+             * Format: uuid
+             */
+            site_id: string;
+            /** Site Name */
+            site_name: string;
+            /** Total Item Count */
+            total_item_count: number;
+            /** Unallocated Item Codes */
+            unallocated_item_codes: string[];
+            /** Unallocated Item Count */
+            unallocated_item_count: number;
+        };
+        /**
+         * SectionDistributionSave
+         * @description `PUT /sites/{site_id}/boq/section-distribution` govdesi — BIRLESTIRME.
+         *
+         *     Govdede gecmeyen hucre KORUNUR. `allocations` ZORUNLUDUR (varsayilani YOKTUR):
+         *     eksik alani sessizce "hicbir sey" saymak niyeti sunucunun uydurmasi olurdu.
+         *     Ust sinir `SECTION_DISTRIBUTION_MAX_CELLS` (asyncpg 32767 parametre siniri
+         *     altinda kalir; asimi 422).
+         */
+        SectionDistributionSave: {
+            /** Allocations */
+            allocations: components["schemas"]["SectionDistributionCellInput"][];
+        };
+        /** SectionDistributionSection */
+        SectionDistributionSection: {
+            /** Code */
+            code: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Draft */
+            is_draft: boolean;
+            /** Name */
+            name: string;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** SectionDistributionSectionItem */
+        SectionDistributionSectionItem: {
+            /** Amount */
+            amount: string | null;
+            /**
+             * Boq Item Id
+             * Format: uuid
+             */
+            boq_item_id: string;
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /** Quantity */
+            quantity: string | null;
+            /** Unit */
+            unit: string;
+            /** Unit Price */
+            unit_price: string | null;
+        };
+        /** SectionDistributionSectionSummary */
+        SectionDistributionSectionSummary: {
+            /** Items */
+            items: components["schemas"]["SectionDistributionSectionItem"][];
+            /**
+             * Section Id
+             * Format: uuid
+             */
+            section_id: string;
+            /** Section Name */
+            section_name: string;
+            /** Total Amount */
+            total_amount: string | null;
         };
         /** SectionListResponse */
         SectionListResponse: {
@@ -37896,6 +38087,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BoqItemResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_section_distribution_endpoint_sites__site_id__boq_section_distribution_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                site_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionDistributionResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_section_distribution_endpoint_sites__site_id__boq_section_distribution_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                site_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SectionDistributionSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionDistributionResponse"];
                 };
             };
             /** @description Yetkisiz işlem */
