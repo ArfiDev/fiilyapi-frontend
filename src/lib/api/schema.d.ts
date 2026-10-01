@@ -19678,6 +19678,8 @@ export interface components {
             lock_report_date: string | null;
             /** Locked */
             locked: boolean;
+            /** Own Crew From Timesheet */
+            own_crew_from_timesheet?: components["schemas"]["OwnCrewFromTimesheet"][];
             /** Section Id */
             section_id: string | null;
             /** Section Name */

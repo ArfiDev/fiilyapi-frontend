@@ -447,6 +447,12 @@ describe("Günlük iskelet önizlemesi tip üretimi (GKS-F1.1 kapısı)", () => 
     >();
   });
 
+  it("SiteDiarySkeleton kendi ekibi puantajdan taşır (GKS-B1.1)", () => {
+    expectTypeOf<NonNullable<Skeleton["own_crew_from_timesheet"]>>().toEqualTypeOf<
+      components["schemas"]["OwnCrewFromTimesheet"][]
+    >();
+  });
+
   it("iskelet ucu GET olarak tanımlıdır", () => {
     expectTypeOf<
       paths["/sites/{site_id}/diary/skeleton"]["get"]
