@@ -30,6 +30,7 @@ import {
   DIARY_TEMPERATURE_REMOVED_MESSAGE,
   EV_DAY_SCENARIO_DAYS,
   TIMESHEET_LOCK_SCENARIOS,
+  diarySkeletonKeys,
   startMockBackend,
 } from "../../../e2e/mock-backend";
 
@@ -987,5 +988,437 @@ describe("🔴 test ikizi ↔ günlük: eski sıcaklık alanı kaldırıldı (CL
 
     expect(detail).not.toHaveProperty(DIARY_REMOVED_TEMPERATURE_FIELD);
     expect(detail.temp_max_c).toBe("28.0");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GKS-F1.2b · günlük İSKELET ÖNİZLEMESİ + POST `lines` BİRLEŞTİRMESİ (kural A)
+//
+// Kaynak: backend `site_diary/{skeleton,skeleton_read,lines,service}.py`
+// (`origin/gks-b1-gunluk-onizleme`) ve `tests/site_diary/
+// test_gks_b1_onizleme_post_bekcisi.py` (önizleme anahtarları == POST).
+// İkiz bu davranışı BİREBİR taklit etmezse F1.3 ekranı canlıda başka, e2e'de başka
+// satır görür. Kalem fikstürü: bi-1 (sec-1 400 + sec-2 300 / 1240 → KISMEN),
+// bi-3 (sec-1 1200 + sec-2 500 / 3200 → KISMEN), bi-4 (sec-1 85 / 180 → KISMEN),
+// bi-2/bi-5/bi-6 tahsissiz. TAM tahsisli fikstür kalemi YOKTUR → o hâl saf
+// fonksiyonda (`diarySkeletonKeys`) ölçülür.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type DiarySkeleton = components["schemas"]["SiteDiarySkeleton"];
+
+const SKELETON_LINE_MISMATCH_TEXT = "Satırdaki bölüm bu şantiyeye ait değil";
+const SKELETON_NOT_ALLOCATED_TEXT =
+  "Kalemin bu bölüme tahsisi yok; miktarı Bölümsüz satıra yazın ya da önce BOQ'da tahsis edin";
+const SKELETON_ITEM_MISMATCH_TEXT = "Seçilen poz bu şantiyenin BOQ'suna ait değil";
+const SKELETON_DUPLICATE_TEXT = "Aynı poz (aynı bölümle) gövdede birden fazla kez gönderildi";
+const SECTION_MISMATCH_TEXT = "Seçilen bölüm bu şantiyeye ait değil";
+
+interface RawSchema {
+  $ref?: string;
+  anyOf?: RawSchema[];
+  type?: string;
+  pattern?: string;
+  maxLength?: number;
+  properties?: Record<string, RawSchema>;
+  required?: string[];
+  items?: RawSchema;
+}
+
+const OPENAPI_SCHEMAS = (
+  JSON.parse(readFileSync(path.join(process.cwd(), "openapi", "openapi.json"), "utf8")) as {
+    components: { schemas: Record<string, RawSchema> };
+  }
+).components.schemas;
+
+/** Yanıt değerinin openapi şemasına uyumu: zorunlu alanlar · FAZLA alan yok · pattern/maxLength · tip. */
+function conformanceViolations(schema: RawSchema, value: unknown, where: string): string[] {
+  if (schema.$ref !== undefined) {
+    const target = OPENAPI_SCHEMAS[schema.$ref.replace("#/components/schemas/", "")];
+    return conformanceViolations(target, value, where);
+  }
+  if (schema.anyOf !== undefined) {
+    if (value === null && schema.anyOf.some((branch) => branch.type === "null")) return [];
+    const branch = schema.anyOf.find((candidate) => candidate.type !== "null") ?? schema.anyOf[0];
+    return conformanceViolations(branch, value, where);
+  }
+  if (schema.type === "array") {
+    if (!Array.isArray(value)) return [`${where}: dizi değil`];
+    return value.flatMap((entry, index) =>
+      conformanceViolations(schema.items ?? {}, entry, `${where}[${index}]`),
+    );
+  }
+  if (schema.type === "object" || schema.properties !== undefined) {
+    if (typeof value !== "object" || value === null) return [`${where}: nesne değil`];
+    const record = value as Record<string, unknown>;
+    const known = schema.properties ?? {};
+    const problems: string[] = [];
+    for (const name of schema.required ?? []) {
+      if (!(name in record)) problems.push(`${where}.${name}: zorunlu alan YOK`);
+    }
+    for (const name of Object.keys(record)) {
+      if (!(name in known)) problems.push(`${where}.${name}: şemada olmayan alan`);
+    }
+    for (const [name, field] of Object.entries(known)) {
+      if (name in record) problems.push(...conformanceViolations(field, record[name], `${where}.${name}`));
+    }
+    return problems;
+  }
+  if (schema.type === "string") {
+    if (typeof value !== "string") return [`${where}: dize değil (${JSON.stringify(value)})`];
+    const problems: string[] = [];
+    if (schema.pattern !== undefined && !new RegExp(schema.pattern).test(value)) {
+      problems.push(`${where}: pattern uymuyor (${value})`);
+    }
+    if (schema.maxLength !== undefined && value.length > schema.maxLength) {
+      problems.push(`${where}: maxLength aşıldı`);
+    }
+    return problems;
+  }
+  if (schema.type === "boolean" && typeof value !== "boolean") return [`${where}: boolean değil`];
+  return [];
+}
+
+/** Satır kimliği: `kalem|bölüm` (Bölümsüz = `none`). */
+function leafKey(line: { boq_item_id: string | null; section_id?: string | null }): string {
+  return `${line.boq_item_id}|${line.section_id ?? "none"}`;
+}
+
+describe("GKS-F1.2b · saf kural A (`diarySkeletonKeys`)", () => {
+  const items = [
+    { id: "full", quantity: 100 },
+    { id: "partial", quantity: 100 },
+    { id: "none", quantity: 50 },
+  ];
+  const allocations = {
+    full: { "sec-b": 40, "sec-a": 60 },
+    partial: { "sec-a": 30 },
+  };
+  const order = { "sec-a": 0, "sec-b": 1 };
+
+  it("bölümsüzken: tam tahsisli kalem Bölümsüz ÜRETMEZ, her bölümüne bir satır (bölüm sırasıyla, planlı = pay)", () => {
+    const keys = diarySkeletonKeys(items, allocations, null, order).filter((k) => k.itemId === "full");
+
+    expect(keys).toEqual([
+      { itemId: "full", sectionId: "sec-a", planned: 60 },
+      { itemId: "full", sectionId: "sec-b", planned: 40 },
+    ]);
+  });
+
+  it("bölümsüzken: kısmen tahsisli kalem TEK Bölümsüz satır (planlı = kota − Σpay), bölüm satırı AÇILMAZ; tahsissiz = tam kota", () => {
+    const keys = diarySkeletonKeys(items, allocations, null, order);
+
+    expect(keys.filter((k) => k.itemId === "partial")).toEqual([
+      { itemId: "partial", sectionId: null, planned: 70 },
+    ]);
+    expect(keys.filter((k) => k.itemId === "none")).toEqual([{ itemId: "none", sectionId: null, planned: 50 }]);
+  });
+
+  it("bölüm seçiliyken: YALNIZ o bölüme tahsisli kalemler, planlı = pay, Bölümsüz YOK", () => {
+    expect(diarySkeletonKeys(items, allocations, "sec-a", order)).toEqual([
+      { itemId: "full", sectionId: "sec-a", planned: 60 },
+      { itemId: "partial", sectionId: "sec-a", planned: 30 },
+    ]);
+    expect(diarySkeletonKeys(items, allocations, "sec-b", order)).toEqual([
+      { itemId: "full", sectionId: "sec-b", planned: 40 },
+    ]);
+  });
+});
+
+describe("🔴 test ikizi ↔ günlük iskelet önizlemesi + POST birleştirmesi (GKS-F1.2b)", () => {
+  let skBase = "";
+  let skClose: () => Promise<void>;
+
+  beforeAll(async () => {
+    const started = startMockBackend(0);
+    skClose = started.close;
+    await new Promise<void>((resolve) => {
+      started.server.once("listening", () => resolve());
+    });
+    const address = started.server.address();
+    if (address === null || typeof address === "string") throw new Error("ikiz port alamadı");
+    skBase = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterAll(async () => {
+    await skClose();
+  });
+
+  async function call<T>(method: string, route: string, body?: unknown): Promise<{ status: number; json: T }> {
+    const response = await fetch(`${skBase}${route}`, {
+      method,
+      headers: { authorization: "Bearer t", "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const text = await response.text();
+    return { status: response.status, json: (text === "" ? {} : JSON.parse(text)) as T };
+  }
+
+  async function preview(day: string, sectionId?: string): Promise<DiarySkeleton> {
+    const query = `entry_date=${day}${sectionId === undefined ? "" : `&section_id=${sectionId}`}`;
+    const { status, json } = await call<DiarySkeleton>("GET", `/sites/s-1/diary/skeleton?${query}`);
+    expect(status, `GET skeleton?${query}: ${JSON.stringify(json)}`).toBe(200);
+    return json;
+  }
+
+  async function create(day: string, extra: Record<string, unknown> = {}): Promise<DiaryDetail> {
+    const { status, json } = await call<DiaryDetail>("POST", "/sites/s-1/diary", { entry_date: day, ...extra });
+    expect(status, `POST diary ${day}: ${JSON.stringify(json)}`).toBe(201);
+    return json;
+  }
+
+  it("önizleme yanıtı openapi `SiteDiarySkeleton` şemasına UYAR (kimliksiz satır, hiçbir alan eksik/fazla değil)", async () => {
+    const body = await preview("2031-02-03");
+
+    expect(conformanceViolations(OPENAPI_SCHEMAS["SiteDiarySkeleton"], body, "skeleton")).toEqual([]);
+    expect(body.lines.length).toBeGreaterThan(0);
+    for (const line of body.lines) expect(line).not.toHaveProperty("id");
+    expect(body).toMatchObject({
+      entry_date: "2031-02-03",
+      section_id: null,
+      section_name: null,
+      existing_entry_id: null,
+      locked: false,
+      lock_report_date: null,
+    });
+  });
+
+  it("bölümsüz önizleme: fikstürde tam tahsisli kalem YOK → her kalem tek Bölümsüz satır, planlı = atanmamış kalan", async () => {
+    const body = await preview("2031-02-04");
+
+    expect(body.lines.map(leafKey)).toEqual(["bi-1|none", "bi-2|none", "bi-3|none", "bi-4|none", "bi-5|none", "bi-6|none"]);
+    const planned = Object.fromEntries(body.lines.map((l) => [l.boq_item_id, l.planned_quantity]));
+    expect(planned["bi-1"]).toBe("540.000"); // 1240 − (400 + 300)
+    expect(planned["bi-2"]).toBe("860.000"); // tahsissiz = tam kota
+    expect(planned["bi-3"]).toBe("1500.000"); // 3200 − (1200 + 500)
+    expect(planned["bi-4"]).toBe("95.000"); // 180 − 85
+  });
+
+  it("bölüm seçiliyken: yalnız o bölümün kalemleri, satırın bölümü o bölüm, planlı = pay, Bölümsüz YOK", async () => {
+    const sec1 = await preview("2031-02-05", "sec-1");
+    const sec2 = await preview("2031-02-05", "sec-2");
+
+    expect(sec1.section_id).toBe("sec-1");
+    expect(sec1.section_name).toBe("Kat 6–10 Kaba İnşaat");
+    expect(sec1.lines.map(leafKey)).toEqual(["bi-1|sec-1", "bi-3|sec-1", "bi-4|sec-1"]);
+    expect(sec1.lines.map((l) => l.planned_quantity)).toEqual(["400.000", "1200.000", "85.000"]);
+    expect(sec1.lines.every((l) => l.section_name === "Kat 6–10 Kaba İnşaat")).toBe(true);
+    expect(sec2.lines.map(leafKey)).toEqual(["bi-1|sec-2", "bi-3|sec-2"]);
+    expect(conformanceViolations(OPENAPI_SCHEMAS["SiteDiarySkeleton"], sec1, "skeleton")).toEqual([]);
+  });
+
+  it("önizleme anahtar kümesi == AYNI girdiyle POST iskeleti (bölümsüz VE bölümlü) — backend bekçisinin ikizi", async () => {
+    const unsectionedPreview = await preview("2031-03-03");
+    const unsectioned = await create("2031-03-03");
+    const sectionedPreview = await preview("2031-03-04", "sec-1");
+    const sectioned = await create("2031-03-04", { section_id: "sec-1" });
+
+    expect(unsectioned.lines.map(leafKey)).toEqual(unsectionedPreview.lines.map(leafKey));
+    expect(sectioned.lines.map(leafKey)).toEqual(sectionedPreview.lines.map(leafKey));
+    expect(unsectioned.lines.map((l) => l.planned_quantity)).toEqual(unsectionedPreview.lines.map((l) => l.planned_quantity));
+    expect(sectioned.lines.map((l) => l.planned_quantity)).toEqual(sectionedPreview.lines.map((l) => l.planned_quantity));
+    // Başlık da bölüme göre: POST'un başlık bölümü iskeleti süzdüğü bölümdür.
+    expect(sectioned.section_id).toBe("sec-1");
+    expect(sectioned.lines.every((l) => l.section_id === "sec-1")).toBe(true);
+  });
+
+  it("önizleme satırının türevleri kayıtlı satırla AYNI hesaptan gelir (planlı/kümülatif/yaprak kümülatifi/kalan/tutar)", async () => {
+    const day = "2031-03-05";
+    const previewBody = await preview(day, "sec-1");
+    const created = await create(day, { section_id: "sec-1" });
+
+    const withoutId = (line: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(line).filter(([name]) => name !== "id"));
+    expect(created.lines.map((l) => withoutId(l as unknown as Record<string, unknown>))).toEqual(
+      previewBody.lines.map((l) => ({ ...l })),
+    );
+  });
+
+  it("önizleme günün KENDİ kaydını kümülatife katmaz (`< gün`), `existing_entry_id` kaydı gösterir", async () => {
+    // d-1 · 2026-07-15 · bi-3 için 120 girilmiş (sec-1 başlıklı eski, bölümsüz-iskelet fikstürü).
+    const detail = await call<DiaryDetail>("GET", "/diary/d-1");
+    const savedCumulative = Number(detail.json.lines.find((l) => l.boq_item_id === "bi-3")?.cumulative_quantity);
+    const body = await preview("2026-07-15");
+
+    expect(body.existing_entry_id).toBe("d-1");
+    const previewCumulative = Number(body.lines.find((l) => l.boq_item_id === "bi-3")?.cumulative_quantity);
+    expect(savedCumulative - previewCumulative).toBe(120);
+  });
+
+  it("kilitli EV günü: `locked` + `lock_report_date` gün kilidi senaryosundan gelir", async () => {
+    const locked = await preview(EV_DAY_SCENARIO_DAYS.locked);
+    const open = await preview(EV_DAY_SCENARIO_DAYS.blocked);
+
+    expect(locked.locked).toBe(true);
+    expect(locked.lock_report_date).not.toBeNull();
+    expect(open.locked).toBe(false);
+    expect(open.lock_report_date).toBeNull();
+  });
+
+  it("yabancı / olmayan bölüm → 422 `Seçilen bölüm bu şantiyeye ait değil` (önizleme VE POST başlığı)", async () => {
+    const foreign = await call<{ detail: string }>("GET", "/sites/s-2/diary/skeleton?entry_date=2031-04-01&section_id=sec-1");
+    const missing = await call<{ detail: string }>("GET", "/sites/s-1/diary/skeleton?entry_date=2031-04-01&section_id=sec-yok");
+    const post = await call<{ detail: string }>("POST", "/sites/s-1/diary", { entry_date: "2031-04-01", section_id: "sec-yok" });
+
+    for (const answer of [foreign, missing, post]) {
+      expect(answer.status).toBe(422);
+      expect(answer.json.detail).toBe(SECTION_MISMATCH_TEXT);
+    }
+  });
+
+  it("POST lines BİRLEŞTİRİR: miktar iskelet satırının ÜSTÜNE yazılır, iskelette olmayan geçerli satır EKLENİR, hiçbir iskelet satırı silinmez", async () => {
+    const day = "2031-05-05";
+    const skeletonKeys = (await preview(day)).lines.map(leafKey);
+    const created = await create(day, {
+      lines: [
+        { boq_item_id: "bi-1", section_id: null, quantity: "12.5", overrun_reason: "fazla döküm" },
+        // bölümsüz önizlemede bi-3 yalnız Bölümsüz satırdır; sec-1 yaprağı iskelette YOK ama tahsisli → eklenir
+        { boq_item_id: "bi-3", section_id: "sec-1", quantity: 5 },
+      ],
+    });
+
+    const byKey = new Map(created.lines.map((l) => [leafKey(l), l]));
+    expect(byKey.get("bi-1|none")?.quantity).toBe("12.500");
+    expect(byKey.get("bi-1|none")?.overrun_reason).toBe("fazla döküm");
+    expect(byKey.get("bi-3|sec-1")?.quantity).toBe("5.000");
+    for (const key of skeletonKeys) expect(byKey.has(key), `iskelet satırı silindi: ${key}`).toBe(true);
+    expect(created.lines).toHaveLength(skeletonKeys.length + 1);
+    expect(byKey.get("bi-2|none")?.quantity).toBe("0.000"); // dokunulmayan iskelet satırı sıfır kalır
+  });
+
+  it("POST lines: tahsissiz bölüme satır → 422 LINE_SECTION_NOT_ALLOCATED, günlük YAZILMAZ", async () => {
+    const day = "2031-05-06";
+    const { status, json } = await call<{ detail: string }>("POST", "/sites/s-1/diary", {
+      entry_date: day,
+      lines: [{ boq_item_id: "bi-2", section_id: "sec-1", quantity: 1 }],
+    });
+
+    expect(status).toBe(422);
+    expect(json.detail).toBe(SKELETON_NOT_ALLOCATED_TEXT);
+    expect((await preview(day)).existing_entry_id).toBeNull();
+  });
+
+  it("POST lines: yabancı bölüm 422 · yabancı poz 422 · gövde-içi çift 409 — hiçbiri günlük açmaz", async () => {
+    const day = "2031-05-07";
+    const foreignSection = await call<{ detail: string }>("POST", "/sites/s-1/diary", {
+      entry_date: day,
+      lines: [{ boq_item_id: "bi-1", section_id: "sec-yok", quantity: 1 }],
+    });
+    const foreignItem = await call<{ detail: string }>("POST", "/sites/s-1/diary", {
+      entry_date: day,
+      lines: [{ boq_item_id: "bi-yok", quantity: 1 }],
+    });
+    const duplicate = await call<{ detail: string }>("POST", "/sites/s-1/diary", {
+      entry_date: day,
+      lines: [
+        { boq_item_id: "bi-1", quantity: 1 },
+        { boq_item_id: "bi-1", section_id: null, quantity: 2 },
+      ],
+    });
+
+    expect([foreignSection.status, foreignSection.json.detail]).toEqual([422, SKELETON_LINE_MISMATCH_TEXT]);
+    expect([foreignItem.status, foreignItem.json.detail]).toEqual([422, SKELETON_ITEM_MISMATCH_TEXT]);
+    expect([duplicate.status, duplicate.json.detail]).toEqual([409, SKELETON_DUPLICATE_TEXT]);
+    expect((await preview(day)).existing_entry_id).toBeNull();
+  });
+
+  it("POST lines şekil kapısı: `additionalProperties:false` iç içe satırda da 422", async () => {
+    const { status } = await call("POST", "/sites/s-1/diary", {
+      entry_date: "2031-05-08",
+      lines: [{ boq_item_id: "bi-1", quantity: 1, unit_price: "1.00" }],
+    });
+
+    expect(status).toBe(422);
+  });
+
+  it("POST: `lines` yoksa iskelet aynen gelir; `worker_counts` POST'ta YOK (mevcut davranış korunur: boş)", async () => {
+    const created = await create("2031-05-09");
+
+    expect(created.lines.every((l) => l.quantity === "0.000")).toBe(true);
+    expect(created.worker_counts).toEqual([]);
+  });
+
+  it("tohumlu günlük kayıtlarına DOKUNULMAZ: d-1..d-3 satırları eski (tüm kalem, bölümsüz-iskelet) şekliyle kalır", async () => {
+    const d1 = await call<DiaryDetail>("GET", "/diary/d-1");
+
+    expect(d1.json.lines.map((l) => l.boq_item_id)).toEqual(["bi-1", "bi-2", "bi-3", "bi-4", "bi-5", "bi-6"]);
+    expect(d1.json.lines.every((l) => !("planned_quantity" in l))).toBe(true);
+  });
+
+  // ── PUT /diary/{id}/lines (non-EV) — anahtar (kalem, bölüm) ────────────────────────
+  // Eski ikiz yalnız `boq_item_id` ile anahtarlıyor ve satırları TÜM-kalem/bölümsüz
+  // iskelete geri çeviriyordu: kural A ile POST edilmiş (bölümlü) kayıt ilk PUT'ta bozulurdu.
+
+  async function putLines(entryId: string, lines: unknown[]): Promise<{ status: number; json: DiaryDetail & { detail?: string } }> {
+    return call<DiaryDetail & { detail?: string }>("PUT", `/diary/${entryId}/lines`, { lines });
+  }
+
+  it("PUT lines: bölümlü POST sonrası bölüm satırı KORUNUR, gövdedeki satır kendi bölümünde miktar yazar, geçmeyen MEVCUT satır 0'a çekilir (silinmez)", async () => {
+    const created = await create("2031-06-02", {
+      section_id: "sec-1",
+      lines: [{ boq_item_id: "bi-1", section_id: "sec-1", quantity: 9 }],
+    });
+    expect(created.lines.map(leafKey)).toEqual(["bi-1|sec-1", "bi-3|sec-1", "bi-4|sec-1"]);
+
+    const { status, json } = await putLines(created.id, [{ boq_item_id: "bi-3", section_id: "sec-1", quantity: 7 }]);
+
+    expect(status, JSON.stringify(json)).toBe(200);
+    expect(json.lines.map(leafKey)).toEqual(["bi-1|sec-1", "bi-3|sec-1", "bi-4|sec-1"]);
+    expect(json.lines.map((l) => l.quantity)).toEqual(["0.000", "7.000", "0.000"]);
+    expect(json.lines.every((l) => l.section_id === "sec-1")).toBe(true);
+    expect(json.lines.map((l) => l.id)).toEqual(created.lines.map((l) => l.id));
+
+    // Aynı kalemin BÖLÜMSÜZ yaprağı ayrı anahtardır: yeni satır olarak eklenir, bölüm satırına YAZMAZ.
+    const second = await putLines(created.id, [{ boq_item_id: "bi-3", section_id: null, quantity: 3 }]);
+    expect(second.status, JSON.stringify(second.json)).toBe(200);
+    expect(second.json.lines.map(leafKey)).toEqual(["bi-1|sec-1", "bi-3|sec-1", "bi-4|sec-1", "bi-3|none"]);
+    expect(second.json.lines.map((l) => l.quantity)).toEqual(["0.000", "0.000", "0.000", "3.000"]);
+  });
+
+  it("PUT lines: mevcutta olmayan GEÇERLİ (kalem, bölüm) anahtarı eklenir; yabancı poz / yabancı bölüm / tahsissiz bölüm 422 ve kayıt DEĞİŞMEZ", async () => {
+    const created = await create("2031-06-03"); // bölümsüz iskelet: bi-3 yalnız Bölümsüz
+    const added = await putLines(created.id, [{ boq_item_id: "bi-3", section_id: "sec-1", quantity: 4 }]);
+
+    expect(added.status, JSON.stringify(added.json)).toBe(200);
+    expect(added.json.lines).toHaveLength(created.lines.length + 1);
+    expect(added.json.lines.find((l) => leafKey(l) === "bi-3|sec-1")?.quantity).toBe("4.000");
+    expect(added.json.lines.find((l) => leafKey(l) === "bi-3|none")?.quantity).toBe("0.000");
+
+    const bad = [
+      [{ boq_item_id: "bi-yok", quantity: 1 }, SKELETON_ITEM_MISMATCH_TEXT],
+      [{ boq_item_id: "bi-1", section_id: "sec-yok", quantity: 1 }, SKELETON_LINE_MISMATCH_TEXT],
+      [{ boq_item_id: "bi-2", section_id: "sec-1", quantity: 1 }, SKELETON_NOT_ALLOCATED_TEXT],
+    ] as const;
+    for (const [line, text] of bad) {
+      const answer = await putLines(created.id, [line]);
+      expect([answer.status, answer.json.detail]).toEqual([422, text]);
+    }
+    const after = await call<DiaryDetail>("GET", `/diary/${created.id}`);
+    expect(after.json.lines.map(leafKey)).toEqual(added.json.lines.map(leafKey));
+  });
+
+  it("PUT lines: tohumlu bölümsüz-iskelet kayıtları (d-1/d-2/d-3) ESKİ yolla AYNI satırı üretir (kimlik, sıra, miktar, bölüm alanı YOK)", async () => {
+    // Eski kural (anahtar yalnız kalem): TÜM BOQ kalemi, BOQ sırasıyla, gövdedeki kalem miktarı, gerisi 0,
+    // satır kimliği `${kayıt}-l-${kalem}`, `section_id`/yaprak alanları YOK.
+    const itemIds = ["bi-1", "bi-2", "bi-3", "bi-4", "bi-5", "bi-6"];
+    const body = [
+      { boq_item_id: "bi-3", quantity: 5 },
+      { boq_item_id: "bi-6", quantity: "2.5" },
+    ];
+    for (const entryId of ["d-1", "d-2", "d-3"]) {
+      await call("POST", `/diary/${entryId}/reopen`); // d-2 zaten taslak → 409 yutulur
+      const before = await call<DiaryDetail>("GET", `/diary/${entryId}`);
+      expect(before.json.status, entryId).toBe("draft");
+
+      const { status, json } = await putLines(entryId, body);
+
+      expect(status, `${entryId}: ${JSON.stringify(json)}`).toBe(200);
+      expect(json.lines.map((l) => l.id), entryId).toEqual(itemIds.map((id) => `${entryId}-l-${id}`));
+      expect(json.lines.map((l) => l.boq_item_id), entryId).toEqual(itemIds);
+      expect(json.lines.map((l) => l.quantity), entryId).toEqual(["0.000", "0.000", "5.000", "0.000", "0.000", "2.500"]);
+      expect(json.lines.every((l) => !("planned_quantity" in l) && l.section_id === undefined), entryId).toBe(true);
+      expect(json.lines.map((l) => [l.code, l.unit, l.unit_price]), entryId).toEqual(
+        before.json.lines.map((l) => [l.code, l.unit, l.unit_price]),
+      );
+    }
   });
 });
