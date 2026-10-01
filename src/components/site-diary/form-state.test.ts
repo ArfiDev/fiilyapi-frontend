@@ -6,6 +6,7 @@ import type {
   SiteDiaryWorkerCountRead,
 } from "@/lib/api/hooks/useSiteDiary";
 
+import type { DiaryLeafRow } from "./diary-lines-tree";
 import {
   buildDiaryCreateBody,
   buildDiaryLinesBody,
@@ -240,6 +241,103 @@ describe("buildDiaryCreateBody", () => {
     expect(body.temp_min_c).toBeNull();
     expect(body.temp_max_c).toBeNull();
     expect(body.wind_ms).toBeNull();
+  });
+});
+
+// GKS-F1.2a · POST + lines: önizleme yapraklarından DOKUNULANLAR + tüm eklenenler.
+function previewLeaf(overrides: Partial<DiaryLeafRow> = {}): DiaryLeafRow {
+  return {
+    key: "duv|",
+    boqItemId: "duv",
+    sectionId: null,
+    label: "Bölümsüz",
+    sectionCode: null,
+    isUnsectioned: true,
+    isAdded: false,
+    isRemovable: false,
+    isOrphan: false,
+    todayText: "",
+    todayValue: "0",
+    cumulative: null,
+    planned: null,
+    remaining: null,
+    isOverrun: false,
+    overrunExcess: null,
+    amount: null,
+    ...overrides,
+  };
+}
+
+describe("buildDiaryCreateBody · lines (GKS-F1.2a)", () => {
+  const leaves = [
+    previewLeaf({ key: "duv|", boqItemId: "duv", sectionId: null }),
+    previewLeaf({ key: "duv|k1", boqItemId: "duv", sectionId: "k1" }),
+    previewLeaf({ key: "kab|k1", boqItemId: "kab", sectionId: "k1" }),
+    previewLeaf({ key: "kab|k2", boqItemId: "kab", sectionId: "k2" }),
+  ];
+
+  it("dokunulan satırı taşır, dokunulmayanı TAŞIMAZ; section_id null açık yazılır", () => {
+    const form: DiaryFormState = {
+      ...emptyDiaryForm("2026-08-03"),
+      quantities: { "duv|": "12,5", "duv|k1": "" },
+      overrunReasons: { "kab|k1": "  Ek kat  " },
+    };
+
+    const body = buildDiaryCreateBody(form, leaves);
+
+    expect(body.lines).toEqual([
+      { boq_item_id: "duv", section_id: null, quantity: 12.5, overrun_reason: null },
+      { boq_item_id: "kab", section_id: "k1", quantity: 0, overrun_reason: "Ek kat" },
+    ]);
+    expect(body.lines?.[0]).toHaveProperty("section_id", null);
+  });
+
+  it("sıfır miktar + boş gerekçe dokunulmamış sayılır", () => {
+    const form: DiaryFormState = { ...emptyDiaryForm("2026-08-03"), quantities: { "duv|": "0", "kab|k1": " " } };
+
+    expect(buildDiaryCreateBody(form, leaves).lines).toBeUndefined();
+  });
+
+  it("geçersiz hücre (negatif / sayı değil) gövdeye GİRMEZ", () => {
+    const form: DiaryFormState = {
+      ...emptyDiaryForm("2026-08-03"),
+      quantities: { "duv|": "abc", "duv|k1": "-3", "kab|k1": "7" },
+      overrunReasons: { "duv|": "gerekçe var ama hücre bozuk" },
+    };
+
+    expect(buildDiaryCreateBody(form, leaves).lines).toEqual([
+      { boq_item_id: "kab", section_id: "k1", quantity: 7, overrun_reason: null },
+    ]);
+  });
+
+  it("TÜM eklenen satırlar (miktarsız da) girer; önizleme yaprağıyla aynı anahtar bir kez yazılır", () => {
+    const form: DiaryFormState = {
+      ...emptyDiaryForm("2026-08-03"),
+      quantities: { "kab|k1": "4" },
+      addedLines: [
+        { boqItemId: "kab", sectionId: "k1", plannedQuantity: "0" },
+        { boqItemId: "duv", sectionId: "k2", plannedQuantity: "0" },
+      ],
+    };
+
+    expect(buildDiaryCreateBody(form, leaves).lines).toEqual([
+      { boq_item_id: "kab", section_id: "k1", quantity: 4, overrun_reason: null },
+      { boq_item_id: "duv", section_id: "k2", quantity: 0, overrun_reason: null },
+    ]);
+  });
+
+  it("öksüz yaprak (boq_item_id null) gövdeye girmez", () => {
+    const orphan = previewLeaf({ key: "orphan:0", boqItemId: null, isOrphan: true });
+    const form: DiaryFormState = { ...emptyDiaryForm("2026-08-03"), quantities: { "orphan:0": "5" } };
+
+    expect(buildDiaryCreateBody(form, [orphan]).lines).toBeUndefined();
+  });
+
+  it("previewLeaves verilmezse / boşsa gövde bugünkü gibidir (lines anahtarı YOK)", () => {
+    const form: DiaryFormState = { ...emptyDiaryForm("2026-08-03"), quantities: { "duv|": "12" } };
+
+    expect(buildDiaryCreateBody(form)).not.toHaveProperty("lines");
+    expect(buildDiaryCreateBody(form, [])).not.toHaveProperty("lines");
   });
 });
 

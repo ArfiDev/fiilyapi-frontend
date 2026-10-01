@@ -2,6 +2,7 @@ import type { SiteDiaryEntryDetail, Weather } from "@/lib/api/hooks/useSiteDiary
 import type {
   SiteDiaryEntryCreate,
   SiteDiaryEntryUpdate,
+  SiteDiaryLineInput,
 } from "@/lib/api/hooks/useSiteDiaryMutations";
 
 import {
@@ -10,6 +11,7 @@ import {
   type SiteDiaryFullLinesSave,
 } from "@/lib/api/hooks/site-diary-save-bodies";
 
+import type { DiaryLeafRow } from "./diary-lines-tree";
 import { DIARY_TEMPERATURE_MAX, DIARY_TEMPERATURE_MIN } from "./diary-labels";
 
 import {
@@ -308,12 +310,55 @@ function weatherFields(form: DiaryFormState) {
   };
 }
 
+/** "+ Bölüm" satırlarının gövde karşılığı (PUT lines ve POST lines ORTAK). */
+function addedLineInputs(form: DiaryFormState): SiteDiaryLineInput[] {
+  return form.addedLines.map((line) => {
+    const key = lineKeyOf(line);
+    return {
+      boq_item_id: line.boqItemId,
+      section_id: line.sectionId,
+      quantity: parseDiaryQuantity(form.quantities[key] ?? "") ?? 0,
+      overrun_reason: textOrNull(form.overrunReasons[key] ?? ""),
+    };
+  });
+}
+
 /**
- * `POST /sites/{site_id}/diary` gövdesi. Kayıt HER ZAMAN `draft` doğar ve
- * satır iskeleti BOQ'dan SUNUCUDA üretilir — bu yüzden gövdede `lines[]`,
- * `status` ya da `worker_counts` YOKTUR (openapi `SiteDiaryEntryCreate`).
+ * Önizleme yaprağı DOKUNULDU mu: geçerli miktar > 0 ya da gerekçe dolu.
+ * Geçersiz miktar hücresi (negatif / sayı değil) satırı gövdeye SOKMAZ —
+ * sessizce `0` yazılmaz (`validateForm` zaten kullanıcıyı durdurur).
  */
-export function buildDiaryCreateBody(form: DiaryFormState): SiteDiaryEntryCreate {
+function touchedPreviewInputs(form: DiaryFormState, leaves: readonly DiaryLeafRow[]): SiteDiaryLineInput[] {
+  const inputs: SiteDiaryLineInput[] = [];
+  for (const leaf of leaves) {
+    if (leaf.boqItemId === null) continue;
+    const quantity = parseDiaryQuantity(form.quantities[leaf.key] ?? "");
+    if (quantity === null) continue;
+    const overrunReason = textOrNull(form.overrunReasons[leaf.key] ?? "");
+    if (quantity <= 0 && overrunReason === null) continue;
+    inputs.push({ boq_item_id: leaf.boqItemId, section_id: leaf.sectionId, quantity, overrun_reason: overrunReason });
+  }
+  return inputs;
+}
+
+/**
+ * `POST /sites/{site_id}/diary` gövdesi. Kayıt HER ZAMAN `draft` doğar;
+ * `status` ve `worker_counts` YOKTUR (openapi `SiteDiaryEntryCreate`; işçi
+ * sayıları POST'a girmez, sunucu yutar).
+ *
+ * GKS-F1.2a: `lines` (BİRLEŞTİR, silmez — sunucu iskeleti yine kurar) =
+ * önizleme yapraklarından DOKUNULANLAR + TÜM `addedLines`; her satırda
+ * `section_id` AÇIKÇA yazılır (`null` dahil, `site-diary-save-bodies`
+ * normalizasyonu). `previewLeaves` verilmezse ya da hiç satır çıkmazsa
+ * `lines` anahtarı HİÇ yazılmaz (eski davranış: yalnız sunucu iskeleti).
+ */
+export function buildDiaryCreateBody(
+  form: DiaryFormState,
+  previewLeaves: readonly DiaryLeafRow[] = [],
+): SiteDiaryEntryCreate {
+  const lines = buildSiteDiaryLinesSave([], {
+    added: [...touchedPreviewInputs(form, previewLeaves), ...addedLineInputs(form)],
+  }).lines;
   return {
     entry_date: form.entryDate,
     section_id: form.sectionId === "" ? null : form.sectionId,
@@ -324,6 +369,7 @@ export function buildDiaryCreateBody(form: DiaryFormState): SiteDiaryEntryCreate
     ppe_checked: form.ppeChecked,
     has_incident: form.hasIncident,
     incident_note: textOrNull(form.incidentNote),
+    ...(lines.length > 0 ? { lines } : {}),
   };
 }
 
@@ -387,16 +433,11 @@ export function buildDiaryLinesBody(
       overrunReason: textOrNull(form.overrunReasons[key] ?? ""),
     };
   }
-  const added = form.addedLines.map((line) => {
-    const key = lineKeyOf(line);
-    return {
-      boq_item_id: line.boqItemId,
-      section_id: line.sectionId,
-      quantity: parseDiaryQuantity(form.quantities[key] ?? "") ?? 0,
-      overrun_reason: textOrNull(form.overrunReasons[key] ?? ""),
-    };
+  return buildSiteDiaryLinesSave(entry.lines, {
+    changes,
+    added: addedLineInputs(form),
+    removed: form.removedLines,
   });
-  return buildSiteDiaryLinesSave(entry.lines, { changes, added, removed: form.removedLines });
 }
 
 /** Geçersiz miktar girilmiş hücrelerin poz kimlikleri (görünür hata için). */

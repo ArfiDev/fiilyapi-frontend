@@ -33,6 +33,13 @@ export interface DiaryTreeBoqItem {
   unallocated_quantity: string | null;
 }
 
+/**
+ * Ağacın okuduğu satır: kayıtlı satır (`id` var) ya da GKS-F1.2a önizleme
+ * iskeleti (`SiteDiarySkeletonLine`, kimliksiz). Ağaç kimliği YALNIZ öksüz
+ * satırın anahtarı için okur; ikinci ağaç kodu yoktur.
+ */
+export type DiaryTreeLine = Omit<SiteDiaryLineRead, "id"> & { id?: string };
+
 export interface DiaryLeafRow {
   key: string;
   boqItemId: string | null;
@@ -103,7 +110,7 @@ interface LeafInput {
   key: string;
   boqItemId: string | null;
   sectionId: string | null;
-  saved: SiteDiaryLineRead | null;
+  saved: DiaryTreeLine | null;
   added: DiaryAddedLine | null;
 }
 
@@ -111,6 +118,7 @@ function buildLeaf(
   input: LeafInput,
   form: DiaryFormState,
   sectionById: ReadonlyMap<string, DiaryTreeSection>,
+  isPreview: boolean,
 ): DiaryLeafRow {
   const { saved, added, sectionId } = input;
   const section = sectionId === null ? undefined : sectionById.get(sectionId);
@@ -139,7 +147,9 @@ function buildLeaf(
     sectionCode: section?.code ?? null,
     isUnsectioned: sectionId === null,
     isAdded: added !== null && saved === null,
-    isRemovable: !isOrphan && (sectionId !== null || (added !== null && saved === null)),
+    // GKS-F1.2a: önizlemede iskelet satırı kaldırılamaz (POST birleştirmesi silemez);
+    // yalnız "+ Bölüm" ile eklenen satır kaldırılabilir.
+    isRemovable: !isOrphan && ((!isPreview && sectionId !== null) || (added !== null && saved === null)),
     isOrphan,
     todayText,
     todayValue,
@@ -178,11 +188,16 @@ function totalsOf(leaves: readonly DiaryLeafRow[]): DiaryItemGroup["totals"] {
 }
 
 export interface DiaryLineTreeInput {
-  lines: readonly SiteDiaryLineRead[];
+  lines: readonly DiaryTreeLine[];
   form: DiaryFormState;
   /** BOQ sırası (grup → kalem). Okunamadıysa boş: ağaç satırlardan kurulur. */
   boqItems: readonly DiaryTreeBoqItem[];
   sections: readonly DiaryTreeSection[];
+  /**
+   * GKS-F1.2a: satırlar kaydedilmemiş önizlemeden geliyor → iskelet satırı
+   * `isRemovable=false`; yalnız `form.addedLines` kaldırılabilir.
+   */
+  isPreview?: boolean;
 }
 
 /**
@@ -190,11 +205,17 @@ export interface DiaryLineTreeInput {
  * basılır — G4 "tamamen tahsisli · iskelet yok"); BOQ'ta olmayan kalemler
  * satır sırasıyla sona eklenir. Kaldırılan satırlar ağaçta YOKTUR.
  */
-export function buildDiaryLineTree({ lines, form, boqItems, sections }: DiaryLineTreeInput): DiaryItemGroup[] {
+export function buildDiaryLineTree({
+  lines,
+  form,
+  boqItems,
+  sections,
+  isPreview = false,
+}: DiaryLineTreeInput): DiaryItemGroup[] {
   const sectionById = new Map(sections.map((section) => [section.id, section]));
   const removed = new Set(form.removedLines);
   const leavesByItem = new Map<string, LeafInput[]>();
-  const firstLineByItem = new Map<string, SiteDiaryLineRead>();
+  const firstLineByItem = new Map<string, DiaryTreeLine>();
   const orphans: DiaryItemGroup[] = [];
   const itemOrder: string[] = [];
 
@@ -206,12 +227,13 @@ export function buildDiaryLineTree({ lines, form, boqItems, sections }: DiaryLin
     leavesByItem.get(itemId)?.push(leaf);
   };
 
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
     if (line.boq_item_id === null) {
       const leaf = buildLeaf(
-        { key: `orphan:${line.id}`, boqItemId: null, sectionId: line.section_id ?? null, saved: line, added: null },
+        { key: `orphan:${line.id ?? index}`, boqItemId: null, sectionId: line.section_id ?? null, saved: line, added: null },
         form,
         sectionById,
+        isPreview,
       );
       orphans.push({
         boqItemId: null,
@@ -250,7 +272,7 @@ export function buildDiaryLineTree({ lines, form, boqItems, sections }: DiaryLin
     const line = firstLineByItem.get(itemId);
     const inputs = leavesByItem.get(itemId) ?? [];
     if (!boq && !line && inputs.length === 0) continue;
-    const leaves = inputs.map((input) => buildLeaf(input, form, sectionById)).sort(sortLeaves);
+    const leaves = inputs.map((input) => buildLeaf(input, form, sectionById, isPreview)).sort(sortLeaves);
     groups.push({
       boqItemId: itemId,
       key: itemId,

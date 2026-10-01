@@ -41,9 +41,10 @@ function useSiteDiaryInvalidator() {
 
 /**
  * Günlük kayit acma (`POST /sites/{site_id}/diary`). Kayit her zaman `draft`
- * dogar; govde `lines[]`/`worker_counts[]`/`status` TASIMAZ (satir iskeleti
- * BOQ pozlarindan sunucuda uretilir). Ayni güne ikinci kayit backend'de 409
- * doner — cagiran ekran bu hatayi Türkçe mesaja cevirir.
+ * dogar; govde `status`/`worker_counts[]` TASIMAZ. GKS-F1.2a: `lines[]`
+ * ONIZLEMEDE girilen satirlari tasiyabilir (sunucu BIRLESTIRIR, silmez —
+ * iskelet yine BOQ pozlarindan sunucuda kurulur). Ayni güne ikinci kayit
+ * backend'de 409 doner — cagiran ekran bu hatayi Türkçe mesaja cevirir.
  */
 export function useCreateSiteDiaryEntry(
   siteId: string,

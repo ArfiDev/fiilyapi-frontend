@@ -7,6 +7,7 @@ import {
   buildSectionPickerOptions,
   diaryQuantityDecimal,
   type DiaryTreeBoqItem,
+  type DiaryTreeLine,
   type DiaryTreeSection,
 } from "./diary-lines-tree";
 import { addDiaryLines, diaryFormFromEntry, emptyDiaryForm, removeDiaryLine, type DiaryFormState } from "./form-state";
@@ -245,5 +246,74 @@ describe("diaryQuantityDecimal", () => {
     expect(diaryQuantityDecimal("2,5")).toBe("2.5");
     expect(diaryQuantityDecimal("-1")).toBeNull();
     expect(diaryQuantityDecimal("x")).toBeNull();
+  });
+});
+
+// GKS-F1.2a · önizleme: kimliksiz (kaydedilmemiş) iskelet satırı AYNI kurucudan geçer.
+function withoutId(source: SiteDiaryLineRead): DiaryTreeLine {
+  const copy: Partial<SiteDiaryLineRead> = { ...source };
+  delete copy.id;
+  return copy as DiaryTreeLine;
+}
+
+function previewLine(overrides: Partial<SiteDiaryLineRead> = {}): DiaryTreeLine {
+  return withoutId(line(overrides));
+}
+
+describe("buildDiaryLineTree · GKS-F1.2a kimliksiz önizleme satırı", () => {
+  it("kimliksiz satırlarla ağaç kurulur ve anahtarlar kayıtlı satırlarla AYNIDIR", () => {
+    const saved = buildDiaryLineTree({ lines: TUGLA, form: formFor(TUGLA), boqItems: BOQ, sections: SECTIONS });
+    const preview = buildDiaryLineTree({
+      lines: TUGLA.map(withoutId),
+      form: formFor(TUGLA),
+      boqItems: BOQ,
+      sections: SECTIONS,
+    });
+
+    expect(preview.flatMap((group) => group.leaves.map((leaf) => leaf.key))).toEqual(
+      saved.flatMap((group) => group.leaves.map((leaf) => leaf.key)),
+    );
+    expect(preview.find((group) => group.boqItemId === "duv")?.leaves.map((leaf) => leaf.key)).toEqual(["duv|", "duv|k610"]);
+  });
+
+  it("kimliksiz ÖKSÜZ satırlar sıra numarasıyla ayrı anahtar alır (çakışmaz)", () => {
+    const lines = [previewLine({ boq_item_id: null }), previewLine({ boq_item_id: null, code: "X" })];
+    const tree = buildDiaryLineTree({ lines, form: emptyDiaryForm("2026-09-24"), boqItems: [], sections: SECTIONS });
+
+    expect(tree.map((group) => group.key)).toEqual(["orphan:0", "orphan:1"]);
+  });
+
+  it("kimlikli öksüz satırın anahtarı bugünkü gibi `orphan:<id>`", () => {
+    const lines = [line({ id: "o", boq_item_id: null })];
+    const tree = buildDiaryLineTree({ lines, form: emptyDiaryForm("2026-09-24"), boqItems: [], sections: SECTIONS });
+
+    expect(tree[0].key).toBe("orphan:o");
+  });
+
+  it("isPreview: iskelet bölüm satırı KALDIRILAMAZ; kayıtlı akışta kaldırılabilir (değişmez)", () => {
+    const lines = TUGLA.map(withoutId);
+    const [preview] = buildDiaryLineTree({ lines, form: formFor(TUGLA), boqItems: [], sections: SECTIONS, isPreview: true });
+    const [saved] = buildDiaryLineTree({ lines: TUGLA, form: formFor(TUGLA), boqItems: [], sections: SECTIONS });
+
+    expect(preview.leaves.map((leaf) => [leaf.label, leaf.isRemovable])).toEqual([
+      ["Bölümsüz", false],
+      ["Kat 6–10", false],
+    ]);
+    expect(saved.leaves.map((leaf) => [leaf.label, leaf.isRemovable])).toEqual([
+      ["Bölümsüz", false],
+      ["Kat 6–10", true],
+    ]);
+  });
+
+  it("isPreview: yalnız `addedLines` (+ Bölüm) kaldırılabilir", () => {
+    const lines = TUGLA.map(withoutId);
+    const form = addDiaryLines(formFor(TUGLA), [{ boqItemId: "duv", sectionId: "k15", plannedQuantity: "0" }]);
+    const [group] = buildDiaryLineTree({ lines, form, boqItems: [], sections: SECTIONS, isPreview: true });
+
+    expect(group.leaves.map((leaf) => [leaf.label, leaf.isAdded, leaf.isRemovable])).toEqual([
+      ["Bölümsüz", false, false],
+      ["Kat 1–5", true, true],
+      ["Kat 6–10", false, false],
+    ]);
   });
 });
