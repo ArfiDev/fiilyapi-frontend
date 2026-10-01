@@ -163,6 +163,7 @@ describe("routes — Planlama raporları (Panel/GİR/QURR)", () => {
 
   it("kök ikizler parametresiz de çağrılabilir — eski çıplak yolla BİREBİR", () => {
     expect(routes.planning.budget()).toBe("/planlama/adam-saat-butcesi");
+    expect(routes.planning.workItemCatalog()).toBe("/planlama/is-kalemi-katalogu");
     expect(routes.planning.panel()).toBe("/planlama/panel");
     expect(routes.planning.dailyReport()).toBe("/planlama/gunluk-rapor");
     expect(routes.planning.weeklyReport()).toBe("/planlama/haftalik-qurr");
@@ -271,6 +272,7 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     ["sites.evWeeklyReport", routes.projects.sites.evWeeklyReport({ projectId: P, siteId: S })],
     ["planning.budget", routes.planning.budget()],
     ["planning.catalog", routes.planning.catalog()],
+    ["planning.workItemCatalog", routes.planning.workItemCatalog()],
     ["planning.panel", routes.planning.panel()],
     ["planning.dailyReport", routes.planning.dailyReport()],
     ["planning.weeklyReport", routes.planning.weeklyReport()],

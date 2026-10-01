@@ -4,19 +4,21 @@ import { useState } from "react";
 
 import { Modal } from "@/components/settings/Modal";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
-import { Button, Field, Input, Segmented } from "@/components/ui";
+import { Alert, Button, Field, Input, Segmented } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { cx } from "@/lib/cx";
 import { useCreateEvDiscipline, useUpdateEvDiscipline } from "@/lib/api/hooks/useEvDisciplines";
 import type { EvDisciplineRead } from "@/lib/api/models";
 
-import { CONTRACTOR_OPTIONS, DisciplineSwatch } from "./CatalogBits";
+import { CONTRACTOR_OPTIONS, DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 import { FormErrorBanner, groupProps } from "./FormErrorBanner";
 import {
   DISCIPLINE_CODE_MAX_LENGTH,
   DISCIPLINE_NAME_MAX_LENGTH,
+  codeChangeWarning,
   buildDisciplineCreateBody,
   buildDisciplineUpdateBody,
+  normalizeCode,
   disciplineColHint,
   disciplineFormFromRead,
   newDisciplineForm,
@@ -62,6 +64,7 @@ export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: 
     discipline && !DISCIPLINE_PALETTE.includes(discipline.color)
       ? [...DISCIPLINE_PALETTE, discipline.color]
       : DISCIPLINE_PALETTE;
+  const hasCodeChanged = discipline !== null && normalizeCode(form.code) !== discipline.code;
   const entries = paletteEntries(palette, existing, discipline);
 
   function patch(changes: Partial<DisciplineFormState>) {
@@ -156,6 +159,12 @@ export function DisciplineFormModal({ discipline, existing, onClose, onSaved }: 
             )}
           </Field>
         </div>
+
+        {hasCodeChanged && discipline.used_by_item_count > 0 && (
+          <Alert variant="warning" role="status" className="ev-cat-use-warn">
+            {codeChangeWarning(discipline.used_by_item_count)}
+          </Alert>
+        )}
 
         <Field
           label="Grafik rengi"

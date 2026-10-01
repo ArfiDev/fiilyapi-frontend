@@ -6,7 +6,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { useDeleteEvDiscipline } from "@/lib/api/hooks/useEvDisciplines";
 import type { EvDisciplineRead } from "@/lib/api/models";
 
-import { DisciplineSwatch } from "./CatalogBits";
+import { DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 
 interface DisciplineDeleteDialogProps {
   discipline: EvDisciplineRead;

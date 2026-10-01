@@ -10,6 +10,8 @@ import {
   useEvCatalog,
   useUpdateEvCatalogItem,
 } from "./useEvCatalog";
+import { CATALOG_ITEMS_QUERY_KEY } from "./useCatalogItems";
+import { EV_DISCIPLINES_QUERY_KEY } from "./catalog-query-keys";
 import { backendClient } from "@/lib/api/client";
 import { BackendError } from "@/lib/api/unwrap";
 import type { EvCatalogItemRead } from "@/lib/api/models";
@@ -20,6 +22,7 @@ vi.mock("@/lib/api/client", () => ({
 
 const ITEM: EvCatalogItemRead = {
   id: "i-bet",
+  poz_no: "KAB-0001",
   discipline: { id: "d-kab", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" },
   name: "Beton döküm",
   uom: "m³",
@@ -133,5 +136,79 @@ describe("katalog mutasyonları", () => {
     });
     expect((result.current.error as BackendError).status).toBe(409);
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+// TKL-F1.2 · ters yön: KAT yazması (disiplin değişimi yeni poz no üretir, T22) çekirdek
+// katalog önbelleğini de bayatlatır → `catalog-items` tazelenir.
+describe("KAT yazması çekirdek katalog önbelleğini tazeler", () => {
+  it("ekleme", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(ITEM, 201));
+    const { result } = renderHook(() => useCreateEvCatalogItem(), { wrapper });
+    act(() =>
+      result.current.mutate({
+        discipline_id: "d-kab",
+        name: "X",
+        uom: "m",
+        standard_unit_mhr: "1",
+        default_contractor_type: "own",
+      }),
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
+  });
+
+  it("güncelleme (disiplin değişimi dahil)", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok(ITEM));
+    const { result } = renderHook(() => useUpdateEvCatalogItem(), { wrapper });
+    act(() => result.current.mutate({ id: "i-bet", body: { discipline_id: "d-duv" } }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: [EV_CATALOG_QUERY_KEY] });
+  });
+
+  it("gerçekleşeni standart yap", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(ITEM));
+    const { result } = renderHook(() => useAdoptEvCatalogActual(), { wrapper });
+    act(() => result.current.mutate("i-bet"));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
+  });
+});
+
+// TKL-F1.3.1-6 · disiplin listesi `used_by_item_count` taşır (ÜS-13b kod uyarısı): kalem
+// yazması `["ev-disciplines"]`i tazelemezse uyarı bayat kalem sayısına bakar.
+describe("KAT kalem yazmaları disiplin listesini (ev-disciplines) tazeler", () => {
+  it("ekleme, güncelleme ve standart yap", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(ITEM, 201));
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok(ITEM));
+    const create = renderHook(() => useCreateEvCatalogItem(), { wrapper });
+    const update = renderHook(() => useUpdateEvCatalogItem(), { wrapper });
+    const adopt = renderHook(() => useAdoptEvCatalogActual(), { wrapper });
+    act(() =>
+      create.result.current.mutate({
+        discipline_id: "d-kab",
+        name: "X",
+        uom: "m",
+        standard_unit_mhr: "1",
+        default_contractor_type: "own",
+      }),
+    );
+    act(() => update.result.current.mutate({ id: "i-bet", body: { name: "Y" } }));
+    act(() => adopt.result.current.mutate("i-bet"));
+    await waitFor(() => {
+      expect(create.result.current.isSuccess).toBe(true);
+      expect(update.result.current.isSuccess).toBe(true);
+      expect(adopt.result.current.isSuccess).toBe(true);
+    });
+    const calls = invalidate.mock.calls.filter(
+      ([filters]) => JSON.stringify(filters) === JSON.stringify({ queryKey: [EV_DISCIPLINES_QUERY_KEY] }),
+    );
+    expect(calls).toHaveLength(3);
+    expect(EV_DISCIPLINES_QUERY_KEY).toBe("ev-disciplines");
   });
 });

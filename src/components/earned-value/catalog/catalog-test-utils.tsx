@@ -80,6 +80,7 @@ function ref(d: EvDisciplineRead) {
 /** B1 gerçeği: `actual` BOŞ, `diff_pct` null. */
 export const BETON: EvCatalogItemRead = {
   id: "i-bet",
+  poz_no: "KAB-0001",
   discipline: ref(KAB),
   name: "Beton döküm",
   uom: "m³",
@@ -94,6 +95,7 @@ export const BETON: EvCatalogItemRead = {
 export const DEMIR: EvCatalogItemRead = {
   ...BETON,
   id: "i-dem",
+  poz_no: "KAB-0002",
   name: "Demir",
   uom: "ton",
   standard_unit_mhr: "11.5000",
@@ -103,6 +105,7 @@ export const DEMIR: EvCatalogItemRead = {
 export const SIVA: EvCatalogItemRead = {
   ...BETON,
   id: "i-siv",
+  poz_no: "DUV-0001",
   discipline: ref(DUV),
   name: "İç sıva",
   uom: "m²",
@@ -116,6 +119,7 @@ export const SIVA: EvCatalogItemRead = {
 export const KALIP_WITH_ACTUAL: EvCatalogItemRead = {
   ...BETON,
   id: "i-kal",
+  poz_no: "KAB-0003",
   name: "Kalıp",
   uom: "m²",
   standard_unit_mhr: "0.8000",

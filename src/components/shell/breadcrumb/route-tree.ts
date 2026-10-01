@@ -388,6 +388,11 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
           label: "Birim Oran Kataloğu",
           href: () => routes.planning.catalog(),
         },
+        // TKL-F1.3 · fiyatlı İş Kalemi Kataloğu (`FİİL Yapı › Planlama › İş Kalemi Kataloğu`, KIK:71).
+        "is-kalemi-katalogu": {
+          label: "İş Kalemi Kataloğu",
+          href: () => routes.planning.workItemCatalog(),
+        },
         // PLN-F3.6a · Panel/GİR/QURR KÖK İKİZLERİ — `adam-saat-butcesi` ile
         // AYNI seviyede, K21 "İlerleme Raporları" parçası YOK (gruplanmaz).
         panel: { label: "Planlama Paneli", href: () => routes.planning.panel() },

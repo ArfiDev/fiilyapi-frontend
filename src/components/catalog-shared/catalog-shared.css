@@ -1,0 +1,26 @@
+/*
+ * TKL-F1.3 · KAT ile İş Kalemi Kataloğu'nun ORTAK rozet/kare kuralları
+ * (eskiden `earned-value/catalog/catalog.css`te; değerler BİREBİR taşındı).
+ */
+
+/* Disiplin rengi karesi — Bütçe:312; zemin VERİDEN (style) */
+.ev-cat-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  /* M6:417 — açık tonların kenarı: yarı saydam koyu çerçeve */
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+
+/* KAT:164 / :492 — Kendi / Taşeron rozeti */
+.ev-cat-own {
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  border-radius: 3px;
+}
+.ev-cat-own--own { color: var(--color-primary); background: var(--color-nav-active-bg); }
+.ev-cat-own--subcon { color: var(--color-text-secondary); background: var(--color-surface-muted); }

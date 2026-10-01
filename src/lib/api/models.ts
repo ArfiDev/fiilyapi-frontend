@@ -45,6 +45,14 @@ export type EvDisciplineUpdate = DeepScale<EvSchema["DisciplineUpdate"]>;
 export type EvCatalogItemRead = DeepScale<EvSchema["CatalogItemRead"]>;
 export type EvCatalogItemCreate = DeepScale<EvSchema["CatalogItemCreate"]>;
 export type EvCatalogItemUpdate = DeepScale<EvSchema["CatalogItemUpdate"]>;
+// TKL-F1.2 · Çekirdek İş Kalemi Kataloğu (`/catalog/*`, fiyatlı; `contracts` kapısı).
+// EV `CatalogItem*` takma adlarından AYRI: o uç fiyat taşımaz (sızıntı bekçisi B2).
+export type WorkItemRead = DeepScale<EvSchema["WorkItemRead"]>;
+export type WorkItemCreate = DeepScale<EvSchema["WorkItemCreate"]>;
+export type WorkItemUpdate = DeepScale<EvSchema["WorkItemUpdate"]>;
+export type WorkItemListResponse = DeepScale<EvSchema["WorkItemListResponse"]>;
+export type WorkDisciplineRead = DeepScale<EvSchema["WorkDisciplineRead"]>;
+export type WorkDisciplineListResponse = DeepScale<EvSchema["WorkDisciplineListResponse"]>;
 export type EvSettingsRead = DeepScale<EvSchema["SettingsRead"]>;
 export type EvSettingsSave = DeepScale<EvSchema["SettingsSave"]>;
 export type EvBudgetView = DeepScale<EvSchema["BudgetView"]>;

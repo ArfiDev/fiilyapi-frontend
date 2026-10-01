@@ -11,6 +11,8 @@ import {
   useUpdateEvDiscipline,
 } from "./useEvDisciplines";
 import { EV_CATALOG_QUERY_KEY } from "./useEvCatalog";
+import { CATALOG_ITEMS_QUERY_KEY } from "./useCatalogItems";
+import { CATALOG_DISCIPLINES_QUERY_KEY } from "./catalog-query-keys";
 import { backendClient } from "@/lib/api/client";
 import { BackendError } from "@/lib/api/unwrap";
 import type { EvDisciplineRead } from "@/lib/api/models";
@@ -131,5 +133,77 @@ describe("disiplin mutasyonları", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [EV_DISCIPLINES_QUERY_KEY] });
+  });
+});
+
+// TKL-F1.2 · T22: disiplin KODU değişince o disiplinin tüm poz no'ları yeniden yazılır →
+// çekirdek katalog (`catalog-items`) önbelleği de tazelenmeli (aksi halde eski numara kalır).
+describe("disiplin mutasyonları çekirdek katalog önbelleğini tazeler", () => {
+  it("kod güncellemesi catalog-items'ı geçersizler", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok({ ...KAB, code: "KBA" }));
+    const { result } = renderHook(() => useUpdateEvDiscipline(), { wrapper });
+    act(() => result.current.mutate({ id: "d-kab", body: { code: "KBA" } }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
+  });
+
+  it("ekleme ve silme de aynı görünümleri tazeler", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(KAB, 201));
+    vi.mocked(backendClient.DELETE).mockResolvedValue(ok(undefined, 204));
+    const created = renderHook(() => useCreateEvDiscipline(), { wrapper });
+    act(() =>
+      created.result.current.mutate({
+        code: "YNI",
+        name: "Yeni",
+        color: "#112233",
+        default_contractor_type: "own",
+        sort_order: 9,
+      }),
+    );
+    await waitFor(() => expect(created.result.current.isSuccess).toBe(true));
+    const deleted = renderHook(() => useDeleteEvDiscipline(), { wrapper });
+    act(() => deleted.result.current.mutate("d-kab"));
+    await waitFor(() => expect(deleted.result.current.isSuccess).toBe(true));
+    const hits = invalidate.mock.calls.filter(
+      (call) => (call[0] as { queryKey: string[] }).queryKey[0] === CATALOG_ITEMS_QUERY_KEY,
+    );
+    expect(hits).toHaveLength(2);
+  });
+});
+
+// TKL-F1.3.1-5 · çekirdek katalog ekranının disiplin çipleri `["catalog-disciplines"]`ten gelir;
+// KAT'taki disiplin yazması onu da tazelemezse yeni ekranda ad/renk/kod bayat kalır.
+describe("disiplin mutasyonları çekirdek disiplin listesini (catalog-disciplines) tazeler", () => {
+  it("ekleme, güncelleme ve silme", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(KAB, 201));
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok(KAB));
+    vi.mocked(backendClient.DELETE).mockResolvedValue(ok(undefined, 204));
+    const create = renderHook(() => useCreateEvDiscipline(), { wrapper });
+    const update = renderHook(() => useUpdateEvDiscipline(), { wrapper });
+    const remove = renderHook(() => useDeleteEvDiscipline(), { wrapper });
+    act(() =>
+      create.result.current.mutate({
+        code: "KAB",
+        name: "Kaba İnşaat",
+        color: "#2563eb",
+        default_contractor_type: "own",
+        sort_order: 1,
+      }),
+    );
+    act(() => update.result.current.mutate({ id: "d-kab", body: { name: "Kaba" } }));
+    act(() => remove.result.current.mutate("d-kab"));
+    await waitFor(() => {
+      expect(create.result.current.isSuccess).toBe(true);
+      expect(update.result.current.isSuccess).toBe(true);
+      expect(remove.result.current.isSuccess).toBe(true);
+    });
+    const calls = invalidate.mock.calls.filter(
+      ([filters]) => JSON.stringify(filters) === JSON.stringify({ queryKey: [CATALOG_DISCIPLINES_QUERY_KEY] }),
+    );
+    expect(calls).toHaveLength(3);
+    expect(CATALOG_DISCIPLINES_QUERY_KEY).toBe("catalog-disciplines");
   });
 });
