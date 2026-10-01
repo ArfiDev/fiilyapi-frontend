@@ -323,3 +323,37 @@ describe("BoqAssignmentCard — kaydedilmemiş değişiklik kaydı", () => {
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });
+
+// SZK-F2 — BOQ tahsis girişi de Numeric(14,3) sınırına tabidir (SZK-B1:
+// BoqItemAllocationInput 1e30 → 500 kusuru). Aşan giriş GÖRÜNÜR hata verir,
+// istek (okuma da yazma da) atılmaz.
+describe("hane sınırı (11 tam + 3 ondalık)", () => {
+  const DIGIT_MESSAGE = "En çok 11 tam ve 3 ondalık hane girilebilir.";
+
+  it.each(["123456789012", "0.0004"])(
+    "'%s' girişinde görünür hata basılır ve replace çağrılmaz",
+    async (typed) => {
+      const user = userEvent.setup();
+      renderEdit();
+      const input = screen.getByLabelText("03.001 için bu bölüme atanan miktar");
+      await user.clear(input);
+      await user.type(input, typed);
+      expect(input).toHaveAttribute("aria-invalid", "true");
+      await user.click(screen.getByRole("button", { name: "Atamaları Kaydet" }));
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(DIGIT_MESSAGE));
+      expect(screen.getByRole("alert")).toHaveTextContent("03.001");
+      expect(mutateAsync).not.toHaveBeenCalled();
+      expect(fetchBoqItemAllocations).not.toHaveBeenCalled();
+    },
+  );
+
+  it("sınırdaki değer (11 tam + 3 ondalık) hata vermez (karşıt kanıt)", async () => {
+    const user = userEvent.setup();
+    renderEdit();
+    const input = screen.getByLabelText("03.001 için bu bölüme atanan miktar");
+    await user.clear(input);
+    await user.type(input, "1.123");
+    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(screen.queryByText(DIGIT_MESSAGE)).not.toBeInTheDocument();
+  });
+});

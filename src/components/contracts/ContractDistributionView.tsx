@@ -16,6 +16,7 @@ import { distributeRemaining } from "@/lib/distribute-remaining";
 import {
   buildDistributionSaveBody,
   distributionCellKey,
+  distributionCellLimitMessage,
   distributionRejectionMessage,
   type DistributionCellEdit,
 } from "@/lib/contract-distribution-save";
@@ -138,6 +139,12 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
     setDistributeNotices([]);
     const build = buildDistributionSaveBody([...edits.values()]);
 
+    if (build.cellLimitExceeded) {
+      setRejectionMessages([distributionCellLimitMessage()]);
+      setSaveError(null);
+      setIsSaved(false);
+      return;
+    }
     // 🛑 Reddedilen hücre varsa istek HİÇ ATILMAZ.
     if (build.rejections.length > 0) {
       setRejectionMessages(

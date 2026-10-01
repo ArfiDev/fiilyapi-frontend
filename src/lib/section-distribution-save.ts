@@ -2,6 +2,8 @@ import type { components } from "@/lib/api/schema";
 import type { DeepScale } from "@/lib/api/scale";
 import {
   parseCellValue,
+  QUANTITY_DIGIT_LIMITS,
+  QUANTITY_DIGIT_LIMIT_MESSAGE,
   type CellDigitLimits,
   type DigitLimitedRejectionReason,
 } from "@/lib/contract-distribution-save";
@@ -19,11 +21,8 @@ export type SectionDistributionCellInput = DeepScale<components["schemas"]["Sect
 /** openapi `SectionDistributionSave.allocations.maxItems` ile AYNI değer (bkz. test). */
 export const SECTION_DISTRIBUTION_MAX_CELLS = 20000;
 
-/** Kolon `Numeric(14, 3)`: 14 hane toplam, 3 ondalık ⇒ en çok 11 tam hane. */
-export const SECTION_QUANTITY_LIMITS: CellDigitLimits = {
-  maxWholeDigits: 11,
-  maxDecimalDigits: 3,
-};
+/** Ortak sınır (`QUANTITY_DIGIT_LIMITS`) — ikinci kopya yok. */
+export const SECTION_QUANTITY_LIMITS: CellDigitLimits = QUANTITY_DIGIT_LIMITS;
 
 export interface SectionDistributionCellEdit {
   boqItemId: string;
@@ -55,7 +54,7 @@ export function sectionDistributionRejectionMessage(
     return "Miktar 0 olamaz — dağılımı kaldırmak için hücreyi boş bırakın.";
   }
   if (reason === "digits") {
-    return "En çok 11 tam ve 3 ondalık hane girilebilir.";
+    return QUANTITY_DIGIT_LIMIT_MESSAGE;
   }
   return "Miktar geçerli bir sayı olmalı (negatif değer kabul edilmez).";
 }

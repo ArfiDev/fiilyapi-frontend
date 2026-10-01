@@ -27,6 +27,7 @@ function item(overrides: Partial<BoqItem> = {}): BoqItem {
     unit_price: "1850.00",
     amount: "2220000.00",
     sort_order: 0,
+    contract_item_id: null,
     progress_pct: placeholder("progress_payments"),
     ...overrides,
   };

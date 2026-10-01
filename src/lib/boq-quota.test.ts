@@ -19,6 +19,7 @@ function row(fields: Pick<BoqItem, "quantity" | "allocated_quantity" | "unalloca
     progress_pct: { available: false, value: null, pending_module: "contracts" },
     sort_order: 0,
     amount: "0",
+    contract_item_id: null,
     ...fields,
   };
 }

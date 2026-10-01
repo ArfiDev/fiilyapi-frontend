@@ -7,6 +7,10 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import { multiplyDecimalStrings, normalizeDecimalInput, sumDecimalStrings } from "@/lib/decimal";
 import { siteQuotaOf } from "@/lib/boq-quota";
+import {
+  exceedsQuantityDigitLimits,
+  QUANTITY_DIGIT_LIMIT_MESSAGE,
+} from "@/lib/contract-distribution-save";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { useBoq, type BoqItem } from "@/lib/api/hooks/useBoq";
@@ -205,6 +209,11 @@ function LiveCard({
       const normalized = normalizeDecimalInput(rawQuantity);
       if (rawQuantity.trim() !== "" && normalized === null) {
         failures.push(`${label}: geçersiz miktar`);
+        continue;
+      }
+      // Numeric(14,3) sınırı: aşan giriş backend'e GİTMEZ (1e30 → 500 kusuru).
+      if (normalized !== null && exceedsQuantityDigitLimits(normalized)) {
+        failures.push(`${label}: ${QUANTITY_DIGIT_LIMIT_MESSAGE}`);
         continue;
       }
       try {
@@ -407,7 +416,8 @@ function AssignmentRowView({
     sectionCurrentQuantity: row.sectionQuantity,
     nextQuantity: normalized,
   });
-  const isInvalid = raw.trim() !== "" && normalized === null;
+  const isTooPrecise = normalized !== null && exceedsQuantityDigitLimits(normalized);
+  const isInvalid = (raw.trim() !== "" && normalized === null) || isTooPrecise;
   const amount = multiplyDecimalStrings(row.effectiveQuantity, row.item.unit_price);
 
   return (
@@ -415,6 +425,9 @@ function AssignmentRowView({
       <td>{row.item.code}</td>
       <td>
         {row.item.description}
+        {isTooPrecise && (
+          <span className="sf-boq-table__warn">{QUANTITY_DIGIT_LIMIT_MESSAGE}</span>
+        )}
         {check.isOvershoot && (
           <span className="sf-boq-table__warn">
             Kalan kotayı {formatQuantity(check.excess)} {row.item.unit} aşıyor — en fazla{" "}

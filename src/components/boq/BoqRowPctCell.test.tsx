@@ -39,6 +39,7 @@ function item(progress: Metric): BoqItem {
     sort_order: 10,
     allocated_quantity: "0.000",
     unallocated_quantity: "1200.000",
+    contract_item_id: null,
   };
 }
 
