@@ -96,25 +96,41 @@ export function validateEmployerUnitPriceField(
   return null;
 }
 
-/** Ortak alanların doğrulaması — iki formda da AYNI sırayla koşar. */
-function validateCommon(values: ContractItemFormValues): ContractItemFormProblem | null {
-  if (!values.code.trim()) return { field: "code", message: "Poz No zorunludur." };
-  if (tooLong(values.code, MAX_LENGTH.code))
+/** Poz No: zorunlu + `maxLength` — form ve satır-içi hücre AYNI kuralı kullanır. */
+export function validateCodeField(raw: string): ContractItemFormProblem | null {
+  if (!raw.trim()) return { field: "code", message: "Poz No zorunludur." };
+  if (tooLong(raw, MAX_LENGTH.code))
     return { field: "code", message: `Poz No en fazla ${MAX_LENGTH.code} karakter olabilir.` };
+  return null;
+}
 
-  if (!values.description.trim())
-    return { field: "description", message: "İş Kalemi Tanımı zorunludur." };
-  if (tooLong(values.description, MAX_LENGTH.description))
+/** İş Kalemi Tanımı: zorunlu + `maxLength`. */
+export function validateDescriptionField(raw: string): ContractItemFormProblem | null {
+  if (!raw.trim()) return { field: "description", message: "İş Kalemi Tanımı zorunludur." };
+  if (tooLong(raw, MAX_LENGTH.description))
     return {
       field: "description",
       message: `İş Kalemi Tanımı en fazla ${MAX_LENGTH.description} karakter olabilir.`,
     };
+  return null;
+}
 
-  if (!values.unit.trim()) return { field: "unit", message: "Birim zorunludur." };
-  if (tooLong(values.unit, MAX_LENGTH.unit))
+/** Birim: zorunlu + `maxLength`. */
+export function validateUnitField(raw: string): ContractItemFormProblem | null {
+  if (!raw.trim()) return { field: "unit", message: "Birim zorunludur." };
+  if (tooLong(raw, MAX_LENGTH.unit))
     return { field: "unit", message: `Birim en fazla ${MAX_LENGTH.unit} karakter olabilir.` };
+  return null;
+}
 
-  return validateQuantityField(values.quantity);
+/** Ortak alanların doğrulaması — iki formda da AYNI sırayla koşar. */
+function validateCommon(values: ContractItemFormValues): ContractItemFormProblem | null {
+  return (
+    validateCodeField(values.code) ??
+    validateDescriptionField(values.description) ??
+    validateUnitField(values.unit) ??
+    validateQuantityField(values.quantity)
+  );
 }
 
 /** `Sıra` boş bırakılabilir; doluysa negatif olmayan tam sayıdır. */

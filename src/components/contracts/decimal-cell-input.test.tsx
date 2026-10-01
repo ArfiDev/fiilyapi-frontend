@@ -114,7 +114,7 @@ describe("İşveren poz tablosu satır-içi hücreleri — Türkçe virgül SESS
         onAddItem={vi.fn()}
         onCommitItem={vi.fn()}
         onCreateItem={vi.fn().mockResolvedValue(true)}
-        isBusy={false}
+        isCreating={false}
         saveError={null}
       />,
     );

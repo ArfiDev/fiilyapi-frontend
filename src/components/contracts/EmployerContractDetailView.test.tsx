@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within, fireEvent, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { EmployerContractDetailView } from "./EmployerContractDetailView";
 import {
@@ -37,14 +38,17 @@ vi.mock("@/lib/api/hooks/useProgressPayments", async (importOriginal) => ({
 // çağırır; bu dosyada QueryClientProvider yoktur, bu yüzden yazma hook'ları
 // sahtelenir. Casuslar test başında `beforeEach`te sıfırlanır.
 const createItemMutateAsync = vi.fn(async (body: unknown) => body);
+// Hücre PATCH'i `mutateAsync` ile atılır (paralel çağrıların her biri kendi
+// sözüne sahip olsun diye); varsayılan: hemen çözülür (beforeEach'te kurulur).
 const updateItemMutate = vi.fn();
+let updateIsPending = false;
 vi.mock("@/lib/api/hooks/useContractMutations", () => ({
   useCreateEmployerContractItem: () => ({
     mutateAsync: createItemMutateAsync,
     isPending: false,
   }),
   useCreateEmployerContractGroup: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateEmployerContractItem: () => ({ mutate: updateItemMutate, isPending: false }),
+  useUpdateEmployerContractItem: () => ({ mutateAsync: updateItemMutate, isPending: updateIsPending }),
 }));
 vi.mock("@/lib/api/hooks/useProjects", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useProjects")>()),
@@ -257,6 +261,11 @@ function mockAll({
 describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // `clearAllMocks` implementasyonu SIFIRLAMAZ — önceki testin
+    // `mockImplementation`ı sızmasın diye açıkça sıfırla.
+    updateItemMutate.mockReset();
+    updateItemMutate.mockResolvedValue(undefined);
+    updateIsPending = false;
     searchParams = new URLSearchParams();
   });
 
@@ -800,7 +809,7 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       expect(screen.getByLabelText("03.001 birim fiyatı")).toHaveValue("1850");
     });
 
-    it("odak çıkışında (emsal tetikleyicisi) yalnız DEĞİŞEN alan PATCH'lenir", () => {
+    it("odak çıkışında (emsal tetikleyicisi) yalnız DEĞİŞEN alan PATCH'lenir", async () => {
       renderItemsTab();
 
       const quantity = screen.getByLabelText("03.002 miktar");
@@ -812,15 +821,33 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
         itemId: "ci-2",
         body: { quantity: "700" },
       });
+      await act(async () => {});
     });
 
-    it("değeri değişmeyen hücre odak çıkışında istek UÇURMAZ", () => {
+    it("dokunulmamış hücre odak çıkışında istek UÇURMAZ", () => {
       renderItemsTab();
 
-      const price = screen.getByLabelText("03.001 birim fiyatı");
-      fireEvent.blur(price);
-      fireEvent.change(price, { target: { value: "1850" } });
-      fireEvent.blur(price);
+      fireEvent.blur(screen.getByLabelText("03.001 birim fiyatı"));
+
+      expect(updateItemMutate).not.toHaveBeenCalled();
+    });
+
+    // 🔴 Eski sürüm görünen değeri AYNEN yazıyordu: React onChange tetiklemez,
+    // yani yalnız "dokunulmadı" yolu ölçülürdü. Burada değer GERÇEKTEN değişir,
+    // sonra eskisine döner (taslak vardır, sunucu değeriyle eşittir).
+    it.each([
+      ["03.001 birim fiyatı", "1850"],
+      ["03.001 miktar", "3200"],
+      ["03.001 poz no", "03.001"],
+      ["03.001 poz adı", "Kat Döşemesi Betonu C25/30"],
+    ])("%s: değişip aynı değere dönen hücre istek UÇURMAZ", (label, original) => {
+      renderItemsTab();
+
+      const cell = screen.getByLabelText(label);
+      fireEvent.change(cell, { target: { value: `${original}9` } });
+      expect(cell).toHaveValue(`${original}9`);
+      fireEvent.change(cell, { target: { value: original } });
+      fireEvent.blur(cell);
 
       expect(updateItemMutate).not.toHaveBeenCalled();
     });
@@ -856,7 +883,7 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       );
     });
 
-    it("birim fiyat SIFIR kabul edilir — miktarla AYNI kural sanılmaz", () => {
+    it("birim fiyat SIFIR kabul edilir — miktarla AYNI kural sanılmaz", async () => {
       renderItemsTab();
 
       const price = screen.getByLabelText("03.002 birim fiyatı");
@@ -868,6 +895,298 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
         itemId: "ci-2",
         body: { unit_price: "0" },
       });
+      await act(async () => {});
+    });
+  });
+
+  describe("İş Kalemleri · SZK-F1 sunucu 409 metinleri AYNEN basılır", () => {
+    const CONFLICTS = [
+      "Bu poz numarası hedef şantiyede zaten kullanılıyor: Ataşehir Konutları · 03.001",
+      "Bu poz numarası bu sözleşmede zaten kullanılıyor",
+    ];
+    it.each(CONFLICTS)("409 detail %s hata bandında görünür", async (detail) => {
+      updateItemMutate.mockRejectedValueOnce(new BackendError(409, { detail }));
+      searchParams = new URLSearchParams("tab=items");
+      mockAll();
+      render(<EmployerContractDetailView projectId="p-1" />);
+
+      const code = screen.getByLabelText("03.002 poz no");
+      fireEvent.change(code, { target: { value: "03.001" } });
+      fireEvent.blur(code);
+
+      expect(updateItemMutate.mock.calls[0][0]).toEqual({
+        itemId: "ci-2",
+        body: { code: "03.001" },
+      });
+      expect(await screen.findByTestId("ecd-items-error-message")).toHaveTextContent(detail);
+      expect(screen.getByTestId("ecd-items-error-message").textContent).toBe(detail);
+      // Etiket: poz kodu · alan adı.
+      expect(screen.getByTestId("ecd-items-error-line").textContent).toBe(`03.002 · Poz No: ${detail}`);
+    });
+  });
+
+  /**
+   * ORTA-2 · hücre kilidi. Var olan satır hücreleri update PATCH'i uçarken
+   * KİLİTLENMEZ; yalnız uçuştaki HÜCRE (kalem+alan) kilitlenir.
+   */
+  describe("İş Kalemleri · uçuştaki PATCH ve hücre kilidi (Tab akışı + yarış)", () => {
+    function deferred() {
+      let resolve!: () => void;
+      const promise = new Promise<void>((r) => {
+        resolve = r;
+      });
+      return { promise, resolve };
+    }
+    function renderItems() {
+      searchParams = new URLSearchParams("tab=items");
+      mockAll();
+      render(<EmployerContractDetailView projectId="p-1" />);
+    }
+
+    it("Tab ile poz no → poz adı → birim: PATCH'ler BEKLERKEN odak komşuda kalır, yazılanlar kaybolmaz", async () => {
+      updateItemMutate.mockImplementation(() => new Promise<void>(() => {}));
+      const user = userEvent.setup();
+      renderItems();
+
+      const code = screen.getByLabelText("03.001 poz no");
+      await user.click(code);
+      await user.type(code, "X");
+      await user.tab();
+
+      const name = screen.getByLabelText("03.001 poz adı");
+      expect(document.activeElement).toBe(name);
+      expect(name).not.toBeDisabled();
+      await user.type(name, "Y");
+      expect(name).toHaveValue("Kat Döşemesi Betonu C25/30Y");
+      await user.tab();
+
+      expect(document.activeElement).toBe(screen.getByLabelText("03.001 birimi"));
+      expect(updateItemMutate.mock.calls.map((c) => c[0])).toEqual([
+        { itemId: "ci-1", body: { code: "03.001X" } },
+        { itemId: "ci-1", body: { description: "Kat Döşemesi Betonu C25/30Y" } },
+      ]);
+    });
+
+    it("uçuştaki hücre kilitli, komşu hücreler açık; kilit PATCH dönünce kalkar", async () => {
+      const first = deferred();
+      updateItemMutate.mockReturnValueOnce(first.promise);
+      renderItems();
+
+      const code = screen.getByLabelText("03.001 poz no");
+      fireEvent.change(code, { target: { value: "03.099" } });
+      fireEvent.blur(code);
+
+      expect(screen.getByLabelText("03.001 poz no")).toBeDisabled();
+      // Aynı satırın komşuları ve diğer satır AÇIK.
+      for (const label of ["03.001 poz adı", "03.001 miktar", "03.001 birim fiyatı", "03.002 poz no"]) {
+        expect(screen.getByLabelText(label)).not.toBeDisabled();
+      }
+      // Uçuşta kilitli hücrede gösterilen değer yeni (taslak) değerdir.
+      expect(screen.getByLabelText("03.001 poz no")).toHaveValue("03.099");
+
+      await act(async () => first.resolve());
+      expect(screen.getByLabelText("03.001 poz no")).not.toBeDisabled();
+    });
+
+    it("AYNI alana iki PATCH: ikincisi ilki bitmeden ATILAMAZ, ilk bitince sırayla gider (ekranda ikincinin değeri kalır)", async () => {
+      const first = deferred();
+      updateItemMutate.mockReturnValueOnce(first.promise);
+      renderItems();
+
+      const qty = screen.getByLabelText("03.001 miktar");
+      fireEvent.change(qty, { target: { value: "100" } });
+      fireEvent.blur(qty);
+      // İlk PATCH sürerken hücre kilitli: ikinci düzenleme yapılamaz.
+      expect(screen.getByLabelText("03.001 miktar")).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("03.001 miktar"), { target: { value: "200" } });
+      fireEvent.blur(screen.getByLabelText("03.001 miktar"));
+      expect(updateItemMutate).toHaveBeenCalledTimes(1);
+
+      await act(async () => first.resolve());
+      const again = screen.getByLabelText("03.001 miktar");
+      fireEvent.change(again, { target: { value: "200" } });
+      fireEvent.blur(again);
+
+      expect(updateItemMutate.mock.calls.map((c) => c[0])).toEqual([
+        { itemId: "ci-1", body: { quantity: "100" } },
+        { itemId: "ci-1", body: { quantity: "200" } },
+      ]);
+      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("200");
+      await act(async () => {});
+    });
+
+    it("FARKLI alanlara iki PATCH paralel uçar: ilki geç dönse de ikisinin değeri ekranda kalır, gövdeler karışmaz", async () => {
+      const slow = deferred();
+      updateItemMutate.mockReturnValueOnce(slow.promise);
+      renderItems();
+
+      const name = screen.getByLabelText("03.001 poz adı");
+      fireEvent.change(name, { target: { value: "Yeni ad" } });
+      fireEvent.blur(name);
+      const price = screen.getByLabelText("03.001 birim fiyatı");
+      fireEvent.change(price, { target: { value: "2000" } });
+      fireEvent.blur(price);
+      await act(async () => {}); // ikinci PATCH (hemen çözülen) biter
+
+      expect(updateItemMutate.mock.calls.map((c) => c[0])).toEqual([
+        { itemId: "ci-1", body: { description: "Yeni ad" } },
+        { itemId: "ci-1", body: { unit_price: "2000" } },
+      ]);
+      // Yavaş PATCH sürerken: o hücre taslağı gösterir, kilitli; öteki açık.
+      expect(screen.getByLabelText("03.001 poz adı")).toBeDisabled();
+      expect(screen.getByLabelText("03.001 poz adı")).toHaveValue("Yeni ad");
+      expect(screen.getByLabelText("03.001 birim fiyatı")).not.toBeDisabled();
+
+      await act(async () => slow.resolve());
+      expect(screen.getByLabelText("03.001 poz adı")).not.toBeDisabled();
+    });
+
+    it("güncelleme isPending iken BÜTÜN satır hücreleri açık kalır (eski global kilit geri gelmesin)", () => {
+      updateIsPending = true;
+      renderItems();
+
+      for (const field of ["poz no", "poz adı", "birimi", "miktar", "birim fiyatı"]) {
+        expect(screen.getByLabelText(`03.001 ${field}`)).not.toBeDisabled();
+      }
+    });
+
+    it("hata görünürlüğü: poz no 409 → başka hücre BAŞARIYLA kaydedilir → poz no hatası HÂLÂ görünür", async () => {
+      updateItemMutate.mockRejectedValueOnce(new BackendError(409, { detail: "Çakışma" }));
+      renderItems();
+
+      fireEvent.change(screen.getByLabelText("03.001 poz no"), { target: { value: "03.002" } });
+      fireEvent.blur(screen.getByLabelText("03.001 poz no"));
+      await screen.findByText("Çakışma");
+
+      const name = screen.getByLabelText("03.001 poz adı");
+      fireEvent.change(name, { target: { value: "Yeni ad" } });
+      await act(async () => {
+        fireEvent.blur(name);
+      });
+
+      expect(updateItemMutate).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId("ecd-items-error")).toHaveTextContent("03.001 · Poz No: Çakışma");
+    });
+
+    it("hata görünürlüğü: poz no 409 → aynı hücre düzeltilip kaydedilir → YALNIZ o hata kalkar", async () => {
+      updateItemMutate
+        .mockRejectedValueOnce(new BackendError(409, { detail: "Poz no çakışması" }))
+        .mockRejectedValueOnce(new BackendError(409, { detail: "Ad çakışması" }));
+      renderItems();
+
+      fireEvent.change(screen.getByLabelText("03.001 poz no"), { target: { value: "03.002" } });
+      fireEvent.blur(screen.getByLabelText("03.001 poz no"));
+      await screen.findByText("Poz no çakışması");
+      fireEvent.change(screen.getByLabelText("03.001 poz adı"), { target: { value: "Yeni ad" } });
+      fireEvent.blur(screen.getByLabelText("03.001 poz adı"));
+      await screen.findByText("Ad çakışması");
+
+      // Paralel iki ret: ikisi de bantta.
+      expect(screen.getAllByTestId("ecd-items-error-line")).toHaveLength(2);
+
+      // Poz no düzeltilir, bu sefer başarılı → yalnız onun hatası kalkar.
+      const code = screen.getByLabelText("03.001 poz no");
+      fireEvent.change(code, { target: { value: "03.777" } });
+      await act(async () => {
+        fireEvent.blur(code);
+      });
+
+      expect(screen.queryByText("Poz no çakışması")).not.toBeInTheDocument();
+      expect(screen.getByText("Ad çakışması")).toBeInTheDocument();
+    });
+
+    it("uçuşta birim seçimi KAYBOLMAZ: seçici yeni değeri gösterir, PATCH dönünce son seçim tek ek istekle gider", async () => {
+      const first = deferred();
+      updateItemMutate.mockReturnValueOnce(first.promise);
+      renderItems();
+
+      const unit = screen.getByLabelText("03.001 birimi");
+      fireEvent.change(unit, { target: { value: "m²" } });
+      expect(screen.getByLabelText("03.001 birimi")).toHaveAttribute("aria-busy", "true");
+      fireEvent.change(screen.getByLabelText("03.001 birimi"), { target: { value: "Adet" } });
+      fireEvent.change(screen.getByLabelText("03.001 birimi"), { target: { value: "Kg" } });
+      expect(screen.getByLabelText("03.001 birimi")).toHaveValue("Kg");
+      expect(updateItemMutate).toHaveBeenCalledTimes(1);
+
+      await act(async () => first.resolve());
+
+      // İkiden fazla seçimde YALNIZ sonuncusu gider.
+      expect(updateItemMutate.mock.calls.map((c) => c[0])).toEqual([
+        { itemId: "ci-1", body: { unit: "m²" } },
+        { itemId: "ci-1", body: { unit: "Kg" } },
+      ]);
+      expect(screen.getByLabelText("03.001 birimi")).not.toHaveAttribute("aria-busy");
+    });
+
+    it("uçuşta seçilen birim sunucu değerine geri dönerse ek istek ATILMAZ", async () => {
+      const first = deferred();
+      updateItemMutate.mockReturnValueOnce(first.promise);
+      renderItems();
+
+      fireEvent.change(screen.getByLabelText("03.001 birimi"), { target: { value: "m²" } });
+      fireEvent.change(screen.getByLabelText("03.001 birimi"), { target: { value: "m³" } });
+      await act(async () => first.resolve());
+
+      expect(updateItemMutate).toHaveBeenCalledTimes(1);
+    });
+
+    it("PATCH reddedilirse hücre kilidi kalkar, hata bandı basılır, hücre sunucu değerine döner", async () => {
+      updateItemMutate.mockRejectedValueOnce(new BackendError(409, { detail: "Çakışma" }));
+      renderItems();
+
+      const code = screen.getByLabelText("03.002 poz no");
+      fireEvent.change(code, { target: { value: "03.001" } });
+      fireEvent.blur(code);
+
+      expect(await screen.findByTestId("ecd-items-error")).toHaveTextContent("Çakışma");
+      expect(screen.getByLabelText("03.002 poz no")).not.toBeDisabled();
+      expect(screen.getByLabelText("03.002 poz no")).toHaveValue("03.002");
+    });
+  });
+
+  describe("İş Kalemleri · SERVER_FIELD eşlemesi (çarpışan fikstür)", () => {
+    function renderColliding() {
+      searchParams = new URLSearchParams("tab=items");
+      const group = ITEMS.groups[0];
+      mockAll({
+        items: {
+          groups: [
+            {
+              ...group,
+              // Alanlar BİLEREK çarpışır: yanlış eşleme yanlış alanla kıyaslar.
+              items: [{ ...group.items[0], code: "m²", description: "m³", unit: "m³" }],
+            },
+          ],
+        } as EmployerContractItemsResponse,
+      });
+      render(<EmployerContractDetailView projectId="p-1" />);
+    }
+
+    it("poz adı: değişip aynı değere dönünce istek yok (description sunucu değeriyle kıyaslanır, unit/code ile DEĞİL)", () => {
+      renderColliding();
+      const name = screen.getByLabelText("m² poz adı");
+      fireEvent.change(name, { target: { value: "başka" } });
+      fireEvent.change(name, { target: { value: "m³" } });
+      fireEvent.blur(name);
+      expect(updateItemMutate).not.toHaveBeenCalled();
+    });
+
+    it("birim: code ('m²') ile kıyaslanmaz — 'm²'ye değişim PATCH atar", async () => {
+      renderColliding();
+      fireEvent.change(screen.getByLabelText("m² birimi"), { target: { value: "m²" } });
+      expect(updateItemMutate).toHaveBeenCalledTimes(1);
+      expect(updateItemMutate.mock.calls[0][0]).toEqual({ itemId: "ci-1", body: { unit: "m²" } });
+      await act(async () => {});
+    });
+
+    it("poz no: description ('m³') ile kıyaslanmaz — 'm³'e değişim PATCH atar", async () => {
+      renderColliding();
+      const code = screen.getByLabelText("m² poz no");
+      fireEvent.change(code, { target: { value: "m³" } });
+      fireEvent.blur(code);
+      expect(updateItemMutate).toHaveBeenCalledTimes(1);
+      expect(updateItemMutate.mock.calls[0][0]).toEqual({ itemId: "ci-1", body: { code: "m³" } });
+      await act(async () => {});
     });
   });
 

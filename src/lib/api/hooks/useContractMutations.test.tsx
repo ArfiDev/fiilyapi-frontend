@@ -274,6 +274,33 @@ describe("useUpdateEmployerContractItem · F-ISVPOZ satır-içi düzenleme", () 
     }
   });
 
+  it("mutasyon, tazeleme (invalidate) BİTENE dek çözülmez — hücre kilidi bayat değerle açılmasın", async () => {
+    vi.mocked(backendClient.PATCH).mockResolvedValue({
+      data: PATCHED,
+      error: undefined,
+      response: new Response(),
+    } as never);
+    const finishers: Array<() => void> = [];
+    vi.spyOn(client, "invalidateQueries").mockImplementation(
+      () => new Promise<void>((resolve) => { finishers.push(resolve); }),
+    );
+
+    const { result } = renderHook(() => useUpdateEmployerContractItem(PROJECT_ID), { wrapper });
+    let settled = false;
+    await act(async () => {
+      void result.current
+        .mutateAsync({ itemId: "ci-1", body: { quantity: "1500" } })
+        .then(() => { settled = true; });
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(backendClient.PATCH).toHaveBeenCalled());
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(settled).toBe(false);
+
+    await act(async () => finishers.forEach((finish) => finish()));
+    await waitFor(() => expect(settled).toBe(true));
+  });
+
   it("backend hatasında hiçbir önbellek tazelenmez", async () => {
     vi.mocked(backendClient.PATCH).mockResolvedValue({
       data: undefined,

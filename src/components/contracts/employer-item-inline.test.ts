@@ -9,6 +9,13 @@ import { commitInlineCell } from "./employer-item-inline";
  * ancak burada bekçilenir.
  */
 describe("commitInlineCell · satır-içi hücre kaydetme kararı", () => {
+  // 🔴 Metin alanları `decimalInputValue`dan GEÇMEZ: "03.010" ondalık gösterimde
+  // "03.01"e düşer ve değişmemiş kod her blur'da PATCH atardı.
+  it("sonu sıfırla biten poz kodu değişmediyse noop (metin ondalık sayılmaz)", () => {
+    expect(commitInlineCell("code", "03.010", "03.010")).toEqual({ kind: "noop" });
+    expect(commitInlineCell("code", " 03.010 ", "03.010")).toEqual({ kind: "noop" });
+  });
+
   it("dokunulmamış hücre istek UÇURMAZ", () => {
     expect(commitInlineCell("quantity", undefined, "3200.000")).toEqual({ kind: "noop" });
   });
@@ -82,6 +89,63 @@ describe("commitInlineCell · satır-içi hücre kaydetme kararı", () => {
     expect(commitInlineCell("unitPrice", "", "1850.00")).toEqual({
       kind: "error",
       message: "Birim Fiyat zorunludur.",
+    });
+  });
+
+  describe("metin alanları (poz no · ad · birim)", () => {
+    it("trim'li değer sunucu değerine eşitse istek UÇMAZ", () => {
+      expect(commitInlineCell("code", " 03.001 ", "03.001")).toEqual({ kind: "noop" });
+      expect(commitInlineCell("description", "Grobeton", "Grobeton")).toEqual({ kind: "noop" });
+      expect(commitInlineCell("unit", "m³", "m³")).toEqual({ kind: "noop" });
+    });
+
+    it("dokunulmamış metin hücresi noop", () => {
+      expect(commitInlineCell("code", undefined, "03.001")).toEqual({ kind: "noop" });
+    });
+
+    it("değişen alan YALNIZ kendi gövdesini taşır", () => {
+      expect(commitInlineCell("code", " 03.002 ", "03.001")).toEqual({
+        kind: "patch",
+        body: { code: "03.002" },
+      });
+      expect(commitInlineCell("description", "Yeni ad", "Grobeton")).toEqual({
+        kind: "patch",
+        body: { description: "Yeni ad" },
+      });
+      expect(commitInlineCell("unit", "m²", "m³")).toEqual({
+        kind: "patch",
+        body: { unit: "m²" },
+      });
+    });
+
+    it("boş poz no / ad / birim reddedilir (form kuralının metni)", () => {
+      expect(commitInlineCell("code", "  ", "03.001")).toEqual({
+        kind: "error",
+        message: "Poz No zorunludur.",
+      });
+      expect(commitInlineCell("description", "", "Grobeton")).toEqual({
+        kind: "error",
+        message: "İş Kalemi Tanımı zorunludur.",
+      });
+      expect(commitInlineCell("unit", "", "m³")).toEqual({
+        kind: "error",
+        message: "Birim zorunludur.",
+      });
+    });
+
+    it("maxLength aşımı reddedilir", () => {
+      expect(commitInlineCell("code", "x".repeat(51), "03.001")).toEqual({
+        kind: "error",
+        message: "Poz No en fazla 50 karakter olabilir.",
+      });
+      expect(commitInlineCell("description", "x".repeat(2001), "Grobeton")).toEqual({
+        kind: "error",
+        message: "İş Kalemi Tanımı en fazla 2000 karakter olabilir.",
+      });
+      expect(commitInlineCell("unit", "x".repeat(51), "m³")).toEqual({
+        kind: "error",
+        message: "Birim en fazla 50 karakter olabilir.",
+      });
     });
   });
 });

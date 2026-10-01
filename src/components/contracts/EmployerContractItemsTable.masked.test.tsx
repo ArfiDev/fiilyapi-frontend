@@ -71,7 +71,7 @@ function renderTable(remaining: string | null) {
       onAddItem={vi.fn()}
       onCommitItem={vi.fn()}
       onCreateItem={vi.fn().mockResolvedValue(true)}
-      isBusy={false}
+      isCreating={false}
       saveError={null}
     />,
   );

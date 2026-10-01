@@ -81,14 +81,22 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
   const [saveError, setSaveError] = useState<string | null>(null);
   const updateItem = useUpdateEmployerContractItem(projectId);
   const createItem = useCreateEmployerContractItem(projectId);
-  const isItemBusy = updateItem.isPending || createItem.isPending;
+  // Yalnız YENİ SATIR oluşturma kilitler; update PATCH'i hücreleri kilitlemez
+  // (Tab ile komşu hücreye geçerken odak <body>'ye düşmesin).
+  const isCreatingItem = createItem.isPending;
 
-  function handleCommitItem(itemId: string, body: EmployerItemUpdateBody) {
-    setSaveError(null);
-    updateItem.mutate(
-      { itemId, body },
-      { onError: (error) => setSaveError(backendErrorMessage(error)) },
-    );
+  // `mutateAsync` (mutate DEĞİL): react-query aynı gözlemcide yalnız SON
+  // `mutate` çağrısının çağrı-düzeyi geri çağrılarını çalıştırır; paralel iki
+  // hücre PATCH'inde ilkinin hatası sessizce yutulurdu.
+  async function handleCommitItem(itemId: string, body: EmployerItemUpdateBody): Promise<string | null> {
+    try {
+      await updateItem.mutateAsync({ itemId, body });
+      return null;
+    } catch (error) {
+      // Hata TABLODA hücre anahtarıyla tutulur; burada tek-string YOK (yeni bir
+      // commit başka hücrenin hatasını silmesin). `saveError` yalnız ekleme içindir.
+      return backendErrorMessage(error);
+    }
   }
 
   async function handleCreateItem(body: EmployerItemCreateBody): Promise<boolean> {
@@ -162,7 +170,7 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
                 onAddItem={() => setIsAddItemOpen(true)}
                 onCommitItem={handleCommitItem}
                 onCreateItem={handleCreateItem}
-                isBusy={isItemBusy}
+                isCreating={isCreatingItem}
                 saveError={saveError}
               />
               {isAddItemOpen && itemsQuery.data && (
