@@ -451,6 +451,32 @@ describe("gönderim — onSubmit'e gövde (§2.3)", () => {
     expect(vi.mocked(props.onSubmit).mock.calls[0]?.[0].body?.items[0]?.group_id).toBe("g-new");
   });
 
+  // TKL-F2.4.1 ORTA-2: 422 tazelemesi hedef grubu silince seçici başka grubu GÖSTERİP eskisine yazıyordu.
+  it("hedef grup tazelemeyle silinirse select VE gövde AYNI (varsayılan) grubu taşır", async () => {
+    const user = userEvent.setup();
+    const { rerenderWith, onSubmit } = renderPicker();
+    await ready();
+    await user.selectOptions(screen.getByLabelText("Grup"), "g-1");
+    expect((screen.getByLabelText("Grup") as HTMLSelectElement).value).toBe("g-1");
+    const withoutG1 = GROUPS.filter((group) => group.id !== "g-1") as unknown as Groups;
+    rerenderWith({ groups: withoutG1, onSubmit });
+    const shown = (screen.getByLabelText("Grup") as HTMLSelectElement).value;
+    expect(shown).toBe("g-2");
+    await fillOne(user);
+    await user.click(submitButton());
+    expect(vi.mocked(onSubmit).mock.calls[0]?.[0].body?.items[0]?.group_id).toBe(shown);
+  });
+
+  // TKL-F2.4.1 DÜŞÜK-6 (SABAH ONAYI): açılmış grup varken "+ Yeni Grup" seçeneği YOK; açılmış grup seçili kalır.
+  it("createdGroup varken '+ Yeni Grup' seçeneği gizlenir ve açılmış grup listede seçili kalır", async () => {
+    renderPicker({ groups: NO_GROUPS, createdGroup: { id: "g-new", name: "AÇILMIŞ" } });
+    await ready();
+    const select = screen.getByLabelText("Grup") as HTMLSelectElement;
+    expect(within(select).queryByRole("option", { name: "+ Yeni Grup" })).not.toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "AÇILMIŞ" })).toBeInTheDocument();
+    expect(select.value).toBe("g-new");
+  });
+
   it("gönderilirken: düğme 'Ekleniyor…' kapalı, girişler kilitli, Vazgeç kapalı, Esc kapatmaz", async () => {
     const user = userEvent.setup();
     const props = renderPicker({ isSubmitting: true });
@@ -486,6 +512,46 @@ describe("gönderim — onSubmit'e gövde (§2.3)", () => {
     expect(onManualAdd).toHaveBeenCalledTimes(1);
   });
 
+  describe("'Elle poz ekle' köprüsü kirli seçimi onaysız silmez (TKL-F2.4.1 ORTA-4)", () => {
+    const CONFIRM_TEXT = "Kaydedilmemiş değişiklikleriniz var. Kapatmak istediğinize emin misiniz?";
+    afterEach(() => vi.restoreAllMocks());
+
+    it("TEMİZKEN onay sorulmaz, köprü hemen çalışır", async () => {
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const user = userEvent.setup();
+      const onManualAdd = vi.fn();
+      renderPicker({ onManualAdd });
+      await ready();
+      await user.click(screen.getByRole("button", { name: "Katalogda yok mu? Elle poz ekle" }));
+      expect(confirm).not.toHaveBeenCalled();
+      expect(onManualAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it("KİRLİYKEN Modal'ın arka plan onayıyla AYNI metin sorulur; vazgeçilirse seçici ve girdiler kalır", async () => {
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const user = userEvent.setup();
+      const onManualAdd = vi.fn();
+      renderPicker({ onManualAdd });
+      await ready();
+      await user.type(quantityOf(LAST_SZL.poz_no), "2");
+      await user.click(screen.getByRole("button", { name: "Katalogda yok mu? Elle poz ekle" }));
+      expect(confirm).toHaveBeenCalledWith(CONFIRM_TEXT);
+      expect(onManualAdd).not.toHaveBeenCalled();
+      expect(quantityOf(LAST_SZL.poz_no)).toHaveValue("2");
+    });
+
+    it("KİRLİYKEN onaylanırsa form açılır (köprü çağrılır)", async () => {
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      const user = userEvent.setup();
+      const onManualAdd = vi.fn();
+      renderPicker({ onManualAdd });
+      await ready();
+      await user.type(quantityOf(LAST_SZL.poz_no), "2");
+      await user.click(screen.getByRole("button", { name: "Katalogda yok mu? Elle poz ekle" }));
+      expect(onManualAdd).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("Vazgeç onClose çağırır", async () => {
     const user = userEvent.setup();
     const props = renderPicker();
@@ -502,6 +568,15 @@ describe("kaydedilmemiş değişiklik (useUnsavedChanges)", () => {
     await ready();
     expect(unsavedRegistry.labels()).not.toContain("Katalogdan poz seçimi");
     await user.type(quantityOf(LAST_SZL.poz_no), "2");
+    await waitFor(() => expect(unsavedRegistry.labels()).toContain("Katalogdan poz seçimi"));
+  });
+
+  // TKL-F2.4.1 DÜŞÜK-7: yalnız B.F. yazılan satır kirli sayılmıyordu (kapatırken onay sorulmuyordu).
+  it("yalnız birim fiyat yazılınca da kirli (seçim/miktar olmadan)", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+    await ready();
+    await user.type(priceOf(SIVA.poz_no), "12,00");
     await waitFor(() => expect(unsavedRegistry.labels()).toContain("Katalogdan poz seçimi"));
   });
 

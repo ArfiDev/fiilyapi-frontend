@@ -13,14 +13,19 @@ import {
   SIVA,
 } from "@/components/work-item-catalog/work-item-fixtures";
 
+import { validateEmployerUnitPriceField, validateQuantityField } from "@/components/contract-item-form/validate";
+
 import {
   blockReasonText,
   buildBulkBody,
   buildPickerRows,
+  defaultGroupId,
   filterRows,
   groupByDiscipline,
+  isPickerInputsDirty,
   MAX_BULK_ITEMS,
   resolveSelection,
+  resolveTargetGroup,
   setQuantity,
   setUnitPrice,
   suggestUnitPrice,
@@ -83,11 +88,15 @@ describe("buildPickerRows — seçilebilirlik", () => {
     expect(rowOf(BETON, groups).block).toEqual({ kind: "linked", groupName: "G" });
   });
 
-  it("poz no karşılaştırması büyük/küçük harf ve boşluktan bağımsızdır", () => {
-    const groups = [
-      { id: "g", name: "G", sort_order: 0, items: [contractItem({ id: "c", code: ` ${SIVA.poz_no.toLowerCase()} `, catalog_item_id: null })] },
-    ] as unknown as Groups;
-    expect(rowOf(SIVA, groups).block).toEqual({ kind: "code" });
+  // TKL-F2.4.1 DÜŞÜK-5: backend `list_employer_item_codes` `code.in_(...)` ile BİREBİR karşılaştırır ve gövdede
+  // kodu kırpmaz (şema `str_strip_whitespace` taşımaz) → istemci de birebir: harf/boşluk farkı çakışma DEĞİLDİR
+  // (istemci sahte engel koyarsa kullanıcı sunucunun kabul edeceği pozu ekleyemez).
+  it("poz no karşılaştırması backend gibi BİREBİR: harf/boşluk farkı çakışma sayılmaz", () => {
+    const withCode = (code: string) =>
+      [{ id: "g", name: "G", sort_order: 0, items: [contractItem({ id: "c", code, catalog_item_id: null })] }] as unknown as Groups;
+    expect(rowOf(SIVA, withCode(SIVA.poz_no.toLowerCase())).block).toBeNull();
+    expect(rowOf(SIVA, withCode(` ${SIVA.poz_no} `)).block).toBeNull();
+    expect(rowOf(SIVA, withCode(SIVA.poz_no)).block).toEqual({ kind: "code" });
   });
 
   it("seçilemeyen satır işaretlenemez: toggleRow ve toggleRows onu atlar", () => {
@@ -185,11 +194,27 @@ describe("validateRow — tek ilk hata (§6 ÜS-F2-25)", () => {
   });
   it("miktar önce, fiyat sonra", () => {
     expect(v("", "")).toBe("Miktar girin");
-    expect(v("abc", "")).toBe("Miktar girin");
+    expect(v("   ", "")).toBe("Miktar girin");
     expect(v("0", "10")).toBe("Miktar 0'dan büyük olmalı");
     expect(v("0,000", "10")).toBe("Miktar 0'dan büyük olmalı");
     expect(v("5", "")).toBe("Birim fiyat girin");
-    expect(v("5", "x")).toBe("Birim fiyat girin");
+    expect(v("5", "  ")).toBe("Birim fiyat girin");
+  });
+  // TKL-F2.4.1 DÜŞÜK-8: "-1" ve "₺1.850,00" "girin" diyordu (dolu alan için yanıltıcı). Metinler
+  // `contract-item-form/validate.ts`teki ONAYLI metinlerle birebir; drift bekçisi aşağıda doğrudan karşılaştırır.
+  it("dolu ama okunamayan değer 'girin' DEMEZ: sayı olmalı / negatif olamaz", () => {
+    expect(v("abc", "5")).toBe("Miktar sayı olmalıdır.");
+    expect(v("5", "x")).toBe("Birim Fiyat sayı olmalıdır.");
+    expect(v("5", "₺1.850,00")).toBe("Birim Fiyat sayı olmalıdır.");
+    expect(v("-1", "5")).toBe("Miktar 0'dan büyük olmalı");
+    expect(v("5", "-1")).toBe("Birim Fiyat negatif olamaz.");
+    expect(v("5", "-1,50")).toBe("Birim Fiyat negatif olamaz.");
+    expect(v("5", "-")).toBe("Birim Fiyat sayı olmalıdır.");
+  });
+  it("metinler validate.ts ile aynı kalır (drift bekçisi)", () => {
+    expect(v("5", "x")).toBe(validateEmployerUnitPriceField("x")?.message);
+    expect(v("5", "-1")).toBe(validateEmployerUnitPriceField("-1")?.message);
+    expect(v("x", "5")).toBe(validateQuantityField("x")?.message);
   });
   it("T30 belirsizliği hem miktarda hem fiyatta REDDEDİLİR", () => {
     expect(v("1.5", "10")).toBe("Ondalık için virgül kullanın (ör. 28,50)");
@@ -330,5 +355,52 @@ describe("groupByDiscipline", () => {
     expect(sections[0]?.rows.map((r) => r.item.poz_no)).toEqual(["KAB-0001", "KAB-0002"]);
     const unknown = groupByDiscipline(rows, [D_DUV]);
     expect(unknown.map((s) => s.discipline.code)).toEqual(["DUV", "KAB"]);
+  });
+});
+
+describe("resolveTargetGroup — hedef grup TÜRETİLMİŞ değer (TKL-F2.4.1 ORTA-2)", () => {
+  const NEW = "__new__";
+  const created = { id: "g-new", name: "YENİ" };
+
+  it("seçili grup hâlâ listede ise o grup", () => {
+    expect(resolveTargetGroup("g-1", GROUPS, null)).toBe("g-1");
+    expect(resolveTargetGroup("g-new", [] as unknown as Groups, created)).toBe("g-new");
+  });
+  it("seçili grup artık YOKSA (422 tazelemesi silmiş) varsayılan = sort_order en büyük grup", () => {
+    const two = [
+      { id: "g-a", name: "A", sort_order: 1, items: [] },
+      { id: "g-b", name: "B", sort_order: 2, items: [] },
+    ] as unknown as Groups;
+    expect(resolveTargetGroup("g-silinmis", two, null)).toBe("g-b");
+    expect(defaultGroupId(two)).toBe("g-b");
+    expect(resolveTargetGroup("g-silinmis", [] as unknown as Groups, null)).toBe(NEW);
+  });
+  it("açılmış grup varken '+ Yeni Grup' seçimi o gruba çözülür (ikinci grup açılmaz)", () => {
+    expect(resolveTargetGroup(NEW, [] as unknown as Groups, created)).toBe("g-new");
+    expect(resolveTargetGroup("g-silinmis", [] as unknown as Groups, created)).toBe("g-new");
+  });
+  it("açılmış grup yoksa '+ Yeni Grup' kalır", () => {
+    expect(resolveTargetGroup(NEW, GROUPS, null)).toBe(NEW);
+  });
+});
+
+describe("isPickerInputsDirty — yalnız B.F. yazılan satır da kirlidir (TKL-F2.4.1 DÜŞÜK-7)", () => {
+  const row = rowOf(SIVA, [] as unknown as Groups);
+
+  it("boş girdi temiz", () => {
+    expect(isPickerInputsDirty([row], NO_INPUTS)).toBe(false);
+  });
+  it("yalnız birim fiyat yazıldı → kirli", () => {
+    expect(isPickerInputsDirty([row], setUnitPrice(NO_INPUTS, row, "25,00"))).toBe(true);
+  });
+  it("yalnız miktar yazıldı / seçildi → kirli", () => {
+    expect(isPickerInputsDirty([row], setQuantity(NO_INPUTS, row, "2"))).toBe(true);
+    expect(isPickerInputsDirty([row], toggleRow(NO_INPUTS, row, true))).toBe(true);
+  });
+  it("seç-sonra-kaldır: otomatik dolan ÖNERİ fiyatı tek başına kirli saymaz", () => {
+    const priced = rowOf(LAST_SZL, [] as unknown as Groups);
+    const toggled = toggleRow(toggleRow(NO_INPUTS, priced, true), priced, false);
+    expect(toggled.get(LAST_SZL.id)?.unitPrice).toBe("3.410,00");
+    expect(isPickerInputsDirty([priced], toggled)).toBe(false);
   });
 });

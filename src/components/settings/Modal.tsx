@@ -53,14 +53,20 @@ function focusableElementsOf(root: HTMLElement): HTMLElement[] {
   );
 }
 
+/** Kirliyken kapatma/terk onayı — arka plan tıklaması ve "köprü" eylemleri AYNI soruyu sorar (TKL-F2.4.1). */
+export const UNSAVED_CLOSE_CONFIRM = "Kaydedilmemiş değişiklikleriniz var. Kapatmak istediğinize emin misiniz?";
+
+/** `isDirty` ise onay sorar; temizse ya da onaylanırsa `true`. */
+export function confirmDiscardIfDirty(isDirty: boolean): boolean {
+  return !isDirty || window.confirm(UNSAVED_CLOSE_CONFIRM);
+}
+
 export function Modal({ title, onClose, children, footer, className, isDirty = false, subtitle, leading }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useUnsavedChanges(isDirty, "Diyalog");
 
   function handleOverlayClick() {
-    if (isDirty && !window.confirm("Kaydedilmemiş değişiklikleriniz var. Kapatmak istediğinize emin misiniz?")) {
-      return;
-    }
+    if (!confirmDiscardIfDirty(isDirty)) return;
     onClose();
   }
 

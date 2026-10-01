@@ -7,6 +7,7 @@
  * ondalık, belirsiz "28.5" REDDEDİLİR); sonuç kayıpsız ondalık METİNdir, tutar ve Σ
  * `lib/decimal` string aritmetiğiyle hesaplanır — `Number()` YOK.
  */
+import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
 import type { EmployerContractItemsResponse } from "@/lib/api/hooks/useContract";
 import type { EmployerContractItemsBulkCreateRequest } from "@/lib/api/hooks/useContractMutations";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
@@ -40,6 +41,10 @@ const PRICE_INTEGER_DIGITS = 16;
 const QUANTITY_REQUIRED = "Miktar girin";
 const QUANTITY_NOT_POSITIVE = "Miktar 0'dan büyük olmalı";
 const PRICE_REQUIRED = "Birim fiyat girin";
+/** `contract-item-form/validate.ts` ONAYLI metinleri (birebir; `picker-model.test.ts` drift bekçisi). */
+const QUANTITY_NOT_A_NUMBER = "Miktar sayı olmalıdır.";
+const PRICE_NOT_A_NUMBER = "Birim Fiyat sayı olmalıdır.";
+const PRICE_NEGATIVE = "Birim Fiyat negatif olamaz.";
 const QUANTITY_FRACTION_LIMIT = "En fazla 3 ondalık";
 const PRICE_FRACTION_LIMIT = "En fazla 2 ondalık";
 const QUANTITY_DIGIT_LIMIT = "En fazla 11 basamak";
@@ -97,16 +102,38 @@ export interface DisciplineSection {
 
 type ContractGroups = EmployerContractItemsResponse["groups"];
 
-const EMPTY_INPUT: RowInput = { selected: false, quantity: "", unitPrice: "" };
-
-function normalizeCode(code: string): string {
-  return code.trim().toLocaleUpperCase("tr-TR");
+/** ÜS-F2-19: varsayılan hedef = sort_order'ı en büyük grup; grupsuz sözleşmede "+ Yeni Grup". */
+export function defaultGroupId(groups: ContractGroups): string {
+  const last = groups.reduce<ContractGroups[number] | null>(
+    (best, group) => (best === null || group.sort_order >= best.sort_order ? group : best),
+    null,
+  );
+  return last === null ? NEW_GROUP_OPTION : last.id;
 }
+
+/**
+ * Hedef grup TÜRETİLMİŞ değerdir (TKL-F2.4.1 ORTA-2): kullanıcının tuttuğu `choice` artık `groups`ta
+ * (ya da açılmış `createdGroup`ta) yoksa — 422 tazelemesi grubu silmiş olabilir — varsayılana düşer.
+ * Select gösterimi ile gövde AYNI sonucu kullanır; seçici başka grubu gösterip eskisine yazamaz.
+ * Açılmış grup varken "+ Yeni Grup" o gruba çözülür (ikinci grup açılmaz, §2.5).
+ */
+export function resolveTargetGroup(
+  choice: string,
+  groups: ContractGroups,
+  createdGroup: { id: string } | null,
+): string {
+  const isKnown = groups.some((group) => group.id === choice) || (createdGroup !== null && createdGroup.id === choice);
+  const resolved = choice === NEW_GROUP_OPTION || isKnown ? choice : defaultGroupId(groups);
+  return resolved === NEW_GROUP_OPTION && createdGroup !== null ? createdGroup.id : resolved;
+}
+
+const EMPTY_INPUT: RowInput = { selected: false, quantity: "", unitPrice: "" };
 
 /**
  * Katalog satırlarını sözleşmedeki mevcut kalemlerle eşler (bellek içi; ayrı istek YOK).
  * (a) `catalog_item_id` bu sözleşmede zaten bağlı → "linked"; (b) bağsız ama aynı `code`
- * (= poz no) başka bir kalemde kullanılıyor → "code". Backend ikisini de engellemez /
+ * (= poz no) başka bir kalemde kullanılıyor → "code". Karşılaştırma BİREBİR (backend
+ * `list_employer_item_codes` `code.in_` ile aynı; harf/boşluk normalizasyonu YOK — TKL-F2.4.1 DÜŞÜK-5). Backend ikisini de engellemez /
  * ikincisinde 409 verir (§0) — istemci korkuluğu + sunucu son savunma.
  */
 export function buildPickerRows(items: readonly WorkItemRead[], groups: ContractGroups): PickerRow[] {
@@ -114,7 +141,7 @@ export function buildPickerRows(items: readonly WorkItemRead[], groups: Contract
   const usedCodes = new Set<string>();
   for (const group of groups) {
     for (const contractItem of group.items) {
-      usedCodes.add(normalizeCode(contractItem.code));
+      usedCodes.add(contractItem.code);
       if (contractItem.catalog_item_id !== null && !linkedGroup.has(contractItem.catalog_item_id)) {
         linkedGroup.set(contractItem.catalog_item_id, group.name);
       }
@@ -123,7 +150,7 @@ export function buildPickerRows(items: readonly WorkItemRead[], groups: Contract
   return items.map((item) => {
     const groupName = linkedGroup.get(item.id);
     if (groupName !== undefined) return { item, block: { kind: "linked", groupName } };
-    if (usedCodes.has(normalizeCode(item.poz_no))) return { item, block: { kind: "code" } };
+    if (usedCodes.has(item.poz_no)) return { item, block: { kind: "code" } };
     return { item, block: null };
   });
 }
@@ -153,6 +180,20 @@ function withInput(inputs: PickerInputs, id: string, input: RowInput): PickerInp
 function selectInput(row: PickerRow, current: RowInput): RowInput {
   const unitPrice = current.unitPrice.trim() === "" ? suggestUnitPrice(row.item) : current.unitPrice;
   return { ...current, selected: true, unitPrice };
+}
+
+/**
+ * Satır girdileri kullanıcı emeği taşıyor mu: seçili · miktar · KENDİ yazdığı birim fiyat.
+ * Seçimde otomatik dolan ÖNERİ fiyatı tek başına emek sayılmaz (seç-sonra-kaldır temiz kalır).
+ */
+export function isPickerInputsDirty(rows: readonly PickerRow[], inputs: PickerInputs): boolean {
+  const suggestionById = new Map(rows.map((row) => [row.item.id, suggestUnitPrice(row.item)]));
+  return [...inputs.entries()].some(
+    ([id, input]) =>
+      input.selected ||
+      input.quantity.trim() !== "" ||
+      (input.unitPrice.trim() !== "" && input.unitPrice !== suggestionById.get(id)),
+  );
 }
 
 export function toggleRow(inputs: PickerInputs, row: PickerRow, selected: boolean): PickerInputs {
@@ -193,16 +234,32 @@ function digitLimitError(
   return null;
 }
 
-function parseError(parsed: TrDecimalParse, required: string): string | null {
-  if (parsed.kind === "invalid") return required;
+interface FieldMessages {
+  required: string;
+  notANumber: string;
+  negative: string;
+}
+
+/** Boş → "girin"; "-" önekli → negatif (gövde okunabiliyorsa); okunamayan → "sayı olmalı"; belirsiz → virgül metni. */
+function syntaxError(raw: string, parse: (text: string) => TrDecimalParse, messages: FieldMessages): string | null {
+  const text = raw.trim();
+  if (text === "") return messages.required;
+  const isNegative = text.startsWith("-");
+  const parsed = parse(isNegative ? text.slice(1) : text);
+  if (parsed.kind === "invalid") return messages.notANumber;
   if (parsed.kind === "ambiguous") return REF_PRICE_AMBIGUOUS_DOT;
-  return null;
+  return isNegative ? messages.negative : null;
 }
 
 function quantityError(raw: string): string | null {
+  const syntax = syntaxError(raw, parseQuantityInput, {
+    required: QUANTITY_REQUIRED,
+    notANumber: QUANTITY_NOT_A_NUMBER,
+    negative: QUANTITY_NOT_POSITIVE,
+  });
+  if (syntax !== null) return syntax;
   const parsed = parseQuantityInput(raw);
-  const syntax = parseError(parsed, QUANTITY_REQUIRED);
-  if (syntax !== null || parsed.kind !== "ok") return syntax;
+  if (parsed.kind !== "ok") return QUANTITY_NOT_A_NUMBER;
   const limit = digitLimitError(
     parsed.value,
     { fraction: QUANTITY_FRACTION_DIGITS, integer: QUANTITY_INTEGER_DIGITS },
@@ -213,9 +270,14 @@ function quantityError(raw: string): string | null {
 }
 
 function priceError(raw: string): string | null {
+  const syntax = syntaxError(raw, parseRefPriceInput, {
+    required: PRICE_REQUIRED,
+    notANumber: PRICE_NOT_A_NUMBER,
+    negative: PRICE_NEGATIVE,
+  });
+  if (syntax !== null) return syntax;
   const parsed = parseRefPriceInput(raw);
-  const syntax = parseError(parsed, PRICE_REQUIRED);
-  if (syntax !== null || parsed.kind !== "ok") return syntax;
+  if (parsed.kind !== "ok") return PRICE_NOT_A_NUMBER;
   return digitLimitError(
     parsed.value,
     { fraction: PRICE_FRACTION_DIGITS, integer: PRICE_INTEGER_DIGITS },

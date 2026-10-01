@@ -21,6 +21,8 @@ export interface WorkItemPickerToolbarProps {
   onHideInContract: (value: boolean) => void;
   groupOptions: readonly GroupOption[];
   groupValue: string;
+  /** false = bu denemede grup ZATEN açıldı: "+ Yeni Grup" seçeneği yok (ikinci grup açılmaz, §2.5). */
+  canCreateGroup: boolean;
   onGroup: (value: string) => void;
   newGroupName: string;
   onNewGroupName: (value: string) => void;
@@ -40,6 +42,7 @@ export function WorkItemPickerToolbar({
   onHideInContract,
   groupOptions,
   groupValue,
+  canCreateGroup,
   onGroup,
   newGroupName,
   onNewGroupName,
@@ -88,7 +91,7 @@ export function WorkItemPickerToolbar({
               {group.name}
             </option>
           ))}
-          <option value={NEW_GROUP_OPTION}>+ Yeni Grup</option>
+          {canCreateGroup && <option value={NEW_GROUP_OPTION}>+ Yeni Grup</option>}
         </Select>
         {groupValue === NEW_GROUP_OPTION && (
           <Input

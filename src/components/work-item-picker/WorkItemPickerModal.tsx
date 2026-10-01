@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { nextSortOrder } from "@/components/contract-item-form/build-body";
 import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
-import { Modal } from "@/components/settings/Modal";
+import { confirmDiscardIfDirty, Modal } from "@/components/settings/Modal";
 import { ListIcon } from "@/components/ui/icons";
 import { useCatalogDisciplines, useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
 import type { EmployerContractItemsBulkCreateRequest } from "@/lib/api/hooks/useContractMutations";
@@ -18,10 +18,13 @@ import { formatPrice, sortByPozNo } from "@/components/work-item-catalog/work-it
 import {
   buildBulkBody,
   buildPickerRows,
+  defaultGroupId,
   filterRows,
   groupByDiscipline,
+  isPickerInputsDirty,
   MAX_BULK_ITEMS,
   resolveSelection,
+  resolveTargetGroup,
   setQuantity,
   setUnitPrice,
   toggleRow,
@@ -79,15 +82,6 @@ export interface WorkItemPickerModalProps {
   onManualAdd?: () => void;
 }
 
-/** ÜS-F2-19: varsayılan hedef = sort_order'ı en büyük grup; grupsuz sözleşmede "+ Yeni Grup". */
-function defaultGroupId(groups: ContractGroups): string {
-  const last = groups.reduce<ContractGroups[number] | null>(
-    (best, group) => (best === null || group.sort_order >= best.sort_order ? group : best),
-    null,
-  );
-  return last === null ? NEW_GROUP_OPTION : last.id;
-}
-
 function emptyReasonOf(args: {
   isLoading: boolean;
   error: Error | null;
@@ -140,8 +134,9 @@ export function WorkItemPickerModal({
   const sections = useMemo(() => groupByDiscipline(visible, disciplines), [visible, disciplines]);
   const resolution = useMemo(() => resolveSelection(rows, inputs), [rows, inputs]);
 
-  // Açılmış grup varken ve "+ Yeni Grup" seçiliyken hedef o gruptur (ikinci grup açılmaz).
-  const targetGroup = createdGroup !== null && groupChoice === NEW_GROUP_OPTION ? createdGroup.id : groupChoice;
+  // Hedef grup TÜRETİLMİŞ (ORTA-2): seçili grup `groups`tan düşmüşse varsayılana döner; gösterim ve gövde aynı değer.
+  // Açılmış grup varken "+ Yeni Grup" o gruba çözülür (ikinci grup açılmaz).
+  const targetGroup = resolveTargetGroup(groupChoice, groups, createdGroup);
   const isNewGroup = targetGroup === NEW_GROUP_OPTION;
   const groupOptions = [
     ...[...groups].sort((a, b) => a.sort_order - b.sort_order).map((group) => ({ id: group.id, name: group.name })),
@@ -154,8 +149,7 @@ export function WorkItemPickerModal({
   const selectedVisibleCount = selectableVisible.filter((row) => inputs.get(row.item.id)?.selected === true).length;
   const isAllChecked = selectableVisible.length > 0 && selectedVisibleCount === selectableVisible.length;
 
-  const isDirty =
-    newGroupName.trim() !== "" || [...inputs.values()].some((input) => input.selected || input.quantity.trim() !== "");
+  const isDirty = newGroupName.trim() !== "" || isPickerInputsDirty(rows, inputs);
   useUnsavedChanges(isDirty, UNSAVED_LABEL);
 
   const { entries, problems, selectedCount } = resolution;
@@ -181,6 +175,11 @@ export function WorkItemPickerModal({
 
   function updateInputs(change: (current: PickerInputs) => PickerInputs) {
     setInputs((current) => change(current));
+  }
+
+  // "Elle poz ekle" seçiciyi KAPATIR → kirli seçim Modal'ın arka plan onayıyla AYNI soruyla korunur.
+  function handleManualAdd() {
+    if (onManualAdd !== undefined && confirmDiscardIfDirty(isDirty)) onManualAdd();
   }
 
   function handleToggleAll() {
@@ -228,7 +227,7 @@ export function WorkItemPickerModal({
           canSubmit={canSubmit}
           onSubmit={handleSubmit}
           onCancel={onClose}
-          onManualAdd={onManualAdd}
+          onManualAdd={onManualAdd === undefined ? undefined : handleManualAdd}
         />
       }
     >
@@ -242,6 +241,7 @@ export function WorkItemPickerModal({
         onHideInContract={setHideInContract}
         groupOptions={groupOptions}
         groupValue={targetGroup}
+        canCreateGroup={createdGroup === null}
         onGroup={setGroupChoice}
         newGroupName={newGroupName}
         onNewGroupName={setNewGroupName}

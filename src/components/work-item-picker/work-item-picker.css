@@ -4,7 +4,9 @@
   max-width: 1100px;
   /* 🔴 TKL-F2.4 (T13 kareleri ölçtü): `.modal` TÜM kutuyu kaydırır (`overflow-y:auto`) → uzun katalogda
      altbilgi (hata bandı · Σ · "N Pozu Ekle" · "Elle poz ekle") kaydırma sonunda KALIYOR, görünmüyordu.
-     Başlık + altbilgi sabit, YALNIZ gövde kayar (başlık satırı `.wip-th` sticky'si de gövdeye bağlanır). */
+     Başlık + altbilgi sabit. TKL-F2.4.1 (ORTA-3): gövde sütun-flex; araç çubuğu + bilgi bandı sabit, YALNIZ
+     tablo kabı (`.wip-table-scroll`) kayar — `.wip-th` sticky'si en yakın kaydırma kabı olan ona yapışır
+     (mockup PS:86-88: `max-height + overflow-y:auto` tablo kabında). Çok kısa pencerede gövde yine kayar (yedek). */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -14,6 +16,8 @@
   flex: none;
 }
 .wip-modal .modal__body {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -30,6 +34,7 @@
 }
 
 .wip-toolbar {
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -60,6 +65,7 @@
 }
 
 .wip-note {
+  flex: none;
   padding: var(--space-3);
   margin-bottom: var(--space-3);
   background: var(--color-primary-soft);
@@ -68,9 +74,14 @@
   font-size: var(--text-small);
 }
 
-/* Dar ekranda (≤768px) 9 sütunlu tablo kabuktan taşmasın: yatay kaydırma (boq-assignment.css:108-112 dersi). */
+/* Tablo kabı: DİKEY kaydırma burada (sticky başlığın kabı) + dar ekranda (≤768px) 9 sütunlu tablo kabuktan
+   taşmasın diye YATAY kaydırma (boq-assignment.css:108-112 dersi). Gövdenin kalanını doldurur; min-height
+   çok kısa pencerede tabloyu 0'a ezmez (gövde yedek olarak kayar). */
 .wip-table-scroll {
+  flex: 1 1 auto;
+  min-height: 240px;
   overflow-x: auto;
+  overflow-y: auto;
 }
 .wip-table {
   width: 100%;
