@@ -5,7 +5,7 @@
 // sinirinda derleme patlar.
 "use client";
 
-import { forwardRef, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 
 import { cx } from "@/lib/cx";
 import { formatDateDots, parseDateDots } from "@/lib/format";
@@ -121,6 +121,32 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
       onValueChange(nextIso);
     }
 
+    // 🔴 DTI-F1: gizli seçici YALNIZ native "change" ile işlenir. Chrome
+    // popup'ında ay gezinmesi (ok/PageUp/PageDown) değeri canlı değiştirir ve
+    // yalnız "input" atar; Esc de "input" ile açılış değerine döner. React'in
+    // onChange'i "input"u dinler → her ay okunda emit olurdu. Gün seçimi ve
+    // Enter "change" atar. Dinleyici bir kez bağlanır, güncel emit ref'ten okunur.
+    const emitRef = useRef(emit);
+    emitRef.current = emit;
+    useEffect(() => {
+      const picker = pickerRef.current;
+      if (!picker) return;
+      function handleChange() {
+        const nextIso = picker!.value;
+        emitRef.current(isoToDisplay(nextIso), nextIso);
+      }
+      picker.addEventListener("change", handleChange);
+      return () => picker.removeEventListener("change", handleChange);
+    }, []);
+
+    // Seçici uncontrolled: taslaktan türeyen ISO değişince değeri eşitle.
+    // Zaten eşitse DOKUNMA — açık popup'ın gezindiği ay bozulmasın.
+    const pickerIso = parseDateDots(draft);
+    useEffect(() => {
+      const picker = pickerRef.current;
+      if (picker && picker.value !== pickerIso) picker.value = pickerIso;
+    }, [pickerIso]);
+
     return (
       <span className="date-input-wrap">
         <input
@@ -152,10 +178,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
           tabIndex={-1}
           aria-hidden="true"
           disabled={disabled || readOnly}
-          value={parseDateDots(draft)}
-          onChange={(event) =>
-            emit(isoToDisplay(event.target.value), event.target.value)
-          }
+          defaultValue={pickerIso}
         />
         <button
           type="button"

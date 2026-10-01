@@ -388,3 +388,69 @@ describe("DateInput — takvim seçici (yönetim kararı: KORUNUR)", () => {
     expect(container.querySelector("button")).toBeDisabled();
   });
 });
+
+/**
+ * DTI-F1 · Gizli native seçici YALNIZ "change" ile işlenir.
+ * Chrome popup'ında ay gezinmesi değeri canlı değiştirir ve yalnız "input"
+ * atar; Esc "input" ile açılış değerine döner. Gün seçimi/Enter "change" atar.
+ */
+describe("DateInput — gizli seçici yalnız change olayını işler (DTI-F1)", () => {
+  const pickerOf = (container: HTMLElement) =>
+    container.querySelector<HTMLInputElement>('input[type="date"]')!;
+
+  it("🔴 seçicideki input olayı (ay gezinmesi) onValueChange ÇAĞIRMAZ ve metni değiştirmez", () => {
+    const onValueChange = vi.fn();
+    const { container } = render(
+      <DateInput aria-label="Tarih" value={iso} onValueChange={onValueChange} />,
+    );
+    fireEvent.input(pickerOf(container), { target: { value: "2026-08-19" } });
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Tarih" })).toHaveValue(tr);
+  });
+
+  it("seçicideki change olayı onValueChange'i bir kez çağırır, metin TR'ye döner", () => {
+    const onValueChange = vi.fn();
+    const { container } = render(<ControlledDateInput onIso={onValueChange} />);
+    fireEvent.change(pickerOf(container), { target: { value: "2026-08-19" } });
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledWith("2026-08-19");
+    expect(screen.getByRole("textbox", { name: "Tarih" })).toHaveValue("19.08.2026");
+  });
+
+  it("gezinme (input×3) + Esc (input) hiç yayın yapmaz; seçim change ile tek yayın", () => {
+    const onValueChange = vi.fn();
+    const { container } = render(<ControlledDateInput initial={iso} onIso={onValueChange} />);
+    const picker = pickerOf(container);
+    for (const day of ["2026-08-19", "2026-09-19", "2026-10-19", iso]) {
+      fireEvent.input(picker, { target: { value: day } });
+    }
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Tarih" })).toHaveValue(tr);
+  });
+
+  it("dışarıdan value değişince gizli seçicinin value'su senkron olur", () => {
+    const { container, rerender } = render(
+      <DateInput aria-label="Tarih" value={iso} onValueChange={() => {}} />,
+    );
+    expect(pickerOf(container).value).toBe(iso);
+    rerender(<DateInput aria-label="Tarih" value="2026-12-31" onValueChange={() => {}} />);
+    expect(pickerOf(container).value).toBe("2026-12-31");
+    rerender(<DateInput aria-label="Tarih" value="" onValueChange={() => {}} />);
+    expect(pickerOf(container).value).toBe("");
+  });
+
+  it("elle geçerli tam tarih yazılınca gizli seçicinin value'su güncellenir", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ControlledDateInput />);
+    await user.type(screen.getByRole("textbox", { name: "Tarih" }), "05.03.2026");
+    expect(pickerOf(container).value).toBe("2026-03-05");
+  });
+
+  it("seçici uncontrolled: kontrollü input uyarısı çıkmaz", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = render(<ControlledDateInput initial={iso} />);
+    fireEvent.change(pickerOf(container), { target: { value: "2026-08-19" } });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
