@@ -2244,6 +2244,7 @@ function buildEmployerContractItemsResponse(
             quantity: item.quantity,
             unit_price: item.unit_price,
             sort_order: itemIndex,
+            catalog_item_id: null,
             distributed_quantity: qty3(distributed),
             remaining_quantity: qty3(Number(item.quantity) - distributed),
           };

@@ -513,3 +513,59 @@ describe("İş kalemi kataloğu tip üretimi (TKL-F1.1 kapısı)", () => {
     expectTypeOf<paths["/catalog/items/{item_id}"]["patch"]>().not.toBeNever();
   });
 });
+
+describe("TKL-B3 son fiyat + toplu ekleme tip üretimi (TKL-F2.1 kapısı)", () => {
+  type ItemResponse = components["schemas"]["EmployerContractItemResponse"];
+  type ItemCreate = components["schemas"]["EmployerContractItemCreate"];
+  type BulkCreate = components["schemas"]["EmployerContractItemsBulkCreate"];
+  type BulkResponse = components["schemas"]["EmployerContractItemsBulkResponse"];
+  type LastPrice = components["schemas"]["LastPriceRead"];
+  type WorkItem = components["schemas"]["WorkItemRead"];
+
+  it("EmployerContractItemResponse.catalog_item_id zorunlu ve null olabilir", () => {
+    expectTypeOf<ItemResponse["catalog_item_id"]>().toEqualTypeOf<
+      string | null
+    >();
+    expectTypeOf<
+      Record<string, never> extends Pick<ItemResponse, "catalog_item_id">
+        ? true
+        : false
+    >().toEqualTypeOf<false>();
+  });
+
+  it("EmployerContractItemCreate.catalog_item_id opsiyoneldir", () => {
+    expectTypeOf<ItemCreate["catalog_item_id"]>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    expectTypeOf<
+      Record<string, never> extends Pick<ItemCreate, "catalog_item_id">
+        ? true
+        : false
+    >().toEqualTypeOf<true>();
+  });
+
+  it("toplu ekleme gövdesi ve yanıtı kalem dizisi taşır", () => {
+    expectTypeOf<BulkCreate["items"]>().toEqualTypeOf<ItemCreate[]>();
+    expectTypeOf<BulkResponse["items"]>().toEqualTypeOf<ItemResponse[]>();
+  });
+
+  it("LastPriceRead alanları kaynaktan gelir", () => {
+    expectTypeOf<LastPrice["price"]>().toEqualTypeOf<string>();
+    expectTypeOf<LastPrice["at"]>().toEqualTypeOf<string>();
+    expectTypeOf<LastPrice["source"]>().toEqualTypeOf<string>();
+    expectTypeOf<LastPrice["doc_no"]>().toEqualTypeOf<string>();
+    expectTypeOf<LastPrice["doc_id"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("WorkItemRead.last_price opsiyonel ve null olabilir", () => {
+    expectTypeOf<WorkItem["last_price"]>().toEqualTypeOf<
+      LastPrice | null | undefined
+    >();
+  });
+
+  it("toplu ekleme ucu tanımlıdır", () => {
+    expectTypeOf<
+      paths["/projects/{project_id}/contract/items/bulk"]["post"]
+    >().not.toBeNever();
+  });
+});

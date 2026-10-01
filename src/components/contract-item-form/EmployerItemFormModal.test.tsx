@@ -52,6 +52,7 @@ const GROUPS: EmployerContractItemsResponse["groups"] = [
         quantity: "100.000",
         unit_price: "1200.00",
         sort_order: 10,
+        catalog_item_id: null,
         distributed_quantity: "100.000",
         remaining_quantity: "0.000",
       },

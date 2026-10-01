@@ -4304,6 +4304,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project_id}/contract/items/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Employer Contract Items Bulk Endpoint
+         * @description TKL-B3.1: çoklu katalog seçicisi için toplu poz ekleme (tek işlem, hep-ya-hiç).
+         *
+         *     Kapı tekil `+ Poz Ekle` ucuyla AYNIDIR; denetim günlüğüne TEK satır yazılır.
+         */
+        post: operations["create_employer_contract_items_bulk_endpoint_projects__project_id__contract_items_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project_id}/costs": {
         parameters: {
             query?: never;
@@ -10858,6 +10880,8 @@ export interface components {
         };
         /** EmployerContractItemCreate */
         EmployerContractItemCreate: {
+            /** Catalog Item Id */
+            catalog_item_id?: string | null;
             /** Code */
             code: string;
             /** Description */
@@ -10885,6 +10909,8 @@ export interface components {
          *     servis `boq_items.contract_item_id` bağlarından hesaplar (spec §3.3, §6.2).
          */
         EmployerContractItemResponse: {
+            /** Catalog Item Id */
+            catalog_item_id: string | null;
             /** Code */
             code: string;
             /** Description */
@@ -10932,6 +10958,22 @@ export interface components {
             unit?: string | null;
             /** Unit Price */
             unit_price?: number | string | null;
+        };
+        /**
+         * EmployerContractItemsBulkCreate
+         * @description `POST /projects/{id}/contract/items/bulk` govdesi (hep-ya-hic).
+         */
+        EmployerContractItemsBulkCreate: {
+            /** Items */
+            items: components["schemas"]["EmployerContractItemCreate"][];
+        };
+        /**
+         * EmployerContractItemsBulkResponse
+         * @description Toplu ekleme yanıtı (BaseModel sarmalayıcı: kapsam maskesi modele uygulanır).
+         */
+        EmployerContractItemsBulkResponse: {
+            /** Items */
+            items: components["schemas"]["EmployerContractItemResponse"][];
         };
         /**
          * EmployerContractItemsResponse
@@ -13823,6 +13865,31 @@ export interface components {
             owner_value: string | null;
             /** Tolerance Pct */
             tolerance_pct: string;
+        };
+        /**
+         * LastPriceRead
+         * @description Kalemin son gorulen birim fiyati (TKL-B3.2; port: `app/core/last_price.py`).
+         *
+         *     `source` kasitli olarak `str`: kaynak kumesi buyur (TKL B4, SA B7); `Literal` olsaydi yeni
+         *     kaynak eklendiginde sema 500 verir ve OpenAPI enumu her turda degisirdi. Bilinen degerler
+         *     `SZL` (sozlesme), `HK` (isveren hakedisi); istemci bilmedigi kaynagi ham metin gosterir.
+         *     `doc_no` insan etiketi (SZL: proje kodu, HK: `HK-<proje kodu>-<sira>`), `doc_id` belge
+         *     baglantisi icin (SZL: proje id, HK: hakedis id).
+         */
+        LastPriceRead: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Doc Id */
+            doc_id: string | null;
+            /** Doc No */
+            doc_no: string;
+            /** Price */
+            price: string;
+            /** Source */
+            source: string;
         };
         /** LeafDiffOut */
         LeafDiffOut: {
@@ -24118,6 +24185,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            last_price?: components["schemas"]["LastPriceRead"] | null;
             /** Name */
             name: string;
             /** Poz No */
@@ -34693,6 +34761,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployerContractItemResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_employer_contract_items_bulk_endpoint_projects__project_id__contract_items_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmployerContractItemsBulkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployerContractItemsBulkResponse"];
                 };
             };
             /** @description Yetkisiz işlem */
