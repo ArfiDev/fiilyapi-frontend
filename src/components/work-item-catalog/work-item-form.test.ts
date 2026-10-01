@@ -192,11 +192,24 @@ describe("parseRefPriceInput — Türkçe kural: nokta binlik, virgül ondalık;
 
   it("noktalı gruplar (ilk hariç) TAM 3 hane olmalı; diğer her nokta kullanımı belirsiz", () => {
     expect(value("1.234.567")).toBe("1234567");
-    expect(value("1234.567")).toBe("1234567");
+    // TKL-F1.6-HF: "1234.567" Türkçede geçersiz binlik (ilk grup en çok 3 hane) → belirsiz (eskiden 1234567).
+    expect(value("1234.567")).toBe("ambiguous");
     expect(value("1.2.3")).toBe("ambiguous");
     expect(value("28.")).toBe("ambiguous");
     expect(value(".500")).toBe("ambiguous");
     expect(value("1.234.5,00")).toBe("ambiguous");
+  });
+
+  it("TKL-F1.6-HF: ilk grup 1-3 hane ve '0' ile başlamaz; Türkçede geçersiz binlik belirsizdir", () => {
+    for (const raw of ["0.500", "00.500", "1234.567", "0.250", "12345.678"]) {
+      expect(value(raw)).toBe("ambiguous");
+      expect(firstWorkItemError({ ...VALID, refPrice: raw }, D_KAB.id)?.message).toBe(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      );
+    }
+    expect(value("1.000")).toBe("1000");
+    expect(value("0,5")).toBe("0.50");
+    expect(value("0")).toBe("0");
   });
 
   it("boş / anlamsız / negatif / çift virgül → invalid", () => {

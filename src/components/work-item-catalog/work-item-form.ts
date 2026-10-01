@@ -63,8 +63,11 @@ export function workItemFormFromItem(item: WorkItemRead): WorkItemFormState {
 /** Belirsiz nokta kullanımında satır hatası (kullanıcı onaylı metin). */
 export const REF_PRICE_AMBIGUOUS_DOT = "Ondalık için virgül kullanın (ör. 28,50)";
 
-/** Binlik gruplu tamsayı: ilk grup serbest, sonrakiler TAM 3 hane ("28.500"). */
-const THOUSANDS_GROUPED = /^\d+(\.\d{3})*$/;
+/**
+ * Tamsayı kısmı: noktasız serbest; noktalıysa Türkçe binlik — ilk grup 1-3 hane ve "0" ile
+ * başlamaz, sonrakiler TAM 3 hane ("28.500"). "0.500"/"1234.567" belirsizdir (TKL-F1.6-HF).
+ */
+const THOUSANDS_GROUPED = /^(\d+|[1-9]\d{0,2}(\.\d{3})+)$/;
 const DIGITS_AND_DOTS = /^[\d.]+$/;
 const DIGITS_ONLY = /^\d+$/;
 const PRICE_MIN_FRACTION = 2;
