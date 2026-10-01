@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 
 import { emptyDiaryForm, type DiaryFormState } from "./form-state";
-import { countEnteredPreviewData, hasEnteredPreviewData, missingSkeletonLines } from "./preview-transition";
+import {
+  countEnteredDateData,
+  countEnteredPreviewData,
+  hasEnteredPreviewData,
+  hasEnteredWorkerData,
+  missingSkeletonLines,
+} from "./preview-transition";
 
 // GKS-F1.2a · önizleme geçişlerinin saf kararları (Ü3 sayım · Ü5 eksik anahtar).
 
@@ -90,5 +96,39 @@ describe("missingSkeletonLines · Ü5 eksik anahtarlar", () => {
     const twice = [skeleton[0], skeleton[0]];
 
     expect(missingSkeletonLines(twice, [], [])).toHaveLength(1);
+  });
+});
+
+describe("GKS-F1.5 · countEnteredDateData (tarih diyaloğunun sayımı: satır + işçi)", () => {
+  it("boş formda 0", () => {
+    expect(countEnteredDateData(emptyDiaryForm("2026-09-24"))).toBe(0);
+  });
+
+  it("satır sayımı countEnteredPreviewData ile AYNI başlar; işçi satırları üstüne eklenir", () => {
+    const lines = formWith({ quantities: { "a|": "5" }, overrunReasons: { "c|": "x" } });
+    expect(countEnteredDateData(lines)).toBe(countEnteredPreviewData(lines));
+    expect(countEnteredPreviewData(lines)).toBe(2);
+    const withWorkers = { ...lines, workerCounts: { "firm|sub-1": "4" } };
+    expect(countEnteredDateData(withWorkers)).toBe(3);
+    expect(countEnteredPreviewData(withWorkers)).toBe(2);
+  });
+
+  it("dolu işçi sayısı, dolu saat ve eklenen firma; aynı firma TEK satır (distinct)", () => {
+    const form = formWith({
+      workerCounts: { "firm|sub-1": "4", "firm|sub-2": "  " },
+      workerHours: { "firm|sub-1": "8", "firm|sub-3": "9" },
+      addedFirms: [
+        { subcontractorId: "sub-1", trade: "A" },
+        { subcontractorId: "sub-4", trade: "D" },
+      ],
+    });
+    // sub-1 (sayı+saat+eklenmiş) · sub-3 (saat) · sub-4 (eklenmiş); sub-2 boş → sayılmaz
+    expect(countEnteredDateData(form)).toBe(3);
+  });
+
+  it("yalnız işçi girilmişse de > 0", () => {
+    expect(countEnteredDateData(formWith({ workerCounts: { "firm|s": "1" } }))).toBe(1);
+    expect(hasEnteredWorkerData(formWith({ workerCounts: { "firm|s": "1" } }))).toBe(true);
+    expect(hasEnteredWorkerData(emptyDiaryForm("2026-09-24"))).toBe(false);
   });
 });

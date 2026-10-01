@@ -62,6 +62,15 @@ export function useCreateSiteDiaryEntry(
   });
 }
 
+async function patchSiteDiaryEntry(entryId: string, body: SiteDiaryEntryUpdate): Promise<SiteDiaryEntryDetail> {
+  return unwrap(
+    await backendClient.PATCH("/diary/{entry_id}", {
+      params: { path: { entry_id: entryId } },
+      body,
+    }),
+  );
+}
+
 /**
  * Baslik alanlari + isci kirilimi guncelleme (`PATCH /diary/{entry_id}`) —
  * backend YALNIZ `draft` kayitta kabul eder. Hangi santiyenin gecersiz
@@ -72,13 +81,25 @@ export function useUpdateSiteDiaryEntry(
 ): UseMutationResult<SiteDiaryEntryDetail, Error, SiteDiaryEntryUpdate> {
   const invalidate = useSiteDiaryInvalidator();
   return useMutation({
-    mutationFn: async (body) =>
-      unwrap(
-        await backendClient.PATCH("/diary/{entry_id}", {
-          params: { path: { entry_id: entryId } },
-          body,
-        }),
-      ),
+    mutationFn: (body) => patchSiteDiaryEntry(entryId, body),
+    onSuccess: (data) => invalidate(data.site_id, data.id),
+  });
+}
+
+/**
+ * GKS-F1.5 · ayni PATCH, ama kayit kimligi CAGRI ANINDA verilir: kayit yokken
+ * ilk "Taslak Kaydet" POST'tan hemen sonra (kimlik henuz ekranin `matchedId`sine
+ * yansimadan) isci kirilimini ayni kayda yazar. Govde `useUpdateSiteDiaryEntry`
+ * ile ayni `buildDiaryUpdateBody`dir.
+ */
+export function useUpdateCreatedSiteDiaryEntry(): UseMutationResult<
+  SiteDiaryEntryDetail,
+  Error,
+  { entryId: string; body: SiteDiaryEntryUpdate }
+> {
+  const invalidate = useSiteDiaryInvalidator();
+  return useMutation({
+    mutationFn: ({ entryId, body }) => patchSiteDiaryEntry(entryId, body),
     onSuccess: (data) => invalidate(data.site_id, data.id),
   });
 }

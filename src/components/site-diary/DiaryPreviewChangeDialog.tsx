@@ -27,8 +27,11 @@ interface DiaryPreviewDialogCopy {
 
 const CANCEL_LABEL = "Vazgeç";
 
-function discardMessage(subject: "Bölüm" | "Tarih", count: number): string {
-  return `${subject} değişince iş kalemi listesi yenilenir; bu güne girdiğiniz ${count} satırlık miktar ve gerekçe kaydedilmeden silinir.`;
+function discardMessage(kind: "section" | "date", count: number): string {
+  // Bölüm değişimi işçileri silmez; tarih değişimi iskeleti VE işçi alanlarını sıfırlar (GKS-F1.5).
+  return kind === "section"
+    ? `Bölüm değişince iş kalemi listesi yenilenir; bu güne girdiğiniz ${count} satırlık miktar ve gerekçe kaydedilmeden silinir.`
+    : `Tarih değişince iş kalemi listesi yenilenir; bu güne girdiğiniz ${count} satırlık miktar, gerekçe ve işçi sayısı kaydedilmeden silinir.`;
 }
 
 export function diaryPreviewDialogCopy(pending: DiaryPreviewPending): DiaryPreviewDialogCopy {
@@ -41,8 +44,8 @@ export function diaryPreviewDialogCopy(pending: DiaryPreviewPending): DiaryPrevi
     };
   }
   return {
-    title: "Girilen miktarlar silinecek",
-    message: discardMessage(pending.kind === "section" ? "Bölüm" : "Tarih", pending.count),
+    title: pending.kind === "section" ? "Girilen miktarlar silinecek" : "Girilen veriler silinecek",
+    message: discardMessage(pending.kind, pending.count),
     confirmLabel: "Değiştir",
     cancelLabel: CANCEL_LABEL,
   };

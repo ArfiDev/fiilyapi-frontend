@@ -52,6 +52,7 @@ vi.mock("@/lib/api/hooks/useSiteDiarySkeleton", async (importOriginal) => ({
 vi.mock("@/lib/api/hooks/useSiteDiaryMutations", () => ({
   useCreateSiteDiaryEntry: vi.fn(),
   useUpdateSiteDiaryEntry: vi.fn(),
+  useUpdateCreatedSiteDiaryEntry: vi.fn(),
   useSaveSiteDiaryLines: vi.fn(),
   useSubmitSiteDiaryEntry: vi.fn(),
   useReopenSiteDiaryEntry: vi.fn(),
@@ -371,10 +372,10 @@ describe("GKS-F1.4 · Ü3b tarih değişimi (kayıt yok)", () => {
     fireEvent.change(dateField(), { target: { value: OTHER_DISPLAY } });
 
     const modal = within(dialog() as HTMLElement);
-    expect(modal.getByText("Girilen miktarlar silinecek")).toBeInTheDocument();
+    expect(modal.getByText("Girilen veriler silinecek")).toBeInTheDocument();
     expect(
       modal.getByText(
-        "Tarih değişince iş kalemi listesi yenilenir; bu güne girdiğiniz 2 satırlık miktar ve gerekçe kaydedilmeden silinir.",
+        "Tarih değişince iş kalemi listesi yenilenir; bu güne girdiğiniz 2 satırlık miktar, gerekçe ve işçi sayısı kaydedilmeden silinir.",
       ),
     ).toBeInTheDocument();
     await user.click(modal.getByRole("button", { name: "Vazgeç" }));
@@ -445,7 +446,7 @@ describe("GKS-F1.4 · Ü3b tarih değişimi (kayıt yok)", () => {
     const modal = within(dialog() as HTMLElement);
     expect(
       modal.getByText(
-        "Tarih değişince iş kalemi listesi yenilenir; bu güne girdiğiniz 2 satırlık miktar ve gerekçe kaydedilmeden silinir.",
+        "Tarih değişince iş kalemi listesi yenilenir; bu güne girdiğiniz 2 satırlık miktar, gerekçe ve işçi sayısı kaydedilmeden silinir.",
       ),
     ).toBeInTheDocument();
     await user.click(modal.getByRole("button", { name: "Vazgeç" }));

@@ -23,6 +23,7 @@ import {
   useReopenSiteDiaryEntry,
   useSaveSiteDiaryLines,
   useSubmitSiteDiaryEntry,
+  useUpdateCreatedSiteDiaryEntry,
   useUpdateSiteDiaryEntry,
 } from "@/lib/api/hooks/useSiteDiaryMutations";
 import {
@@ -63,6 +64,7 @@ import { buildDiaryExtensionContext, isSameDiaryExtensionContext } from "./diary
 import { buildDiaryLineTree, diaryTreeLeaves } from "./diary-lines-tree";
 import { boqTreeItems, siteTreeSections } from "./diary-tree-sources";
 import { diaryTimesheetHref } from "./diary-timesheet-link";
+import { diaryWorkersPatchFailedMessage, saveNewDiaryEntry } from "./first-save";
 import { classifyDiarySaveError } from "./save-error";
 import {
   diaryCoreLock,
@@ -74,7 +76,6 @@ import { useDiaryPreviewTransitions } from "./useDiaryPreviewTransitions";
 import {
   addDiaryFirm,
   addDiaryLines,
-  buildDiaryCreateBody,
   buildDiaryLinesBody,
   buildDiaryUpdateBody,
   diaryFormFromEntry,
@@ -219,6 +220,8 @@ export function DiaryEntryScreen({
 
   const createEntry = useCreateSiteDiaryEntry(siteId);
   const updateEntry = useUpdateSiteDiaryEntry(matchedId);
+  // GKS-F1.5 · kayıt yokken ilk kayıtta işçi PATCH'i: kimlik çağrı anında verilir.
+  const patchCreatedEntry = useUpdateCreatedSiteDiaryEntry();
   const saveLines = useSaveSiteDiaryLines(matchedId);
   const submitEntry = useSubmitSiteDiaryEntry(matchedId);
   const reopenEntry = useReopenSiteDiaryEntry(matchedId);
@@ -336,6 +339,18 @@ export function DiaryEntryScreen({
     return next;
   }
 
+  /**
+   * Kayıt YOKKEN POST başarılı olur olmaz (formu DEĞİŞTİRMEDEN): kaydı ekrana
+   * bağlar ve kirlilik tabanını o kayıt yapar. Bu, ardından gelen işçi PATCH'i
+   * sürerken kayıt detayının yüklenmesi formu kayıttan ezmesin diye şarttır
+   * (aynı kimlik → kirli form korunur).
+   */
+  function adoptCreatedBaseline(created: SiteDiaryEntryDetail) {
+    preview.adoptCreatedEntry(created);
+    setSeeded({ key: `entry:${created.id}`, baseline: created });
+    setNoEntryBaseline(null);
+  }
+
   // ── Kalem ağacı (G1) + uzantı bağlamı (§2.7) ──────────────────────────
   const treeSections = siteTreeSections(siteQuery.data?.sections ?? []);
   const treeSource = diaryTreeSource(entry, preview.skeleton);
@@ -442,7 +457,8 @@ export function DiaryEntryScreen({
   }
 
   const canReopen = hasAtLeast(permission.level, "admin");
-  const isDirty = isEntryFormDirty;
+  // Kayıtlı günde `isEntryFormDirty`; kayıtsız günde `noEntryBaseline` kirliliği (GKS-F1.5).
+  const isDirty = registryDirty;
   // Uzantı yuvası `submitGate`: `canSubmit === false` → Gönder pasif + gerekçeler EKRANDA.
   const gate = extension?.submitGate ?? null;
   const isGateClosed = gate !== null && !gate.canSubmit;
@@ -476,8 +492,9 @@ export function DiaryEntryScreen({
   const firms = subcontractors.data?.items ?? [];
   const firmNameById = new Map(firms.map((firm) => [firm.id, firm.name]));
   const firmOptions = firms.filter((firm) => firm.is_active).map((firm) => ({ id: firm.id, name: firm.name }));
-  // G12a — kendi ekip backend'de türetilir; kayıt yokken (ya da eski yanıtta) boş.
-  const ownCrew = entry?.own_crew_from_timesheet ?? [];
+  // G12a — kendi ekip backend'de türetilir: kayıtta detaydan, kayıtsız günde
+  // iskeletten (GKS-F1.5); alan yoksa (eski yanıt) ya da puantaj yoksa boş.
+  const ownCrew = entry?.own_crew_from_timesheet ?? preview.skeleton?.own_crew_from_timesheet ?? [];
   const timesheetHref = diaryTimesheetHref({ projectKey, siteKey, day: activeDate });
   const accrual = computeDiaryAccrual({
     employerItems: employerPaymentsQuery.data?.items ?? [],
@@ -596,11 +613,17 @@ export function DiaryEntryScreen({
     }
     try {
       if (!entry) {
-        // Tek POST: başlık + önizlemede dokunulan satırlar (GKS-F1.3).
-        const created = await createEntry.mutateAsync(buildDiaryCreateBody(form, diaryTreeLeaves(lineTree)));
-        preview.adoptCreatedEntry(created);
-        reseedFromSaved(created, form);
-        setActiveDate(created.entry_date);
+        // POST: başlık + önizlemede dokunulan satırlar (GKS-F1.3); işçi alanları
+        // kirliyse AYNI kayda PATCH (GKS-F1.5, bkz. `first-save.ts`).
+        const result = await saveNewDiaryEntry(form, diaryTreeLeaves(lineTree), {
+          create: createEntry.mutateAsync,
+          patch: (entryId, body) => patchCreatedEntry.mutateAsync({ entryId, body }),
+          onCreated: adoptCreatedBaseline,
+        });
+        // PATCH düştüyse form KİRLİ kalır (işçi değerleri silinmez); kayıt zaten açık.
+        if (result.ok) reseedFromSaved(result.saved, form);
+        else setErrorMessage(diaryWorkersPatchFailedMessage(result.error));
+        setActiveDate(result.created.entry_date);
         return;
       }
       const updated = await updateEntry.mutateAsync(buildDiaryUpdateBody(form, entry));
@@ -911,7 +934,6 @@ export function DiaryEntryScreen({
             ownCrew={ownCrew}
             timesheetHref={timesheetHref}
             disabled={isReadOnly}
-            isEntryMissing={!entry}
           />
           <DiarySafetyCard form={form} onChange={handleFormChange} disabled={isReadOnly} />
         </div>

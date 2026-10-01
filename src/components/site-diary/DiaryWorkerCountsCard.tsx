@@ -41,9 +41,6 @@ export interface DiaryWorkerCountsCardProps {
   onChange: (key: string, value: string) => void;
   /** Salt-okunur görünüm (izin yok, kayıt `submitted` ya da gün kilitli). */
   disabled: boolean;
-  /** Kayıt henüz açılmadı — `POST` gövdesi `worker_counts` KABUL ETMEZ, sayı
-   * girişi kaydedilemez; alanlar gerekçesiyle devre dışı kalır (silinmez). */
-  isEntryMissing: boolean;
   /** Firma satırının saat hücresi (İ:356-357). */
   onHoursChange?: (key: string, value: string) => void;
   /** G10 — firma satırı ekle/kaldır (formen `site_diary` yazma). */
@@ -133,14 +130,12 @@ export function DiaryWorkerCountsCard({
   form,
   onChange,
   disabled,
-  isEntryMissing,
   onHoursChange,
   onAddFirm,
   onRemoveRow,
   firmOptions = [],
   firmNameById,
 }: DiaryWorkerCountsCardProps) {
-  const isDisabled = disabled || isEntryMissing;
   const hoursValues = form.workerHours ?? {};
   const totals = diaryCrewTotals(ownCrew, rows, form.workerCounts, hoursValues);
   const presentFirms = new Set(rows.flatMap((row) => (row.subcontractorId ? [row.subcontractorId] : [])));
@@ -189,12 +184,7 @@ export function DiaryWorkerCountsCard({
                 aria-invalid={isInvalid || undefined}
                 maxLength={DIARY_WORKER_COUNT_MAX}
                 value={value}
-                disabled={isDisabled}
-                title={
-                  isEntryMissing
-                    ? "Önce taslak kaydedin — işçi dağılımı kayıt açıldıktan sonra kaydedilebilir"
-                    : undefined
-                }
+                disabled={disabled}
                 onChange={(event) => onChange(key, event.target.value)}
               />
               {isFirm ? (
@@ -207,7 +197,7 @@ export function DiaryWorkerCountsCard({
                   aria-label={`${label} kişi başı saat`}
                   maxLength={WORKER_HOURS_MAX_LENGTH}
                   value={hoursText}
-                  disabled={isDisabled}
+                  disabled={disabled}
                   onChange={(event) => onHoursChange?.(key, event.target.value)}
                 />
               ) : (
@@ -217,7 +207,7 @@ export function DiaryWorkerCountsCard({
               <span className={cx("diary-workers__as", isFirm && "diary-workers__as--sub")}>
                 {formatHours(isFirm ? firmManHours(value, hoursText) : null)}
               </span>
-              {onRemoveRow && !isDisabled ? (
+              {onRemoveRow && !disabled ? (
                 <button
                   type="button"
                   className="diary-lines__remove"
@@ -234,7 +224,7 @@ export function DiaryWorkerCountsCard({
         })}
         {/* İ:365 */}
         <div className="diary-workers__sub-note">Taşeron: kişi × saat = a-s</div>
-        {onAddFirm && !isDisabled && addable.length > 0 && (
+        {onAddFirm && !disabled && addable.length > 0 && (
           <div className="diary-workers__add-firm">
             <Select
               aria-label="Taşeron firma ekle"
@@ -267,11 +257,6 @@ export function DiaryWorkerCountsCard({
       {totals.people === null && (
         <p className="diary-workers__note">
           İşçi sayısı yalnız tam sayı olabilir — toplam bu yüzden gösterilmiyor.
-        </p>
-      )}
-      {isEntryMissing && !disabled && (
-        <p className="diary-workers__note">
-          İşçi dağılımı kayıt açıldıktan sonra girilebilir — önce “Taslak Kaydet” deyin.
         </p>
       )}
     </section>

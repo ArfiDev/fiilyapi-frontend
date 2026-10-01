@@ -71,6 +71,7 @@ vi.mock("@/lib/api/hooks/useSiteDiarySkeleton", async () => ({
 vi.mock("@/lib/api/hooks/useSiteDiaryMutations", () => ({
   useCreateSiteDiaryEntry: vi.fn(),
   useUpdateSiteDiaryEntry: vi.fn(),
+  useUpdateCreatedSiteDiaryEntry: vi.fn(),
   useSaveSiteDiaryLines: vi.fn(),
   useSubmitSiteDiaryEntry: vi.fn(),
   useReopenSiteDiaryEntry: vi.fn(),
@@ -866,13 +867,13 @@ describe("SiteDiaryEntryView · işçi dağılımı (G12a)", () => {
     expect(screen.getByText(/Bu gün için puantaj girilmemiş/)).toBeInTheDocument();
   });
 
-  it("kayıt yokken boş hâl + 'önce taslak kaydedin' notu", () => {
+  it("kayıt yokken boş hâl basılır; 'önce taslak kaydedin' notu YOK (GKS-F1.5)", () => {
     mockScreen();
     render(<SiteDiaryEntryView />);
 
     expect(screen.getByText(/Bu gün için puantaj girilmemiş/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Puantaja git/ })).toHaveAttribute("href", timesheetHrefFor(TODAY));
-    expect(screen.getByText(/önce “Taslak Kaydet” deyin/)).toBeInTheDocument();
+    expect(screen.queryByText(/önce “Taslak Kaydet” deyin/)).toBeNull();
   });
 
   it("🔴 TAM KÜME: gizli (sayısı 0) eski satır PATCH gövdesinde korunur; görünen eski satır 'Diğer (eski kayıt)'", async () => {

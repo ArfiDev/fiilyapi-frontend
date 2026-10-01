@@ -1,5 +1,3 @@
-import { vi } from "vitest";
-
 import type { SiteDiarySkeleton } from "@/lib/api/hooks/useSiteDiarySkeleton";
 
 /**
@@ -19,5 +17,5 @@ export function echoSkeletonQuery(_siteId: string, entryDate: string, sectionId:
     lines: [],
     lines_total: "0.00",
   };
-  return { data, isFetching: false, isLoading: false, isError: false, error: null, refetch: vi.fn() };
+  return { data, isFetching: false, isLoading: false, isError: false, error: null, refetch: () => Promise.resolve() };
 }

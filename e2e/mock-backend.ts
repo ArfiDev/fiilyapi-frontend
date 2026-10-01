@@ -11095,6 +11095,9 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         lock_report_date: locks[0]?.report_date ?? null,
         lines: lines.map((line) => buildDiaryLineFields(state, site.id, entryDate, line, false)),
         lines_total: money2(diaryLinesTotal(lines)),
+        // GKS-F1.5 · kayıtlı detayla AYNI türetme (`evOwnCrewFromTimesheet`): puantajlı
+        // günde kayıtsız ekran da kendi ekibi basar.
+        own_crew_from_timesheet: evOwnCrewFromTimesheet(site.id, entryDate),
       };
       return send(200, body);
     }

@@ -1244,6 +1244,19 @@ describe("🔴 test ikizi ↔ günlük iskelet önizlemesi + POST birleştirmesi
     expect(savedCumulative - previewCumulative).toBe(120);
   });
 
+  it("GKS-F1.5 · önizleme `own_crew_from_timesheet` == aynı gün kayıt detayının türetmesi (puantajlı gün); puantajsız gün boş", async () => {
+    const day = EV_DAY_SCENARIO_DAYS.full;
+    const list = await getJson<{ items: { id: string; entry_date: string }[] }>("/sites/s-1/diary?year=2026&month=10");
+    const entryId = list.items.find((item) => item.entry_date === day)?.id;
+    const detail = await call<DiaryDetail & { own_crew_from_timesheet?: unknown[] }>("GET", `/diary/${entryId}`);
+    const body = await preview(day);
+
+    expect(detail.json.own_crew_from_timesheet?.length ?? 0).toBeGreaterThan(0);
+    expect(body.own_crew_from_timesheet).toEqual(detail.json.own_crew_from_timesheet);
+    expect(conformanceViolations(OPENAPI_SCHEMAS["SiteDiarySkeleton"], body, "skeleton")).toEqual([]);
+    expect((await preview("2031-02-03")).own_crew_from_timesheet).toEqual([]);
+  });
+
   it("kilitli EV günü: `locked` + `lock_report_date` gün kilidi senaryosundan gelir", async () => {
     const locked = await preview(EV_DAY_SCENARIO_DAYS.locked);
     const open = await preview(EV_DAY_SCENARIO_DAYS.blocked);

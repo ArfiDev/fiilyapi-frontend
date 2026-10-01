@@ -45,6 +45,7 @@ vi.mock("@/lib/api/hooks/useSiteDiarySkeleton", () => ({ useSiteDiarySkeleton: v
 vi.mock("@/lib/api/hooks/useSiteDiaryMutations", () => ({
   useCreateSiteDiaryEntry: vi.fn(),
   useUpdateSiteDiaryEntry: vi.fn(),
+  useUpdateCreatedSiteDiaryEntry: vi.fn(),
   useSaveSiteDiaryLines: vi.fn(),
   useSubmitSiteDiaryEntry: vi.fn(),
   useReopenSiteDiaryEntry: vi.fn(),

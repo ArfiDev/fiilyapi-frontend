@@ -5,7 +5,7 @@ import { fetchSiteDiarySkeleton } from "@/lib/api/hooks/useSiteDiarySkeleton";
 
 import type { DiaryPreviewPending } from "./DiaryPreviewChangeDialog";
 import { addDiaryLines, type DiaryFormState } from "./form-state";
-import { countEnteredPreviewData, missingSkeletonLines } from "./preview-transition";
+import { countEnteredDateData, countEnteredPreviewData, missingSkeletonLines } from "./preview-transition";
 
 /**
  * GKS-F1.4 · bölüm/tarih değişiminde onay akışı (Ü3, Ü3b, Ü5). Ekran yalnız
@@ -131,23 +131,29 @@ export function useDiaryPreviewTransitions({
         setForm((prev) => ({ ...prev, entryDate: typedDate }));
         return;
       }
-      const count = countEnteredPreviewData(form);
       const isNewDate = typedDate !== undefined && typedDate !== activeDate;
-      if (count === 0 || (!isSectionChange && !isNewDate)) {
-        apply(patch);
-      } else if (isSectionChange) {
-        setPending({ model: { kind: "section", count }, contextKey, commit: () => apply({ ...patch, ...CLEARED_LINE_INPUTS }) });
-      } else {
-        const restore = () => setForm((prev) => ({ ...prev, entryDate: activeDate }));
-        setPending({ model: { kind: "date", count }, contextKey, commit: () => apply(patch), rollback: restore });
+      if (isSectionChange) {
+        // Bölüm değişimi YALNIZ satır verisini siler; işçi alanları durur.
+        const count = countEnteredPreviewData(form);
+        if (count === 0) apply(patch);
+        else setPending({ model: { kind: "section", count }, contextKey, commit: () => apply({ ...patch, ...CLEARED_LINE_INPUTS }) });
+        return;
       }
+      // Tarih değişimi iskeleti VE işçi alanlarını sıfırlar: sayım ikisini de kapsar.
+      const count = isNewDate ? countEnteredDateData(form) : 0;
+      if (count === 0) {
+        apply(patch);
+        return;
+      }
+      const restore = () => setForm((prev) => ({ ...prev, entryDate: activeDate }));
+      setPending({ model: { kind: "date", count }, contextKey, commit: () => apply(patch), rollback: restore });
     },
     [entry, form, activeDate, contextKey, setForm, offerMissingLines],
   );
 
   const requestSelectDate = useCallback<UseDiaryPreviewTransitionsResult["requestSelectDate"]>(
     (entryDate, apply) => {
-      const count = entry === undefined && entryDate !== activeDate ? countEnteredPreviewData(form) : 0;
+      const count = entry === undefined && entryDate !== activeDate ? countEnteredDateData(form) : 0;
       if (count === 0) apply();
       else setPending({ model: { kind: "date", count }, contextKey, commit: apply });
     },

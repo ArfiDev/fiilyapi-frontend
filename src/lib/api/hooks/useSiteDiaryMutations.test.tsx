@@ -8,6 +8,7 @@ import {
   useReopenSiteDiaryEntry,
   useSaveSiteDiaryLines,
   useSubmitSiteDiaryEntry,
+  useUpdateCreatedSiteDiaryEntry,
   useUpdateSiteDiaryEntry,
 } from "./useSiteDiaryMutations";
 import {
@@ -156,6 +157,22 @@ describe("useUpdateSiteDiaryEntry", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as BackendError).status).toBe(409);
     expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("useUpdateCreatedSiteDiaryEntry (GKS-F1.5)", () => {
+  it("kimliği çağrı ANINDA alır: az önce açılan kayda PATCH /diary/{id} atar ve standart geçersiz kılmayı yapar", async () => {
+    vi.mocked(backendClient.PATCH).mockResolvedValue(okResponse(DETAIL));
+
+    const { result } = renderHook(() => useUpdateCreatedSiteDiaryEntry(), { wrapper });
+    act(() => result.current.mutate({ entryId: "d-yeni", body: { worker_counts: [] } as never }));
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(backendClient.PATCH).toHaveBeenCalledWith("/diary/{entry_id}", {
+      params: { path: { entry_id: "d-yeni" } },
+      body: { worker_counts: [] },
+    });
+    expectStandardInvalidation();
   });
 });
 

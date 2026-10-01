@@ -57,6 +57,7 @@ vi.mock("@/lib/api/hooks/useSiteDiarySkeleton", async () => ({
 vi.mock("@/lib/api/hooks/useSiteDiaryMutations", () => ({
   useCreateSiteDiaryEntry: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateSiteDiaryEntry: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateCreatedSiteDiaryEntry: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSaveSiteDiaryLines: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSubmitSiteDiaryEntry: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useReopenSiteDiaryEntry: () => ({ mutateAsync: vi.fn(), isPending: false }),

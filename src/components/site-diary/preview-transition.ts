@@ -28,6 +28,29 @@ export function countEnteredPreviewData(form: DiaryFormState): number {
   return keys.size;
 }
 
+/** İşçi hücresi/firma anahtarları (dolu sayı, dolu saat, eklenen firma) — distinct. */
+function enteredWorkerKeys(form: DiaryFormState): Set<string> {
+  const keys = new Set<string>();
+  for (const [key, value] of Object.entries(form.workerCounts)) if (isFilled(value)) keys.add(key);
+  for (const [key, value] of Object.entries(form.workerHours)) if (isFilled(value)) keys.add(key);
+  for (const firm of form.addedFirms) keys.add(`firm|${firm.subcontractorId}`);
+  return keys;
+}
+
+/** Formda girilmiş işçi verisi (dolu sayı/saat anahtarı ya da eklenen firma) var mı. */
+export function hasEnteredWorkerData(form: DiaryFormState): boolean {
+  return enteredWorkerKeys(form).size > 0;
+}
+
+/**
+ * GKS-F1.5 · TARİH değişimi onayının `{n}`i: satır verisi (`countEnteredPreviewData`
+ * kümesi) + işçi satırları. Tarih değişince iskelet VE işçi alanları sıfırlanır;
+ * bölüm değişimi işçileri silmez, onun sayımı `countEnteredPreviewData`dır.
+ */
+export function countEnteredDateData(form: DiaryFormState): number {
+  return countEnteredPreviewData(form) + enteredWorkerKeys(form).size;
+}
+
 export function hasEnteredPreviewData(form: DiaryFormState): boolean {
   return countEnteredPreviewData(form) > 0;
 }
