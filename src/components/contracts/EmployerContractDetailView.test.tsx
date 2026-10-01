@@ -926,8 +926,50 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
 
       // no 51 · hücreler artık `type="number"` DEĞİLDİR (`inputMode="decimal"`)
       // — değer metin olarak karşılaştırılır.
-      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3200");
-      expect(screen.getByLabelText("03.001 birim fiyatı")).toHaveValue("1850");
+      // 🔴 TKL-F2.6a · K7: GÖSTERİM Türkçe biçimdir (binlik nokta, ondalık virgül) —
+      // sunucudaki "3200.000" / "1850.00" → "3.200" / "1.850,00".
+      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3.200");
+      expect(screen.getByLabelText("03.001 birim fiyatı")).toHaveValue("1.850,00");
+    });
+
+    // 🔴 TKL-F2.6a · K7 (a)(c)(d)(e): tablo miktar hücresi T30 ile okunur.
+    it.each([
+      ["1.500", { quantity: "1500" }],
+      ["1,5", { quantity: "1.5" }],
+    ])("miktar hücresine '%s' yazılınca gövde %j (T30)", async (typed, body) => {
+      renderItemsTab();
+
+      const quantity = screen.getByLabelText("03.002 miktar");
+      fireEvent.change(quantity, { target: { value: typed } });
+      fireEvent.blur(quantity);
+
+      expect(updateItemMutate).toHaveBeenCalledTimes(1);
+      expect(updateItemMutate.mock.calls[0][0]).toEqual({ itemId: "ci-2", body });
+      await act(async () => {});
+    });
+
+    it("miktar hücresinde belirsiz '0.500' istek UÇURMAZ ve virgül uyarısı basar", () => {
+      renderItemsTab();
+
+      const quantity = screen.getByLabelText("03.002 miktar");
+      fireEvent.change(quantity, { target: { value: "0.500" } });
+      fireEvent.blur(quantity);
+
+      expect(updateItemMutate).not.toHaveBeenCalled();
+      expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      );
+    });
+
+    it("birim fiyat hücresine gösterilen '1.850,00' aynen yazılınca istek UÇMAZ", () => {
+      renderItemsTab();
+
+      const price = screen.getByLabelText("03.001 birim fiyatı");
+      fireEvent.change(price, { target: { value: "1.850,000" } });
+      fireEvent.change(price, { target: { value: "1.850,00" } });
+      fireEvent.blur(price);
+
+      expect(updateItemMutate).not.toHaveBeenCalled();
     });
 
     it("odak çıkışında (emsal tetikleyicisi) yalnız DEĞİŞEN alan PATCH'lenir", async () => {
@@ -957,8 +999,8 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
     // yani yalnız "dokunulmadı" yolu ölçülürdü. Burada değer GERÇEKTEN değişir,
     // sonra eskisine döner (taslak vardır, sunucu değeriyle eşittir).
     it.each([
-      ["03.001 birim fiyatı", "1850"],
-      ["03.001 miktar", "3200"],
+      ["03.001 birim fiyatı", "1.850,00"],
+      ["03.001 miktar", "3.200"],
       ["03.001 poz no", "03.001"],
       ["03.001 poz adı", "Kat Döşemesi Betonu C25/30"],
     ])("%s: değişip aynı değere dönen hücre istek UÇURMAZ", (label, original) => {
@@ -988,7 +1030,7 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
         "Miktar sıfırdan büyük olmalıdır.",
       );
-      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3200");
+      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3.200");
     });
 
     it("negatif birim fiyat gönderilmez (`minimum: 0`)", () => {
@@ -1389,6 +1431,34 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
         "Ondalık için virgül kullanın (ör. 28,50)",
       );
+    });
+
+    // 🔴 TKL-F2.6a · K7 — yeni satır miktarı da T30.
+    it("🔴 yeni satır miktarı '1.500' → '1500'; '1,5' → '1.5' (T30)", async () => {
+      openNewRow();
+      fillNewRow("100");
+      fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "1.500" } });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+      });
+      expect(createItemMutateAsync.mock.calls[0][0]).toMatchObject({ quantity: "1500" });
+    });
+
+    it("🔴 yeni satır miktarı '1,5' kabul edilir, belirsiz '1.5' POST EDİLMEZ", async () => {
+      openNewRow();
+      fillNewRow("100");
+      fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "1.5" } });
+      fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+      expect(createItemMutateAsync).not.toHaveBeenCalled();
+      expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      );
+
+      fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "1,5" } });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+      });
+      expect(createItemMutateAsync.mock.calls[0][0]).toMatchObject({ quantity: "1.5" });
     });
 
     it("miktarı SIFIR olan taslak POST EDİLMEZ — tam formla AYNI korkuluk", () => {

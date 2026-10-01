@@ -12,7 +12,12 @@
 
 import type { components } from "@/lib/api/schema";
 
-import type { ContractItemFormValues, EmployerItemFormValues } from "./validate";
+import {
+  parseEmployerQuantity,
+  parseEmployerUnitPrice,
+  type ContractItemFormValues,
+  type EmployerItemFormValues,
+} from "./validate";
 import type { DeepScale } from "@/lib/api/scale";
 
 export type SubcontractorItemCreateBody =
@@ -63,13 +68,20 @@ export function buildEmployerItemBody(
   values: EmployerItemFormValues,
   fallbackSortOrder: number,
 ): EmployerItemCreateBody {
+  // 🔴 TKL-F2.6a · K6: `values.quantity`/`unitPrice` HAM Türkçe girdidir ("1.500,5"); gövdeye
+  // T30 ile okunmuş nokta-ondalık METİN girer. Okunamazsa `validateEmployerItem` atlanmıştır:
+  // sessizce ham metin göndermek yerine fırlatılır (para değeri tahmin edilmez).
+  const quantity = parseEmployerQuantity(values.quantity);
+  if (quantity.kind === "error") throw new Error(quantity.problem.message);
+  const unitPrice = parseEmployerUnitPrice(values.unitPrice);
+  if (unitPrice.kind === "error") throw new Error(unitPrice.problem.message);
   return {
     group_id: values.groupId,
     code: values.code.trim(),
     description: values.description.trim(),
     unit: values.unit.trim(),
-    quantity: values.quantity.trim(),
-    unit_price: values.unitPrice.trim(),
+    quantity: quantity.value,
+    unit_price: unitPrice.value,
     sort_order: resolveSortOrder(values.sortOrder, fallbackSortOrder),
   };
 }

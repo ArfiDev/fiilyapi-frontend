@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { MAX_LENGTH, NEW_GROUP_OPTION } from "./constants";
 import {
+  parseEmployerQuantity,
   validateEmployerItem,
   validateSubcontractorItem,
   type ContractItemFormValues,
@@ -17,8 +18,11 @@ const VALID: ContractItemFormValues = {
   sortOrder: "",
 };
 
+// 🔴 TKL-F2.6a (K6/T30): İŞV formu metni Türkçe okur ("1240,5"; nokta = binlik) — TAŞ formunun
+// nokta-ondalık "1240.5"i burada BELİRSİZdir, bu yüzden miktar/fiyat ezilir.
 const VALID_EMPLOYER: EmployerItemFormValues = {
   ...VALID,
+  quantity: "1240,5",
   groupId: "gggggggg-0000-0000-0000-000000000001",
   groupName: "",
 };
@@ -102,6 +106,59 @@ describe("validateEmployerItem (İŞV)", () => {
   it("🔴 uzunluk sınırı YALNIZ yeni grup dalında koşar — mevcut grup seçiliyken groupName YOK SAYILIR", () => {
     expect(
       validateEmployerItem({ ...VALID_EMPLOYER, groupName: "g".repeat(2001) }),
+    ).toBeNull();
+  });
+});
+
+describe("parseEmployerQuantity · T30 (K6/K7)", () => {
+  const ok = (value: string) => ({ kind: "ok", value });
+  const err = (message: string) => ({ kind: "error", problem: { field: "quantity", message } });
+
+  it("'1.500' → 1500 (binlik), '1,5' → 1.5 (ondalık), '2,125' → 2.125 (kayıpsız metin)", () => {
+    expect(parseEmployerQuantity("1.500")).toEqual(ok("1500"));
+    expect(parseEmployerQuantity("1,5")).toEqual(ok("1.5"));
+    expect(parseEmployerQuantity("2,125")).toEqual(ok("2.125"));
+    expect(parseEmployerQuantity(" 1.234.567,125 ")).toEqual(ok("1234567.125"));
+  });
+
+  it("belirsiz nokta ('1.5', '0.500', '1234.567') reddedilir — onaylı metin", () => {
+    const message = "Ondalık için virgül kullanın (ör. 28,50)";
+    expect(parseEmployerQuantity("1.5")).toEqual(err(message));
+    expect(parseEmployerQuantity("0.500")).toEqual(err(message));
+    expect(parseEmployerQuantity("1234.567")).toEqual(err(message));
+  });
+
+  it("boş / sayı değil / sıfır / negatif: mevcut miktar metinleri", () => {
+    expect(parseEmployerQuantity("  ")).toEqual(err("Miktar zorunludur."));
+    expect(parseEmployerQuantity("abc")).toEqual(err("Miktar sayı olmalıdır."));
+    expect(parseEmployerQuantity("0")).toEqual(err("Miktar sıfırdan büyük olmalıdır."));
+    expect(parseEmployerQuantity("0,000")).toEqual(err("Miktar sıfırdan büyük olmalıdır."));
+    expect(parseEmployerQuantity("-5")).toEqual(err("Miktar sıfırdan büyük olmalıdır."));
+  });
+
+  it("Numeric(14,3): 3 kesir ve 11 tam basamak SINIRDA kabul, bir fazlası reddedilir", () => {
+    expect(parseEmployerQuantity("1,125")).toEqual(ok("1.125"));
+    expect(parseEmployerQuantity("1,1255").kind).toBe("error");
+    expect(parseEmployerQuantity("99999999999").kind).toBe("ok");
+    expect(parseEmployerQuantity("100000000000").kind).toBe("error");
+  });
+});
+
+describe("validateEmployerItem · T30 miktar/fiyat metni (K6)", () => {
+  it("🔴 belirsiz miktar ('1.5') ve belirsiz fiyat ('28.5') satır hatasıdır", () => {
+    expect(validateEmployerItem({ ...VALID_EMPLOYER, quantity: "1.5" })).toEqual({
+      field: "quantity",
+      message: "Ondalık için virgül kullanın (ör. 28,50)",
+    });
+    expect(validateEmployerItem({ ...VALID_EMPLOYER, unitPrice: "28.5" })).toEqual({
+      field: "unitPrice",
+      message: "Ondalık için virgül kullanın (ör. 28,50)",
+    });
+  });
+
+  it("Türkçe girdi geçerlidir: '1.500' miktar, '28.500,75' fiyat", () => {
+    expect(
+      validateEmployerItem({ ...VALID_EMPLOYER, quantity: "1.500", unitPrice: "28.500,75" }),
     ).toBeNull();
   });
 });

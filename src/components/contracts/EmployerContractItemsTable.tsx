@@ -13,10 +13,7 @@ import {
   UNIT_PLACEHOLDER_OPTION,
 } from "@/components/contract-item-form/constants";
 import { buildEmployerItemBody, nextSortOrder } from "@/components/contract-item-form/build-body";
-import {
-  parseEmployerUnitPrice,
-  validateEmployerItem,
-} from "@/components/contract-item-form/validate";
+import { validateEmployerItem } from "@/components/contract-item-form/validate";
 import type { EmployerItemFormValues } from "@/components/contract-item-form/validate";
 import type { EmployerItemCreateBody } from "@/components/contract-item-form/build-body";
 import { cx } from "@/lib/cx";
@@ -29,7 +26,8 @@ import type {
 
 import {
   commitInlineCell,
-  decimalInputValue,
+  trPriceInputValue,
+  trQuantityInputValue,
   type EmployerItemUpdateBody,
   type InlineCellField,
   type InlineRowDraft,
@@ -66,7 +64,7 @@ import "./employer-contract-detail.css";
  * bu yüzeyi EKSİK bırakmıştır. Kullanıcı "inline" dedi ve depoda KANONİK
  * EMSAL var (`subcontractor-contract-form/ContractItemsCard.tsx`): miktar ve
  * birim fiyat hücrede `Input size="row"` ile düzenlenir, `onBlur`da kaydedilir,
- * gösterim `decimalInputValue`den gelir. Yüzey o emsalden TÜRETİLDİ; yeni bir
+ * gösterim (K7: Türkçe biçim, `trQuantityInputValue`/`trPriceInputValue`) hücre yardımcısından gelir. Yüzey o emsalden TÜRETİLDİ; yeni bir
  * etkileşim dili icat edilmedi.
  *
  * 🔴 `EmployerContractHeaderCard`taki "Düzenle" düğmesi (77) ve onun
@@ -288,7 +286,7 @@ export function EmployerContractItemsTable({
    */
   async function commitCell(
     // 🔴 KAPSAM MASKESİ (2026-09-19): metraj/fiyat `null` gelebilir; gösterim
-    //    `decimalInputValue` ile "" olur, kaydetme kararı ise `commitInlineCell`
+    //    `trQuantityInputValue`/`trPriceInputValue` ile "" olur, kaydetme kararı ise `commitInlineCell`
     //    içinde ham metinle verilir.
     item: CellItem,
     field: InlineCellField,
@@ -344,23 +342,17 @@ export function EmployerContractItemsTable({
   async function submitNewRow(group: EmployerContractItemsResponse["groups"][number]) {
     // Tam form doğrulamasının AYNISI koşar (`groupId` gerçek grup, sentinel
     // değil) — satır-içi yol formdan DAHA GEVŞEK olamaz.
-    // 🔴 K1 · birim fiyat metni T30 kuralıyla okunur ("28.500" = 28500); okunamayan fiyat
-    // boş bırakılır → önce DİĞER alan hataları (sıra korunur), fiyat hatası en sonda.
-    const price = parseEmployerUnitPrice(newRow.unitPrice);
+    // 🔴 K1/K7 · miktar ve birim fiyat HAM metinle doğrulanır (T30: "28.500" = 28500, "1,5" = 1,5;
+    // belirsiz nokta reddedilir) ve gövdeye `buildEmployerItemBody` içinde okunmuş hâliyle girer.
     const values = {
       ...newRow,
-      unitPrice: price.kind === "ok" ? price.value : "",
       groupId: group.id,
       groupName: "",
       sortOrder: "",
     };
     const problem = validateEmployerItem(values);
     if (problem) {
-      setClientError(
-        problem.field === "unitPrice" && price.kind === "error"
-          ? price.problem.message
-          : problem.message,
-      );
+      setClientError(problem.message);
       return;
     }
     setClientError(null);
@@ -500,7 +492,7 @@ interface GroupRowsProps {
   onDraft: (itemId: string, patch: InlineRowDraft) => void;
   onCommitCell: (
     // 🔴 KAPSAM MASKESİ (2026-09-19): metraj/fiyat `null` gelebilir; gösterim
-    //    `decimalInputValue` ile "" olur, kaydetme kararı ise `commitInlineCell`
+    //    `trQuantityInputValue`/`trPriceInputValue` ile "" olur, kaydetme kararı ise `commitInlineCell`
     //    içinde ham metinle verilir.
     item: CellItem,
     field: InlineCellField,
@@ -606,7 +598,7 @@ function GroupRows({
                 className="ecd-items__cell-input"
                 aria-label={`${item.code} birim fiyatı`}
                 disabled={pendingCells.has(cellKey(item.id, "unitPrice"))}
-                value={draft.unitPrice ?? decimalInputValue(item.unit_price)}
+                value={draft.unitPrice ?? trPriceInputValue(item.unit_price)}
                 onChange={(event) => onDraft(item.id, { unitPrice: event.target.value })}
                 onBlur={() => onCommitCell(item, "unitPrice")}
               />
@@ -620,7 +612,7 @@ function GroupRows({
                 className="ecd-items__cell-input"
                 aria-label={`${item.code} miktar`}
                 disabled={pendingCells.has(cellKey(item.id, "quantity"))}
-                value={draft.quantity ?? decimalInputValue(item.quantity)}
+                value={draft.quantity ?? trQuantityInputValue(item.quantity)}
                 onChange={(event) => onDraft(item.id, { quantity: event.target.value })}
                 onBlur={() => onCommitCell(item, "quantity")}
               />

@@ -41,7 +41,12 @@ import {
   UNIT_PLACEHOLDER_OPTION,
 } from "./constants";
 import { SummaryRow } from "./SummaryRow";
-import { validateEmployerItem, type EmployerItemFormValues } from "./validate";
+import {
+  parseEmployerQuantity,
+  parseEmployerUnitPrice,
+  validateEmployerItem,
+  type EmployerItemFormValues,
+} from "./validate";
 import "./contract-item-form.css";
 
 /**
@@ -142,7 +147,13 @@ export function EmployerItemFormModal({
   const defaultSortOrder = nextSortOrder(
     (selectedGroup?.items ?? []).map((item) => item.sort_order),
   );
-  const preview = lineTotalPreview(values.quantity, values.unitPrice);
+  // 🔴 K6: önizleme T30 ile OKUNMUŞ değerlerden hesaplanır; okunamayan girdi → önizleme yok.
+  const parsedQuantity = parseEmployerQuantity(values.quantity);
+  const parsedUnitPrice = parseEmployerUnitPrice(values.unitPrice);
+  const preview =
+    parsedQuantity.kind === "ok" && parsedUnitPrice.kind === "ok"
+      ? lineTotalPreview(parsedQuantity.value, parsedUnitPrice.value)
+      : null;
 
   const allItems = groups.flatMap((group) => group.items);
   // 🔴 KAPSAM MASKESİ (kullanıcı kararı 2026-09-19) — sayaç UYDURULMAZ.
@@ -387,9 +398,10 @@ export function EmployerItemFormModal({
                   <Input
                     {...control}
                     ref={quantityRef}
-                    type="number"
+                    // 🔴 TKL-F2.6a · K6: `type="number"` DEĞİL — tarayıcı Türkçe virgülü ""a indirger
+                    // ve T30 kuralını (nokta=binlik) uygulatamaz; metin + `lib/tr-decimal`.
+                    inputMode="decimal"
                     numeric
-                    min={0}
                     placeholder={TEXT.quantityPlaceholder}
                     value={values.quantity}
                     onChange={(event) => set("quantity", event.target.value)}
@@ -401,9 +413,10 @@ export function EmployerItemFormModal({
                   <Input
                     {...control}
                     ref={unitPriceRef}
-                    type="number"
+                    // 🔴 TKL-F2.6a · K6: `type="number"` DEĞİL — tarayıcı Türkçe virgülü ""a indirger
+                    // ve T30 kuralını (nokta=binlik) uygulatamaz; metin + `lib/tr-decimal`.
+                    inputMode="decimal"
                     numeric
-                    min={0}
                     placeholder={TEXT.unitPricePlaceholder}
                     value={values.unitPrice}
                     onChange={(event) => set("unitPrice", event.target.value)}
