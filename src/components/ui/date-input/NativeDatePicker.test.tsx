@@ -53,6 +53,29 @@ describe("NativeDatePicker — gizli seçici + showPicker", () => {
     expect(onPick).toHaveBeenCalledWith("2026-09-12");
   });
 
+  it("GRP-F1: native `input` olayı (takvimde ay gezinmesi) onPick'i TETİKLEMEZ — yalnız `change` seçimi kesinleştirir", () => {
+    const onPick = vi.fn();
+    const { container } = render(<NativeDatePicker value="2026-09-24" onPick={onPick} />);
+    const picker = container.querySelector<HTMLInputElement>('input[type="date"]')!;
+
+    // Chrome ay okunda değeri canlı günceller ve `input` atar; popup hâlâ açıktır.
+    fireEvent.input(picker, { target: { value: "2026-10-01" } });
+    expect(onPick).not.toHaveBeenCalled();
+
+    // Gün tıklanınca/popup kapanınca `change` gelir → tek seçim.
+    fireEvent.change(picker, { target: { value: "2026-10-05" } });
+    expect(onPick).toHaveBeenCalledTimes(1);
+    expect(onPick).toHaveBeenCalledWith("2026-10-05");
+  });
+
+  it("GRP-F1: value prop'u değişince gizli girdinin değeri senkronlanır", () => {
+    const { container, rerender } = render(<NativeDatePicker value="2026-09-24" onPick={vi.fn()} />);
+    const picker = container.querySelector<HTMLInputElement>('input[type="date"]')!;
+    expect(picker.value).toBe("2026-09-24");
+    rerender(<NativeDatePicker value="2026-09-25" onPick={vi.fn()} />);
+    expect(picker.value).toBe("2026-09-25");
+  });
+
   it("max sonrası gün → onPick ÇAĞRILMAZ (jsdom native `max` özniteliğini denetlemez, bu yüzden guard koddadır)", () => {
     const onPick = vi.fn();
     const { container } = render(

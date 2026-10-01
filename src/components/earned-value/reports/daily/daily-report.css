@@ -545,6 +545,24 @@
   white-space: nowrap;
 }
 
+/*
+ * GRP-F1 — GİR:246 yaprak satır ad div'i `white-space` BELİRTMEZ: uzun iş
+ * kalemi adı sabit genişlikli (table-layout:fixed) hücrede SARILIR, komşu
+ * "Birim" hücresine TAŞMAZ. Grup/toplam satırları (GİR:240, tek satır +
+ * span 9) nowrap kalır: seçici YALNIZ yaprak satırı kapsar. `min-width:0`
+ * flex çocuğunun içeriğe göre büzülmesini açar; `break-word` yalnız sığmayan
+ * uzun kesintisiz kodu böler (normal sözcükleri DEĞİL).
+ */
+.ev-daily-qty__table .tree-table__row--leaf .ev-qty-name {
+  white-space: normal;
+  min-width: 0;
+}
+
+.ev-daily-qty__table .tree-table__row--leaf .ev-qty-name > span {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
 /* Lider denetimi (6. tur, madde 2/4) — GİR:240 mockup grid min genişlikleri
    (`minmax(170px,1.6fr) 50px ... 140px`); `<table>` auto-layout bunları
    GARANTİ ETMEZ, `min-width` alt sınır olarak zorlar (taşarsa yatay kaydırma

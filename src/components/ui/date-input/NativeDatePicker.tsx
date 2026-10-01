@@ -2,7 +2,7 @@
 // `DateInput.tsx` başındaki aynı not — `use-client-directive-guard` bekçisi).
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 import "./native-date-picker.css";
 
@@ -65,14 +65,39 @@ export const NativeDatePicker = forwardRef<NativeDatePickerHandle, NativeDatePic
       },
     }));
 
-    function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-      const next = event.target.value;
-      if (!next) return;
-      if (min != null && next < min) return;
-      if (max != null && next > max) return;
-      if (next === value) return;
-      onPick(next);
-    }
+    // Güncel guard girdileri; dinleyici bir kez bağlanır, her render'da yeniden değil.
+    const latest = useRef({ value, min, max, onPick });
+    latest.current = { value, min, max, onPick };
+
+    // 🔴 GRP-F1: seçim YALNIZ native `change` olayında işlenir. Chrome'un takvim
+    // popup'ı ay okunda girdinin değerini canlı günceller ve `input` olayı atar;
+    // React'in `onChange`i `input`u dinler → `onPick` ay gezinmesinde çağrılıyor,
+    // rota değişip popup kapanıyordu. `change` yalnız gün seçilince/popup
+    // kapanınca gelir.
+    useEffect(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      function handleChange() {
+        const { value: current, min: lo, max: hi, onPick: pick } = latest.current;
+        const next = input!.value;
+        if (!next) return;
+        if (lo != null && next < lo) return;
+        if (hi != null && next > hi) return;
+        if (next === current) return;
+        pick(next);
+      }
+      input.addEventListener("change", handleChange);
+      return () => input.removeEventListener("change", handleChange);
+    }, []);
+
+    // Uncontrolled (`defaultValue`): `value`+`onChange` olmadan React "kontrollü
+    // girdi" uyarısı verir, `value`+`onChange` ise `input` olayını yeniden
+    // bağlar. Dış `value` değişince değer elle senkronlanır; aynıysa dokunulmaz
+    // (açık popup'ın gezindiği ayı bozmamak için).
+    useEffect(() => {
+      const input = inputRef.current;
+      if (input && input.value !== value) input.value = value;
+    }, [value]);
 
     return (
       <input
@@ -84,8 +109,7 @@ export const NativeDatePicker = forwardRef<NativeDatePickerHandle, NativeDatePic
         disabled={disabled}
         min={min ?? undefined}
         max={max ?? undefined}
-        value={value}
-        onChange={handleChange}
+        defaultValue={value}
       />
     );
   },
