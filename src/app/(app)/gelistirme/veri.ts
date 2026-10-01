@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-01 19:58",
+  guncellendi: "2026-10-01 20:08",
   gorevler: [
     {
       kod: "BLF",
@@ -62,13 +62,32 @@ export const VERI: GelistirmeVerisi = {
       spec: "GUNLUK-KAYIT-ONIZLEME-SPEC.md",
       dilimler: [
         { kod: "B1", aciklama: "Önizleme ucu + tek istekte kayıt + Bölümsüz satır açığı", durum: "devam", hat: "backend", pr: "backend #153 (hazır, bekliyor)", bagimlilik: "F1 ile art arda merge" },
-        { kod: "F1", aciklama: "Bölüm seçilince kalemler gelir, tek kayıt", durum: "sirada", hat: "frontend" },
+        { kod: "F1", aciklama: "Bölüm seçilince kalemler gelir, tek kayıt (plan hazırlanıyor)", durum: "devam", hat: "frontend" },
       ],
       kararlar: [
         "Önizleme + tek kayıt; seçim kayıt açmaz.",
         "Bölüm seçilince yalnız o bölüme dağıtılmış kalemler.",
         "Bölüm seçilmezse tamamen dağıtılmış kalem, dağıtıldığı her bölüm için satır alır.",
         "Bölümsüz satırın başlık bölümüne sayılması olduğu gibi kalır.",
+      ],
+    },
+    {
+      kod: "TKL",
+      acilim: "İş Kalemi Kataloğu + Teklif Hazırlama",
+      aciklama:
+        "Katalogdan tıklayıp kalem ekleme; yan menüde Teklif Hazırlama (revizyon, PDF/Excel, kâr/gider, KDV, koşullar); kazanılan teklif projeye dönüşür.",
+      durum: "devam",
+      spec: "TEKLIF-KATALOG-HAZIRLIK.md",
+      dilimler: [
+        { kod: "P0", aciklama: "Mimari plan: katalog yeri, veri modeli, son fiyat, dönüştürme, dilimler", durum: "devam", hat: "backend" },
+      ],
+      kararlar: [
+        "Veri düzeyinde tek katalog; Planlama'da fiyatsız Birim Oran Kataloğu, teklif/sözleşmede fiyatlı İş Kalemi Kataloğu.",
+        "Poz no zorunlu, şirket genelinde tekil; referans fiyat + son fiyat (sözleşme, teklif, satınalma, hakediş).",
+        "Teklifte adam-saat düzenlenebilir; dönüştürülünce projenin adam-saat bütçesinde Rev.0 olur.",
+        "Kâr/gider teklif geneli + kalemde; teklif B.F. girilince kâr geri hesaplanır; fiyat farkı koşulu; şablonlar.",
+        "Çoklu seçici ve PDF mevcut ekranlardan türetilir, onaya sunulur.",
+        "Kazanıldı ile dönüştürme ayrı; gruplar sözleşmeye taşınır; durum revizyon başına.",
       ],
     },
     {
@@ -131,17 +150,6 @@ export const VERI: GelistirmeVerisi = {
     },
   ],
   bekleyenler: [
-    {
-      kod: "TKL",
-      acilim: "İş Kalemi Kataloğu + Teklif Hazırlama",
-      aciklama: "Mockup'lar geldi (Liste, Yeni, Detay, Şablonlar, Dönüştür, Katalog); inceleniyor. Uygulama yeni session'da.",
-      kararlar: [
-        "Tek katalog; planlamada fiyat, teklifte adam-saat görünür.",
-        "Poz no zorunlu; referans fiyat + son fiyat önerisi.",
-        "Teklif: revizyon, PDF/Excel, kâr/gider, KDV ve koşullar.",
-        "Kazanılınca düzenlenebilir dönüştürmeyle proje + sözleşme.",
-      ],
-    },
     {
       kod: "BOQ-E2E",
       acilim: "İş kalemi düzenleme testi",
