@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -29,6 +29,7 @@ import {
   EDIT_DISABLED_REASON,
   PDF_DISABLED_REASON,
 } from "./EmployerContractHeaderCard";
+import { EmployerCatalogPickerHost } from "./EmployerCatalogPickerHost";
 import { EmployerContractItemsTable } from "./EmployerContractItemsTable";
 import { EmployerContractTabs } from "./EmployerContractTabs";
 import { parseEmployerContractTab } from "./employer-contract-tabs";
@@ -52,6 +53,12 @@ export interface EmployerContractDetailViewProps {
   projectId: string;
 }
 
+/** Başarı bildiriminin görünme süresi (KIK toast süresi, ÜS-F2-7). */
+const ADDED_NOTICE_MS = 2800;
+
+/** "+ Poz Ekle" hangi diyaloğu açtı: katalog seçicisi (varsayılan) ya da eski tekli form. */
+type AddItemDialog = "catalog" | "manual" | null;
+
 export function EmployerContractDetailView({ projectId }: EmployerContractDetailViewProps) {
   const searchParams = useSearchParams();
   const tab = parseEmployerContractTab(searchParams);
@@ -74,7 +81,18 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
   const [today] = useState(() => new Date());
 
   // F-BLG T2a · "+ Poz Ekle" diyalogu; sahibi bu ekrandır (tablo yalnız tetikler).
-  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
+  // TKL-F2.4 (ÜS-F2-1): düğme önce KATALOG SEÇİCİSİNİ açar; seçicideki "Elle poz ekle"
+  // köprüsü eski tekli formu açar (seçici o anda kapanır).
+  const [addDialog, setAddDialog] = useState<AddItemDialog>(null);
+
+  // ÜS-F2-7 · toplu eklemeden sonra "N poz eklendi" (tablo başlığında, 2800 ms). `id` her
+  // bildirimde artar → art arda iki ekleme ilkinin zamanlayıcısıyla erken kapanmaz.
+  const [addedNotice, setAddedNotice] = useState<{ text: string; id: number } | null>(null);
+  useEffect(() => {
+    if (addedNotice === null) return;
+    const timer = setTimeout(() => setAddedNotice(null), ADDED_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [addedNotice]);
 
   // F-ISVPOZ · satır-içi düzenleme/ekleme yazmaları. Mutasyon sahibi EKRANDIR
   // (taşeron emsalinde de öyle: kart yalnız taslak tutar ve tetikler).
@@ -167,18 +185,34 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
                 isError={itemsQuery.isError}
                 isLoading={itemsQuery.isLoading}
                 data={itemsQuery.data}
-                onAddItem={() => setIsAddItemOpen(true)}
+                onAddItem={() => setAddDialog("catalog")}
+                addedNotice={addedNotice?.text ?? null}
                 onCommitItem={handleCommitItem}
                 onCreateItem={handleCreateItem}
                 isCreating={isCreatingItem}
                 saveError={saveError}
               />
-              {isAddItemOpen && itemsQuery.data && (
+              {addDialog === "catalog" && itemsQuery.data && (
+                <EmployerCatalogPickerHost
+                  projectId={projectId}
+                  projectName={projectQuery.data?.name}
+                  groups={itemsQuery.data.groups}
+                  onClose={() => setAddDialog(null)}
+                  onManualAdd={() => setAddDialog("manual")}
+                  onAdded={(count) =>
+                    setAddedNotice((current) => ({
+                      text: `${count} poz eklendi`,
+                      id: (current?.id ?? 0) + 1,
+                    }))
+                  }
+                />
+              )}
+              {addDialog === "manual" && itemsQuery.data && (
                 <EmployerItemFormModal
                   projectId={projectId}
                   groups={itemsQuery.data.groups}
                   detail={detail}
-                  onClose={() => setIsAddItemOpen(false)}
+                  onClose={() => setAddDialog(null)}
                 />
               )}
             </>

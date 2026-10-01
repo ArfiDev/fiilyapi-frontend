@@ -2,6 +2,21 @@
    Yalnız token: çıplak hex YOK. `LastPriceCell` sınıfları (`wik-*`) work-item-catalog.css'te yaşar. */
 .wip-modal {
   max-width: 1100px;
+  /* 🔴 TKL-F2.4 (T13 kareleri ölçtü): `.modal` TÜM kutuyu kaydırır (`overflow-y:auto`) → uzun katalogda
+     altbilgi (hata bandı · Σ · "N Pozu Ekle" · "Elle poz ekle") kaydırma sonunda KALIYOR, görünmüyordu.
+     Başlık + altbilgi sabit, YALNIZ gövde kayar (başlık satırı `.wip-th` sticky'si de gövdeye bağlanır). */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wip-modal .modal__head,
+.wip-modal .modal__footer {
+  flex: none;
+}
+.wip-modal .modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .wip-lead {
   display: inline-flex;

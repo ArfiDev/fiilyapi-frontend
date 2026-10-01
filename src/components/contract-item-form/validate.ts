@@ -9,6 +9,8 @@
  *   `group_id`                   → yalnız İŞV'de, zorunlu
  */
 
+import { decimalDigitCounts, parseRefPriceInput, REF_PRICE_AMBIGUOUS_DOT } from "@/lib/tr-decimal";
+
 import { MAX_LENGTH, NEW_GROUP_OPTION } from "./constants";
 
 export type ContractItemFormField =
@@ -94,6 +96,41 @@ export function validateEmployerUnitPriceField(
   if (!(decimalValue(price) >= 0))
     return { field: "unitPrice", message: "Birim Fiyat negatif olamaz." };
   return null;
+}
+
+/** `unit_price` kolonu `Numeric(18,2)`: backend hane sınırı DENETLEMEZ, fazlayı sessizce yuvarlar. */
+const PRICE_MAX_FRACTION = 2;
+const PRICE_MAX_INTEGER = 16;
+const PRICE_FRACTION_LIMIT = "En fazla 2 ondalık";
+const PRICE_DIGIT_LIMIT = "En fazla 16 basamak";
+
+export type EmployerUnitPriceParse =
+  | { kind: "ok"; value: string }
+  | { kind: "error"; problem: ContractItemFormProblem };
+
+/**
+ * 🔴 TKL-F2.4 · K1 — İŞV birim fiyatının METİN girişi (satır-içi hücre + yeni satır) T30 kuralıyla
+ * okunur: nokta BİNLİK, virgül ondalık, belirsiz "28.5" reddedilir (`lib/tr-decimal.ts` TEK kaynak).
+ * Eskiden `isDecimalString` "28.500"ü 28,50 sayıp sözleşme bedeline sessizce yazıyordu.
+ * Dönen `value` nokta-ondalık METİNdir (gövdeye aynen girer; `Number()` YOK).
+ * `type="number"` tam form BU yolu kullanmaz (tarayıcı değeri zaten nokta-ondalık normalize eder).
+ */
+export function parseEmployerUnitPrice(raw: string): EmployerUnitPriceParse {
+  const text = raw.trim();
+  const fail = (message: string): EmployerUnitPriceParse => ({
+    kind: "error",
+    problem: { field: "unitPrice", message },
+  });
+  if (!text) return fail("Birim Fiyat zorunludur.");
+  const isNegative = text.startsWith("-");
+  const parsed = parseRefPriceInput(isNegative ? text.slice(1) : text);
+  if (parsed.kind === "ambiguous") return fail(REF_PRICE_AMBIGUOUS_DOT);
+  if (parsed.kind === "invalid") return fail("Birim Fiyat sayı olmalıdır.");
+  if (isNegative) return fail("Birim Fiyat negatif olamaz.");
+  const digits = decimalDigitCounts(parsed.value);
+  if (digits.fraction > PRICE_MAX_FRACTION) return fail(PRICE_FRACTION_LIMIT);
+  if (digits.integer > PRICE_MAX_INTEGER) return fail(PRICE_DIGIT_LIMIT);
+  return { kind: "ok", value: parsed.value };
 }
 
 /** Poz No: zorunlu + `maxLength` — form ve satır-içi hücre AYNI kuralı kullanır. */

@@ -13,7 +13,10 @@ import {
   UNIT_PLACEHOLDER_OPTION,
 } from "@/components/contract-item-form/constants";
 import { buildEmployerItemBody, nextSortOrder } from "@/components/contract-item-form/build-body";
-import { validateEmployerItem } from "@/components/contract-item-form/validate";
+import {
+  parseEmployerUnitPrice,
+  validateEmployerItem,
+} from "@/components/contract-item-form/validate";
 import type { EmployerItemFormValues } from "@/components/contract-item-form/validate";
 import type { EmployerItemCreateBody } from "@/components/contract-item-form/build-body";
 import { cx } from "@/lib/cx";
@@ -110,6 +113,8 @@ export interface EmployerContractItemsTableProps {
   isCreating: boolean;
   /** Sunucu hatası (`backendErrorMessage`); istemci hatasıyla aynı yerde basılır. */
   saveError: string | null;
+  /** TKL-F2.4 · toplu ekleme başarı bildirimi ("N poz eklendi"); başlıkta `role="status"`. */
+  addedNotice?: string | null;
 }
 
 const COLUMN_COUNT = 7;
@@ -203,6 +208,7 @@ export function EmployerContractItemsTable({
   onCreateItem,
   isCreating,
   saveError,
+  addedNotice = null,
 }: EmployerContractItemsTableProps) {
   const groups = data?.groups;
   // 🔴 Grup YOKLUĞU artık düğmeyi KAPATMAZ (F-POZGRUP): `group_id` hâlâ
@@ -338,16 +344,27 @@ export function EmployerContractItemsTable({
   async function submitNewRow(group: EmployerContractItemsResponse["groups"][number]) {
     // Tam form doğrulamasının AYNISI koşar (`groupId` gerçek grup, sentinel
     // değil) — satır-içi yol formdan DAHA GEVŞEK olamaz.
-    const problem = validateEmployerItem({ ...newRow, groupId: group.id, groupName: "", sortOrder: "" });
+    // 🔴 K1 · birim fiyat metni T30 kuralıyla okunur ("28.500" = 28500); okunamayan fiyat
+    // boş bırakılır → önce DİĞER alan hataları (sıra korunur), fiyat hatası en sonda.
+    const price = parseEmployerUnitPrice(newRow.unitPrice);
+    const values = {
+      ...newRow,
+      unitPrice: price.kind === "ok" ? price.value : "",
+      groupId: group.id,
+      groupName: "",
+      sortOrder: "",
+    };
+    const problem = validateEmployerItem(values);
     if (problem) {
-      setClientError(problem.message);
+      setClientError(
+        problem.field === "unitPrice" && price.kind === "error"
+          ? price.problem.message
+          : problem.message,
+      );
       return;
     }
     setClientError(null);
-    const body = buildEmployerItemBody(
-      { ...newRow, groupId: group.id, groupName: "", sortOrder: "" },
-      nextSortOrder(group.items.map((item) => item.sort_order)),
-    );
+    const body = buildEmployerItemBody(values, nextSortOrder(group.items.map((item) => item.sort_order)));
     if (await onCreateItem(body)) closeAddRow();
   }
 
@@ -367,6 +384,11 @@ export function EmployerContractItemsTable({
         <span className="ecd-items__head-title" id="ecd-items-title">
           Poz Listesi
         </span>
+        {addedNotice !== null && (
+          <span className="ecd-items__added" role="status" data-testid="ecd-added-notice">
+            {addedNotice}
+          </span>
+        )}
         <Link
           href={employerContractDistributionHref(projectId)}
           className="ecd-items__head-link"

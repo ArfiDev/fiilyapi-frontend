@@ -33,9 +33,68 @@ describe("commitInlineCell · satır-içi hücre kaydetme kararı", () => {
   });
 
   it("değişen birim fiyat yalnız `unit_price` taşır (miktar gövdeye girmez)", () => {
-    expect(commitInlineCell("unitPrice", "1900.50", "1850.00")).toEqual({
+    expect(commitInlineCell("unitPrice", "1900,50", "1850.00")).toEqual({
       kind: "patch",
       body: { unit_price: "1900.50" },
+    });
+  });
+
+  // 🔴 TKL-F2.4 · K1 — T30 (`lib/tr-decimal.ts`): nokta BİNLİKtir. Eskiden "28.500" 28,50 okunup
+  // sözleşme bedeline SESSİZCE yazılıyordu (seçicideki ikizi T30'la kapanmıştı).
+  describe("birim fiyat · T30 Türkçe ondalık kuralı (K1)", () => {
+    it("'28.500' → 28500 (binlik); gövde nokta-ondalık METİN", () => {
+      expect(commitInlineCell("unitPrice", "28.500", "1850.00")).toEqual({
+        kind: "patch",
+        body: { unit_price: "28500" },
+      });
+    });
+
+    it("'28.5' BELİRSİZ → hata, istek YOK (sessiz 28,50 okuması yok)", () => {
+      expect(commitInlineCell("unitPrice", "28.5", "1850.00")).toEqual({
+        kind: "error",
+        message: "Ondalık için virgül kullanın (ör. 28,50)",
+      });
+    });
+
+    it("'1.234,5' → '1234.50'; '28,5' → '28.50' (virgüllü fiyat 2 kesire tamamlanır)", () => {
+      expect(commitInlineCell("unitPrice", "1.234,5", "1850.00")).toEqual({
+        kind: "patch",
+        body: { unit_price: "1234.50" },
+      });
+      expect(commitInlineCell("unitPrice", "28,5", "1850.00")).toEqual({
+        kind: "patch",
+        body: { unit_price: "28.50" },
+      });
+    });
+
+    it("3. kesir hanesi reddedilir (backend Numeric(18,2) sessizce yuvarlardı)", () => {
+      expect(commitInlineCell("unitPrice", "28,505", "1850.00")).toEqual({
+        kind: "error",
+        message: "En fazla 2 ondalık",
+      });
+    });
+
+    it("17 basamaklı tam kısım reddedilir (Numeric(18,2) taşması)", () => {
+      expect(commitInlineCell("unitPrice", "12345678901234567", "1850.00")).toEqual({
+        kind: "error",
+        message: "En fazla 16 basamak",
+      });
+    });
+
+    it("sayı olmayan girdi 'sayı olmalıdır'; eksi işaretli girdi 'negatif olamaz'", () => {
+      expect(commitInlineCell("unitPrice", "abc", "1850.00")).toEqual({
+        kind: "error",
+        message: "Birim Fiyat sayı olmalıdır.",
+      });
+      expect(commitInlineCell("unitPrice", "-28,50", "1850.00")).toEqual({
+        kind: "error",
+        message: "Birim Fiyat negatif olamaz.",
+      });
+    });
+
+    it("sunucu değerine eşit okunan girdi noop ('1850,00' ↔ '1850.00')", () => {
+      expect(commitInlineCell("unitPrice", "1850,00", "1850.00")).toEqual({ kind: "noop" });
+      expect(commitInlineCell("unitPrice", "1.850", "1850.00")).toEqual({ kind: "noop" });
     });
   });
 
@@ -121,7 +180,7 @@ describe("commitInlineCell · satır-içi hücre kaydetme kararı", () => {
     it("🔴 TKL-F2.2: hiçbir hücre gövdesi `catalog_item_id` taşımaz (bağ PATCH'te SABİT — backend 422)", () => {
       const commits = [
         commitInlineCell("quantity", "5", "4.000"),
-        commitInlineCell("unitPrice", "9.5", "9.00"),
+        commitInlineCell("unitPrice", "9,5", "9.00"),
         commitInlineCell("code", "X1", "X0"),
         commitInlineCell("description", "Yeni", "Eski"),
         commitInlineCell("unit", "m²", "m³"),

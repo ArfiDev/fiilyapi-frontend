@@ -461,6 +461,17 @@
   font-weight: var(--weight-semibold);
   color: var(--color-text);
 }
+/* TKL-F2.4 · toplu ekleme başarı bildirimi (KIK `.wik-toast` ile aynı renk dili). */
+.ecd-items__added {
+  padding: 3px 10px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-success-deep);
+  background: var(--color-success-tint);
+  border: 1px solid var(--color-success-tint-border);
+  border-radius: var(--radius-8);
+  white-space: nowrap;
+}
 .ecd-items__head-link {
   margin-left: auto;
   font-size: 12px;

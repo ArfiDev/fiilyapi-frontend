@@ -26,4 +26,14 @@ describe("work-item-picker.css — token disiplini", () => {
   it("tablo yatay kaydırılır (dar ekranda kabuktan taşmaz)", () => {
     expect(/\.wip-table-scroll\s*{([^}]*)}/.exec(declarations)?.[1]).toContain("overflow-x: auto");
   });
+
+  // TKL-F2.4 · T13 karesi ölçtü: `.modal` tüm kutuyu kaydırdığından altbilgi (hata bandı, Σ, "N Pozu Ekle")
+  // uzun katalogda görünmüyordu. jsdom yerleşim hesaplamaz → kural metin düzeyinde bekçilenir.
+  it("🔴 altbilgi SABİT: kutu sütun-flex + taşma gizli, YALNIZ gövde kayar", () => {
+    expect(/\.wip-modal\s*{([^}]*)}/.exec(declarations)?.[1]).toMatch(/display:\s*flex[\s\S]*flex-direction:\s*column[\s\S]*overflow:\s*hidden/);
+    const body = /\.wip-modal \.modal__body\s*{([^}]*)}/.exec(declarations)?.[1] ?? "";
+    expect(body).toContain("overflow-y: auto");
+    expect(body).toContain("min-height: 0");
+    expect(/\.wip-modal \.modal__head,\s*\.wip-modal \.modal__footer\s*{([^}]*)}/.exec(declarations)?.[1]).toContain("flex: none");
+  });
 });

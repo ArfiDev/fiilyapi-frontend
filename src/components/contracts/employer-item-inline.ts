@@ -19,7 +19,7 @@
 import {
   validateCodeField,
   validateDescriptionField,
-  validateEmployerUnitPriceField,
+  parseEmployerUnitPrice,
   validateQuantityField,
   validateUnitField,
 } from "@/components/contract-item-form/validate";
@@ -70,6 +70,16 @@ export function commitInlineCell(
 ): InlineCommit {
   if (draft === undefined) return { kind: "noop" };
   const next = draft.trim();
+  // 🔴 K1 · birim fiyat T30 kuralıyla okunur ("28.500" = 28500); gövde OKUNMUŞ metindir.
+  if (field === "unitPrice") return commitUnitPrice(next, serverValue);
+  return commitOtherCell(field, next, serverValue);
+}
+
+function commitOtherCell(
+  field: Exclude<InlineCellField, "unitPrice">,
+  next: string,
+  serverValue: string | null,
+): InlineCommit {
   const isText = field === "code" || field === "description" || field === "unit";
   const shown = isText ? (serverValue ?? "").trim() : decimalInputValue(serverValue);
   if (next === shown) return { kind: "noop" };
@@ -82,12 +92,20 @@ export function commitInlineCell(
   return { kind: "patch", body: bodyFor(field, next) };
 }
 
-function validateCell(field: InlineCellField, next: string) {
+function commitUnitPrice(next: string, serverValue: string | null): InlineCommit {
+  // Ham metin gösterilenle AYNIYSA (maskeli null ↔ "" dahil) dokunulmamıştır.
+  if (next === decimalInputValue(serverValue)) return { kind: "noop" };
+  const parsed = parseEmployerUnitPrice(next);
+  if (parsed.kind === "error") return { kind: "error", message: parsed.problem.message };
+  // Aynı sayıyı başka yazımla ("1.850" ↔ "1850.00") yazmak istek UÇURMAZ.
+  if (decimalInputValue(parsed.value) === decimalInputValue(serverValue)) return { kind: "noop" };
+  return { kind: "patch", body: { unit_price: parsed.value } };
+}
+
+function validateCell(field: Exclude<InlineCellField, "unitPrice">, next: string) {
   switch (field) {
     case "quantity":
       return validateQuantityField(next);
-    case "unitPrice":
-      return validateEmployerUnitPriceField(next);
     case "code":
       return validateCodeField(next);
     case "description":
