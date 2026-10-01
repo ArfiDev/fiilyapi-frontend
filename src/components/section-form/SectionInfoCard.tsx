@@ -1,6 +1,7 @@
 import { Field, Input, Select, Textarea } from "@/components/ui";
-import { SECTION_FIELD_MAX_LENGTH, SECTION_STATUS_OPTIONS, SECTION_TYPE_OPTIONS } from "./constants";
+import { SECTION_FIELD_MAX_LENGTH, SECTION_STATUS_OPTIONS } from "./constants";
 import type { SectionFormValues } from "./form-state";
+import { SectionTypePicker } from "./SectionTypePicker";
 import type { SectionFormErrors } from "./validate";
 
 export interface SectionInfoCardProps {
@@ -67,23 +68,12 @@ export function SectionInfoCard({ values, onChange, siteName, errors }: SectionI
           )}
         </Field>
 
-        <Field label="Bölüm Tipi" required error={errors?.sectionType}>
-          {(control) => (
-            <Select
-              {...control}
-              value={values.sectionType}
-              status={errors?.sectionType ? "error" : "default"}
-              onChange={(e) => onChange("sectionType", e.target.value as SectionFormValues["sectionType"])}
-            >
-              <option value="">Seçiniz...</option>
-              {SECTION_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
+        {/* BLF-F1.3: liste uçtan (şirket geneli) + "+ Yeni tip ekle". */}
+        <SectionTypePicker
+          value={values.sectionTypeId}
+          onChange={(id) => onChange("sectionTypeId", id)}
+          error={errors?.sectionTypeId}
+        />
 
         <Field label="Durum">
           {(control) => (

@@ -20,7 +20,7 @@ const NO_END_DATE_TITLE = "Bitiş tarihi girilmemiş";
 // En yakın modül anahtarı "boq" (iş kalemi gecikme riski bu modülden gelir).
 const DELAY_RISK_PENDING_MODULE = "boq";
 // D78: "Gerçekleşen" tutarı — hakediş modülünden türer, backend bu alanı bu
-// dilimde üretmiyor (yalnız `budget_amount` gerçektir, bkz. task-2-brief §KPI).
+// dilimde üretmiyor (BLF-F1.3: gerçek olan tek tutar türev `budget`tır).
 const REALIZED_AMOUNT_PENDING_MODULE = "progress_payments";
 
 export interface SectionHeroCardProps {
@@ -92,23 +92,23 @@ function ProgressCell({ progress }: { progress: SectionDetailResponse["progress_
   );
 }
 
-// D76-78 · 2. hücre: Bölüm Bedeli — GERÇEK veri (`budget_amount`, elle girilen
-// kolon). ⚠️ BOQ türevi `budget` (MetricPlaceholder) İLE AYNI DEĞİL, burada
-// KULLANILMAZ (task-2-brief §KPI uyarısı). Alt satır "Gerçekleşen" yer tutucu.
-function BudgetCell({ budgetAmount }: { budgetAmount: string | null }) {
-  const isReal = budgetAmount !== null;
+// D76-78 · 2. hücre: Bölüm Bedeli — TÜREV `budget` (BLF-F1.3, kullanıcı kararı
+// F-a): Σ(bölüme tahsis edilen miktar × pozun birim fiyatı). Elle girilen
+// `budget_amount` kolonu yanıttan KALKTI; tek kaynak budur. K-MKD3: tahsisi
+// olmayan bölüm `available: true` + "0.00" döner → "₺ 0" gerçek sıfırdır, "—"
+// değil. Alt satır "Gerçekleşen" yer tutucu.
+function BudgetCell({ budget }: { budget: SectionDetailResponse["budget"] }) {
+  const raw = budget.value;
+  const isReal = budget.available && raw !== null && raw !== undefined;
   return (
     <div className="section-hero__kpi" data-testid="section-hero-kpi-budget">
       <div className="section-hero__kpi-label">Bölüm Bedeli</div>
       {isReal ? (
         <div className="section-hero__kpi-value section-hero__kpi-value--money">
-          {formatCompactCurrency(budgetAmount)}
+          {formatCompactCurrency(raw)}
         </div>
       ) : (
-        // 🔴 GEREKÇE YAZILMAZ — ikizi `site-detail/SectionCard.tsx`te
-        // gerekçesiyle yazılı: maskeli `null` ile girilmemiş `null` istemcide
-        // ayırt edilemez, o yüzden "—" basılır ve susulur.
-        <div className="section-hero__kpi-value section-hero__kpi-value--pending">—</div>
+        <PlaceholderValue pendingModule={budget.pending_module ?? "boq"} />
       )}
       <div
         className="section-hero__kpi-note section-hero__kpi-note--pending"
@@ -189,7 +189,7 @@ function RemainingDaysCell({ endDate }: { endDate: string | null }) {
 }
 
 // Bölüm Detay hero kartı (mockup D54-96). Beş KPI hücresinden yalnız Bölüm
-// Bedeli (`budget_amount`) ve Kalan Gün (`end_date` türevi) gerçek değerdir;
+// Bedeli (türev `budget`) ve Kalan Gün (`end_date` türevi) gerçek değerdir;
 // kalan üçü ilgili modülle birlikte gelir (task-2-brief §KPI şeridi).
 export function SectionHeroCard({
   section,
@@ -252,7 +252,7 @@ export function SectionHeroCard({
       </div>
       <div className="section-hero__kpis">
         <ProgressCell progress={section.progress_pct} />
-        <BudgetCell budgetAmount={section.budget_amount} />
+        <BudgetCell budget={section.budget} />
         <WorkerCell worker={section.worker_count} />
         <BoqCountCell boqItemCount={section.boq_item_count} />
         <RemainingDaysCell endDate={section.end_date} />

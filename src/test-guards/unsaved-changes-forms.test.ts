@@ -75,6 +75,8 @@ const EXEMPT: Record<string, string> = {
   "components/settings/permissions/PermissionMatrix.tsx":
     "hücre bazında anında kaydeder, taslak yok — 'Değişiklikleri Kaydet' yalnız router.refresh(); izin turuna bırakıldı",
   "components/settings/users/UsersScreen.tsx": "salt liste+modal anahtarı, form alt-modallerde",
+  "components/section-form/SectionTypePicker.tsx":
+    "SectionForm'un alt-alan seçicisi: seçili tip SectionForm değerinde (dirty orada), 'yeni tip adı' geçici girdi",
   "components/site-form/SiteFormActions.tsx": "salt buton şeridi, state SiteCreateView'de",
   "components/timesheet/TimesheetWeekTable.tsx": "dirty zaten useTimesheetWeekEditor'de, çift kayıt riski",
   // Aşağıdaki iki dosya SEKME-F1.3b.0 envanterinde (70 aday) YOKTU — bu

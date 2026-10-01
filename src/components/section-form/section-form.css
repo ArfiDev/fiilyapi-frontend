@@ -64,6 +64,35 @@
   width: 150px;
 }
 
+/* BLF-F1.3: Bölüm Tipi seçicisi — "+ Yeni tip ekle" (BoqItemFormModal "+ Yeni
+   Grup" deseni, kullanıcı onaylı sapma): seçilince seçicinin ALTINDA açılır,
+   kapalıyken hiçbir yer kaplamaz (kapalı hâl görsel olarak değişmez). */
+.sf-type-add {
+  margin-top: var(--space-2);
+}
+.sf-type-add__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sf-type-add__input {
+  flex: 1;
+  min-width: 0;
+}
+.sf-type-add__error {
+  margin-top: var(--space-1);
+  font-size: var(--text-small);
+  color: var(--color-danger-text);
+}
+.sf-type-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: var(--text-small);
+  color: var(--color-danger-text);
+}
+
 /* F131-211: Bölüme Atanacak İş Kalemleri — devre dışı kart. */
 .sf-boq-card {
   cursor: default;

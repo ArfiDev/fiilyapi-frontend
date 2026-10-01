@@ -731,6 +731,33 @@ interface MockSite extends SiteContractFields {
 // alanlar (progress_pct/boq_item_count/budget/worker_count) burada
 // TUTULMAZ — GET yanitinda uretilir (buildSectionDetail), tipki
 // buildSiteDetail'daki desende oldugu gibi.
+/** `SectionTypeRead` — `GET/POST /section-types` satırı (BLF-B1 sözleşmesi). */
+interface MockSectionType {
+  id: string;
+  name: string;
+}
+
+/**
+ * BLF-F1.4 — 7 tohum tip (backend migration'ı `section-labels.ts` adlarıyla
+ * BİREBİR tohumlar). Kimlikler UUID biçimindedir: `SectionCreate.section_type_id`
+ * sözleşmede `format: uuid`.
+ */
+const SEED_SECTION_TYPES: readonly MockSectionType[] = [
+  { id: "5ec70000-0000-4000-8000-000000000001", name: "Temel & Altyapı" },
+  { id: "5ec70000-0000-4000-8000-000000000002", name: "Kaba İnşaat" },
+  { id: "5ec70000-0000-4000-8000-000000000003", name: "İnce İşler" },
+  { id: "5ec70000-0000-4000-8000-000000000004", name: "Cephe & Çatı" },
+  { id: "5ec70000-0000-4000-8000-000000000005", name: "Mekanik / Elektrik" },
+  { id: "5ec70000-0000-4000-8000-000000000006", name: "Peyzaj" },
+  { id: "5ec70000-0000-4000-8000-000000000007", name: "Teslimat & Kabul" },
+];
+const SEED_TYPE_STRUCTURAL = SEED_SECTION_TYPES[1];
+
+/** Backend `normalize_label` ikizi (kırp · boşlukları tekle · TR küçük harf) — YALNIZ mock 409'u için. */
+function normalizeTypeName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase("tr");
+}
+
 interface MockSection {
   id: string;
   /** URL-3 — SANTIYE ICINDE tekildir. `sec-3` BILEREK `null` (nullable kanit fikstru). */
@@ -744,12 +771,13 @@ interface MockSection {
   start_date: string | null;
   end_date: string | null;
   sort_order: number;
-  section_type: components["schemas"]["SectionType"] | null;
+  /** BLF-F1.4 — şirket geneli tip listesi satırı `{id,name}` (enum KALKTI). */
+  section_type: MockSectionType | null;
   description: string | null;
   deputy_manager_user_id: string | null;
   deputy_manager_name: string | null;
   planned_worker_count: number | null;
-  budget_amount: string | null;
+  // BLF-F1.4: elle `budget_amount` kolonu YANITTAN KALKTI (tek kaynak türev `budget`).
   is_draft: boolean;
   // F-TKV T6 — P11 alanları. `SectionResponse`/`SectionDetailResponse` ikisi de
   // ZORUNLU taşır; eksik bırakılırsa Gantt ekranı elmasları hiç göremezdi.
@@ -1042,6 +1070,8 @@ interface MockState {
   modules: Array<{ id: string; key: string; name: string; group: string; sort_order: number }>;
   projects: MockProject[];
   sites: MockSite[];
+  /** BLF-F1.4 — şirket geneli bölüm tipi listesi (POST KALICI EKLEMEZ). */
+  sectionTypes: MockSectionType[];
   sections: MockSection[];
   employers: MockEmployer[];
   // P7 T7 — İşveren hakedişleri (mevcut proje evrenine bağlı, bkz.
@@ -2965,9 +2995,9 @@ function seedState(): MockState {
     {
       id: "sec-1", slug: "kat-6-10-kaba-insaat", site_id: "s-1", code: "A-01", name: "Kat 6–10 Kaba İnşaat", status: "active",
       manager_user_id: "u-2", manager_name: "Sercan Öztürk", start_date: "2026-01-01", end_date: "2026-09-30",
-      sort_order: 0, section_type: "structural", description: "6-10 kat arası kaba inşaat imalatları.",
+      sort_order: 0, section_type: SEED_TYPE_STRUCTURAL, description: "6-10 kat arası kaba inşaat imalatları.",
       deputy_manager_user_id: "u-4", deputy_manager_name: "Kadir Arslan", planned_worker_count: 24,
-      budget_amount: "1250000.00", is_draft: false,
+      is_draft: false,
       // F-TKV T6 — Gantt elmasları + bağımlılık zinciri (sec-2 → sec-1).
       depends_on_section_id: "sec-2",
       milestones: [
@@ -2979,8 +3009,8 @@ function seedState(): MockState {
     {
       id: "sec-2", slug: "zemin-kat-kaba-insaat", site_id: "s-1", code: "A-02", name: "Zemin Kat Kaba İnşaat", status: "completed",
       manager_user_id: null, manager_name: "M. Arslan", start_date: "2025-03-01", end_date: "2025-12-01",
-      sort_order: 1, section_type: "structural", description: null, deputy_manager_user_id: null,
-      deputy_manager_name: null, planned_worker_count: 12, budget_amount: "480000.00", is_draft: false,
+      sort_order: 1, section_type: SEED_TYPE_STRUCTURAL, description: null, deputy_manager_user_id: null,
+      deputy_manager_name: null, planned_worker_count: 12, is_draft: false,
       depends_on_section_id: null,
       milestones: [
         { id: "ms-3", title: "Zemin kat teslim", milestone_date: "2025-12-01", sort_order: 0 },
@@ -2997,7 +3027,7 @@ function seedState(): MockState {
       id: "sec-3", slug: null, site_id: "s-1", code: null, name: "Peyzaj Düzenlemesi (Taslak)", status: "on_hold",
       manager_user_id: null, manager_name: null, start_date: null, end_date: null, sort_order: 2,
       section_type: null, description: null, deputy_manager_user_id: null, deputy_manager_name: null,
-      planned_worker_count: null, budget_amount: null, is_draft: true,
+      planned_worker_count: null, is_draft: true,
       // Tarihsiz + milestone'suz: Gantt'ta BAR ÇİZİLMEZ ama satır KALIR (K8).
       depends_on_section_id: null, milestones: [],
       created_at: "2026-02-01T08:00:00Z", updated_at: "2026-02-01T08:00:00Z",
@@ -3016,6 +3046,7 @@ function seedState(): MockState {
     projects: PROJECT_FIXTURES,
     sites,
     sections,
+    sectionTypes: SEED_SECTION_TYPES.map((type) => ({ ...type })),
     // Mockup satır 98 statik seçenekleriyle isim hizalı (Form - Proje Oluştur.dc.html).
     employers: [
       { id: "emp-1", name: "Güneşkent Gayrimenkul A.Ş.", tax_number: "9876543210", contact_person: "Ahmet Güneş", is_active: true },
@@ -3240,7 +3271,6 @@ function buildSectionListItems(state: MockState, siteId: string): components["sc
         worker_count: COUNT_PENDING("timesheet"),
         // BLM-SAY: kayıtlı kolonlar LİSTE yanıtına da girer.
         planned_worker_count: sec.planned_worker_count,
-        budget_amount: sec.budget_amount,
         depends_on_section_id: sec.depends_on_section_id,
         milestones: sec.milestones,
       };
@@ -3312,8 +3342,8 @@ function buildSiteDetail(
  * `POST /sites/{site_id}/sections` VE `PATCH /sections/{id}` AYNI şekli
  * döndürür (tıpkı `buildSiteDetail` gibi tek yerde kurulur). Dört yer
  * tutucu (`progress_pct`/`boq_item_count`/`budget`/`worker_count`) burada
- * üretilir, fikstürde SAKLANMAZ — `budget` (BOQ türevi) ile `budget_amount`
- * (elle girilen gerçek kolon) AYNI ŞEY DEĞİLDİR (P6 §7 S2a).
+ * üretilir, fikstürde SAKLANMAZ. BLF-F1.4: elle `budget_amount` yanıttan
+ * KALKTI — Bölüm Bedeli tek kaynak, türev `budget`.
  */
 function buildSectionDetail(
   state: MockState,
@@ -3344,7 +3374,6 @@ function buildSectionDetail(
     deputy_manager_user_id: section.deputy_manager_user_id,
     deputy_manager_name: section.deputy_manager_name,
     planned_worker_count: section.planned_worker_count,
-    budget_amount: section.budget_amount,
     is_draft: section.is_draft,
     depends_on_section_id: section.depends_on_section_id,
     milestones: section.milestones,
@@ -3384,20 +3413,32 @@ function mergeMilestones(
 }
 
 /**
+ * `section_type_id` → liste satırı. `undefined`/`null` = tip yok; bilinmeyen id
+ * 422 (backend `_assert_section_type_exists`). Tip ADI hep listeden okunur.
+ */
+function resolveSectionType(
+  state: MockState,
+  raw: unknown,
+): { type: MockSectionType | null } | { error: string } {
+  if (raw === undefined || raw === null) return { type: null };
+  const found = typeof raw === "string" ? state.sectionTypes.find((type) => type.id === raw) : undefined;
+  return found ? { type: found } : { error: "Bölüm tipi bulunamadı" };
+}
+
+/**
  * Backend'in çalışma-zamanı doğrulama kuralı — `app/modules/sites/guards.py::
  * validate_section` (P6 §7 spec, OpenAPI'de KODLU DEĞİL). Tutarlılık kuralı
  * taslakta DA uygulanır; zorunluluk kuralları YALNIZ `is_draft: false` iken.
- * `budget_amount` kontrolü `=== null` — `0` GEÇERLİ bir bedeldir, falsy
- * kontrolü YANLIŞ olurdu.
+ * BLF-F1.4: `budget_amount` zorunluluğu KALKTI (bedel türevdir). Tip zorunluluğu
+ * (F-c) kalır ve PATCH ile yayındaki bölümde tipi boşaltmayı da kapsar.
  */
 function validateSectionInput(input: {
   is_draft: boolean;
-  section_type: string | null;
+  section_type: MockSectionType | null;
   manager_user_id: string | null;
   manager_name: string | null;
   start_date: string | null;
   end_date: string | null;
-  budget_amount: string | null;
 }): string | null {
   if (input.start_date && input.end_date && input.end_date < input.start_date) {
     return "Planlanan bitiş tarihi başlangıçtan önce olamaz.";
@@ -3410,7 +3451,6 @@ function validateSectionInput(input: {
   if (input.start_date === null || input.end_date === null) {
     return "Başlangıç ve planlanan bitiş tarihi zorunludur.";
   }
-  if (input.budget_amount === null) return "Bölüm bedeli zorunludur.";
   return null;
 }
 
@@ -8908,7 +8948,6 @@ export function startMockBackend(port: number): { server: Server; close: () => P
             deputy_manager_user_id: null,
             deputy_manager_name: null,
             planned_worker_count: null,
-            budget_amount: null,
             is_draft: false,
             created_at: nowIso,
             updated_at: nowIso,
@@ -8944,6 +8983,32 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     // gönderiminden (yukarıdaki `projectSitesMatch` POST'u) AYRI bir uçtur —
     // orada P6 doğrulaması uygulanmaz, burada uygulanır (`useCreateSection`
     // hook'unun çağırdığı uç budur).
+    // BLF-F1.4 — şirket geneli bölüm tipi listesi (`GET/POST /section-types`).
+    // 🔴 POST KALICI YAZMAZ: playwright `fullyParallel` — paylaşılan mock
+    // durumuna eklemek, tip listesini okuyan öbür testlerle yarışırdı. POST yalnız
+    // YANIT döner (yeni satır, id sunucu sırasından); "yeni tip seç + bölümü
+    // kaydet" akışı testte `page.route` ile kurulur. 409 dalı TOHUMLARA karşı
+    // çalışır; gövde gerçek backend gibi `{detail: "Bu bölüm tipi zaten var:
+    // <MEVCUT AD>", existing: {id, name}}`.
+    if (path === "/section-types") {
+      if (method === "GET") return send(200, state.sectionTypes);
+      if (method === "POST") {
+        return withBody((body) => {
+          const name = typeof body.name === "string" ? body.name.trim() : "";
+          if (name === "" || name.length > 100) {
+            return send(422, { detail: [{ type: "string_length", loc: ["body", "name"], msg: "Ad 1-100 karakter olmalıdır" }] });
+          }
+          const taken = state.sectionTypes.find((type) => normalizeTypeName(type.name) === normalizeTypeName(name));
+          if (taken) return send(409, { detail: `Bu bölüm tipi zaten var: ${taken.name}`, existing: { id: taken.id, name: taken.name } });
+          const created: MockSectionType = {
+            id: `5ec70000-0000-4000-8000-${String(state.sectionTypes.length + 1).padStart(12, "0")}`,
+            name,
+          };
+          return send(201, created);
+        });
+      }
+    }
+
     const siteSectionsMatch = path.match(/^\/sites\/([^/]+)\/sections$/);
     // GET /sites/{site_id}/sections — `SectionListResponse`. F-PL T5: planlama
     // ızgarasında satır açarken bölüm SEÇİLİR; ızgaranın grupları yalnız mevcut
@@ -8978,13 +9043,11 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         const managerName = body.manager_name ? String(body.manager_name) : null;
         const startDate = body.start_date ? String(body.start_date) : null;
         const endDate = body.end_date ? String(body.end_date) : null;
-        const sectionType = enumValue<components["schemas"]["SectionType"]>(
-          SECTION_CREATE_SCHEMA,
-          "section_type",
-          body.section_type,
-        );
-        const budgetAmount =
-          body.budget_amount === undefined || body.budget_amount === null ? null : String(body.budget_amount);
+        // BLF-F1.4: girdi `section_type_id` (uuid); eski `budget_amount` gövdede
+        // gelse bile YOK SAYILIR (CEO kararı — 422 değil).
+        const typeLookup = resolveSectionType(state, body.section_type_id);
+        if ("error" in typeLookup) return send(422, { detail: typeLookup.error });
+        const sectionType = typeLookup.type;
         const validationError = validateSectionInput({
           is_draft: isDraft,
           section_type: sectionType,
@@ -8992,7 +9055,6 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           manager_name: managerName ?? userNameById(state, managerUserId),
           start_date: startDate,
           end_date: endDate,
-          budget_amount: budgetAmount,
         });
         if (validationError) return send(422, { detail: validationError });
         const nowIso = new Date().toISOString();
@@ -9014,7 +9076,6 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           deputy_manager_user_id: typeof body.deputy_manager_user_id === "string" ? body.deputy_manager_user_id : null,
           deputy_manager_name: body.deputy_manager_name ? String(body.deputy_manager_name) : null,
           planned_worker_count: typeof body.planned_worker_count === "number" ? body.planned_worker_count : null,
-          budget_amount: budgetAmount,
           is_draft: isDraft,
           depends_on_section_id:
             typeof body.depends_on_section_id === "string" ? body.depends_on_section_id : null,
@@ -9082,10 +9143,13 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         const managerNameRaw = pick("manager_name", (v) => (v ? String(v) : null));
         const startDate = pick("start_date", (v) => (v ? String(v) : null));
         const endDate = pick("end_date", (v) => (v ? String(v) : null));
-        const sectionType = pick("section_type", (v) =>
-          enumValue<components["schemas"]["SectionType"]>(SECTION_UPDATE_SCHEMA, "section_type", v),
-        );
-        const budgetAmount = pick("budget_amount", (v) => (v === undefined || v === null ? null : String(v)));
+        // `section_type_id` anahtarı YOK = dokunma; `null` = tipi boşalt (taslakta
+        // serbest, yayında 422 "Bölüm tipi seçiniz" — F-c).
+        const typeLookup = Object.prototype.hasOwnProperty.call(body, "section_type_id")
+          ? resolveSectionType(state, body.section_type_id)
+          : { type: section.section_type };
+        if ("error" in typeLookup) return send(422, { detail: typeLookup.error });
+        const sectionType = typeLookup.type;
         const managerName = managerNameRaw ?? userNameById(state, managerUserId);
 
         const validationError = validateSectionInput({
@@ -9095,7 +9159,6 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           manager_name: managerName,
           start_date: startDate,
           end_date: endDate,
-          budget_amount: budgetAmount,
         });
         if (validationError) return send(422, { detail: validationError });
 
@@ -9127,7 +9190,6 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           deputy_manager_user_id: pick("deputy_manager_user_id", (v) => (typeof v === "string" ? v : null)),
           deputy_manager_name: pick("deputy_manager_name", (v) => (v ? String(v) : null)),
           planned_worker_count: pick("planned_worker_count", (v) => (typeof v === "number" ? v : null)),
-          budget_amount: budgetAmount,
           is_draft: isDraft,
           updated_at: new Date().toISOString(),
         };

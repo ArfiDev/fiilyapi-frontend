@@ -354,26 +354,23 @@ describe("Bölüm (section) tip üretimi — P6 sözleşme genişlemesi", () => 
     expect(statuses).toContain("on_hold");
   });
 
-  it("SectionType yeni şeması yedi bölüm türünü içerir", () => {
-    type Type = components["schemas"]["SectionType"];
-    const types: Type[] = [
-      "foundation_infra",
-      "structural",
-      "finishing",
-      "facade_roof",
-      "mep",
-      "landscape",
-      "handover",
-    ];
-    expect(types).toHaveLength(7);
+  it("BLF-F1.1: SectionType enum'u KALKTI; yerine SectionTypeRead {id,name} + SectionTypeCreate geldi", () => {
+    type Schemas = components["schemas"];
+    expectTypeOf<Schemas>().not.toHaveProperty("SectionType");
+    expectTypeOf<Schemas["SectionTypeRead"]>().toEqualTypeOf<{ id: string; name: string }>();
+    expectTypeOf<Schemas["SectionTypeCreate"]>().toHaveProperty("name");
+    type Paths = import("@/lib/api/schema").paths;
+    expectTypeOf<Paths>().toHaveProperty("/section-types");
   });
 
   it("SectionDetailResponse GET tekil bölüm gövdesini taşır (progress_pct/budget yer tutucudur)", () => {
     type Detail = components["schemas"]["SectionDetailResponse"];
     expectTypeOf<Detail>().toHaveProperty("id");
     expectTypeOf<Detail>().toHaveProperty("site_id");
-    expectTypeOf<Detail>().toHaveProperty("section_type");
-    expectTypeOf<Detail>().toHaveProperty("budget_amount");
+    expectTypeOf<Detail["section_type"]>().toEqualTypeOf<{ id: string; name: string } | null>();
+    // BLF-F1.1: elle `budget_amount` yanıttan KALKTI; tek kaynak türev `budget`.
+    expectTypeOf<Detail>().not.toHaveProperty("budget_amount");
+    expectTypeOf<Detail>().toHaveProperty("budget");
     expectTypeOf<Detail>().toHaveProperty("is_draft");
     expectTypeOf<Detail>().toHaveProperty("progress_pct");
     expectTypeOf<Detail>().toHaveProperty("boq_item_count");
@@ -383,12 +380,15 @@ describe("Bölüm (section) tip üretimi — P6 sözleşme genişlemesi", () => 
     type Create = components["schemas"]["SectionCreate"];
     type Update = components["schemas"]["SectionUpdate"];
 
-    expectTypeOf<Create>().toHaveProperty("section_type");
+    expectTypeOf<Create>().toHaveProperty("section_type_id");
+    expectTypeOf<Create>().not.toHaveProperty("section_type");
+    expectTypeOf<Create>().not.toHaveProperty("budget_amount");
+    expectTypeOf<Update>().toHaveProperty("section_type_id");
+    expectTypeOf<Update>().not.toHaveProperty("budget_amount");
     expectTypeOf<Create>().toHaveProperty("description");
     expectTypeOf<Create>().toHaveProperty("deputy_manager_user_id");
     expectTypeOf<Create>().toHaveProperty("deputy_manager_name");
     expectTypeOf<Create>().toHaveProperty("planned_worker_count");
-    expectTypeOf<Create>().toHaveProperty("budget_amount");
     expectTypeOf<Create>().toHaveProperty("is_draft");
 
     // Yeni alanlar (section_type/description/deputy_*/planned_worker_count/

@@ -23,7 +23,7 @@ export type SectionUpdateRequest = DeepScale<components["schemas"]["SectionUpdat
 // DUZELTME TURU 1 (review bulgusu): donus tipi ONCEDEN `SectionResponse`
 // (dar govde) idi ama gercek uc (`POST /sites/{site_id}/sections`,
 // schema.d.ts:8632 `create_section_endpoint_sites__site_id__sections_post`)
-// `SectionDetailResponse` doner — `is_draft`/`budget_amount`/`section_type`/
+// `SectionDetailResponse` doner — `is_draft`/`section_type` ({id,name}, BLF-F1)/
 // `site_id` dahil TUM P6 kolonlarini tasir. Yapisal alt-kume iliskisi
 // yuzunden typecheck bunu yakalamiyordu ama T3'teki "taslak kaydet → olusan
 // kaydi duzenleme kipine al" akisi bu alanlari tip duzeyinde okuyamazdi.

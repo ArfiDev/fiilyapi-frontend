@@ -59,7 +59,7 @@ test("santiye detayindan bolum detayina link, hero + KPI + sekmeler + Hakedis Ol
   await expect(page.locator(".section-hero__meta")).toContainText("A-Blok Şantiyesi");
   await expect(page.getByText("Sorumlu: Sercan Öztürk")).toBeVisible();
 
-  // 3) KPI ayrımı — Bölüm Bedeli (budget_amount) VE Kalan Gün (end_date türevi)
+  // 3) KPI ayrımı — Bölüm Bedeli (türev `budget`, BLF-F1) VE Kalan Gün (end_date türevi)
   // GERÇEK; İlerleme/İşçi yer tutucu (task-2-brief §KPI).
   //
   // 🔴 F-BLMKART (2026-08-27) GÜNCELLEMESİ: "İş Kalemleri" ARTIK YER TUTUCU
@@ -177,15 +177,16 @@ test("taslak + beklemede bolum: durum rozeti ve bos alanlarda durust yer tutucu"
   await page.clock.setFixedTime(FIXED_TODAY);
   await login(page);
 
-  // sec-3: taslak + on_hold, section_type/manager/tarih/butce hepsi null —
+  // sec-3: taslak + on_hold, section_type/manager/tarih hepsi null —
   // §4 zorunluluk kuralinin YALNIZ is_draft:false iken uygulandigini kanitlayan
   // kayit (bkz. e2e/mock-backend.ts). Dogrudan URL ile gidiliyor (READ-ONLY).
   await page.goto("/projeler/p-1/santiyeler/s-1/bolumler/sec-3");
   await expect(page.getByRole("heading", { level: 1, name: "Peyzaj Düzenlemesi (Taslak)" })).toBeVisible();
   await expect(page.getByText("Beklemede", { exact: true })).toBeVisible();
 
-  // Bölüm Bedeli null → durust "—" (yer tutucu DEGIL, gercek eksiklik).
-  await expect(page.getByTestId("section-hero-kpi-budget")).toContainText("—");
+  // Bölüm Bedeli: tahsisi yok → türev `budget` `available: true` + "0.00" →
+  // GERÇEK sıfır "₺ 0" (BLF-F1: elle kolon kalktı; "—" yalnız zarf yer tutucuysa).
+  await expect(page.getByTestId("section-hero-kpi-budget")).toContainText("₺ 0");
   // Kalan Gün: end_date null → durust "—".
   await expect(page.getByTestId("section-hero-kpi-days")).toContainText("—");
 });

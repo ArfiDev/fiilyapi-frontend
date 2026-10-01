@@ -84,15 +84,14 @@ const BASE_SECTION: SectionDetailResponse = {
   milestones: [],
   progress_pct: { available: false, value: null, pending_module: "boq" },
   boq_item_count: { available: false, count: null, pending_module: "boq" },
-  budget: { available: false, value: null, pending_module: "boq" },
+  budget: { available: true, value: "3520000.00", pending_module: null },
   worker_count: { available: false, count: null, pending_module: "timesheet" },
   site_id: SITE_ID,
-  section_type: "structural",
+  section_type: { id: "type-structural", name: "Kaba İnşaat" },
   description: null,
   deputy_manager_user_id: null,
   deputy_manager_name: null,
   planned_worker_count: null,
-  budget_amount: "3520000.00",
   is_draft: false,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
@@ -324,19 +323,21 @@ describe("SectionDetailView — durum rozeti (4 durum, D59)", () => {
   });
 });
 
-describe("SectionDetailView — KPI şeridi (budget_amount gerçek, diğerleri yer tutucu)", () => {
+describe("SectionDetailView — KPI şeridi (türev `budget` gerçek, diğerleri yer tutucu)", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("Bölüm Bedeli budget_amount'tan gerçek basılır", () => {
+  it("Bölüm Bedeli türev `budget`tan gerçek basılır", () => {
     mockPermission("view");
     mockQueries();
     renderView();
     expect(screen.getByText("₺ 3,5M")).toBeInTheDocument();
   });
 
-  it("budget_amount null ise zarif düşüş (—) basılır, sahte sayı yazılmaz", () => {
+  it("`budget` yer tutucuysa zarif düşüş (—) basılır, sahte sayı yazılmaz", () => {
     mockPermission("view");
-    mockQueries({ data: { ...BASE_SECTION, budget_amount: null } });
+    mockQueries({
+      data: { ...BASE_SECTION, budget: { available: false, value: null, pending_module: "boq" } },
+    });
     renderView();
     expect(screen.getByTestId("section-hero-kpi-budget")).toHaveTextContent("—");
   });

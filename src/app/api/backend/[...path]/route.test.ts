@@ -727,6 +727,15 @@ describe("BFF /api/backend/[...path]", () => {
       },
     );
 
+    // BLF-F1.2 — Bolum formunun tip secicisi (`GET/POST /section-types`) YENI
+    // bir kokten gecer: ilk path segmenti "sites" DEGIL "section-types"tir.
+    // Eksikse tip listesi YALNIZ CANLIDA 404 alir (jsdom/mock gormez). Dinamik
+    // tarama (cagrilan ⊆ izinli, openapi ⊆ izinli, kok forward) zaten yakalar;
+    // ADLI kapi kok dusurulurse gerekcesiyle de kirar.
+    it("section-types koku allow-list'te GERCEK girdi olarak tanimlidir (yorum metni DEGIL)", () => {
+      expect(readAllowedRoots()).toContain("section-types");
+    });
+
     // P7 · T1 — hakediş ekranlari icin yeni eklenen iki kok ADLI olarak da
     // kapiya baglanir: dinamik tarama zaten yakalar, ama bu test kokler
     // sessizce dusurulurse gerekcesini de birlikte kirar.

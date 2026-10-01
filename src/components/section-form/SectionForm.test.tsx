@@ -11,6 +11,7 @@ import { useCreateSection, useUpdateSection } from "@/lib/api/hooks/useSectionMu
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
+import { useCreateSectionType, useSectionTypes } from "@/lib/api/hooks/useSectionTypes";
 import { BackendError } from "@/lib/api/unwrap";
 import { MESSAGES } from "./validate";
 import { GANTT_AUTO_ADD_REASON } from "./SectionForm";
@@ -46,6 +47,12 @@ vi.mock("@/lib/api/hooks/useUserOptions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useUserOptions")>()),
   useUserOptions: vi.fn(),
 }));
+// BLF-F1.3 — tip seçicisi ağdan okur; bu dosyada liste/ekleme sahte (kendi
+// davranışı `SectionTypePicker.test.tsx`te ölçülür).
+vi.mock("@/lib/api/hooks/useSectionTypes", () => ({
+  useSectionTypes: vi.fn(),
+  useCreateSectionType: vi.fn(),
+}));
 // 🔴 F-BLMPOZ: `BoqAssignmentCard` DÜZENLEME kipinde artık GERÇEKTEN ağa
 // çıkıyor (iki `useBoq` sorgusu). Bu dosya `QueryClientProvider` kurmuyor —
 // kartın kendi davranışı `BoqAssignmentCard.test.tsx`te ölçülür, burada
@@ -66,6 +73,8 @@ const MANAGER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const NEW_SECTION_ID = "44444444-4444-4444-4444-444444444444";
 const SIBLING_ID = "55555555-5555-4555-8555-555555555555";
 const MILESTONE_ID = "66666666-6666-4666-8666-666666666666";
+const TYPE_FOUNDATION = { id: "77777777-7777-4777-8777-777777777771", name: "Temel & Altyapı" };
+const TYPE_STRUCTURAL = { id: "77777777-7777-4777-8777-777777777772", name: "Kaba İnşaat" };
 
 const BASE_ME = {
   id: "user-0",
@@ -106,10 +115,9 @@ const SECTION_DETAIL = {
   start_date: "2026-10-01",
   end_date: "2027-03-31",
   sort_order: 6,
-  section_type: "structural",
+  section_type: TYPE_STRUCTURAL,
   description: "Kat 11–14 arası betonarme, kalıp ve demir imalatı.",
   planned_worker_count: 42,
-  budget_amount: "2840000",
   is_draft: false,
   progress_pct: PLACEHOLDER,
   boq_item_count: COUNT_PLACEHOLDER,
@@ -160,14 +168,20 @@ beforeEach(() => {
   vi.mocked(useCreateSection).mockReturnValue({ mutate: createMutate, isPending: false } as never);
   vi.mocked(useUpdateSection).mockReturnValue({ mutate: updateMutate, isPending: false } as never);
   mockUsers();
+  vi.mocked(useSectionTypes).mockReturnValue(
+    queryResult({ data: [TYPE_FOUNDATION, TYPE_STRUCTURAL] }),
+  );
+  vi.mocked(useCreateSectionType).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
 });
 
 function renderCreate() {
   return render(<SectionForm mode="create" projectKey={PROJECT_ID} siteKey={SITE_ID} />);
 }
 
-function renderEdit() {
-  vi.mocked(useSection).mockReturnValue(queryResult({ data: SECTION_DETAIL }));
+function renderEdit(detailOverrides: Record<string, unknown> = {}) {
+  vi.mocked(useSection).mockReturnValue(
+    queryResult({ data: { ...(SECTION_DETAIL as object), ...detailOverrides } as never }),
+  );
   return render(<SectionForm mode="edit" projectKey={PROJECT_ID} siteKey={SITE_ID} sectionKey={SECTION_ID} />);
 }
 
@@ -233,11 +247,10 @@ function clickFooterAction(user: ReturnType<typeof userEvent.setup>, name: strin
 
 async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Bölüm Adı"), "Kat 11–14 Kaba İnşaat");
-  await user.selectOptions(screen.getByLabelText("Bölüm Tipi"), "structural");
+  await user.selectOptions(screen.getByLabelText("Bölüm Tipi"), TYPE_STRUCTURAL.id);
   await user.selectOptions(screen.getByLabelText("Bölüm Sorumlusu"), MANAGER_ID);
   fireEvent.change(screen.getByLabelText("Başlangıç Tarihi"), { target: { value: "01.10.2026" } });
   fireEvent.change(screen.getByLabelText("Planlanan Bitiş"), { target: { value: "31.03.2027" } });
-  await user.type(screen.getByLabelText("Bölüm Bedeli (₺)"), "2840000");
 }
 
 describe("SectionForm — taslak / taslak dışı ayrımı", () => {
@@ -285,13 +298,15 @@ describe("SectionForm — taslak / taslak dışı ayrımı", () => {
     const [body, opts] = createMutate.mock.calls[0];
     expect(body).toMatchObject({
       name: "Kat 11–14 Kaba İnşaat",
-      section_type: "structural",
+      section_type_id: TYPE_STRUCTURAL.id,
       manager_user_id: MANAGER_ID,
       start_date: "2026-10-01",
       end_date: "2027-03-31",
-      budget_amount: 2840000,
       is_draft: false,
     });
+    // 🔴 BLF-F1.3: elle bedel gövdeye GİRMEZ.
+    expect(body).not.toHaveProperty("budget_amount");
+    expect(body).not.toHaveProperty("section_type");
 
     act(() => opts.onSuccess({ id: NEW_SECTION_ID }));
     expect(pushMock).toHaveBeenCalledWith(
@@ -299,20 +314,23 @@ describe("SectionForm — taslak / taslak dışı ayrımı", () => {
     );
   });
 
-  it("bütçe '0' iken geçerlidir ve gönderilir", async () => {
+  it("🔴 BLF-F1.3: taslak dışı kayıtta tip SEÇİLMEDEN gövde gitmez (F-c zorunluluğu korunur)", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    await fillRequired(user);
+    await user.selectOptions(screen.getByLabelText("Bölüm Tipi"), "");
+    await clickFooterAction(user, "Bölümü Oluştur");
+
+    expect(screen.getAllByText(MESSAGES.sectionTypeRequired).length).toBeGreaterThan(0);
+    expect(createMutate).not.toHaveBeenCalled();
+  });
+
+  it("🔴 BLF-F1.3: taslakta tip boş olabilir (section_type_id null)", async () => {
     const user = userEvent.setup();
     renderCreate();
     await user.type(screen.getByLabelText("Bölüm Adı"), "Temel");
-    await user.selectOptions(screen.getByLabelText("Bölüm Tipi"), "structural");
-    await user.selectOptions(screen.getByLabelText("Bölüm Sorumlusu"), MANAGER_ID);
-    fireEvent.change(screen.getByLabelText("Başlangıç Tarihi"), { target: { value: "01.10.2026" } });
-    fireEvent.change(screen.getByLabelText("Planlanan Bitiş"), { target: { value: "31.03.2027" } });
-    await user.type(screen.getByLabelText("Bölüm Bedeli (₺)"), "0");
-    await clickFooterAction(user, "Bölümü Oluştur");
-
-    expect(screen.queryByText(MESSAGES.budgetRequired)).not.toBeInTheDocument();
-    expect(createMutate).toHaveBeenCalledTimes(1);
-    expect(createMutate.mock.calls[0][0].budget_amount).toBe(0);
+    await clickFooterAction(user, "Taslak Kaydet");
+    expect(createMutate.mock.calls[0][0].section_type_id).toBeNull();
   });
 });
 
@@ -361,7 +379,42 @@ describe("SectionForm — edit kipi", () => {
     expect(screen.getByLabelText("Bölüm Adı")).toHaveValue("Kat 11–14 Kaba İnşaat");
     expect(screen.getByLabelText("Bölüm Kodu")).toHaveValue("BLM-06");
     expect(screen.getByLabelText("Bölüm Sorumlusu")).toHaveValue(MANAGER_ID);
-    expect(screen.getByLabelText("Bölüm Bedeli (₺)")).toHaveValue(2840000);
+    expect(screen.getByLabelText("Bölüm Tipi")).toHaveValue(TYPE_STRUCTURAL.id);
+  });
+
+  it("🔴 BLF-F1.3: Bölüm Bedeli düzenlemede de KİLİTLİ türev — detaydaki `budget` basılır", () => {
+    renderEdit({ budget: { available: true, value: "2840000.00" } });
+    const field = screen.getByLabelText("Bölüm Bedeli");
+    expect(field).toBeDisabled();
+    expect(field).toHaveValue("₺ 2.840.000");
+    expect(screen.getByText("İş kalemlerinden hesaplanır")).toBeInTheDocument();
+  });
+
+  it("🔴 BLF-F1.3: kayıt gövdesinde budget_amount YOK, section_type_id detaydan taşınır", async () => {
+    const user = userEvent.setup();
+    renderEdit();
+    await clickFooterAction(user, "Kaydet");
+    const [body] = updateMutate.mock.calls[0];
+    expect(body.section_type_id).toBe(TYPE_STRUCTURAL.id);
+    expect(body).not.toHaveProperty("budget_amount");
+  });
+
+  it("🔴 BLF-F1.3: backend'in 'Bölüm tipi seçiniz' 422'si (yayındaki bölümde tip boşaltma) bantta AYNEN görünür", async () => {
+    const user = userEvent.setup();
+    renderEdit();
+    await clickFooterAction(user, "Kaydet");
+    const [, opts] = updateMutate.mock.calls[0];
+    act(() => opts.onError(new BackendError(422, { detail: "Bölüm tipi seçiniz" })));
+    expect(screen.getByRole("alert")).toHaveTextContent("Bölüm tipi seçiniz");
+  });
+
+  it("🔴 BLF-F1.3: yayındaki bölümde tipi boşaltmak İSTEMCİDE de durdurulur (F-c)", async () => {
+    const user = userEvent.setup();
+    renderEdit();
+    await user.selectOptions(screen.getByLabelText("Bölüm Tipi"), "");
+    await clickFooterAction(user, "Kaydet");
+    expect(screen.getAllByText(MESSAGES.sectionTypeRequired).length).toBeGreaterThan(0);
+    expect(updateMutate).not.toHaveBeenCalled();
   });
 
   it("🔴 F-TKV T5 UÇTAN UCA: bağımlılık DETAYDAN tohumlanır ve gövdeye GERÇEKTEN girer", async () => {

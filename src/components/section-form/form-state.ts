@@ -1,5 +1,5 @@
 import type { SectionDetailResponse } from "@/lib/api/hooks/useSection";
-import type { SectionStatus, SectionType } from "@/lib/section-labels";
+import type { SectionStatus } from "@/lib/section-labels";
 
 /**
  * Bölüm formunun tüm alanları — hepsi KONTROLLÜ ve string tabanlı (sayı ve
@@ -10,7 +10,8 @@ export interface SectionFormValues {
   name: string;
   code: string;
   sortOrder: string;
-  sectionType: SectionType | "";
+  /** `GET /section-types` satırının id'si (BLF-F1.3: enum DEĞİL, string uuid). */
+  sectionTypeId: string;
   status: SectionStatus;
   description: string;
   managerUserId: string;
@@ -18,7 +19,6 @@ export interface SectionFormValues {
   plannedWorkerCount: string;
   startDate: string;
   endDate: string;
-  budgetAmount: string;
   /**
    * F-TKV T5 — Bağımlılık seçici (F115-118). P11 uçları açıldı
    * (`SectionCreate.depends_on_section_id`), kontrol artık GERÇEK.
@@ -39,7 +39,7 @@ export function emptySectionFormValues(): SectionFormValues {
     name: "",
     code: "",
     sortOrder: "0",
-    sectionType: "",
+    sectionTypeId: "",
     status: "planned",
     description: "",
     managerUserId: "",
@@ -47,7 +47,6 @@ export function emptySectionFormValues(): SectionFormValues {
     plannedWorkerCount: "",
     startDate: "",
     endDate: "",
-    budgetAmount: "",
     dependsOnSectionId: "",
     milestoneTitle: "",
     milestoneDate: "",
@@ -68,7 +67,7 @@ export function sectionFormValuesFromDetail(detail: SectionDetailResponse): Sect
     name: detail.name,
     code: detail.code ?? "",
     sortOrder: String(detail.sort_order),
-    sectionType: detail.section_type ?? "",
+    sectionTypeId: detail.section_type?.id ?? "",
     status: detail.status,
     description: detail.description ?? "",
     managerUserId: detail.manager_user_id ?? "",
@@ -79,7 +78,6 @@ export function sectionFormValuesFromDetail(detail: SectionDetailResponse): Sect
         : String(detail.planned_worker_count),
     startDate: detail.start_date ?? "",
     endDate: detail.end_date ?? "",
-    budgetAmount: detail.budget_amount ?? "",
     dependsOnSectionId: detail.depends_on_section_id ?? "",
     // Ekleme kutusu HER ZAMAN boş açılır — mevcut milestone'lar
     // `build-body.ts`de `existingMilestones` üzerinden korunur.

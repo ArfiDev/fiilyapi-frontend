@@ -5429,6 +5429,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/section-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Section Types Endpoint */
+        get: operations["list_section_types_endpoint_section_types_get"];
+        put?: never;
+        /** Create Section Type Endpoint */
+        post: operations["create_section_type_endpoint_section_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sections/documents/{link_id}": {
         parameters: {
             query?: never;
@@ -18319,8 +18337,8 @@ export interface components {
          * @description `Form - Bolum Ekle`in tam govdesi (P6 §5, T3).
          *
          *     Yer tutucu `budget` alani BURADA DA YOKTUR (spec §2.2): o BOQ turevidir ve
-         *     girdi olarak alinmaz. Elle girilen `budget_amount` onun yerine GECMEZ, ayri
-         *     bir kolondur (bkz. `Section` docstring'i, §7 S2a).
+         *     girdi olarak alinmaz. BLF-B1: eski elle `budget_amount` alani da KALKTI; eski
+         *     istemci onu gonderirse Pydantic varsayilani (`extra="ignore"`) sessizce yok sayar.
          *
          *     Mockup'ta gorunup burada OLMAYANLAR — spec §6, bu dilimde ARA COZUM
          *     YAZILMAZ: BOQ atamalari (Form 131-211), taseron/makine (88-98),
@@ -18328,8 +18346,6 @@ export interface components {
          *     "Süre (Gün)" (Form 109) `readonly` bir TUREVDIR, saklanmaz.
          */
         SectionCreate: {
-            /** Budget Amount */
-            budget_amount?: number | string | null;
             /** Code */
             code?: string | null;
             /** Depends On Section Id */
@@ -18357,7 +18373,8 @@ export interface components {
             name: string;
             /** Planned Worker Count */
             planned_worker_count?: number | null;
-            section_type?: components["schemas"]["SectionType"] | null;
+            /** Section Type Id */
+            section_type_id?: string | null;
             /**
              * Sort Order
              * @default 0
@@ -18378,12 +18395,8 @@ export interface components {
          *     liste + detay + santiye detayinda dogdu; `progress_pct` yer tutucu KALDI
          *     (hakediş turevi, ayri is), `worker_count` T4'te zaten bagliydi.
          *
-         *     `budget` (BOQ turevi) ile `budget_amount` (elle girilen gercek kolon) AYNI
-         *     SEY DEGILDIR ve biri digerinin yerine gecmez — bkz. `Section` docstring'i
-         *     (P6 §7 S2a). Bag ACILDI, ama `budget_amount` bu dilimde TUREVE CEVRILMEDI:
-         *     o bir URUN KARARIDIR (canli kayitlarda elle girilmis bedeller var) ve
-         *     yonetime raporlandi. Iki alan da yanittadir, hangisinin basilacagi ekranin
-         *     kararidir.
+         *     BLF-B1 (kullanici karari F-a): bolum bedeli YALNIZ turev `budget`tir;
+         *     `budget_amount` yanittan KALKTI (kolon ayri dilimde DROP edilir).
          *
          *     Mockup'ta gorunup burada OLMAYAN her sey `Section` modelinde de yoktur
          *     (BOQ atamalari, taseron/makine, bagimlilik/milestone, belgeler): spec §6
@@ -18392,8 +18405,6 @@ export interface components {
         SectionDetailResponse: {
             boq_item_count: components["schemas"]["CountPlaceholder"];
             budget: components["schemas"]["MetricPlaceholder"];
-            /** Budget Amount */
-            budget_amount: string | null;
             /** Code */
             code: string | null;
             /**
@@ -18429,7 +18440,7 @@ export interface components {
             /** Planned Worker Count */
             planned_worker_count: number | null;
             progress_pct: components["schemas"]["MetricPlaceholder"];
-            section_type: components["schemas"]["SectionType"] | null;
+            section_type: components["schemas"]["SectionTypeRead"] | null;
             /**
              * Site Id
              * Format: uuid
@@ -18687,8 +18698,6 @@ export interface components {
         SectionResponse: {
             boq_item_count: components["schemas"]["CountPlaceholder"];
             budget: components["schemas"]["MetricPlaceholder"];
-            /** Budget Amount */
-            budget_amount: string | null;
             /** Code */
             code: string | null;
             /** Depends On Section Id */
@@ -18829,20 +18838,42 @@ export interface components {
             unit: string;
         };
         /**
-         * SectionType
-         * @description Bolum turu (`Form - Bolum Ekle` satir 70, spec §3). Etiketler:
-         *     Temel & Altyapi · Kaba Insaat · Ince Isler · Cephe & Cati · Mekanik-Elektrik ·
-         *     Peyzaj · Teslimat & Kabul. Nullable — taslak destegi (kalici karar 4).
-         * @enum {string}
+         * SectionTypeConflict
+         * @description `POST /section-types` 409 govdesi: `existing` = ayni adli MEVCUT tip (yaristaki
+         *     kazanan dahil). Yalniz OpenAPI sozlesmesi icindir — govdeyi handler uretir.
          */
-        SectionType: "foundation_infra" | "structural" | "finishing" | "facade_roof" | "mep" | "landscape" | "handover";
+        SectionTypeConflict: {
+            /** Detail */
+            detail: string;
+            existing: components["schemas"]["SectionTypeRead"];
+        };
+        /**
+         * SectionTypeCreate
+         * @description `POST /section-types` govdesi. Ad kirpilir; bos/yalniz-bosluk 422.
+         */
+        SectionTypeCreate: {
+            /** Name */
+            name: string;
+        };
+        /**
+         * SectionTypeRead
+         * @description BLF-B1 — bolum tipi `{id, name}`. `sort_order` yanitta YOKTUR (liste sirasi
+         *     sunucudan gelir). Hem `GET /section-types` hem bolum yanitindaki `section_type`.
+         */
+        SectionTypeRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /**
          * SectionUpdate
          * @description `site_id` YOK — bolum baska santiyeye tasinamaz.
          */
         SectionUpdate: {
-            /** Budget Amount */
-            budget_amount?: number | string | null;
             /** Code */
             code?: string | null;
             /** Depends On Section Id */
@@ -18867,7 +18898,8 @@ export interface components {
             name?: string | null;
             /** Planned Worker Count */
             planned_worker_count?: number | null;
-            section_type?: components["schemas"]["SectionType"] | null;
+            /** Section Type Id */
+            section_type_id?: string | null;
             /** Sort Order */
             sort_order?: number | null;
             /** Start Date */
@@ -37191,6 +37223,96 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_section_types_endpoint_section_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionTypeRead"][];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_section_type_endpoint_section_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SectionTypeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionTypeRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionTypeConflict"];
+                };
             };
             /** @description Validation Error */
             422: {

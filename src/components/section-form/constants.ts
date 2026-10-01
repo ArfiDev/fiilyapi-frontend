@@ -1,5 +1,5 @@
-import { SECTION_STATUS_LABELS, SECTION_TYPE_LABELS } from "@/lib/section-labels";
-import type { SectionStatus, SectionType } from "@/lib/section-labels";
+import { SECTION_STATUS_LABELS } from "@/lib/section-labels";
+import type { SectionStatus } from "@/lib/section-labels";
 
 /** Seçicilerin ilk (boş) seçeneği (site-form deseni). */
 export const SELECT_PLACEHOLDER = "Seçiniz...";
@@ -14,10 +14,15 @@ export const SECTION_FIELD_MAX_LENGTH = {
   code: 50,
 } as const satisfies Record<string, number>;
 
-/** Bölüm Tipi seçenekleri — F70 sırasıyla (`section-labels.ts` tek kaynak). */
-export const SECTION_TYPE_OPTIONS: readonly { value: SectionType; label: string }[] = (
-  Object.keys(SECTION_TYPE_LABELS) as SectionType[]
-).map((value) => ({ value, label: SECTION_TYPE_LABELS[value] }));
+/**
+ * `SectionTypeCreate.name` üst sınırı (`openapi/openapi.json` →
+ * `components.schemas.SectionTypeCreate`, `maxLength: 100`). Yalnız uzunluk —
+ * benzersizlik/normalize karşılaştırması İSTEMCİDE YOK, tek kaynak backend 409.
+ */
+export const SECTION_TYPE_NAME_MAX_LENGTH = 100;
+
+/** "+ Yeni tip ekle" seçeneğinin sentinel değeri (BoqItemFormModal `__new__` deseni; UUID ile çakışmaz). */
+export const NEW_SECTION_TYPE_OPTION = "__new__";
 
 /** Durum seçenekleri — F71 sırasıyla, `on_hold` DAHİL (`section-labels.ts` tek kaynak). */
 export const SECTION_STATUS_OPTIONS: readonly { value: SectionStatus; label: string }[] = (

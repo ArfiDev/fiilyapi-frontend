@@ -134,75 +134,30 @@ function MetricCell({ label, valueClassName = "section-card__metric-value", plac
   );
 }
 
-const BOQ_NOTE_TITLE = "İş kalemi tahsislerinden türeyen tutar (miktar × birim fiyat)";
-
-// ── "Bölüm Bedeli" hucresi — IKI ADAY, IKISI DE BASILIR ────────────────────
+// ── "Bölüm Bedeli" hucresi — TEK SATIR, TEK KAYNAK ─────────────────────────
 //
-// 🔴 URUN KARARI (yonetim, 2026-08-27). `SectionResponse` bu turdan itibaren
-// AYNI kutuya aday IKI alan tasiyor ve `Section` docstring'i (P6 §7 S2a) ikisinin
-// AYRI KOLON oldugunu, birinin digerinin YERINE GECMEDIGINI soyluyor:
-//   · `budget_amount` — ELLE GIRILEN bedel (bolum formundan). ASIL degerdir.
-//   · `budget`        — BOQ tahsislerinden TUREYEN tutar (BLM-SAY):
-//                       Σ(bolume tahsis edilen miktar × pozun birim fiyati).
-// Birini secip digerini gizlemek, kullanicinin elle girdigi bedelin BOQ'dan
-// ayristigini EKRANDAN OKUYAMAMASI demekti. Bu yuzden kutu iki satirlidir:
-// ust satir `budget_amount`, alt satir "BOQ: …". Ayrismayi ekran SAKLAMAZ.
+// 🔴 BLF-F1.3 (kullanici karari F-a, 2026-10-01): Bolum Bedeli YALNIZ
+// HESAPLANIR — Σ(bolume tahsis edilen miktar × pozun birim fiyati), yani
+// `SectionResponse.budget` (BLM-SAY turevi). Elle girilen `budget_amount`
+// kolonu yanittan CIKTI; eski iki satirli kutu ("ASIL" elle deger + alt satir
+// "BOQ: …", yonetim karari 2026-08-27) tek satira indi. Iki kaynak ayrismasi
+// artik YOK, dolayisiyla ayrismayi gosteren alt satir da yok.
 //
-// ⚠️ MOCKUP SAPMASI: `Şantiye Detay.dc.html:178-179` bu kutuda TEK satir cizer
-// ("₺1,84M"); alt satir mockup'ta YOKTUR. Sapma bilinclidir ve raporlandi.
-// Alt satirin bicimi mockup'in KOMSU kutusundaki not satirindan alinmistir
-// (`:175` "Tümü tamamlandı" — 11px, `margin-top:2px`), yani kart icinde yeni bir
-// tipografi ICAT EDILMEDI.
+// ⚠️ MOCKUP: `Şantiye Detay.dc.html:178-179` bu kutuda zaten TEK satir cizer
+// ("₺1,84M") — bu hâl mockup'a tekrar UYAR.
 //
-// `budget_amount` `null` iken sahte sifir basilmaz — SectionHeroCard'daki
-// `BudgetCell` ile AYNI davranis: "—" basilir ve GEREKCE VERILMEZ (2026-09-20;
-// eski ortak baslik "Bölüm bedeli girilmemiş" idi ve maskeli rolde YALANDI).
-function BudgetMetricCell({
-  label,
-  budgetAmount,
-  boqBudget,
-}: {
-  label: string;
-  budgetAmount: SectionResponse["budget_amount"];
-  boqBudget: SectionResponse["budget"];
-}) {
-  const moneyClass = "section-card__metric-value section-card__metric-value--money";
-  const isManualReal = budgetAmount !== null && budgetAmount !== undefined;
-  // 🔴 K-MKD3: "satir yok" ≠ "deger 0" ≠ "henuz bilinmiyor". BOQ tarafinda
-  // tahsisi olmayan bolum `available: true` + `"0.00"` doner ve bu YER TUTUCU
-  // DEGILDIR — "BOQ: ₺ 0" DOGRU bir cumledir. Bu yuzden `available` bayragina
-  // bakilir, `pending_module`un varligina DEGIL (dolu `MetricPlaceholder`
-  // zaten `pending_module` TASIYAMAZ — `CountPlaceholder`in TERSI kural).
-  const isBoqReal = hasRealValue(boqBudget);
+// 🔴 K-MKD3: "satir yok" ≠ "deger 0" ≠ "henuz bilinmiyor". Tahsisi olmayan
+// bolum `available: true` + "0.00" doner ve bu YER TUTUCU DEGILDIR — "₺ 0"
+// DOGRU bir cumledir (`hasRealValue` bayrak VE degeri okur).
+function BudgetMetricCell({ label, budget }: { label: string; budget: SectionResponse["budget"] }) {
   return (
-    <div className="section-card__metric">
-      <div className="section-card__metric-label">{label}</div>
-      {isManualReal ? (
-        <div className={moneyClass}>{formatCompactCurrency(budgetAmount)}</div>
-      ) : (
-        // 🔴 GEREKÇE YAZILMAZ (2026-09-20). Eskiden burada
-        // `title="Bölüm bedeli girilmemiş"` vardı; bu bir İDDİADIR ve ekranın
-        // onu kanıtlayacak bilgisi YOKTUR: `budget_amount` null gelmesinin iki
-        // sebebi var (girilmemiş · KAPSAM MASKESİ düşürmüş) ve `/auth/me` yükü
-        // kapsam taşımadığı için ikisi istemcide ayırt EDİLEMEZ. `sites =
-        // view/limited` olan rol (şantiye şefi) gerçek bir bedeli "girilmemiş"
-        // diye okuyordu. Kanon: gerekçe ancak KANITLIYSA basılır
-        // (`contract-progress.ts::isProvenZeroAmount` emsali).
-        <div className={cx(moneyClass, "section-card__metric-value--pending")}>—</div>
-      )}
-      {isBoqReal ? (
-        <div className="section-card__metric-note" title={BOQ_NOTE_TITLE}>
-          {`BOQ: ${formatCompactCurrency(boqBudget.value ?? 0)}`}
-        </div>
-      ) : (
-        <div
-          className={cx("section-card__metric-note", "section-card__metric-note--pending")}
-          title={pendingModuleHint(boqBudget.pending_module)}
-        >
-          BOQ: —
-        </div>
-      )}
-    </div>
+    <MetricCell
+      label={label}
+      valueClassName="section-card__metric-value section-card__metric-value--money"
+      placeholder={budget}
+    >
+      {formatCompactCurrency(budget.value ?? 0)}
+    </MetricCell>
   );
 }
 
@@ -361,11 +316,7 @@ export function SectionCard({ projectKey, siteKey, section }: SectionCardProps) 
           {section.boq_item_count.count}
         </MetricCell>
 
-        <BudgetMetricCell
-          label={STATUS_BUDGET_LABEL[section.status]}
-          budgetAmount={section.budget_amount}
-          boqBudget={section.budget}
-        />
+        <BudgetMetricCell label={STATUS_BUDGET_LABEL[section.status]} budget={section.budget} />
 
         {/* Isci hucresinin KAYNAGI etiketiyle birlikte degisir
             (STATUS_WORKER_LABEL ile AYNI dallanma, tek yerde tutulur):

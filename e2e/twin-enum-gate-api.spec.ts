@@ -39,32 +39,42 @@ async function expectEnum422(response: import("@playwright/test").APIResponse, f
   expect(body).toContain("Input should be");
 }
 
-test("bolum yazma uclari sozlesme disi `section_type` degerini REDDEDER", async ({ page }) => {
+// 🔴 BLF-F1.4 — `section_type` ENUM'U KALKTI (tip artık şirket geneli liste, girdi
+// `section_type_id` uuid). Eski kapının ANLAMI "ikiz, sözleşme DIŞI tip değerini
+// onaylamaz" idi; yeni sözleşmede o değer = listede OLMAYAN `section_type_id`.
+// ÖLÇÜLDÜ (backend `section_writes._assert_section_type_exists`): bilinmeyen id →
+// 422 `Bölüm tipi bulunamadı` (404 değil — tip burada bir alan değeridir), her
+// yazmadan ÖNCE koşar. Hata gövdesi FastAPI enum biçiminde DEĞİL, düz `detail`
+// metnidir; bu yüzden `expectEnum422` yerine mesaj denetlenir.
+const UNKNOWN_TYPE_ID = "5ec70000-0000-4000-8000-0000000000ee";
+const SEED_STRUCTURAL_TYPE_ID = "5ec70000-0000-4000-8000-000000000002";
+
+test("bolum yazma uclari listede OLMAYAN `section_type_id` degerini REDDEDER", async ({ page }) => {
   await login(page);
 
   const created = await page.request.post("/api/backend/sites/s-2/sections", {
-    data: { name: "Enum kapisi POST", section_type: "kafama-gore-tip", is_draft: true },
+    data: { name: "Tip kapisi POST", section_type_id: UNKNOWN_TYPE_ID, is_draft: true },
   });
-  await expectEnum422(created, "section_type");
+  expect(created.status(), await created.text()).toBe(422);
+  expect(JSON.stringify(await created.json())).toContain("Bölüm tipi bulunamadı");
 
   const patched = await page.request.patch("/api/backend/sections/sec-1", {
-    data: { section_type: "kafama-gore-tip" },
+    data: { section_type_id: UNKNOWN_TYPE_ID },
   });
-  await expectEnum422(patched, "section_type");
+  expect(patched.status(), await patched.text()).toBe(422);
+  expect(JSON.stringify(await patched.json())).toContain("Bölüm tipi bulunamadı");
 
-  // 🔴 KARŞIT KANIT — kapı her şeyi reddeden bir DUVAR değil. Bu olmasaydı uç
-  // her gövdeye 422 verse bile test yeşil kalır ve HİÇBİR ŞEY ölçmezdi.
-  // Sözleşmedeki üye (`structural`) enum kapısını GEÇER ve istek DAHA SONRAKİ
-  // bir kurala (tarih tutarlılığı) takılır: hata mesajının DEĞİŞMESİ, kapının
-  // seçici olduğunun kanıtıdır. Gövde reddedildiği için sec-1 OYNAMAZ.
-  const validEnum = await page.request.patch("/api/backend/sections/sec-1", {
-    data: { section_type: "structural", start_date: "2026-05-01", end_date: "2026-01-01" },
+  // 🔴 KARŞIT KANIT — kapı her şeyi reddeden bir DUVAR değil: listedeki (tohum)
+  // tip kapıyı GEÇER ve istek DAHA SONRAKİ bir kurala (tarih tutarlılığı) takılır;
+  // mesajın DEĞİŞMESİ kapının seçici olduğunu kanıtlar. Gövde reddedildiği için
+  // sec-1 OYNAMAZ.
+  const validType = await page.request.patch("/api/backend/sections/sec-1", {
+    data: { section_type_id: SEED_STRUCTURAL_TYPE_ID, start_date: "2026-05-01", end_date: "2026-01-01" },
   });
-  expect(validEnum.status()).toBe(422);
-  expect(
-    JSON.stringify(await validEnum.json()),
-    "sözleşmedeki üye enum kapısını GEÇMELİ — hata artık BAŞKA bir kuraldan gelir",
-  ).toContain("Planlanan bitiş tarihi başlangıçtan önce olamaz.");
+  expect(validType.status()).toBe(422);
+  const validBody = JSON.stringify(await validType.json());
+  expect(validBody).toContain("Planlanan bitiş tarihi başlangıçtan önce olamaz.");
+  expect(validBody).not.toContain("Bölüm tipi bulunamadı");
 });
 
 test("gunluk yazma uclari sozlesme disi `weather` degerini REDDEDER", async ({ page }) => {
