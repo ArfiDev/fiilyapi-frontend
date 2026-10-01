@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { TreeTable } from "@/components/earned-value/common/tree-table/TreeTable";
 import type { TreeNode } from "@/components/earned-value/common/tree-table/tree-rows";
@@ -749,6 +749,16 @@ function Toolbar({ report, date, onDateChange, view, setView, gate, onOpenModal,
   // GİR:99 `disabled="{{ approved }}"` — onaylı rapor yeniden üretilmez.
   const refreshDisabled = report.status === "approved" || isRefreshing;
   const isPrintView = view === "print";
+  // QURR emsali (`WeeklyQurrScreen` `pendingPrint`): "Yazdır / PDF" önce yazdırma
+  // görünümünü açar, `window.print()` DOM güncellendikten SONRA çağrılır — yoksa
+  // ekran kromu (araç çubuğu, başlık) basılırdı.
+  const [pendingPrint, setPendingPrint] = useState(false);
+  useEffect(() => {
+    if (pendingPrint && isPrintView) {
+      setPendingPrint(false);
+      window.print();
+    }
+  }, [pendingPrint, isPrintView]);
   return (
     <div className="ev-daily-toolbar">
       <ReportDateNav mode="day" day={date} dayNo={report.day_no} weekNo={report.week_no} onChange={onDateChange} />
@@ -765,7 +775,13 @@ function Toolbar({ report, date, onDateChange, view, setView, gate, onOpenModal,
         >
           {isPrintView ? "Ekran görünümü" : "Yazdırma önizlemesi"}
         </Button>
-        <Button variant="secondary" onClick={() => window.print()}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setView("print");
+            setPendingPrint(true);
+          }}
+        >
           Yazdır / PDF
         </Button>
         {gate.visible && (
