@@ -50,6 +50,10 @@ vi.mock("@/lib/api/hooks/useSiteDiary", () => ({
   useSiteDiaryEntries: vi.fn(),
   useSiteDiaryEntry: vi.fn(),
 }));
+// GKS-F1.3 · kayıtsız gün önizlemesi: istenen gün/bölüm için boş, güncel iskelet.
+vi.mock("@/lib/api/hooks/useSiteDiarySkeleton", async () => ({
+  useSiteDiarySkeleton: (await import("@/components/site-diary/diary-skeleton.testkit")).echoSkeletonQuery,
+}));
 vi.mock("@/lib/api/hooks/useSiteDiaryMutations", () => ({
   useCreateSiteDiaryEntry: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateSiteDiaryEntry: () => ({ mutateAsync: vi.fn(), isPending: false }),

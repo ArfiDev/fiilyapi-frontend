@@ -62,6 +62,13 @@ import { buildDiaryExtensionContext, isSameDiaryExtensionContext } from "./diary
 import { buildDiaryLineTree, diaryTreeLeaves } from "./diary-lines-tree";
 import { boqTreeItems, siteTreeSections } from "./diary-tree-sources";
 import { diaryTimesheetHref } from "./diary-timesheet-link";
+import { classifyDiarySaveError } from "./save-error";
+import {
+  diaryCoreLock,
+  diaryTreeSource,
+  useDiaryPreview,
+  useExistingEntryRaceNotice,
+} from "./useDiaryPreview";
 import {
   addDiaryFirm,
   addDiaryLines,
@@ -173,8 +180,18 @@ export function DiaryEntryScreen({
   // (T3'ün "Son Kayıtlar" listesi AYNI önbellek anahtarını kullanır).
   const period = isoPeriod(activeDate);
   const entriesQuery = useSiteDiaryEntries(siteId, period);
-  const matchedId =
+  const listMatchedId =
     entriesQuery.data?.items.find((item) => item.entry_date === activeDate)?.id ?? "";
+  // GKS-F1.3 · kayıtsız günün önizlemesi + `matchedId` (liste ?? existing_entry_id).
+  const preview = useDiaryPreview({
+    siteId,
+    activeDate,
+    sectionId: form.sectionId,
+    listMatchedId,
+    isListLoading: entriesQuery.isLoading,
+    refetchEntries: entriesQuery.refetch,
+  });
+  const matchedId = preview.matchedId;
   const entryQuery = useSiteDiaryEntry(matchedId);
   const entry = matchedId === "" ? undefined : entryQuery.data;
 
@@ -319,14 +336,14 @@ export function DiaryEntryScreen({
 
   // ── Kalem ağacı (G1) + uzantı bağlamı (§2.7) ──────────────────────────
   const treeSections = siteTreeSections(siteQuery.data?.sections ?? []);
-  const lineTree = entry
-    ? buildDiaryLineTree({
-        lines: entry.lines,
-        form,
-        boqItems: boqTreeItems(boqQuery.data),
-        sections: treeSections,
-      })
-    : [];
+  const treeSource = diaryTreeSource(entry, preview.skeleton);
+  const lineTree = buildDiaryLineTree({
+    lines: treeSource.lines,
+    form,
+    boqItems: boqTreeItems(boqQuery.data),
+    sections: treeSections,
+    isPreview: treeSource.isPreview,
+  });
   const extensionContext = buildDiaryExtensionContext({
     siteId: siteQuery.data?.id ?? null,
     day: activeDate,
@@ -365,6 +382,11 @@ export function DiaryEntryScreen({
       ? JSON.stringify(form) !== JSON.stringify(noEntryBaseline.form)
       : false;
   useUnsavedChanges(registryDirty, "Şantiye günlüğü");
+  const hasRaceNotice = useExistingEntryRaceNotice({
+    existingEntryId: preview.existingEntryId,
+    matchedId,
+    isFormDirty: registryDirty,
+  });
 
   if (!permission.canView) return <AccessDenied />;
   if (isForbidden(siteQuery.error) || isForbidden(entriesQuery.error)) return <AccessDenied />;
@@ -399,7 +421,11 @@ export function DiaryEntryScreen({
 
   const isSubmitted = entry?.status === "submitted";
   // Uzantı yuvası `lock` (rapor onayı): kilitliyse BÜTÜN alanlar salt okunur.
-  const isLocked = extension?.lock?.isLocked === true;
+  // GKS-F1.3 (Ü8): çekirdek kilit de okunur — kayıtta `entry.locked`, kayıtsız
+  // günde `skeleton.locked`; uzantı kilidi yoksa çekirdek bandı basılır.
+  const hasExtensionLock = extension?.lock?.isLocked === true;
+  const coreLock = diaryCoreLock(entry, preview.skeleton);
+  const isLocked = hasExtensionLock || coreLock.isLocked;
   // Salt-okunur görünüm: yazma izni yok, kayıt gönderilmiş ya da gün kilitli.
   const isReadOnly = !permission.canWrite || isSubmitted || isLocked;
   const canReopen = hasAtLeast(permission.level, "admin");
@@ -415,6 +441,9 @@ export function DiaryEntryScreen({
    */
   const canSubmit =
     permission.canWrite && !isSubmitted && entry !== undefined && !isLocked && !isGateClosed && !isSaving;
+  // Kayıt yokken Taslak Kaydet önizleme GÜNCELken açılır: bayat önizlemenin
+  // satırları yeni başlığın iskeletine eklenirdi (POST birleştirir, silmez).
+  const isCreateBlocked = entry === undefined && (matchedId !== "" || !preview.isCurrent);
   const lineRefs = new Map<string, DiaryLineRef>(extensionContext.lines.map((line) => [line.key, line]));
 
   // Sağ panel türevleri — hepsi SAF fonksiyonlarda (ayrı `.ts` dosyaları),
@@ -483,12 +512,22 @@ export function DiaryEntryScreen({
       setErrorMessage(backendErrorMessage(error, "Günlük gönderilemedi."));
       return;
     }
-    if (error instanceof BackendError && error.status === 409) {
+    const kind = classifyDiarySaveError(error);
+    if (kind === "locked") {
+      // Kilit 409'u "aynı gün kaydı" DEĞİLDİR: "Var olan kaydı aç" basılmaz.
+      setErrorMessage(backendErrorMessage(error, "Bu gün rapor onayıyla kilitlendi."));
+    } else if (kind === "date_conflict") {
       setHasDateConflict(true);
       setErrorMessage(backendErrorMessage(error, "Bu güne ait günlük kayıt zaten var."));
-      return;
+    } else {
+      setErrorMessage(backendErrorMessage(error, fallback));
     }
-    setErrorMessage(backendErrorMessage(error, fallback));
+    // Kayıtsız günde sunucu gerçeği değişmiş olabilir (kilit, başkasının kaydı,
+    // BOQ/tahsis): önizleme (ve çakışmada liste) yeniden çekilir.
+    if (entry === undefined && (kind !== "other" || (error instanceof BackendError && error.status === 422))) {
+      preview.refetch();
+      if (kind === "date_conflict") void entriesQuery.refetch();
+    }
   }
 
   /** Kaydetmeden önce görünür doğrulama; hata varsa metni basar ve `false` döner. */
@@ -533,7 +572,10 @@ export function DiaryEntryScreen({
     }
     try {
       if (!entry) {
-        const created = await createEntry.mutateAsync(buildDiaryCreateBody(form));
+        // Tek POST: başlık + önizlemede dokunulan satırlar (GKS-F1.3).
+        const created = await createEntry.mutateAsync(buildDiaryCreateBody(form, diaryTreeLeaves(lineTree)));
+        preview.adoptCreatedEntry(created);
+        reseedFromSaved(created, form);
         setActiveDate(created.entry_date);
         return;
       }
@@ -636,7 +678,7 @@ export function DiaryEntryScreen({
           {permission.canWrite && !isSubmitted && (
             <>
               {/* E7 66 — kilitli günde yazma yok (İ:121 düğme pasif). */}
-              <Button variant="secondary" disabled={isSaving || isLocked} onClick={handleSaveDraft}>
+              <Button variant="secondary" disabled={isSaving || isLocked || isCreateBlocked} onClick={handleSaveDraft}>
                 {isSaving ? "Kaydediliyor…" : "Taslak Kaydet"}
               </Button>
               {/* GK169 — kayıt açılmadan gönderilemez (satır iskeleti sunucudan
@@ -646,7 +688,7 @@ export function DiaryEntryScreen({
               <Button
                 variant="success"
                 disabled={!canSubmit}
-                title={entry ? undefined : "Önce taslak kaydedin — iş kalemi satırları kayıt açılınca gelir"}
+                title={entry ? undefined : "Önce taslak kaydedin"}
                 onClick={handleSaveAndSubmit}
               >
                 Kaydet &amp; Gönder
@@ -687,6 +729,20 @@ export function DiaryEntryScreen({
             <LockIcon width={16} height={16} />
             <div className="diary__lock-banner-body">{extension.lock.banner}</div>
           </div>
+        )}
+        {/* Çekirdek kilit bandı YALNIZ uzantı kilidi yokken (Ü8): EV'li şantiyede
+            bant `topBanner`daki `DayLockBanner`dır, çift basılmaz. */}
+        {!hasExtensionLock && coreLock.bannerText !== null && (
+          <div className="diary__lock-banner" role="status">
+            <LockIcon width={16} height={16} />
+            <div className="diary__lock-banner-body">{coreLock.bannerText}</div>
+          </div>
+        )}
+        {/* Ü6 · kayıtsız günde yazılanlar varken başkasının açtığı kayıt yüklendi. */}
+        {hasRaceNotice && (
+          <span className="diary__status-note">
+            Bu güne ait kayıt başka bir kullanıcı tarafından açıldı; kayıt yüklendi.
+          </span>
         )}
       </div>
 
@@ -751,6 +807,10 @@ export function DiaryEntryScreen({
           />
           <DiaryLinesCard
             entry={entry}
+            linesTotal={treeSource.linesTotal}
+            previewStatus={preview.status}
+            onRetryPreview={preview.refetch}
+            hasSection={form.sectionId !== ""}
             groups={lineTree}
             sections={treeSections}
             form={form}
@@ -805,7 +865,7 @@ export function DiaryEntryScreen({
             isError={entriesQuery.isError}
             activeDate={activeDate}
             onSelectDate={handleSelectDate}
-            hasUnsavedChanges={isDirty}
+            hasUnsavedChanges={registryDirty}
           />
           <DiaryPaymentAccrualCard
             accrual={accrual}

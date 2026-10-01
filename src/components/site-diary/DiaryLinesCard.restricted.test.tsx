@@ -5,14 +5,14 @@ import { DiaryLinesCard, type DiaryLinesCardProps } from "./DiaryLinesCard";
 import type { SiteDiaryEntryDetail } from "@/lib/api/hooks/useSiteDiary";
 import type { DiaryFormState } from "./form-state";
 
-// DSC-F1.3 · kısıtlı kullanıcıda kayıt AÇIKKEN tüm liste boşsa bildirim;
-// kayıt açılmamışken "Taslak Kaydet" yönlendirmesi değişmez.
+// DSC-F1.3 · kısıtlı kullanıcıda tüm liste boşsa ortak bildirim. GKS-F1.3:
+// kayıt açılmamışken (önizleme) de aynı bildirim; eski "Önce Taslak Kaydet
+// deyin" metni kalktı.
 const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 
 const NO_BOQ_TEXT = "Bu şantiyede sözleşme BOQ pozu tanımlı değil — iş kalemi satırı üretilemedi.";
-const NO_ENTRY_TEXT =
-  "İş kalemi satırları, gün için kayıt açıldığında sözleşme BOQ pozlarından otomatik gelir. Önce “Taslak Kaydet” deyin.";
+const OLD_NO_ENTRY_TEXT = /Önce “Taslak Kaydet” deyin/;
 
 function renderCard(hasEntry: boolean) {
   const props: DiaryLinesCardProps = {
@@ -48,11 +48,18 @@ describe("DiaryLinesCard — kısıtlı boş durum (DSC-F1.3)", () => {
     expect(screen.queryByText(NO_BOQ_TEXT)).not.toBeInTheDocument();
   });
 
-  it("kısıtlı iken kayıt açılmamışsa Taslak Kaydet metni DEĞİŞMEZ", () => {
+  it("kısıtlı + kayıt YOK (önizleme) + liste boş → aynı ortak bildirim; eski metin yok", () => {
     scope.value = { isRestricted: true, names: ["Civil Works"] };
     renderCard(false);
-    expect(screen.getByText(NO_ENTRY_TEXT)).toBeInTheDocument();
-    expect(screen.queryByText("Disiplininize ait kayıt yok.")).not.toBeInTheDocument();
+    expect(screen.getByText("Disiplininize ait kayıt yok.")).toBeInTheDocument();
+    expect(screen.queryByText(OLD_NO_ENTRY_TEXT)).not.toBeInTheDocument();
+    expect(screen.queryByText(NO_BOQ_TEXT)).not.toBeInTheDocument();
+  });
+
+  it("atamasız + kayıt YOK (önizleme) + liste boş → BOQ yok metni", () => {
+    renderCard(false);
+    expect(screen.getByText(NO_BOQ_TEXT)).toBeInTheDocument();
+    expect(screen.queryByText(OLD_NO_ENTRY_TEXT)).not.toBeInTheDocument();
   });
 
   it("atamasız + kayıt açık + liste boş → bugünkü metin aynen", () => {
