@@ -127,12 +127,14 @@ export function DiaryLinesCard({
   const emptyState = isPreviewPending ? (
     // Ü11 · önizleme gelmeden satır uydurulmaz.
     previewStatus === "error" ? (
-      <>
-        <p className="diary__error">İş kalemleri yüklenemedi</p>
-        <Button variant="ghost" size="sm" onClick={onRetryPreview}>
+      <div className="diary__error">
+        <div className="diary__error-reasons">
+          <span>İş kalemleri yüklenemedi</span>
+        </div>
+        <Button variant="ghost" size="sm" className="diary__error-action" onClick={onRetryPreview}>
           Tekrar dene
         </Button>
-      </>
+      </div>
     ) : (
       <p className="diary-lines__empty">İş kalemleri yükleniyor…</p>
     )

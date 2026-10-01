@@ -371,7 +371,7 @@ describe("GKS-F1.3 · kaydetme hataları", () => {
     expect(refetchSkeleton).toHaveBeenCalled();
   });
 
-  it("tarih çakışması 409'u 'Var olan kaydı aç' basar; liste ve önizleme yenilenir", async () => {
+  it("tarih çakışması 409'u 'Var olan kaydı aç' basar; OTOMATİK yenileme YOK (GKS-F1.4.1)", async () => {
     const user = userEvent.setup();
     createMutate.mockRejectedValue(new BackendError(409, { detail: "Bu şantiyede bu güne ait günlük kayıt zaten var" }));
     render(<SiteDiaryEntryView />);
@@ -379,8 +379,8 @@ describe("GKS-F1.3 · kaydetme hataları", () => {
     await user.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
 
     expect(await screen.findByRole("button", { name: "Var olan kaydı aç" })).toBeInTheDocument();
-    expect(refetchSkeleton).toHaveBeenCalled();
-    expect(refetchEntries).toHaveBeenCalled();
+    expect(refetchSkeleton).not.toHaveBeenCalled();
+    expect(refetchEntries).not.toHaveBeenCalled();
   });
 
   it("422 detail'i basar ve önizlemeyi yeniler", async () => {

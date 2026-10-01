@@ -35,6 +35,8 @@ export interface UseDiaryPreviewTransitionsInput {
   /** Kayıtlı gün; `undefined` = kayıtsız gün (önizleme). */
   entry: SiteDiaryEntryDetail | undefined;
   sections: readonly { id: string; name: string }[];
+  /** Ekran salt okunur (izin yok / gönderilmiş / kilitli) — Ü5 yarış korumasının girdisi. */
+  isReadOnly: boolean;
   setForm: Dispatch<SetStateAction<DiaryFormState>>;
   /** İskelet çekilemedi: ekranın mevcut hata alanına metin basar. */
   onLoadError: (message: string) => void;
@@ -53,6 +55,8 @@ export interface UseDiaryPreviewTransitionsResult {
 
 interface PendingState {
   model: DiaryPreviewPending;
+  /** Diyalog hangi kayıt + güne soruldu; bağlam değişirse diyalog kapanır, `commit` atılır. */
+  contextKey: string;
   commit: () => void;
   /** Vazgeçilirse çalışır (tarihte: alanı uygulanmış güne döndürür). */
   rollback?: () => void;
@@ -64,22 +68,34 @@ export function useDiaryPreviewTransitions({
   form,
   entry,
   sections,
+  isReadOnly,
   setForm,
   onLoadError,
 }: UseDiaryPreviewTransitionsInput): UseDiaryPreviewTransitionsResult {
   const [pending, setPending] = useState<PendingState | null>(null);
 
   // Asenkron yanıt "şimdiki" formu/kaydı görsün (yarış koruması).
-  const latestRef = useRef({ form, entry, sections });
+  const latestRef = useRef({ form, entry, sections, isReadOnly });
   useEffect(() => {
-    latestRef.current = { form, entry, sections };
+    latestRef.current = { form, entry, sections, isReadOnly };
   });
+
+  // Bağlam (kayıt kimliği + aranan gün) değişince açık diyalog bayattır: kapanır,
+  // `commit` uygulanmaz (S3'e geçen formun miktarlarını boşaltmasın).
+  const contextKey = `${entry?.id ?? ""}|${activeDate}`;
+  if (pending !== null && pending.contextKey !== contextKey) setPending(null);
 
   const offerMissingLines = useCallback(
     async (target: SiteDiaryEntryDetail, sectionId: string) => {
       const isStale = () => {
         const latest = latestRef.current;
-        return latest.form.sectionId !== sectionId || latest.entry?.id !== target.id;
+        return (
+          latest.form.sectionId !== sectionId ||
+          latest.entry?.id !== target.id ||
+          latest.entry.status !== "draft" ||
+          latest.entry.locked ||
+          latest.isReadOnly
+        );
       };
       try {
         const skeleton = await fetchSiteDiarySkeleton(siteId, target.entry_date, sectionId);
@@ -90,6 +106,7 @@ export function useDiaryPreviewTransitions({
         const sectionName = latest.sections.find((section) => section.id === sectionId)?.name ?? skeleton.section_name ?? "";
         setPending({
           model: { kind: "add-lines", sectionName, count: missing.length },
+          contextKey: `${target.id}|${target.entry_date}`,
           commit: () => setForm((prev) => addDiaryLines(prev, missing)),
         });
       } catch {
@@ -119,22 +136,22 @@ export function useDiaryPreviewTransitions({
       if (count === 0 || (!isSectionChange && !isNewDate)) {
         apply(patch);
       } else if (isSectionChange) {
-        setPending({ model: { kind: "section", count }, commit: () => apply({ ...patch, ...CLEARED_LINE_INPUTS }) });
+        setPending({ model: { kind: "section", count }, contextKey, commit: () => apply({ ...patch, ...CLEARED_LINE_INPUTS }) });
       } else {
         const restore = () => setForm((prev) => ({ ...prev, entryDate: activeDate }));
-        setPending({ model: { kind: "date", count }, commit: () => apply(patch), rollback: restore });
+        setPending({ model: { kind: "date", count }, contextKey, commit: () => apply(patch), rollback: restore });
       }
     },
-    [entry, form, activeDate, setForm, offerMissingLines],
+    [entry, form, activeDate, contextKey, setForm, offerMissingLines],
   );
 
   const requestSelectDate = useCallback<UseDiaryPreviewTransitionsResult["requestSelectDate"]>(
     (entryDate, apply) => {
       const count = entry === undefined && entryDate !== activeDate ? countEnteredPreviewData(form) : 0;
       if (count === 0) apply();
-      else setPending({ model: { kind: "date", count }, commit: apply });
+      else setPending({ model: { kind: "date", count }, contextKey, commit: apply });
     },
-    [entry, form, activeDate],
+    [entry, form, activeDate, contextKey],
   );
 
   const confirm = useCallback(() => {

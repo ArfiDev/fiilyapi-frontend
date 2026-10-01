@@ -95,4 +95,11 @@ describe("DiaryLinesCard · önizleme", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Tekrar dene" }));
     expect(onRetryPreview).toHaveBeenCalledTimes(1);
   });
+
+  it("GKS-F1.4.1 · hata: 'Tekrar dene' kırmızı bandın İÇİNDE (diary__error emsali)", () => {
+    renderCard({ previewStatus: "error", onRetryPreview: vi.fn() }, []);
+    const band = screen.getByText("İş kalemleri yüklenemedi").closest(".diary__error");
+    expect(band).not.toBeNull();
+    expect(band).toContainElement(screen.getByRole("button", { name: "Tekrar dene" }));
+  });
 });
