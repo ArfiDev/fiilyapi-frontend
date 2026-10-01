@@ -34,26 +34,8 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-01 12:35",
+  guncellendi: "2026-10-01 13:40",
   gorevler: [
-    {
-      kod: "BDG",
-      acilim: "Bölüm Dağılımı",
-      aciklama:
-        "Şantiyenin iş kalemleri bölümlere tek ekrandan dağıtılır (kalem x bölüm matrisi). Sözleşmedeki Poz Dağılımı ekranından türetilir.",
-      durum: "devam",
-      spec: "BOLUM-DAGILIMI-SPEC.md",
-      dilimler: [
-        { kod: "B1", aciklama: "Matris okuma + birleştirme kaydı ucu", durum: "bitti", hat: "backend", pr: "backend #150" },
-        { kod: "F1", aciklama: "Bölüm Dağılımı ekranı (Kalanı buraya dağıt dahil)", durum: "devam", hat: "frontend", bagimlilik: "KDG-F1 merge bekler (ekran dilimi)" },
-      ],
-      kararlar: [
-        "Mockup yok, sözleşme Poz Dağılımı ekranından birebir türetilir.",
-        "Giriş: İş Kalemleri başlığındaki Bölüm Dağılımı düğmesi; yan menü öğesi yok.",
-        "Atanmamış miktar yalnız uyarıdır, kısmi dağıtım serbesttir.",
-        "Uyarı kalem listesiyle yazılır; atanmamış rozeti kırmızı.",
-      ],
-    },
     {
       kod: "SZK",
       acilim: "Sözleşme Kalemi",
@@ -63,12 +45,13 @@ export const VERI: GelistirmeVerisi = {
       spec: "SOZLESME-KALEM-KILIDI-SPEC.md",
       dilimler: [
         { kod: "F1", aciklama: "Sözleşme tablosunda poz no, tarif, birim satır içi düzenleme", durum: "bitti", hat: "frontend", pr: "frontend #148" },
-        { kod: "B1", aciklama: "Şantiye kaleminde sözleşme alanları kilidi + sayı sınırları", durum: "devam", hat: "backend" },
+        { kod: "B1", aciklama: "Şantiye kaleminde sözleşme alanları kilidi + sayı sınırları", durum: "devam", hat: "backend", pr: "backend #151 (CI)" },
         { kod: "F2", aciklama: "Şantiye formunda kilit gösterimi", durum: "sirada", hat: "frontend", bagimlilik: "B1 merge bekler" },
       ],
       kararlar: [
         "Şantiyede açık kalanlar: miktar (kota), grup, sıra.",
         "Sözleşmede olmayan şantiye kalemi serbest düzenlenir.",
+        "Kilitli alan aynı değerle gelirse kabul, farklıysa ret.",
       ],
     },
     {
@@ -79,21 +62,82 @@ export const VERI: GelistirmeVerisi = {
       durum: "devam",
       spec: "BOLUM-FORMU-SPEC.md",
       dilimler: [
-        { kod: "B1", aciklama: "Bedel zorunluluğu kalkar + bölüm tipi tablosu (migration)", durum: "devam", hat: "backend", bagimlilik: "F1 ile birlikte merge edilir" },
-        { kod: "F1", aciklama: "Form: bedel salt okunur, + Yeni tip ekle", durum: "sirada", hat: "frontend", bagimlilik: "B1 merge bekler" },
+        { kod: "B1", aciklama: "Bedel zorunluluğu kalkar + bölüm tipi tablosu (migration)", durum: "devam", hat: "backend", pr: "backend #152", bagimlilik: "F1 ile birlikte merge edilir" },
+        { kod: "F1", aciklama: "Form: bedel kilitli kutu, + Yeni tip ekle", durum: "devam", hat: "frontend" },
       ],
-      kararlar: ["Bölüm tipi zorunlu kalır.", "Yazım farkıyla kopya tip engellenir."],
+      kararlar: [
+        "Bölüm tipi zorunlu kalır; yayındaki bölümde boşaltılamaz.",
+        "Yazım farkıyla kopya tip engellenir.",
+        "+ Yeni tip ekle, + Yeni Grup deseninde.",
+      ],
     },
     {
-      kod: "GRP",
-      acilim: "Günlük Rapor",
-      aciklama: "Günlük İlerleme Raporunda uzun kalem adı taşması ve takvimde ay ileri tuşunun takvimi kapatması.",
+      kod: "GKS",
+      acilim: "Günlük Kayıt Satırları",
+      aciklama:
+        "Günlük kayıtta bölüm seçilince o bölümün kalemleri kaydetmeden gelir; Taslak Kaydet başlık ve satırları tek seferde yazar.",
+      durum: "devam",
+      spec: "GUNLUK-KAYIT-ONIZLEME-SPEC.md",
+      dilimler: [
+        { kod: "B1", aciklama: "Önizleme ucu + tek istekte kayıt + Bölümsüz satır açığı", durum: "devam", hat: "backend" },
+        { kod: "F1", aciklama: "Bölüm seçilince kalemler gelir, tek kayıt", durum: "sirada", hat: "frontend", bagimlilik: "B1 merge bekler" },
+      ],
+      kararlar: [
+        "Önizleme + tek kayıt; seçim kayıt açmaz.",
+        "Bölüm seçilince yalnız o bölüme dağıtılmış kalemler.",
+        "Bölüm seçilmezse tamamen dağıtılmış kalem, dağıtıldığı her bölüm için satır alır.",
+      ],
+    },
+    {
+      kod: "FLK",
+      acilim: "Sekme Şeridi",
+      aciklama: "Aktif sekme sonradan genişleyince şerit yeniden kaydırılmıyordu; görsel testi de kararsızdı.",
+      durum: "devam",
+      spec: "-",
+      dilimler: [{ kod: "F1", aciklama: "Şerit yeniden kaydırma + test bekçisi", durum: "devam", hat: "frontend" }],
+      kararlar: [],
+    },
+    {
+      kod: "BDG",
+      acilim: "Bölüm Dağılımı",
+      aciklama: "Şantiyenin iş kalemleri bölümlere tek ekrandan dağıtılır (kalem x bölüm matrisi).",
+      durum: "bitti",
+      spec: "BOLUM-DAGILIMI-SPEC.md",
+      dilimler: [
+        { kod: "B1", aciklama: "Matris okuma + birleştirme kaydı ucu", durum: "bitti", hat: "backend", pr: "backend #150" },
+        { kod: "F1", aciklama: "Bölüm Dağılımı ekranı", durum: "bitti", hat: "frontend", pr: "frontend #154" },
+      ],
+      kararlar: ["Giriş: İş Kalemleri başlığındaki Bölüm Dağılımı düğmesi.", "Atanmamış miktar yalnız uyarıdır."],
+    },
+    {
+      kod: "KDG",
+      acilim: "Kalanı Dağıt",
+      aciklama: "Poz Dağılımı ve Bölüm Dağılımı ekranlarında her kolonda Kalanı buraya dağıt düğmesi.",
+      durum: "bitti",
+      spec: "BOLUM-DAGILIMI-SPEC.md (K7)",
+      dilimler: [{ kod: "F1", aciklama: "Sözleşme Poz Dağılımı ekranına düğme", durum: "bitti", hat: "frontend", pr: "frontend #151" }],
+      kararlar: ["Düğme yalnız hücreleri doldurur, kayıt Dağılımı Kaydet ile."],
+    },
+    {
+      kod: "YZD",
+      acilim: "Yazdırma",
+      aciklama: "Yazdırırken yan menü, üst bar ve sekmeler basılmaz; günlük rapor yazdırma görünümüne geçer.",
+      durum: "bitti",
+      spec: "-",
+      dilimler: [{ kod: "F1", aciklama: "Kabuk düzeyinde yazdırma kuralı", durum: "bitti", hat: "frontend", pr: "frontend #153" }],
+      kararlar: [],
+    },
+    {
+      kod: "GRP / DTI",
+      acilim: "Günlük Rapor + Tarih Girişi",
+      aciklama: "Rapor ad taşması, takvimde ay ileri tuşu ve formlarda ara tarih sızması.",
       durum: "bitti",
       spec: "-",
       dilimler: [
-        { kod: "F1", aciklama: "Ad sarılır; takvim seçimi yalnız gerçek seçimde işlenir", durum: "bitti", hat: "frontend", pr: "frontend #147" },
+        { kod: "GRP-F1", aciklama: "Ad sarılır; takvim seçimi yalnız gerçek seçimde", durum: "bitti", hat: "frontend", pr: "frontend #147" },
+        { kod: "DTI-F1", aciklama: "Formlarda tarih alanı aynı onarım", durum: "bitti", hat: "frontend", pr: "frontend #150" },
       ],
-      kararlar: ["Canlıya çıkınca kullanıcı takvimi elle dener."],
+      kararlar: ["Takvim kullanıcı tarafından canlıda doğrulandı."],
     },
     {
       kod: "GLS",
@@ -104,49 +148,28 @@ export const VERI: GelistirmeVerisi = {
       dilimler: [{ kod: "F1", aciklama: "Sayfa + yan menü öğesi (yalnız sistem yöneticisi)", durum: "bitti", hat: "frontend", pr: "frontend #149" }],
       kararlar: ["Backend yok; içeriği CEO elle günceller."],
     },
-    {
-      kod: "DTI",
-      acilim: "Tarih Girişi",
-      aciklama: "Formlardaki tarih alanında takvimde ay gezinirken ara tarihler forma yazılıyor.",
-      durum: "bitti",
-      spec: "-",
-      dilimler: [{ kod: "F1", aciklama: "Tarih seçimi yalnız gerçek seçimde işlenir", durum: "bitti", hat: "frontend", pr: "frontend #150" }],
-      kararlar: [],
-    },
-    {
-      kod: "KDG",
-      acilim: "Kalanı Dağıt",
-      aciklama:
-        "Poz Dağılımı ve Bölüm Dağılımı ekranlarında her kolonda Kalanı buraya dağıt düğmesi; tek şantiyede tümünü dağıtır.",
-      durum: "devam",
-      spec: "BOLUM-DAGILIMI-SPEC.md (K7)",
-      dilimler: [{ kod: "F1", aciklama: "Sözleşme Poz Dağılımı ekranına düğme", durum: "devam", hat: "frontend", pr: "frontend #151 (CI)" }],
-      kararlar: [
-        "Düğme yalnız hücreleri doldurur, kayıt Dağılımı Kaydet ile.",
-        "Kalan rozeti ekrandaki değerlerle anında güncellenir.",
-      ],
-    },
   ],
   bekleyenler: [
     {
-      kod: "GKS",
-      acilim: "Günlük Kayıt Satırları",
-      aciklama:
-        "Günlük kayıtta bölüm seçilince o bölümün kalemleri kaydetmeden gelir; Taslak Kaydet başlık ve satırları tek seferde yazar.",
+      kod: "TKL",
+      acilim: "İş Kalemi Kataloğu + Teklif Hazırlama",
+      aciklama: "Katalogdan kalem seçerek sözleşme ve teklif; yan menüde Teklif Hazırlama. Yeni session işi, mockup bekleniyor.",
       kararlar: [
-        "Önizleme + tek kayıt; seçim kayıt açmaz.",
-        "Bölüm seçilince yalnız o bölüme dağıtılmış kalemler.",
-        "Backend sırası: SZK-B1 sonrası.",
+        "Tek katalog (Birim Oran Kataloğu genişler); planlamada fiyat, teklifte adam-saat görünür.",
+        "Poz no zorunlu; referans fiyat + son fiyat önerisi.",
+        "Teklif: revizyon, PDF/Excel, kâr/gider, KDV ve koşullar.",
+        "Kazanılınca düzenlenebilir dönüştürmeyle proje + sözleşme.",
       ],
     },
     {
       kod: "DSC-B6 / F3",
       acilim: "Disiplin Kapsamı kapanışı",
-      aciklama: "Beklemede (kullanıcı kararı). Servislerde kapsam parametresi zorunlu olacak; hakediş menüsü kısıtlıya gizlenecek.",
+      aciklama: "Beklemede (kullanıcı kararı).",
       kararlar: ["Şimdilik bekliyor, tekrar dönülecek."],
     },
   ],
   sorular: [
+    { baslik: "TKL mockup'ları", aciklama: "Teklif listesi, detay, katalogdan seçici, katalog yönetimi, dönüştürme, PDF (promptlar TKL-MOCKUP-PROMPTLARI.md)." },
     { baslik: "Poz kodu kâhini (KARARLAR-BEKLEYEN 14)", aciklama: "Kısıtlı kullanıcının poz kodundan başka disiplin kaleminin varlığını sezebilmesi kabul edilsin mi?" },
     { baslik: "Mockup dışı metinler (KARARLAR-BEKLEYEN 15)", aciklama: "Disiplin kapsamı turunda CEO'nun verdiği metin ve gösterim kararlarının onayı." },
     { baslik: "Mobil davranış (KARARLAR-BEKLEYEN 13)", aciklama: "Dar ekranda kabuk davranışı. Kullanıcı: en son yapılacak." },
