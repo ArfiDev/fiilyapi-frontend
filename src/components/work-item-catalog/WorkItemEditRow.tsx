@@ -4,10 +4,9 @@ import { CONTRACTOR_OPTIONS } from "@/components/catalog-shared/CatalogBits";
 import { unitOptions } from "@/components/catalog-shared/catalog-units";
 import { Button, Input, Segmented, Select } from "@/components/ui";
 import { AlertIcon } from "@/components/ui/icons";
-import { EMPTY_CELL } from "@/lib/format";
-import type { WorkDisciplineRead } from "@/lib/api/models";
+import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 
-import { NO_LAST_PRICE_SOURCE } from "./WorkItemRow";
+import { LastPriceCell } from "./LastPriceCell";
 import type { WorkItemDraft } from "./work-item-drafts";
 import {
   firstWorkItemError,
@@ -37,6 +36,10 @@ interface WorkItemEditRowProps {
   pozNo: string | null;
   /** Düzenlemede kalemin, yeni satırda ŞİMDİKİ listeden çözülen disiplin (yoksa null). */
   discipline: WorkItemDisciplineLabel | null;
+  /** Düzenlemede kalemin son fiyat okuması (salt okunur hücre); yeni satırda null. */
+  lastPrice?: WorkItemRead["last_price"];
+  /** Düzenlemede kalemin KAYITLI referans fiyatı (fark tabanı / maske ayrımı); yeni satırda null. */
+  savedRefPrice?: string | null;
   testId: string;
   /** Katalogdaki mevcut birimler (açılır listeye eklenir). */
   catalogUnits: readonly string[];
@@ -53,6 +56,8 @@ export function WorkItemEditRow({
   draft,
   pozNo,
   discipline,
+  lastPrice = null,
+  savedRefPrice = null,
   testId,
   catalogUnits,
   onPatch,
@@ -119,8 +124,7 @@ export function WorkItemEditRow({
           />
         </div>
         <div role="cell" className="wik-cell wik-cell--last wik-cell--readonly">
-          <span className="wik-last wik-last--empty">{EMPTY_CELL}</span>
-          <span className="wik-sub wik-sub--nowrap">{`salt okunur · ${NO_LAST_PRICE_SOURCE}`}</span>
+          <LastPriceCell lastPrice={lastPrice} refPrice={savedRefPrice} isNewItem={pozNo === null} readOnly />
         </div>
         <div role="cell" className="wik-cell wik-cell--edit">
           <Input

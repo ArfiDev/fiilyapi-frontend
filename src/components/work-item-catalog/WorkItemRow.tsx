@@ -1,18 +1,15 @@
 import { ContractorBadge, DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 import { Button } from "@/components/ui";
 import { cx } from "@/lib/cx";
-import { EMPTY_CELL } from "@/lib/format";
 import type { WorkItemRead } from "@/lib/api/models";
 
+import { LastPriceCell } from "./LastPriceCell";
 import {
   formatPrice,
   formatPriceUpdated,
   formatStandardRate,
   isPriceStale,
 } from "./work-item-model";
-
-/** ÜS-8 — son fiyat kaynağı (B3) gelene dek her satırın boş hâli (KIK:254-256). */
-export const NO_LAST_PRICE_SOURCE = "henüz kaynak yok";
 
 interface WorkItemRowProps {
   item: WorkItemRead;
@@ -43,8 +40,7 @@ export function WorkItemRow({ item, now, canWrite, onEdit }: WorkItemRowProps) {
         {formatPrice(item.ref_price)}
       </div>
       <div role="cell" className="wik-cell wik-cell--last">
-        <span className="wik-last wik-last--empty">{EMPTY_CELL}</span>
-        <span className="wik-sub wik-sub--nowrap">{NO_LAST_PRICE_SOURCE}</span>
+        <LastPriceCell lastPrice={item.last_price} refPrice={item.ref_price} />
       </div>
       <div role="cell" className="wik-cell wik-cell--num">
         {formatStandardRate(item.standard_unit_mhr)}

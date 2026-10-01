@@ -5,7 +5,19 @@ import userEvent from "@testing-library/user-event";
 import { backendClient } from "@/lib/api/client";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
-import { BETON, DEMIR, D_DUV, D_KAB, SIVA } from "./work-item-fixtures";
+import {
+  BETON,
+  DEMIR,
+  D_DUV,
+  D_KAB,
+  LAST_EMPTY,
+  LAST_HK_HIGH,
+  LAST_MASKED,
+  LAST_SZL,
+  LAST_UNKNOWN_SOURCE,
+  SIVA,
+} from "./work-item-fixtures";
+import { LAST_PRICE_HIGH_PCT } from "./last-price";
 import { fail, getCalls, mockGets, mockItemsFailure, ok, renderScreen, type ApiState } from "./work-item-test-utils";
 
 const perm = vi.hoisted(() => ({ level: "full" as string | undefined }));
@@ -147,13 +159,12 @@ describe("liste (KIK:128-147)", () => {
     expect(screen.queryByText(/Eksikleri göster/)).not.toBeInTheDocument();
   });
 
-  it("dipnot ÜS-8: referans fiyat elle girilir + turuncu tarih; son-fiyat kaynağı ve '+%' maddeleri YOK", async () => {
+  it("dipnot ÜS-F2-17: ÜS-8 bekletmesi kalktı — son fiyat + '+%' maddeleri basılır, SA/teklif vaadi YOK", async () => {
     renderScreen();
     await screen.findByText("Beton döküm");
-    expect(screen.getByText("Referans fiyat elle girilir")).toBeInTheDocument();
+    expect(screen.getByText(/son fiyat işveren sözleşmeleri ve onaylı hakedişlerden gelir/)).toBeInTheDocument();
     expect(screen.getByText("6 aydan eski fiyat")).toBeInTheDocument();
     expect(screen.queryByText(/satınalma, hakediş ve kazanılan tekliflerden/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/referansın %5 üstünde/)).not.toBeInTheDocument();
   });
 });
 
@@ -741,5 +752,86 @@ describe("F1.3.1-13 · aynı bildirim iki kez gelirse 2800 ms sayacı sıfırlan
       vi.advanceTimersByTime(1400);
     });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("Son fiyat kolonu (TKL-F2.5 · KIK:138-141, 252-256)", () => {
+  beforeEach(() => {
+    mockGets({
+      disciplines: [D_KAB, D_DUV],
+      items: [LAST_SZL, LAST_HK_HIGH, LAST_EMPTY, LAST_MASKED, LAST_UNKNOWN_SOURCE],
+    });
+  });
+
+  it("dolu SZL: ₺ fiyat + soluk fark + 'Sözleşme · GNK · 12.09'", async () => {
+    renderScreen();
+    const row = within(await screen.findByTestId("wik-row-i-szl"));
+    expect(row.getByText("₺3.410,00")).toBeInTheDocument();
+    const diff = row.getByText("+%1,8");
+    expect(diff).not.toHaveClass("wik-last__diff--high");
+    expect(row.getByText("Sözleşme · GNK · 12.09")).toBeInTheDocument();
+    expect(row.queryByText("henüz kaynak yok")).not.toBeInTheDocument();
+  });
+
+  it("dolu HK > %5: fark kırmızı sınıfta; tarih İstanbul günü (UTC 21:30 → 21.09)", async () => {
+    renderScreen();
+    const row = within(await screen.findByTestId("wik-row-i-hk"));
+    expect(row.getByText("₺555,00")).toBeInTheDocument();
+    expect(row.getByText("+%6,7")).toHaveClass("wik-last__diff--high");
+    expect(row.getByText("Hakediş · HK-GNK-8 · 21.09")).toBeInTheDocument();
+  });
+
+  it("boş (ref var, kaynak yok): '—' + 'henüz kaynak yok'", async () => {
+    renderScreen();
+    const row = within(await screen.findByTestId("wik-row-i-bos"));
+    expect(row.getByText("henüz kaynak yok")).toBeInTheDocument();
+  });
+
+  it("ÇİFT-NULL (limited maskesi): yalnız '—', 'henüz kaynak yok' YOK (ÜS-F2-15)", async () => {
+    renderScreen();
+    const row = within(await screen.findByTestId("wik-row-i-msk"));
+    expect(row.queryByText("henüz kaynak yok")).not.toBeInTheDocument();
+    expect(row.getAllByText("—").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("bilinmeyen kaynak ham; negatif fark eksi işaretli; uzun kod kırpılır ama title tam metin taşır", async () => {
+    renderScreen();
+    const row = within(await screen.findByTestId("wik-row-i-unk"));
+    expect(row.getByText("\u2212%3,2")).not.toHaveClass("wik-last__diff--high");
+    const source = row.getByText("ZZ · COK-UZUN-PROJE-KODU-2026-A-BLOK · 05.03");
+    expect(source).toHaveAttribute("title", "ZZ · COK-UZUN-PROJE-KODU-2026-A-BLOK · 05.03");
+  });
+
+  it("düzenleme satırı: aynı değer salt okunur kaynak satırıyla (KIK:158)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const view = within(await screen.findByTestId("wik-row-i-szl"));
+    await user.click(view.getByRole("button", { name: /düzenle/ }));
+    const row = within(screen.getByTestId("wik-edit-i-szl"));
+    expect(row.getByText("₺3.410,00")).toBeInTheDocument();
+    expect(row.getByText("salt okunur · Sözleşme · GNK · 12.09")).toBeInTheDocument();
+  });
+
+  it("düzenleme satırı maskeli kalemde 'henüz kaynak yok' basmaz", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const view = within(await screen.findByTestId("wik-row-i-msk"));
+    await user.click(view.getByRole("button", { name: /düzenle/ }));
+    const row = within(screen.getByTestId("wik-edit-i-msk"));
+    expect(row.queryByText(/henüz kaynak yok/)).not.toBeInTheDocument();
+  });
+
+  it("dipnot (KIK:184-188 · ÜS-F2-17): üç madde, eşik metni sabitten", async () => {
+    renderScreen();
+    await screen.findByTestId("wik-row-i-szl");
+    expect(
+      screen.getByText(
+        "Referans fiyat elle girilir; son fiyat işveren sözleşmeleri ve onaylı hakedişlerden gelir",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("+%")).toBeInTheDocument();
+    expect(screen.getByText(`son fiyat referansın %${LAST_PRICE_HIGH_PCT} üstünde`)).toBeInTheDocument();
+    expect(screen.getByText("turuncu tarih")).toBeInTheDocument();
+    expect(screen.getByText("6 aydan eski fiyat")).toBeInTheDocument();
   });
 });
