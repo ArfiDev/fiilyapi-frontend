@@ -12,6 +12,7 @@ import { useContractDistribution, useEmployerContract } from "@/lib/api/hooks/us
 import { useSaveContractDistribution } from "@/lib/api/hooks/useContractMutations";
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
+import { distributeRemaining } from "@/lib/distribute-remaining";
 import {
   buildDistributionSaveBody,
   distributionCellKey,
@@ -19,6 +20,7 @@ import {
   type DistributionCellEdit,
 } from "@/lib/contract-distribution-save";
 
+import { isDistributionMetrajHidden, toDistributeRemainingItem } from "./distribution-derive";
 import { employerContractHref } from "./employer-contract-tabs";
 import { ContractDistributionGrid } from "./ContractDistributionGrid";
 import { ContractDistributionHeaderCard } from "./ContractDistributionHeaderCard";
@@ -64,12 +66,20 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
   const [rejectionMessages, setRejectionMessages] = useState<readonly string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  /** KDG K7 · son "Kalanı buraya dağıt" sonucu (bilgi satırları). */
+  const [distributeNotices, setDistributeNotices] = useState<readonly string[]>([]);
 
   useUnsavedChanges(edits.size > 0, "Poz dağılımı");
 
   if (isForbidden(distributionQuery.error)) return <AccessDenied />;
 
   const data = distributionQuery.data;
+  const isMetrajHidden = data !== undefined && isDistributionMetrajHidden(data.groups);
+  const distributeBlockReason = !permission.canWrite
+    ? "Kalanı dağıtma kapalı: yazma izniniz yok."
+    : isMetrajHidden
+      ? "Kalanı dağıtma kapalı: metraj bu rol için gizli."
+      : null;
 
   function handleCellChange(contractItemId: string, siteId: string, value: string) {
     // Mutasyonsuz güncelleme: her düzenleme YENİ bir Map üretir.
@@ -77,9 +87,55 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
     next.set(distributionCellKey(contractItemId, siteId), { contractItemId, siteId, value });
     setEdits(next);
     setIsSaved(false);
+    setDistributeNotices([]);
+  }
+
+  /**
+   * KDG K7 (CEO 2026-10-01) · her kalemin EKRANDAKİ kalanını `siteId` kolonuna
+   * ekler. Hesap saf yardımcıda (`distribute-remaining.ts`); burada yalnız
+   * adaptör var. TEK `setEdits` ⇒ tek render. Yazma yine "Dağılımı Kaydet"le.
+   */
+  function handleDistributeRemaining(siteId: string) {
+    if (!data) return;
+    const items = data.groups.flatMap((group) => group.items);
+    const distributeItems = items.flatMap((item) => {
+      const mapped = toDistributeRemainingItem(item);
+      return mapped === null ? [] : [mapped];
+    });
+    const drafts = new Map([...edits].map(([key, edit]) => [key, edit.value]));
+    const result = distributeRemaining({
+      items: distributeItems,
+      columnIds: data.sites.map((site) => site.id),
+      targetColumnId: siteId,
+      drafts,
+      cellKey: distributionCellKey,
+    });
+
+    const itemIdByKey = new Map(
+      distributeItems.map((item) => [distributionCellKey(item.id, siteId), item.id]),
+    );
+    const next = new Map(edits);
+    for (const key of result.changedKeys) {
+      const contractItemId = itemIdByKey.get(key);
+      const value = result.drafts.get(key);
+      if (contractItemId === undefined || value === undefined) continue;
+      next.set(key, { contractItemId, siteId, value });
+    }
+
+    const notices: string[] = [];
+    if (result.changedCount === 0) notices.push("Dağıtılacak kalan yok.");
+    if (result.skippedCount > 0) {
+      notices.push(
+        `${result.skippedCount} kalem atlandı: geçersiz taslak ya da sözleşme miktarını aşan dağılım var.`,
+      );
+    }
+    setEdits(next);
+    setDistributeNotices(notices);
+    setIsSaved(false);
   }
 
   async function handleSave() {
+    setDistributeNotices([]);
     const build = buildDistributionSaveBody([...edits.values()]);
 
     // 🛑 Reddedilen hücre varsa istek HİÇ ATILMAZ.
@@ -195,9 +251,16 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
             dirtyCount={edits.size}
             isSaving={saveMutation.isPending}
             isSaved={isSaved}
+            noticeMessages={distributeNotices}
             rejectionMessages={rejectionMessages}
             saveError={saveError}
           />
+
+          {distributeBlockReason !== null && (
+            <p className="cdist__message" data-testid="cdist-distribute-reason">
+              {distributeBlockReason}
+            </p>
+          )}
 
           <ContractDistributionGrid
             sites={data.sites}
@@ -205,6 +268,8 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
             edits={new Map([...edits].map(([key, edit]) => [key, edit.value]))}
             canWrite={permission.canWrite}
             onCellChange={handleCellChange}
+            onDistributeRemaining={handleDistributeRemaining}
+            isDistributeDisabled={distributeBlockReason !== null}
           />
 
           <ContractDistributionSiteSummaries

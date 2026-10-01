@@ -178,6 +178,20 @@
   background: var(--color-danger-soft);
   color: var(--color-danger-strong);
 }
+/* KDG K7 · kolon başlığındaki "Kalanı buraya dağıt" (ghost/sm) — başlığın
+   altına iner, kolon rengini devralır. */
+.cdist-grid__distribute {
+  display: block;
+  margin: 4px 0 0 auto;
+  white-space: nowrap;
+}
+/* KDG K7 · canlı rozet taslaktan hesaplandı: "kaydedilmedi" görünür metin. */
+.cdist-grid__unsaved {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
 /* 98-99: hücre girdisi — 80px genişlik, sağa dayalı, mono. */
 .cdist-cell {
   text-align: right;
