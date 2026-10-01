@@ -98,4 +98,8 @@ describe("buildEmployerItemBody (İŞV)", () => {
   it("Sıra boşken grup içi varsayılanı kullanır", () => {
     expect(buildEmployerItemBody(EMPLOYER_BASE, 11).sort_order).toBe(11);
   });
+
+  it("🔴 TKL-F2.2: elle ekleme gövdesi `catalog_item_id` TAŞIMAZ (bağ yalnız katalog seçiciden toplu eklemede)", () => {
+    expect(Object.keys(buildEmployerItemBody(EMPLOYER_BASE, 0))).not.toContain("catalog_item_id");
+  });
 });

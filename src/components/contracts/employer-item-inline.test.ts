@@ -118,6 +118,20 @@ describe("commitInlineCell · satır-içi hücre kaydetme kararı", () => {
       });
     });
 
+    it("🔴 TKL-F2.2: hiçbir hücre gövdesi `catalog_item_id` taşımaz (bağ PATCH'te SABİT — backend 422)", () => {
+      const commits = [
+        commitInlineCell("quantity", "5", "4.000"),
+        commitInlineCell("unitPrice", "9.5", "9.00"),
+        commitInlineCell("code", "X1", "X0"),
+        commitInlineCell("description", "Yeni", "Eski"),
+        commitInlineCell("unit", "m²", "m³"),
+      ];
+      for (const commit of commits) {
+        expect(commit.kind).toBe("patch");
+        if (commit.kind === "patch") expect(Object.keys(commit.body)).not.toContain("catalog_item_id");
+      }
+    });
+
     it("boş poz no / ad / birim reddedilir (form kuralının metni)", () => {
       expect(commitInlineCell("code", "  ", "03.001")).toEqual({
         kind: "error",
