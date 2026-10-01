@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button/Button";
 import { Input } from "@/components/ui/input/Input";
 import { CheckIcon, WarningTriangleIcon, inlineSymbolProps } from "@/components/ui/icons";
 import { cx } from "@/lib/cx";
@@ -8,6 +9,7 @@ import type {
   ContractDistributionSite,
 } from "@/lib/api/hooks/useContract";
 import { distributionCellKey } from "@/lib/contract-distribution-save";
+import { remainingQuantity } from "@/lib/distribute-remaining";
 
 import {
   allocationQuantityFor,
@@ -15,6 +17,7 @@ import {
   distributionSiteAccent,
   isRemainingSettled,
   isUndistributedItem,
+  toDistributeRemainingItem,
 } from "./distribution-derive";
 import "./employer-contract-detail.css";
 import "./contract-distribution.css";
@@ -42,6 +45,10 @@ export interface ContractDistributionGridProps {
   edits: ReadonlyMap<string, string>;
   canWrite: boolean;
   onCellChange: (contractItemId: string, siteId: string, value: string) => void;
+  /** KDG K7 · kolon başlığındaki "Kalanı buraya dağıt". */
+  onDistributeRemaining: (siteId: string) => void;
+  /** İzin yok / metraj gizli — gerekçe ekranda görünür (üst bileşen yazar). */
+  isDistributeDisabled: boolean;
 }
 
 export function ContractDistributionGrid({
@@ -50,6 +57,8 @@ export function ContractDistributionGrid({
   edits,
   canWrite,
   onCellChange,
+  onDistributeRemaining,
+  isDistributeDisabled,
 }: ContractDistributionGridProps) {
   // 5 sabit kolon (77-81) + şantiye başına 1 (82-83) + Kalan (84).
   const columnCount = 6 + sites.length;
@@ -93,6 +102,16 @@ export function ContractDistributionGrid({
                     data-testid="cdist-site-column"
                   >
                     🏗 {site.name} Kota
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="cdist-grid__distribute"
+                      disabled={isDistributeDisabled}
+                      onClick={() => onDistributeRemaining(site.id)}
+                      data-testid="cdist-distribute-remaining"
+                    >
+                      Kalanı buraya dağıt
+                    </Button>
                   </th>
                 ))}
                 <th className="ecd-items__th ecd-items__th--center">Kalan</th>
@@ -118,7 +137,11 @@ export function ContractDistributionGrid({
   );
 }
 
-interface GroupRowsProps extends Omit<ContractDistributionGridProps, "groups"> {
+interface GroupRowsProps
+  extends Omit<
+    ContractDistributionGridProps,
+    "groups" | "onDistributeRemaining" | "isDistributeDisabled"
+  > {
   group: ContractDistributionGroup;
   columnCount: number;
 }
@@ -153,13 +176,19 @@ function GroupRows({
   );
 }
 
-interface ItemRowProps extends Omit<ContractDistributionGridProps, "groups"> {
+interface ItemRowProps
+  extends Omit<
+    ContractDistributionGridProps,
+    "groups" | "onDistributeRemaining" | "isDistributeDisabled"
+  > {
   item: ContractDistributionItem;
 }
 
 function ItemRow({ item, sites, edits, canWrite, onCellChange }: ItemRowProps) {
   const isUndistributed = isUndistributedItem(item);
-  const isSettled = isRemainingSettled(item.remaining_quantity);
+  const hasDirtyCell = sites.some((site) => edits.has(distributionCellKey(item.id, site.id)));
+  const shownRemaining = liveRemaining(item, sites, edits, hasDirtyCell);
+  const isSettled = isRemainingSettled(shownRemaining);
 
   return (
     <tr
@@ -224,16 +253,46 @@ function ItemRow({ item, sites, edits, canWrite, onCellChange }: ItemRowProps) {
           // `✓` artık inline SVG (F-SEM) ⇒ metinden ayırt edilemez; kapanmış
           // rozet YAPISAL olarak da damgalanır, testler bunu okur.
           data-settled={isSettled ? "true" : "false"}
+          data-dirty={hasDirtyCell ? "true" : "false"}
         >
           {isSettled ? (
             <>
               <CheckIcon {...inlineSymbolProps} /> 0
             </>
           ) : (
-            formatQuantity(item.remaining_quantity)
+            formatQuantity(shownRemaining)
           )}
         </span>
+        {hasDirtyCell && shownRemaining !== null && (
+          // KDG K7 · taslaktan hesaplanan rozet: kaydedilmediği GÖRÜNÜR yazılır.
+          <span className="cdist-grid__unsaved" data-testid="cdist-remaining-unsaved">
+            kaydedilmedi
+          </span>
+        )}
       </td>
     </tr>
   );
+}
+
+/**
+ * KDG K7 · canlı Kalan: kirli hücre varsa quantity − Σ etkin değer; yoksa
+ * sunucunun `remaining_quantity`si otoritedir. Maskeli metrajda (`null`) ya da
+ * taslak geçersizken canlı hesap YAPILMAZ — sunucu değeri (maskede `null` → "—").
+ */
+function liveRemaining(
+  item: ContractDistributionItem,
+  sites: readonly ContractDistributionSite[],
+  edits: ReadonlyMap<string, string>,
+  hasDirtyCell: boolean,
+): string | null {
+  if (!hasDirtyCell || item.remaining_quantity === null) return item.remaining_quantity;
+  const distributeItem = toDistributeRemainingItem(item);
+  if (distributeItem === null) return item.remaining_quantity;
+  const live = remainingQuantity(
+    distributeItem,
+    sites.map((site) => site.id),
+    edits,
+    distributionCellKey,
+  );
+  return live ?? item.remaining_quantity;
 }

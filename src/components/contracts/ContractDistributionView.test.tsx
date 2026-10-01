@@ -1,3 +1,4 @@
+import { Profiler } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
@@ -459,4 +460,205 @@ describe("POZ dağılımı — hata ve izin yolları", () => {
 
     expect(screen.queryByTestId("cdist-save")).toBeNull();
   });
+});
+
+// KDG K7 (CEO 2026-10-01) · "Kalanı buraya dağıt" + canlı Kalan rozeti.
+describe("POZ dağılımı — Kalanı buraya dağıt (KDG K7)", () => {
+  function distributeButton(siteName: string): HTMLElement {
+    const index = DISTRIBUTION.sites.findIndex((site) => site.name === siteName);
+    return screen.getAllByTestId("cdist-distribute-remaining")[index];
+  }
+
+  function badgeOf(code: string): HTMLElement {
+    const codes = ["03.001", "03.003", "05.001"];
+    return screen.getAllByTestId("cdist-remaining")[codes.indexOf(code)];
+  }
+
+  it("her şantiye kolon başlığında bir düğme basılır", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    expect(screen.getAllByTestId("cdist-distribute-remaining")).toHaveLength(2);
+    expect(distributeButton("A-Blok")).toBeEnabled();
+    expect(distributeButton("A-Blok")).toHaveTextContent("Kalanı buraya dağıt");
+  });
+
+  it("düğme kalanı hücreye yazar ve hücreyi kirli yapar", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    fireEvent.click(distributeButton("A-Blok"));
+
+    expect(cell("05.001", "A-Blok").value).toBe("18400");
+    expect(cell("05.001", "A-Blok")).toHaveAttribute("data-dirty", "true");
+    // Kalan 0 olan kaleme dokunulmadı.
+    expect(cell("03.001", "A-Blok")).toHaveAttribute("data-dirty", "false");
+    expect(cell("03.001", "A-Blok").value).toBe("1900");
+    expect(screen.getByText(/Kaydedilmemiş 1 hücre değişikliği/)).toBeInTheDocument();
+  });
+
+  it("dolu hücrenin üstüne ekler", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    typeInCell("03.001", "A-Blok", "1800");
+    fireEvent.click(distributeButton("B-Blok"));
+
+    // ci-1: 3200 − (1800 + 1300) = 100 → B: 1300 + 100
+    expect(cell("03.001", "B-Blok").value).toBe("1400");
+  });
+
+  it("Kaydet gövdesi yalnız değişen hücreleri içerir", async () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    fireEvent.click(distributeButton("A-Blok"));
+    await save();
+
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+    expect(mutateAsync).toHaveBeenCalledWith({
+      allocations: [{ contract_item_id: "ci-5", site_id: "s-1", quantity: "18400" }],
+    });
+  });
+
+  it("canlı rozet taslaktan hesaplanır ve 'kaydedilmedi' işaretini taşır", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    expect(badgeOf("03.001")).toHaveAttribute("data-settled", "true");
+    expect(screen.queryByTestId("cdist-remaining-unsaved")).toBeNull();
+
+    typeInCell("03.001", "A-Blok", "1800");
+
+    expect(badgeOf("03.001")).toHaveAttribute("data-settled", "false");
+    expect(badgeOf("03.001")).toHaveTextContent("100");
+    expect(screen.getByTestId("cdist-remaining-unsaved")).toHaveTextContent("kaydedilmedi");
+  });
+
+  it("Kaydet'ten sonra rozet yine sunucu değerindedir (işaret kalkar)", async () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    typeInCell("03.001", "A-Blok", "1800");
+    await save();
+
+    await waitFor(() => expect(screen.queryByTestId("cdist-remaining-unsaved")).toBeNull());
+    expect(badgeOf("03.001")).toHaveTextContent("0");
+  });
+
+  it("hiçbir kalem değişmezse 'Dağıtılacak kalan yok' bildirimi görünür", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    fireEvent.click(distributeButton("A-Blok"));
+    fireEvent.click(distributeButton("A-Blok"));
+
+    expect(screen.getByText("Dağıtılacak kalan yok.")).toBeInTheDocument();
+  });
+
+  it("atlanan kalem sayısı yazılır (taslakta aşım)", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    typeInCell("03.001", "A-Blok", "2000"); // 2000 + 1300 > 3200
+    fireEvent.click(distributeButton("B-Blok"));
+
+    expect(screen.getByTestId("cdist-status")).toHaveTextContent("1 kalem atlandı");
+    // Atlanan kalem değişmedi, ötekiler doldu.
+    expect(cell("03.001", "B-Blok").value).toBe("1300");
+    expect(cell("05.001", "B-Blok").value).toBe("18400");
+  });
+
+  it("geçersiz taslaklı kalem atlanır ve sayılır", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    typeInCell("05.001", "A-Blok", "abc");
+    fireEvent.click(distributeButton("B-Blok"));
+
+    expect(screen.getByTestId("cdist-status")).toHaveTextContent("1 kalem atlandı");
+    expect(cell("05.001", "B-Blok").value).toBe("");
+  });
+
+  it("yazma izni yokken düğme devre dışı ve gerekçe görünür", () => {
+    permissionLevel = "read";
+    render(<ContractDistributionView projectId="p-1" />);
+
+    for (const button of screen.getAllByTestId("cdist-distribute-remaining")) {
+      expect(button).toBeDisabled();
+    }
+    expect(screen.getByTestId("cdist-distribute-reason")).toHaveTextContent(
+      "yazma izniniz yok",
+    );
+  });
+
+  it("metraj gizliyken (maskeli kalem) düğme devre dışı, gerekçe görünür, rozet '—'", () => {
+    const masked: ContractDistributionResponse = {
+      ...DISTRIBUTION,
+      groups: DISTRIBUTION.groups.map((group) => ({
+        ...group,
+        items: group.items.map((item) =>
+          item.id === "ci-5" ? { ...item, quantity: null, remaining_quantity: null } : item,
+        ),
+      })),
+    } as unknown as ContractDistributionResponse;
+    mockHooks(masked);
+    render(<ContractDistributionView projectId="p-1" />);
+
+    for (const button of screen.getAllByTestId("cdist-distribute-remaining")) {
+      expect(button).toBeDisabled();
+    }
+    expect(screen.getByTestId("cdist-distribute-reason")).toHaveTextContent("metraj");
+    expect(badgeOf("05.001")).toHaveTextContent("—");
+  });
+
+  it("izin ve maske serbestken gerekçe satırı basılmaz", () => {
+    render(<ContractDistributionView projectId="p-1" />);
+
+    expect(screen.queryByTestId("cdist-distribute-reason")).toBeNull();
+  });
+
+  it("düğme TEK render üretir (tek setEdits)", () => {
+    const onRender = vi.fn();
+    render(
+      <Profiler id="cdist" onRender={onRender}>
+        <ContractDistributionView projectId="p-1" />
+      </Profiler>,
+    );
+    const before = onRender.mock.calls.length;
+
+    fireEvent.click(distributeButton("A-Blok"));
+
+    expect(onRender.mock.calls.length - before).toBe(1);
+  });
+
+  it("500 kalem × 4 şantiye: düğme tek render ve makul sürede", () => {
+    const sites = ["s-1", "s-2", "s-3", "s-4"].map((id, index) => ({
+      id,
+      name: `Blok-${index + 1}`,
+    }));
+    const items = Array.from({ length: 500 }, (_, index) => ({
+      id: `ci-${index}`,
+      code: `P.${index}`,
+      description: `Kalem ${index}`,
+      unit: "m²",
+      quantity: "1000.000",
+      unit_price: "10.00",
+      remaining_quantity: "850.000",
+      allocations: [{ site_id: "s-1", quantity: "150.000", boq_item_id: `ci-${index}` }],
+    }));
+    mockHooks({
+      ...DISTRIBUTION,
+      sites,
+      groups: [{ id: "cg-x", name: "Büyük", sort_order: 1, items }],
+      undistributed_item_count: 0,
+      undistributed_item_names: [],
+      site_summaries: [],
+    } as unknown as ContractDistributionResponse);
+    const onRender = vi.fn();
+    render(
+      <Profiler id="cdist-big" onRender={onRender}>
+        <ContractDistributionView projectId="p-1" />
+      </Profiler>,
+    );
+    const before = onRender.mock.calls.length;
+
+    fireEvent.click(screen.getAllByTestId("cdist-distribute-remaining")[3]);
+
+    expect(onRender.mock.calls.length - before).toBe(1);
+    expect(cell("P.0", "Blok-4").value).toBe("850");
+    expect(cell("P.499", "Blok-4").value).toBe("850");
+    // jsdom'da 2000 girdi çizimi yavaştır; süre sınırı yalnız takılmayı yakalar.
+  }, 60_000);
 });

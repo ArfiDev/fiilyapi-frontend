@@ -2,6 +2,7 @@ import type {
   ContractDistributionGroup,
   ContractDistributionItem,
 } from "@/lib/api/hooks/useContract";
+import type { DistributeRemainingItem } from "@/lib/distribute-remaining";
 
 /**
  * F-P5 T4 · POZ dağılımı ızgarasının SAF türevleri.
@@ -99,9 +100,11 @@ export function isUndistributedItem(item: ContractDistributionItem): boolean {
 }
 
 /**
- * POZ 100 vs 161 · "Kalan" rozeti. Sunucunun `remaining_quantity` alanı TEK
- * kaynaktır (yerel taslaktan YENİDEN HESAPLANMAZ; ekranda kaydedilmemiş
- * değişiklik olduğu ayrıca yazılır).
+ * POZ 100 vs 161 · "Kalan" rozeti. Kaynak: kirli hücre YOKSA sunucunun
+ * `remaining_quantity` alanı; kirli hücre varsa KDG K7, CEO 2026-10-01:
+ * taslaktan canlı hesaplanır (`distribute-remaining.ts::remainingQuantity`) ve
+ * rozet "kaydedilmedi" işaretini taşır. Metraj gizli rolde (`null`) canlı
+ * hesap YAPILMAZ.
  *
  * "Σ kota = sözleşme miktarı olmalı" (POZ 72) YUMUŞAK gösterimdir: rozet
  * 0'da yeşil ✓, aksi hâlde kırmızı kalan miktardır. HARD VALIDATION YOKTUR —
@@ -113,4 +116,36 @@ export function isRemainingSettled(remainingQuantity: string | null): boolean {
   if (remainingQuantity === null) return false;
   const remaining = Number(remainingQuantity);
   return Number.isFinite(remaining) && remaining === 0;
+}
+
+/**
+ * KDG K7 · `ContractDistributionItem` → saf yardımcının genel kalem şekli.
+ * Maskeli metrajda (`quantity` null) `null` döner — canlı hesap/dağıtım YOK.
+ */
+export function toDistributeRemainingItem(
+  item: ContractDistributionItem,
+): DistributeRemainingItem | null {
+  if (item.quantity === null || item.quantity === undefined) return null;
+  const shares = new Map<string, string>();
+  for (const allocation of item.allocations) {
+    if (allocation.quantity !== null) shares.set(allocation.site_id, allocation.quantity);
+  }
+  return { id: item.id, quantity: item.quantity, shares };
+}
+
+/**
+ * Fail-closed (BoqAssignmentCard `some` deseni): HERHANGİ bir kalemde metraj
+ * (`quantity`/`remaining_quantity`) gizliyse dağıtım kapanır — gizli bir kalem
+ * "kalan 0" gibi okunup sessizce atlanmasın.
+ */
+export function isDistributionMetrajHidden(groups: readonly ContractDistributionGroup[]): boolean {
+  return groups.some((group) =>
+    group.items.some(
+      (item) =>
+        item.quantity === null ||
+        item.quantity === undefined ||
+        item.remaining_quantity === null ||
+        item.remaining_quantity === undefined,
+    ),
+  );
 }

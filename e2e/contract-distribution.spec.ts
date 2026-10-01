@@ -150,3 +150,58 @@ test("poz dağılımı: BİRLEŞTİRME — dokunulmamış kota kaydetten sonra s
   await page.reload();
   await expect(cell(page, "03.001", "A-Blok Şantiyesi")).toHaveValue("1800");
 });
+
+test("poz dağılımı: 'Kalanı buraya dağıt' hücreleri doldurur, Kaydet yalnız değişenleri yollar", async ({
+  page,
+}) => {
+  await login(page);
+
+  // 🔒 Mock-backend durumuna YAZILMAZ (paralel görsel kareler 03.010'u çizer):
+  // PUT yakalanır ve backend'e GİTMEDEN, o anki GET yanıtından türetilmiş
+  // yanıtla karşılanır (`route.continue` YOK).
+  type Allocation = { site_id: string; quantity: string | null; boq_item_id?: string };
+  type Body = { allocations: { contract_item_id: string; site_id: string; quantity: string | null }[] };
+  const bodies: Body[] = [];
+  await page.route("**/contract/distribution", async (route) => {
+    const request = route.request();
+    if (request.method() !== "PUT") return route.fallback();
+    const body = JSON.parse(request.postData() ?? "{}") as Body;
+    bodies.push(body);
+    const current = await page.request.get(request.url());
+    const payload = (await current.json()) as {
+      groups: { items: { id: string; allocations: Allocation[] }[] }[];
+    };
+    for (const item of payload.groups.flatMap((group) => group.items)) {
+      for (const change of body.allocations.filter((a) => a.contract_item_id === item.id)) {
+        item.allocations = item.allocations.map((a) =>
+          a.site_id === change.site_id ? { ...a, quantity: change.quantity } : a,
+        );
+      }
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", json: payload });
+  });
+
+  await page.goto(URL);
+
+  // 03.010 (kalıp) — 3200 + 2000 = 5200.
+  await expect(cell(page, "03.010", "A-Blok Şantiyesi")).toHaveValue("3200");
+  await expect(cell(page, "03.010", "B-Blok Şantiyesi")).toHaveValue("2000");
+
+  // A'yı 200 düşür → ekrandaki kalan 200; B kolonundaki düğme onu B'ye ekler.
+  await cell(page, "03.010", "A-Blok Şantiyesi").fill("3000");
+  await page.getByTestId("cdist-distribute-remaining").nth(1).click();
+  await expect(cell(page, "03.010", "B-Blok Şantiyesi")).toHaveValue("2200");
+  await expect(page.getByTestId("cdist-remaining-unsaved").first()).toHaveText("kaydedilmedi");
+
+  await saveDistribution(page);
+  await expect(page.locator("main").getByText("Poz dağılımı kaydedildi.")).toBeVisible();
+
+  expect(bodies).toEqual([
+    {
+      allocations: [
+        { contract_item_id: "ci-4", site_id: "s-1", quantity: "3000" },
+        { contract_item_id: "ci-4", site_id: "s-2", quantity: "2200" },
+      ],
+    },
+  ]);
+});

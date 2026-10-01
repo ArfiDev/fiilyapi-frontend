@@ -12,6 +12,8 @@ export interface ContractDistributionSaveStatusProps {
   dirtyCount: number;
   isSaving: boolean;
   isSaved: boolean;
+  /** KDG K7 · "Kalanı buraya dağıt" sonucu (bilgi satırları, hata değil). */
+  noticeMessages?: readonly string[];
   /** Gövdeye ALINMAYAN hücrelerin Türkçe gerekçeleri (T1 üreticisinden). */
   rejectionMessages: readonly string[];
   /** Sunucu hatası (422 dahil) — backend `detail`i olduğu gibi basılır. */
@@ -22,6 +24,7 @@ export function ContractDistributionSaveStatus({
   dirtyCount,
   isSaving,
   isSaved,
+  noticeMessages = [],
   rejectionMessages,
   saveError,
 }: ContractDistributionSaveStatusProps) {
@@ -38,6 +41,7 @@ export function ContractDistributionSaveStatus({
     lines.push({ text: "Poz dağılımı kaydedildi.", isFailure: false });
   }
 
+  for (const message of noticeMessages) lines.push({ text: message, isFailure: false });
   for (const message of rejectionMessages) lines.push({ text: message, isFailure: true });
   if (saveError !== null) lines.push({ text: saveError, isFailure: true });
 
