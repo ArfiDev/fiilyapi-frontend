@@ -26,3 +26,11 @@ describe("kırıntı — Teklif Detay (TKL-F3.5)", () => {
     expect(buildTrail("/teklif-hazirlama/yeni").map((crumb) => crumb.label)).toEqual(["Teklif Hazırlama", "Yeni Teklif"]);
   });
 });
+
+describe("kırıntı — Teklif Yazdır (TKL-F3.7)", () => {
+  it("/teklif-hazirlama/{id}/yazdir → Teklif Hazırlama › {teklif no} › Yazdır; teklif no bağlantısı detaya gider", () => {
+    const crumbs = buildTrail("/teklif-hazirlama/offer-14/yazdir", { offer: "TKL-2026-0014" });
+    expect(crumbs.map((crumb) => crumb.label)).toEqual(["Teklif Hazırlama", "TKL-2026-0014", "Yazdır"]);
+    expect(crumbs[1]?.href).toBe("/teklif-hazirlama/offer-14");
+  });
+});

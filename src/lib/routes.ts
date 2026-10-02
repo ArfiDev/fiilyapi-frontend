@@ -524,7 +524,8 @@ export const routes = {
     new: () => "/teklif-hazirlama/yeni",
     detail: (p: { offerId: RouteId; rev?: number }) =>
       `/teklif-hazirlama/${seg(p.offerId)}${qs({ [OFFER_REV_PARAM]: p.rev })}`,
-    print: (p: { offerId: RouteId; rev: number; kind: OfferPrintKind }) =>
+    // `rev`/`kind` opsiyonel: kırıntı düğümü (`route-tree.ts`) çıplak yazdırma adresini üretir; ekranlar ikisini de verir.
+    print: (p: { offerId: RouteId; rev?: number; kind?: OfferPrintKind }) =>
       `/teklif-hazirlama/${seg(p.offerId)}/yazdir${qs({ [OFFER_REV_PARAM]: p.rev, [OFFER_PRINT_KIND_PARAM]: p.kind })}`,
   },
 
