@@ -9,6 +9,7 @@ import { cx } from "@/lib/cx";
 import { EMPTY_CELL } from "@/lib/format";
 
 import { blockReasonText, type PickerRow, type RowInput } from "./picker-model";
+import type { PickerRules } from "./picker-rules";
 
 export interface WorkItemPickerRowProps {
   row: PickerRow;
@@ -17,6 +18,10 @@ export interface WorkItemPickerRowProps {
   error: string | null;
   /** Geçerli satırın "miktar × birim fiyat" tutarı (biçimli); yoksa null. */
   amountText: string | null;
+  /** Seçilemezlik gerekçesi metni (hedefe göre). */
+  rules: PickerRules;
+  /** Fiyat kutusunun erişilebilir adı soneki ("birim fiyat" · "maliyet B.F."). */
+  priceAriaSuffix: string;
   isDisabled: boolean;
   onToggle: (row: PickerRow, selected: boolean) => void;
   onQuantity: (row: PickerRow, text: string) => void;
@@ -29,6 +34,8 @@ export function WorkItemPickerRow({
   input,
   error,
   amountText,
+  rules,
+  priceAriaSuffix,
   isDisabled,
   onToggle,
   onQuantity,
@@ -61,7 +68,7 @@ export function WorkItemPickerRow({
       <td className="wip-cell wip-cell--name">
         <span className="wip-name">{item.name}</span>
         {isBlocked ? (
-          <span className="wip-sub wip-sub--block">{blockReasonText(block)}</span>
+          <span className="wip-sub wip-sub--block">{blockReasonText(block, rules)}</span>
         ) : error !== null ? (
           <span className="wip-sub wip-sub--error">{error}</span>
         ) : (
@@ -93,7 +100,7 @@ export function WorkItemPickerRow({
           value={input?.unitPrice ?? ""}
           disabled={isBlocked || isDisabled}
           status={error !== null ? "error" : "default"}
-          aria-label={`${item.poz_no} birim fiyat`}
+          aria-label={`${item.poz_no} ${priceAriaSuffix}`}
           onChange={(event) => onUnitPrice(row, event.target.value)}
         />
       </td>

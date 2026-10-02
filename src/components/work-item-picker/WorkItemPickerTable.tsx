@@ -16,13 +16,17 @@ import {
   type PickerRow,
   type ResolvedEntry,
 } from "./picker-model";
+import type { PickerRules } from "./picker-rules";
+import type { PickerTarget } from "./picker-target";
 import { WorkItemPickerRow } from "./WorkItemPickerRow";
 import "./work-item-picker.css";
 
 const COLUMN_COUNT = 9;
 
-/** PS:86-97 sırası; Şantiye Kotası/Dağıtılmış/Kalan/Bu Bölüme/Dağıtım → plan §1.3 eşlemesi. */
-const COLUMNS = ["Poz No", "Tanım", "Birim", "Ref. fiyat", "Son fiyat", "Miktar", "Birim fiyat", "Tutar"] as const;
+/** PS:86-97 sırası; Şantiye Kotası/Dağıtılmış/Kalan/Bu Bölüme/Dağıtım → plan §1.3 eşlemesi. Fiyat kolonu başlığı hedefe göre. */
+function columnsOf(priceHeader: string): readonly string[] {
+  return ["Poz No", "Tanım", "Birim", "Ref. fiyat", "Son fiyat", "Miktar", priceHeader, "Tutar"];
+}
 
 export type PickerEmptyReason = "loading" | "error" | "forbidden" | "catalog-empty" | "restricted-empty" | "no-match" | null;
 
@@ -38,6 +42,8 @@ export interface WorkItemPickerTableProps {
   inputs: PickerInputs;
   /** Başarıyla çözülen satırlar (tutar sütunu için). */
   entries: readonly ResolvedEntry[];
+  /** Hedef adaptörü: sütun başlığı, tablo başlığı, seçilemezlik gerekçesi, fiyat kuralı. */
+  target: Pick<PickerTarget<unknown>, "tableCaption" | "priceHeader" | "priceAriaSuffix"> & PickerRules;
   emptyReason: PickerEmptyReason;
   restrictedNames: readonly string[];
   isDisabled: boolean;
@@ -67,6 +73,7 @@ export function WorkItemPickerTable({
   sections,
   inputs,
   entries,
+  target,
   emptyReason,
   restrictedNames,
   isDisabled,
@@ -80,7 +87,7 @@ export function WorkItemPickerTable({
   return (
     <div className="wip-table-scroll">
       <table className="wip-table">
-        <caption className="sr-only">Katalogdan sözleşmeye eklenebilecek pozlar</caption>
+        <caption className="sr-only">{target.tableCaption}</caption>
         <thead>
           <tr>
             <th scope="col" className="wip-th wip-th--check">
@@ -92,7 +99,7 @@ export function WorkItemPickerTable({
                 onChange={onToggleAll}
               />
             </th>
-            {COLUMNS.map((column) => (
+            {columnsOf(target.priceHeader).map((column) => (
               <th key={column} scope="col" className="wip-th">
                 {column}
               </th>
@@ -113,6 +120,7 @@ export function WorkItemPickerTable({
                 section={section}
                 inputs={inputs}
                 entryById={entryById}
+                target={target}
                 isDisabled={isDisabled}
                 onToggle={onToggle}
                 onQuantity={onQuantity}
@@ -130,13 +138,14 @@ interface SectionRowsProps {
   section: DisciplineSection;
   inputs: PickerInputs;
   entryById: ReadonlyMap<string, ResolvedEntry>;
+  target: WorkItemPickerTableProps["target"];
   isDisabled: boolean;
   onToggle: WorkItemPickerTableProps["onToggle"];
   onQuantity: WorkItemPickerTableProps["onQuantity"];
   onUnitPrice: WorkItemPickerTableProps["onUnitPrice"];
 }
 
-function SectionRows({ section, inputs, entryById, isDisabled, onToggle, onQuantity, onUnitPrice }: SectionRowsProps) {
+function SectionRows({ section, inputs, entryById, target, isDisabled, onToggle, onQuantity, onUnitPrice }: SectionRowsProps) {
   const { discipline, rows } = section;
   return (
     <>
@@ -155,8 +164,10 @@ function SectionRows({ section, inputs, entryById, isDisabled, onToggle, onQuant
             key={row.item.id}
             row={row}
             input={input}
-            error={input?.selected === true && row.block === null ? validateRow(input) : null}
-            amountText={entry === undefined ? null : formatPrice(multiplyDecimalStrings(entry.quantity, entry.unitPrice))}
+            error={input?.selected === true && row.block === null ? validateRow(input, target) : null}
+            amountText={entry === undefined || entry.unitPrice === null ? null : formatPrice(multiplyDecimalStrings(entry.quantity, entry.unitPrice))}
+            rules={target}
+            priceAriaSuffix={target.priceAriaSuffix}
             isDisabled={isDisabled}
             onToggle={onToggle}
             onQuantity={onQuantity}

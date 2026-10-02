@@ -18,6 +18,8 @@ export interface WorkItemPickerToolbarProps {
   disciplineId: string;
   onDiscipline: (value: string) => void;
   hideInContract: boolean;
+  /** "Sözleşmede olanları gizle" · "Teklifte olanları gizle". */
+  hideLabel: string;
   onHideInContract: (value: boolean) => void;
   groupOptions: readonly GroupOption[];
   groupValue: string;
@@ -39,6 +41,7 @@ export function WorkItemPickerToolbar({
   disciplineId,
   onDiscipline,
   hideInContract,
+  hideLabel,
   onHideInContract,
   groupOptions,
   groupValue,
@@ -79,7 +82,7 @@ export function WorkItemPickerToolbar({
         <Checkbox
           checked={hideInContract}
           onChange={(event) => onHideInContract(event.target.checked)}
-          label="Sözleşmede olanları gizle"
+          label={hideLabel}
           disabled={isDisabled}
         />
       </div>

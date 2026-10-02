@@ -8,6 +8,10 @@ export interface WorkItemPickerFooterProps {
   selectedCount: number;
   /** "₺1.234,56" ya da "—". */
   totalText: string;
+  /** "Eklenecek Tutar" (sözleşme) · "Eklenecek maliyet" (teklif). */
+  totalLabel: string;
+  /** "Katalogda yok mu? …" bağlantı etiketi (`onManualAdd` verilince). */
+  manualAddLabel: string;
   isSubmitting: boolean;
   canSubmit: boolean;
   onSubmit: () => void;
@@ -21,6 +25,8 @@ export function WorkItemPickerFooter({
   bandLines,
   selectedCount,
   totalText,
+  totalLabel,
+  manualAddLabel,
   isSubmitting,
   canSubmit,
   onSubmit,
@@ -40,14 +46,14 @@ export function WorkItemPickerFooter({
       <div className="wip-footer__row">
         {onManualAdd && (
           <Button variant="ghost" size="sm" disabled={isSubmitting} onClick={onManualAdd}>
-            Katalogda yok mu? Elle poz ekle
+            {manualAddLabel}
           </Button>
         )}
         <span className="wip-footer__stat wip-footer__stat--first">
           Seçili Poz <strong data-testid="wip-selected">{selectedCount}</strong>
         </span>
         <span className="wip-footer__stat">
-          Eklenecek Tutar <strong data-testid="wip-total">{totalText}</strong>
+          {totalLabel} <strong data-testid="wip-total">{totalText}</strong>
         </span>
         <Button variant="secondary" disabled={isSubmitting} onClick={onCancel}>
           Vazgeç

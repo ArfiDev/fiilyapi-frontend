@@ -19,4 +19,12 @@ describe("toplu uç sınırı ↔ openapi", () => {
     expect(MAX_BULK_ITEMS).toBe(schema.properties?.items?.maxItems);
     expect(schema.properties?.items?.minItems).toBe(1);
   });
+
+  // TKL-F3.6: teklif hedefi AYNI seçici sabitini kullanır (hep-ya-hiç, parçalama yok) → teklif ucu da aynı tavanı taşımalı.
+  it("MAX_BULK_ITEMS = OfferItemsBulkCreate.items.maxItems (teklif hedefi, ve en az 1 kalem)", () => {
+    const schema = spec().components.schemas["OfferItemsBulkCreate"] as unknown as ArraySchema;
+    expect(schema.properties?.items?.maxItems).toBeDefined();
+    expect(MAX_BULK_ITEMS).toBe(schema.properties?.items?.maxItems);
+    expect(schema.properties?.items?.minItems).toBe(1);
+  });
 });
