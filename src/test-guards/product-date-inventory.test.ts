@@ -43,6 +43,10 @@ const URUN_TARIH_ENVANTERI: Record<string, number> = {
   // bağlıdır (`isPriceStale(…, now)`); ekranda görünen renk saatle değişir. Görsel spec (F1.5)
   // `page.clock.setFixedTime` ile sabitlemeli.
   "components/work-item-catalog/WorkItemCatalogScreen.tsx": 1,
+  // TKL-F3.3 — Teklif listesi "süresi geçti" kırmızısı (`sent ∧ valid_until < bugün İstanbul`) İSTEMCİ
+  // SAATİNE bağlıdır (`OffersScreen` → `now`); satır rengi/etiketi saatle değişir. Görsel spec (F3.8)
+  // `page.clock.setFixedTime` ile sabitlemeli.
+  "components/offers/OffersScreen.tsx": 1,
   // PLN-F1.6 — Bütçe Adım 2 Gantt + Adım 3 S-eğrisi "bugün" çizgisi (BÜT:292, 349)
   // `localTodayIso()`. Görsel spec `page.clock.setFixedTime` ile sabitlemeli.
   "components/earned-value/budget/budget-format.ts": 1,

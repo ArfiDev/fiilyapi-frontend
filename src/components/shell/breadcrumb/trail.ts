@@ -33,6 +33,8 @@ export interface CrumbNames {
   readonly section?: string;
   /** DET-1.2 — günlük kaydın tarihi ("24.09.2026"). */
   readonly diaryEntry?: string;
+  /** TKL-F3.3 — teklif numarası ("TKL-2026-0014"); `useOffer` önbelleğinden (`["offer", id]`). */
+  readonly offer?: string;
   /**
    * Adı ÇÖZÜLEMEYEN türler (sorgu hata verdi: 404 / 403 / kopuk ağ).
    *

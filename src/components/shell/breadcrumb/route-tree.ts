@@ -536,6 +536,11 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
       },
     },
 
+    // TKL-F3.3 · Teklif Hazırlama. `yeni` / `[offerId]` (named: "offer") / `yazdir` düğümleri
+    // sayfalarıyla BİRLİKTE gelir (F3.4 / F3.5 / F3.7): "ağaçtaki her href bir page.tsx" bekçisi
+    // sayfasız düğümü reddeder. Ad çözümü (`CrumbNames.offer`) hazırdır.
+    "teklif-hazirlama": { label: "Teklif Hazırlama", href: () => routes.offers.list() },
+
     stok: { label: "Stok & Depo", href: () => routes.stock() },
   },
 };

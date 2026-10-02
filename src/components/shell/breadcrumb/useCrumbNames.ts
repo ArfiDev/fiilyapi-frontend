@@ -55,6 +55,16 @@ import { formatDateDots } from "@/lib/format";
 import type { CrumbNames } from "./trail";
 import type { NamedEntity, RouteKeys } from "./trail-node";
 
+/**
+ * TKL-F3.3 · teklif kırıntısı yalnız numarayı okur. Anahtar sayfanın `useOffer` anahtarıyla
+ * (`["offer", id]`, TKL-F3 §2.1) BİREBİR aynı olmalıdır.
+ * F3.2 `offer-query-keys.ts`i yazınca bu sabit oradan ithal edilir (tek üretici).
+ */
+const OFFER_QUERY_KEY = "offer";
+interface OfferCrumbSource {
+  readonly offer_no: string;
+}
+
 export function useCrumbNames(keys: RouteKeys): CrumbNames {
   const project = useQueryCacheSnapshot<ProjectDetail>([PROJECT_QUERY_KEY, keys.projectId]);
   const site = useQueryCacheSnapshot<SiteDetail>([SITE_QUERY_KEY, keys.siteId, keys.projectId]);
@@ -73,6 +83,9 @@ export function useCrumbNames(keys: RouteKeys): CrumbNames {
     siteDiaryEntryQueryKey(keys.entityId, section?.data?.id),
   );
 
+  // TKL-F3.3 — teklif detayı: kırıntı adı teklif numarası (sayfa zaten çeker, ikinci istek yok).
+  const offer = useQueryCacheSnapshot<OfferCrumbSource>([OFFER_QUERY_KEY, keys.entityId]);
+
   const projectName = project?.data?.name ?? site?.data?.project.name;
 
   /**
@@ -88,12 +101,14 @@ export function useCrumbNames(keys: RouteKeys): CrumbNames {
   if (site?.data === undefined && site?.status === "error") unresolved.add("site");
   if (section?.data === undefined && section?.status === "error") unresolved.add("section");
   if (diaryEntry?.data === undefined && diaryEntry?.status === "error") unresolved.add("diaryEntry");
+  if (offer?.data === undefined && offer?.status === "error") unresolved.add("offer");
 
   return {
     project: projectName,
     site: site?.data?.name,
     section: section?.data?.name,
     diaryEntry: diaryEntry?.data === undefined ? undefined : formatDateDots(diaryEntry.data.entry_date),
+    offer: offer?.data?.offer_no,
     unresolved,
   };
 }

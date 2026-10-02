@@ -80,7 +80,7 @@ export const EMPTY_KEYS: RouteKeys = {
  * Bu bir yalan değildir: kullanıcı gerçekten o yüzeydedir. Adı basmak için
  * ikinci bir sorgu açmak K5'i ihlal ederdi.
  */
-export type NamedEntity = "project" | "site" | "section" | "diaryEntry";
+export type NamedEntity = "project" | "site" | "section" | "diaryEntry" | "offer";
 
 export interface DynamicChild {
   /** URL segmentinin yazılacağı anahtar. */

@@ -21,3 +21,12 @@ export const PROJECT_PARAM = "proje";
 
 /** Toplu ünite üretim ekranının blok bağlamı (BE 109 zinciri). */
 export const BLOCK_PARAM = "blok";
+
+/** TKL-F3 · Teklif revizyon no'su (`/teklif-hazirlama/{id}?rev=2`, yazdırma rotası da aynı anahtarı okur). */
+export const OFFER_REV_PARAM = "rev";
+
+/** TKL-F3 · Teklif yazdırma türü (`/teklif-hazirlama/{id}/yazdir?tur=isveren|ic`). */
+export const OFFER_PRINT_KIND_PARAM = "tur";
+
+/** `tur` değerleri: işveren görünümü (yalnız satış fiyatı) ya da iç döküm (maliyet + kâr). */
+export type OfferPrintKind = "isveren" | "ic";
