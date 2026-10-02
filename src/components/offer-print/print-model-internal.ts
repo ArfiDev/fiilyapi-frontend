@@ -52,6 +52,8 @@ export interface InternalSourceRevision extends PrintRevisionSource {
   groups: readonly InternalSourceGroup[];
   totals: {
     unpriced_count: number;
+    /** SO-21: miktarı girilmemiş kalem sayısı. */
+    unquantified_count: number;
     customer: { net: string | null; vat: string | null; gross: string | null };
     internal: {
       cost: string | null;
@@ -169,6 +171,7 @@ function totalRows(revision: InternalSourceRevision): TotalRow[] {
     { label: `Kâr (${formatPct(internal.profit_pct ?? revision.profit_pct)})`, value: formatTotal(internal.profit) },
     { label: "Toplam adam-saat", value: formatQuantity(internal.man_hours) },
     { label: "Fiyatsız kalem", value: String(revision.totals.unpriced_count) },
+    { label: "Miktarsız kalem", value: String(revision.totals.unquantified_count) },
   ];
 }
 

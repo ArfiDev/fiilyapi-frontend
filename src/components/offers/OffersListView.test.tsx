@@ -157,6 +157,16 @@ describe("tablo satırları (TL:137-168)", () => {
     expect(screen.getByTestId("offers-total-gross")).toHaveTextContent("—");
   });
 
+  it("🔴 F4.2 miktarsız kalemli satırda net yanında işaret + 'N kalem miktarsız · tutar kısmi' ipucu; sayaç 0 iken YOK; Σ sunucu net'inden", () => {
+    const partial = makeOffer({ offer_no: "P-1", net: "100.00", gross: "120.00", unquantified_count: 2 });
+    const full = makeOffer({ offer_no: "P-2", net: "50.00", gross: "60.00", unquantified_count: 0 });
+    renderView({ body: { kind: "ready", data: makeResponse([partial, full]) } });
+    const marker = within(row("P-1")).getByTitle("2 kalem miktarsız · tutar kısmi");
+    expect(marker).toHaveAccessibleName("2 kalem miktarsız · tutar kısmi");
+    expect(within(row("P-2")).queryByTitle(/miktarsız/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("offers-total-net")).toHaveTextContent("₺150,00");
+  });
+
   it("tam listede Σ basılır", () => {
     const a = makeOffer({ offer_no: "S-1", net: "100.00", gross: "120.00" });
     const b = makeOffer({ offer_no: "S-2", net: "50.50", gross: "60.60" });

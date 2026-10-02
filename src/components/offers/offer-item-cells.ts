@@ -6,9 +6,8 @@
  * KAYDEDİLMEZ. Sonuç kayıpsız ondalık METİNdir; `Number()` YOK. Hesap (tutar/toplam/türev kâr) SUNUCUDADIR
  * (`calc.py`, ÜS-F3-1): bu modül yalnız gösterir ve gövdeyi kurar.
  *
- * 🔶 B5 İLERİ UYUM: `quantity` null olabilir (B5: `OfferItemCreate.quantity` nullable + `unquantified_count`; bugün
- * maskeli rolde de null). Okuma/gövde yolu null'u taşır: miktar hücresi boş, tutar "—"; `isQuantityMissing` satır
- * uyarısı için TEK yer (B5 metni geldiğinde yalnız `OfferItemRow` bunu bağlar).
+ * 🔶 `quantity` null olabilir: miktarsız kalem (SO-21, `unquantified_count`) YA DA `finance` maskesi. Okuma/gövde yolu
+ * null'u taşır: miktar hücresi boş, tutar "—"; ayrımın TEK karar noktası `isQuantityMissing` (F4.2).
  */
 import { trPriceInputValue, trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import type { OfferItemUpdateBody } from "@/lib/api/hooks/useOfferMutations";
@@ -71,6 +70,8 @@ const LABEL: Readonly<Record<ItemCellField, string>> = {
   offerUnitPrice: "Teklif B.F.",
 };
 
+/** SO-24: dolu miktar boşaltılamaz (sunucu `quantity:null` 422); boş kalem boş kalırsa istek zaten uçmaz. */
+export const MSG_QUANTITY_NOT_CLEARABLE = "Miktar boşaltılamaz";
 export const MSG_COST_FIRST = "Önce maliyet girin";
 const MSG_PCT_INVALID = "Geçerli bir yüzde girin";
 const MSG_PCT_FRACTION = `En çok ${PCT_FRACTION} ondalık hane`;
@@ -126,8 +127,29 @@ export function isUnpriced(item: OfferItem): boolean {
   return !item.priced;
 }
 
-export function isQuantityMissing(item: OfferItem): boolean {
-  return item.quantity === null;
+/**
+ * TKL-F4.2 · miktar eksikliğinin TEK karar noktası girdisi. 🔴 `finance` kapsamında `quantity` MASKELİ null döner
+ * (`operasyonel`), sunucu sayacı `unquantified_count` ise `kimlik` (maskesiz): salt `quantity === null` her kalemi
+ * "miktarsız" sanardı.
+ */
+export interface QuantityBasis {
+  /** Sunucunun `totals.unquantified_count`u (gerçekten miktarsız kalem sayısı). */
+  unquantifiedCount: number;
+  /** Okunan kalemlerden `quantity === null` olanların sayısı (maske + gerçek miktarsız). */
+  nullQuantityCount: number;
+}
+
+export function quantityBasisOf(items: readonly OfferItem[], unquantifiedCount: number): QuantityBasis {
+  return { unquantifiedCount, nullQuantityCount: items.filter((item) => item.quantity === null).length };
+}
+
+/**
+ * Miktarsız = `quantity === null` ∧ sunucu sayacı > 0 ∧ sayaç, okunan null-miktarlı kalem sayısına EŞİT. Sayaç 0 →
+ * null maskedir (uyarı YOK). Sayaç < null sayısı → maske + gerçek miktarsız karışık, kalem ayırt EDİLEMEZ: yanlış-pozitif
+ * üretmemek için hiçbiri miktarsız sayılmaz (yanlış-negatif kabul; plan §9 risk 4).
+ */
+export function isQuantityMissing(item: OfferItem, basis: QuantityBasis): boolean {
+  return item.quantity === null && basis.unquantifiedCount > 0 && basis.unquantifiedCount === basis.nullQuantityCount;
 }
 
 /** "₺1.288,00" ya da "—" (fiyatsız / maskeli / B5 miktarsız kalem). */
@@ -257,7 +279,7 @@ function commitRequired(
   parsed: ParsedValue,
   ctx: CellContext,
 ): CellCommit {
-  if (text === "") return { kind: "error", message: `${LABEL[field]} girin` };
+  if (text === "") return { kind: "error", message: key === "quantity" ? MSG_QUANTITY_NOT_CLEARABLE : `${LABEL[field]} girin` };
   if (!parsed.ok) return { kind: "error", message: parsed.message };
   if (sameNumber(parsed.value, currentValue(key, ctx.item))) return { kind: "noop" };
   return { kind: "patch", body: { [key]: parsed.value } };

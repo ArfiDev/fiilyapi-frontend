@@ -84,3 +84,31 @@ describe("işveren modeli — iç veri ÇIKTIYA TAŞINMAZ (sızıntı, model kat
     expect(serialized).not.toContain(PRICED_UNIT_PRICE.replace(".", ",") + "9");
   });
 });
+
+describe("🔴 F4.2 işveren modeli — miktarsız kalem (SO-21)", () => {
+  const unquantifiedGroup = () =>
+    makeGroup("g1", "Kaba İnşaat", 1, [{ id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null }]);
+  const withUnquantified = (counts: { unpriced: number; unquantified: number }) =>
+    build({
+      groups: [unquantifiedGroup()],
+      totals: { ...makePrintRevision().totals, unpriced_count: counts.unpriced, unquantified_count: counts.unquantified },
+    });
+
+  it("satır: Miktar '—', Tutar '—' (0 DEĞİL), B.F. BASILIR; fiyatsız işareti yanmaz", () => {
+    const row = flatRows(withUnquantified({ unpriced: 0, unquantified: 1 })).find((r) => r.kind === "item" && r.poz === "UQ.1");
+    expect(row).toMatchObject({ quantity: "—", unitPrice: "128,80", amount: "—", isUnpriced: false });
+  });
+
+  it("grup ara toplamı miktarsız kalemi ATLAR (yalnız dolu tutarlar)", () => {
+    const subtotal = flatRows(withUnquantified({ unpriced: 0, unquantified: 1 })).find((r) => r.kind === "subtotal");
+    expect(subtotal).toMatchObject({ amount: "12.880,00" });
+  });
+
+  it("dipnot: miktarsız sayısı > 0 → 'Miktarı girilmemiş N kalem'; fiyatsız dipnotuna EK (aynı paragraf, ikisi de)", () => {
+    expect(withUnquantified({ unpriced: 0, unquantified: 2 }).footnote).toBe("* Miktarı girilmemiş 2 kalem toplama dahil değildir.");
+    expect(withUnquantified({ unpriced: 1, unquantified: 2 }).footnote).toBe(
+      "* Fiyatı belirlenmemiş 1 kalem toplama dahil değildir. * Miktarı girilmemiş 2 kalem toplama dahil değildir.",
+    );
+    expect(withUnquantified({ unpriced: 0, unquantified: 0 }).footnote).toBeNull();
+  });
+});

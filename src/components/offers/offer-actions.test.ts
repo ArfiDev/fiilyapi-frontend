@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { OFFER_ACTIONS, offerActionGate, type OfferAction } from "./offer-actions";
+import { OFFER_ACTIONS, offerActionGate, visibleActionReasons, type OfferAction } from "./offer-actions";
 import type { OfferStatus } from "./offer-types";
 
 /**
@@ -36,6 +36,43 @@ describe("eylem kapısı (§4.2) — SON revizyon", () => {
       expect(enabledMap(row.status, true, row.isDirty)).toEqual([...row.expected]);
     });
   }
+});
+
+describe("🔴 F4.2 eylem kapısı — miktarsız kalem ekseni (ÜS-F4-17, SO-21)", () => {
+  const UNQUANTIFIED = "Miktarı girilmemiş kalem var"; // backend 422 metni AYNEN
+
+  it("taslakta unquantifiedCount > 0 → YALNIZ Gönder kapanır, gerekçe backend metni; diğer eylemler değişmez", () => {
+    for (const isDirty of [false, true]) {
+      const base = offerActionGate({ status: "draft", isLatest: true, isDirty, canWrite: true });
+      const gate = offerActionGate({ status: "draft", isLatest: true, isDirty, canWrite: true, unquantifiedCount: 2 });
+      expect(gate.send).toEqual({ enabled: false, reason: UNQUANTIFIED });
+      for (const action of OFFER_ACTIONS.filter((candidate) => candidate !== "send")) {
+        expect(gate[action], `${action} · dirty=${isDirty}`).toEqual(base[action]);
+      }
+    }
+  });
+
+  it("5 durum × son/eski × sayaç>0: kapı yalnız taslak-Gönder'de değişir (diğer her hücre sayaçsızla AYNI)", () => {
+    for (const status of STATUSES) {
+      for (const isLatest of [true, false]) {
+        const base = offerActionGate({ status, isLatest, isDirty: false, canWrite: true });
+        const gate = offerActionGate({ status, isLatest, isDirty: false, canWrite: true, unquantifiedCount: 1 });
+        const changed = OFFER_ACTIONS.filter((action) => JSON.stringify(gate[action]) !== JSON.stringify(base[action]));
+        expect(changed, `${status}/${isLatest ? "son" : "eski"}`).toEqual(status === "draft" && isLatest ? ["send"] : []);
+      }
+    }
+  });
+
+  it("sayaç 0 / yok → kapı DEĞİŞMEZ; yetkisiz ve eski revizyonda mevcut gerekçe korunur", () => {
+    expect(offerActionGate({ status: "draft", isLatest: true, isDirty: false, canWrite: true, unquantifiedCount: 0 }).send.enabled).toBe(true);
+    const readOnly = offerActionGate({ status: "draft", isLatest: true, isDirty: false, canWrite: false, unquantifiedCount: 3 });
+    expect(readOnly.send).toEqual({ enabled: false, reason: "Teklifleri yalnız Sözleşmeler tam yetkisi değiştirir" });
+  });
+
+  it("gerekçe görünür listede (düğme altında) basılır", () => {
+    const gate = offerActionGate({ status: "draft", isLatest: true, isDirty: false, canWrite: true, unquantifiedCount: 1 });
+    expect(visibleActionReasons(gate)).toContain(UNQUANTIFIED);
+  });
 });
 
 describe("eylem kapısı (§4.2) — ESKİ revizyon: 5 durum × 7 eylem HEPSİ kapalı", () => {

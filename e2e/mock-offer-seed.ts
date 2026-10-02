@@ -19,7 +19,8 @@ export interface OffersSeedInput {
 interface SeedItem {
   catalogName: string;
   group: string;
-  quantity: string;
+  /** `null` = miktar girilmedi (SO-21). */
+  quantity: string | null;
   cost: string | null;
   overheadPct?: string;
   profitPct?: string;
@@ -242,7 +243,7 @@ function seedRevision(
       pozNo: entry.pozNo,
       description: entry.name,
       unit: entry.uom,
-      quantity: quantizeDecimal(item.quantity, 3),
+      quantity: item.quantity === null ? null : quantizeDecimal(item.quantity, 3),
       unitMhr: quantizeDecimal(entry.standardUnitMhr, 4),
       costUnitPrice: item.cost,
       overheadPct: item.overheadPct === undefined ? null : quantizeDecimal(item.overheadPct, 2),

@@ -157,7 +157,7 @@ export function readRevision(state: OffersState, offer: OfferRec, revision: Revi
       customer: ordered.customer,
       internal: ordered.internal,
       unpriced_count: ordered.unpriced_count,
-      unquantified_count: 0, // mock kaleminin miktari hep dolu (backend ikizi: miktari null kalem sayisi)
+      unquantified_count: ordered.unquantified_count,
     },
   };
 }
@@ -229,7 +229,7 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
         net: result.customer.net,
         gross: result.customer.gross,
         unpriced_count: result.unpriced_count,
-        unquantified_count: 0,
+        unquantified_count: result.unquantified_count,
       };
     }),
     history: historyOf(state, revisions),
@@ -300,7 +300,7 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
       net: result.customer.net,
       gross: result.customer.gross,
       unpriced_count: result.unpriced_count,
-      unquantified_count: 0,
+      unquantified_count: result.unquantified_count,
       conversion_state: null,
       project_id: null,
       created_at: offer.createdAt,

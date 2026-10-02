@@ -36,12 +36,14 @@ interface ItemSpec {
   description?: string;
   /** `null` → fiyatsız kalem. */
   unitPrice: string | null;
-  quantity?: string;
+  /** `null` → miktarı girilmemiş kalem (SO-21): tutar/maliyet/GG/kâr/a-s null, B.F. dolu (`calc.py`). */
+  quantity?: string | null;
 }
 
 export function makeItem(spec: ItemSpec): OfferItemRead {
   const priced = spec.unitPrice !== null;
-  const quantity = spec.quantity ?? "100.000";
+  const quantity = spec.quantity === undefined ? "100.000" : spec.quantity;
+  const isQuantified = quantity !== null;
   return {
     id: spec.id,
     group_id: spec.groupId,
@@ -58,14 +60,14 @@ export function makeItem(spec: ItemSpec): OfferItemRead {
     offer_unit_price: spec.unitPrice === null ? null : LEAK_SENTINELS.itemCostUnitPrice.raw,
     priced,
     customer: priced
-      ? { unit_price: spec.unitPrice, amount: spec.unitPrice === "0" ? "0" : PRICED_AMOUNT }
+      ? { unit_price: spec.unitPrice, amount: !isQuantified ? null : spec.unitPrice === "0" ? "0" : PRICED_AMOUNT }
       : null,
     internal: {
-      cost: LEAK_SENTINELS.itemCost.raw,
-      overhead: LEAK_SENTINELS.itemOverhead.raw,
-      profit: LEAK_SENTINELS.itemProfit.raw,
+      cost: isQuantified ? LEAK_SENTINELS.itemCost.raw : null,
+      overhead: isQuantified ? LEAK_SENTINELS.itemOverhead.raw : null,
+      profit: isQuantified ? LEAK_SENTINELS.itemProfit.raw : null,
       profit_pct: LEAK_SENTINELS.itemProfitPct.raw,
-      man_hours: LEAK_SENTINELS.itemManHours.raw,
+      man_hours: isQuantified ? LEAK_SENTINELS.itemManHours.raw : null,
     },
   };
 }

@@ -380,6 +380,13 @@
   font-weight: var(--weight-semibold);
   color: var(--color-text);
 }
+.offers-partial {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+  vertical-align: -2px;
+  color: var(--color-warning-strong);
+}
 .offers-cell--valid {
   display: flex;
   flex-direction: column;

@@ -21,6 +21,11 @@ export function formatLiraFixed(value: string | null | undefined): string {
   return `₺${TR_INTEGER.format(BigInt(whole))},${cents}`;
 }
 
+/** ÜS-F4-16: miktarsız kalemli satırın net hücresi ipucu (tutar yalnız dolu kalemlerin toplamı); yoksa `null`. */
+export function unquantifiedHint(item: Pick<OfferListItem, "unquantified_count">): string | null {
+  return item.unquantified_count > 0 ? `${item.unquantified_count} kalem miktarsız · tutar kısmi` : null;
+}
+
 export type ListedTotals =
   | { kind: "truncated" }
   | { kind: "sum"; net: string | null; gross: string | null };

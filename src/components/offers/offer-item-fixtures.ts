@@ -47,6 +47,16 @@ export function makeUnpricedItem(over: Partial<OfferItemRead> & Pick<OfferItemRe
   });
 }
 
+/** Miktarı girilmemiş FİYATLI kalem (SO-21): B.F. dolu; tutar/maliyet/GG/kâr/adam-saat null (`calc.py`). */
+export function makeUnquantifiedItem(over: Partial<OfferItemRead> & Pick<OfferItemRead, "id">): OfferItemRead {
+  return makeItem({
+    quantity: null,
+    customer: { unit_price: "128.80", amount: null },
+    internal: { cost: null, man_hours: null, overhead: null, profit: null, profit_pct: "15.00" },
+    ...over,
+  });
+}
+
 /** Elle teklif B.F. 150,00 (maliyet 100, GG %12 → türev kâr %33,93). */
 export function makeManualItem(over: Partial<OfferItemRead> & Pick<OfferItemRead, "id">): OfferItemRead {
   return makeItem({

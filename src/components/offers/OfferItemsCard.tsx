@@ -9,6 +9,7 @@ import { useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 
 import { OfferCatalogPickerHost } from "./OfferCatalogPickerHost";
+import { quantityBasisOf } from "./offer-item-cells";
 import { OfferItemsLegend } from "./OfferItemsLegend";
 import { OfferItemsTable } from "./OfferItemsTable";
 import { useOfferGroupActions } from "./useOfferGroupActions";
@@ -79,6 +80,11 @@ export function OfferItemsCard({ offerId, revNo, revision, canEdit, onWritesBusy
 
   const itemCount = revision.groups.reduce((sum, group) => sum + group.items.length, 0);
   const unpricedCount = revision.totals.unpriced_count;
+  const unquantifiedCount = revision.totals.unquantified_count;
+  const quantityBasis = quantityBasisOf(
+    revision.groups.flatMap((group) => group.items),
+    unquantifiedCount,
+  );
 
   return (
     <section className="oit-card" aria-labelledby="oit-title">
@@ -91,6 +97,12 @@ export function OfferItemsCard({ offerId, revNo, revision, canEdit, onWritesBusy
           <span className="oit-pill oit-pill--warn">
             <WarningTriangleIcon {...inlineSymbolProps} />
             {`${unpricedCount} kalemde fiyat girilmedi`}
+          </span>
+        )}
+        {unquantifiedCount > 0 && (
+          <span className="oit-pill oit-pill--warn">
+            <WarningTriangleIcon {...inlineSymbolProps} />
+            {`${unquantifiedCount} kalemde miktar girilmedi`}
           </span>
         )}
         <div className="oit-head__actions">
@@ -123,6 +135,7 @@ export function OfferItemsCard({ offerId, revNo, revision, canEdit, onWritesBusy
         groups={revision.groups}
         overheadPct={revision.overhead_pct}
         profitPct={revision.profit_pct}
+        quantityBasis={quantityBasis}
         catalogById={catalogById}
         editor={editor}
         canEdit={canEdit}

@@ -69,7 +69,8 @@ export interface ItemRec {
   pozNo: string;
   description: string;
   unit: string;
-  quantity: string;
+  /** `null` = miktar girilmedi (SO-21). */
+  quantity: string | null;
   unitMhr: string;
   costUnitPrice: string | null;
   overheadPct: string | null;

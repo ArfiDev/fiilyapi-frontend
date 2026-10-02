@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { makeCompany, makePrintOffer, makePrintRevision } from "./offer-print-fixtures";
+import { PRICED_UNIT_PRICE, makeCompany, makeGroup, makePrintOffer, makePrintRevision } from "./offer-print-fixtures";
 import { buildInternalPrintModel } from "./print-model-internal";
 
 const model = () => buildInternalPrintModel({ offer: makePrintOffer(), revision: makePrintRevision(), company: makeCompany() });
@@ -40,6 +40,33 @@ describe("iç döküm modeli", () => {
       ["Kâr (%22,22)", "₺77.777.777,77"],
       ["Toplam adam-saat", "555.666"],
       ["Fiyatsız kalem", "1"],
+      ["Miktarsız kalem", "0"],
     ]);
+  });
+});
+
+describe("🔴 F4.2 iç döküm — miktarsız kalem (SO-21)", () => {
+  const revision = () =>
+    makePrintRevision({
+      groups: [
+        makeGroup("g1", "Kaba İnşaat", 1, [{ id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null }]),
+      ],
+      totals: { ...makePrintRevision().totals, unpriced_count: 0, unquantified_count: 3 },
+    });
+  const built = () => buildInternalPrintModel({ offer: makePrintOffer(), revision: revision(), company: makeCompany() });
+  const rows = () => built().pages.flatMap((page) => page.parts.flatMap((part) => part.rows));
+
+  it("satır: Miktar/Maliyet/Tutar '—' (null, 0 DEĞİL); B.F. ve maliyet B.F. basılır", () => {
+    const row = rows().find((r) => r.kind === "item" && r.poz === "UQ.1");
+    expect(row).toMatchObject({ quantity: "—", cost: "—", amount: "—", unitPrice: "128,80", costUnitPrice: "888.888,88", isUnpriced: false });
+  });
+
+  it("grup Σ yalnız dolu değerler: miktarsız kalem maliyet/a-s/tutar toplamına girmez", () => {
+    const subtotal = rows().find((r) => r.kind === "subtotal");
+    expect(subtotal).toMatchObject({ cost: "777.777,77", manHours: "444.444", amount: "12.880,00" });
+  });
+
+  it("özet satırı 'Miktarsız kalem N' sunucu sayacından", () => {
+    expect(built().totals.find((row) => row.label === "Miktarsız kalem")).toEqual({ label: "Miktarsız kalem", value: "3" });
   });
 });

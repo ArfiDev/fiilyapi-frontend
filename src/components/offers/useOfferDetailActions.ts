@@ -13,6 +13,9 @@ import { BackendError, isForbidden } from "@/lib/api/unwrap";
 
 /** 409 = durum makinesi çatışması (başkası aynı anda geçirmiş / revizyon artık taslak değil). */
 const CONFLICT_STATUS = 409;
+/** Geçiş hatasında ekranın gerçek duruma oturması gereken durumlar (409 çatışma, 422 ön koşul). */
+const UNPROCESSABLE_STATUS = 422;
+const STALE_STATUSES: readonly number[] = [CONFLICT_STATUS, UNPROCESSABLE_STATUS];
 
 interface UseOfferDetailActionsArgs {
   offerId: string;
@@ -56,7 +59,8 @@ export function useOfferDetailActions(args: UseOfferDetailActionsArgs) {
       return;
     }
     setError(backendErrorMessage(err, fallback));
-    if (err instanceof BackendError && err.status === CONFLICT_STATUS) refreshAfterConflict();
+    // 409 = durum çatışması; 422 = geçiş ön koşulu (kalemsiz/miktarsız) başkasınca değişmiş olabilir → taze oku.
+    if (err instanceof BackendError && STALE_STATUSES.includes(err.status)) refreshAfterConflict();
   }
 
   function run(action: OfferTransitionAction, body: OfferLoseBody | undefined, toast: string, fallback: string, onDone: () => void) {
@@ -77,6 +81,8 @@ export function useOfferDetailActions(args: UseOfferDetailActionsArgs) {
     clearError: () => setError(null),
     refreshAfterConflict,
     reportError: fail,
+    /** İstemcide önceden bilinen engel (ör. miktarsız kalem): sunucu metniyle AYNI cümle bantta basılır. */
+    reportMessage: (message: string) => setError(message),
     send: (onDone: () => void) =>
       run("send", undefined, `Gönderildi olarak işaretlendi · geçerlilik ${validityDays} gün`, "Gönderildi işaretlenemedi.", onDone),
     // K-F3-2: mockup toast'u KALIR (dönüştürme F5'te gelir).

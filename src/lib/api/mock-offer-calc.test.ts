@@ -31,7 +31,7 @@ import {
 
 const REV = { overhead_pct: "12", profit_pct: "15" } as const;
 
-function item(cost: string | null, quantity = "1", over: Partial<ItemInput> = {}): ItemInput {
+function item(cost: string | null, quantity: string | null = "1", over: Partial<ItemInput> = {}): ItemInput {
   return {
     quantity,
     unit_mhr: "1",
@@ -290,7 +290,7 @@ describe("🔴 DEĞİŞMEZ: maliyet + GG + kâr = tutar (500 rastgele kalem)", (
       if (!r.priced) continue;
       priced += 1;
       const c = r.customer;
-      if (c === null || r.internal.cost === null || r.internal.overhead === null || r.internal.profit === null) {
+      if (c === null || c.amount === null || r.internal.cost === null || r.internal.overhead === null || r.internal.profit === null) {
         throw new Error("fiyatlı kalemde alan eksik");
       }
       const sum = BigInt(r.internal.cost.replace(".", "")) + BigInt(r.internal.overhead.replace(".", "")) + BigInt(r.internal.profit.replace(".", ""));
@@ -358,6 +358,9 @@ interface Golden {
   source: string;
   items: GoldenItem[];
   revisions: GoldenRevision[];
+  /** F4.2: miktarı null kalemli vektörler (backend B6 calc.py, SO-21). */
+  items_null: GoldenItem[];
+  revisions_null: GoldenRevision[];
 }
 
 const GOLDEN = JSON.parse(
@@ -402,6 +405,80 @@ describe("🔴 altın vektörler: ikiz = GERÇEK calc.py (dizi eşitliği, ölç
       }
     });
     expect(mismatches.slice(0, 3)).toEqual([]);
+  });
+});
+
+describe("🔴 F4.2 altın vektörler: miktar null (SO-21) = GERÇEK calc.py", () => {
+  it("vektörler gerçekten yüklendi ve miktarsız kalem içeriyor (sahte-yeşil önlemi)", () => {
+    expect(GOLDEN.items_null.length).toBeGreaterThanOrEqual(250);
+    expect(GOLDEN.items_null.filter((v) => v.input.quantity === null).length).toBeGreaterThan(100);
+    expect(GOLDEN.items_null.filter((v) => v.input.quantity === null && v.expected?.customer != null).length).toBeGreaterThan(50);
+    expect(GOLDEN.revisions_null.filter((v) => v.expected.unquantified_count > 0).length).toBeGreaterThan(40);
+    expect(GOLDEN.revisions.every((v) => v.expected.unquantified_count === 0)).toBe(true);
+  });
+
+  it("250 tek kalem (miktar null dahil): her alan gerçek calc.py ile birebir", () => {
+    const mismatches: string[] = [];
+    GOLDEN.items_null.forEach((vector, index) => {
+      if (vector.error !== undefined) {
+        expect(() => calcItem(vector.input, vector.rev), `#${index}`).toThrow(ManualPriceWithoutCostError);
+        return;
+      }
+      const actual = calcItem(vector.input, vector.rev);
+      if (JSON.stringify(actual) !== JSON.stringify(vector.expected)) {
+        mismatches.push(`#${index}: ${JSON.stringify(vector.input)}\n  gerçek ${JSON.stringify(vector.expected)}\n  ikiz   ${JSON.stringify(actual)}`);
+      }
+    });
+    expect(mismatches.slice(0, 5)).toEqual([]);
+  });
+
+  it("60 revizyon: miktarsız kalem toplamlara girmez, unquantified_count gerçek calc.py ile birebir", () => {
+    const mismatches: string[] = [];
+    GOLDEN.revisions_null.forEach((vector, index) => {
+      const actual = calcRevision(vector.items, vector.rev);
+      if (JSON.stringify(actual) !== JSON.stringify(vector.expected)) {
+        mismatches.push(`#${index}\n  gerçek ${JSON.stringify(vector.expected)}\n  ikiz   ${JSON.stringify(actual)}`);
+      }
+    });
+    expect(mismatches.slice(0, 3)).toEqual([]);
+  });
+});
+
+describe("🔴 F4.2 miktarsız kalem (calc.py test_unquantified.py aynası)", () => {
+  it("fiyatlı miktarsız: B.F. VAR; tutar/maliyet/GG/kâr/adam-saat null (0 DEĞİL)", () => {
+    const r = calcItem(item("100", null), REV);
+    expect(r.priced).toBe(true);
+    expect(r.customer).toEqual({ unit_price: "128.80", amount: null });
+    expect(r.internal).toEqual({ man_hours: null, cost: null, overhead: null, profit: null, profit_pct: "15" });
+  });
+
+  it("elle B.F. + miktarsız: türev kâr % hesaplanır, tutar yok", () => {
+    const r = calcItem(item("100", null, { offer_unit_price: "140" }), REV);
+    expect(r.customer).toEqual({ unit_price: "140.00", amount: null });
+    expect(r.internal.profit_pct).toBe("25.00");
+    expect(r.internal.cost).toBeNull();
+  });
+
+  it("fiyatsız + miktarsız: customer null, adam-saat null", () => {
+    const r = calcItem(item(null, null), REV);
+    expect(r.priced).toBe(false);
+    expect(r.customer).toBeNull();
+    expect(r.internal.man_hours).toBeNull();
+  });
+
+  it("toplamlar miktarsızı DIŞLAR; sayaçlar bağımsız (fiyatsız+miktarsız ikisine de girer)", () => {
+    const r = calcRevision([item("100", "2"), item("100", null), item(null, null), item(null, "3")], { ...REV, vat_pct: "20" });
+    expect(r.customer.net).toBe("257.60");
+    expect(r.internal.man_hours).toBe("5");
+    expect(r.unpriced_count).toBe(2);
+    expect(r.unquantified_count).toBe(2);
+  });
+
+  it("tümü miktarsız: toplamlar 0, adam-saat 0 (null değil), sayaç = kalem sayısı", () => {
+    const r = calcRevision([item("10", null), item("20", null)], { ...REV, vat_pct: "20" });
+    expect(r.customer).toEqual({ net: "0", vat: "0.00", gross: "0.00" });
+    expect(r.internal.man_hours).toBe("0");
+    expect(r.unquantified_count).toBe(2);
   });
 });
 

@@ -733,6 +733,67 @@ describe("kalem: katalogdan kopya, SO-6/T38 `cost_unit_price` üç hâli, SO-4",
   });
 });
 
+describe("🔴 F4.2 miktarsız kalem (SO-21/SO-24): mock = backend B6", () => {
+  async function fresh(): Promise<{ offerId: string; groupId: string }> {
+    const offer = await createOffer();
+    return { offerId: offer.id, groupId: (await createGroup(offer.id)).id };
+  }
+
+  it("quantity YOK ya da null → 201, miktar null; tutar/maliyet/adam-saat null; B.F. fiyatlıda VAR", async () => {
+    const { offerId, groupId } = await fresh();
+    const absent = await api("POST", `${rev(offerId)}/items`, { catalog_item_id: CAT_A, group_id: groupId, cost_unit_price: "100" });
+    expect(absent.status, JSON.stringify(absent.json)).toBe(201);
+    expect(absent.json).toMatchObject({ quantity: null, priced: true });
+    expect(absent.json.customer.amount).toBeNull();
+    expect(absent.json.customer.unit_price).not.toBeNull();
+    expect(absent.json.internal).toMatchObject({ man_hours: null, cost: null, overhead: null, profit: null });
+    const explicit = await createItem(offerId, groupId, CAT_C, { quantity: null });
+    expect(explicit.quantity).toBeNull();
+  });
+
+  it("toplamlara GİRMEZ; unquantified_count revizyon + özet + liste satırında; unpriced_count bağımsız", async () => {
+    const { offerId, groupId } = await fresh();
+    await createItem(offerId, groupId, CAT_A, { quantity: "2", cost_unit_price: "100" });
+    await createItem(offerId, groupId, CAT_C, { quantity: null, cost_unit_price: "100" });
+    await createItem(offerId, groupId, CAT_B, { quantity: null, cost_unit_price: null }); // hem fiyatsız hem miktarsız
+    const revision = await revisionOf(offerId);
+    expect(revision.totals.customer.net).toBe("257.60"); // yalnız dolu kalem: 2 x 128,80
+    expect(revision.totals.unquantified_count).toBe(2);
+    expect(revision.totals.unpriced_count).toBe(1);
+    expect(revision.totals.internal.man_hours).toBe("1.7000000"); // yalnız miktarlı kalem (2 x 0,85)
+    const detail = await api("GET", `/offers/${offerId}`);
+    expect(detail.json.revisions[0].unquantified_count).toBe(2);
+    const list = await api("GET", "/offers");
+    expect(list.json.items.find((row: Record<string, any>) => row.id === offerId).unquantified_count).toBe(2);
+  });
+
+  it("PATCH quantity:null 422 (SO-24); dolu miktar yazılınca tutar belirir, sayaç düşer", async () => {
+    const { offerId, groupId } = await fresh();
+    const item = await createItem(offerId, groupId, CAT_A, { quantity: null, cost_unit_price: "100" });
+    expect((await api("PATCH", `${rev(offerId)}/items/${item.id}`, { quantity: null })).status).toBe(422);
+    const filled = await api("PATCH", `${rev(offerId)}/items/${item.id}`, { quantity: "3" });
+    expect(filled.status, JSON.stringify(filled.json)).toBe(200);
+    expect(filled.json.customer.amount).toBe("386.40");
+    expect((await revisionOf(offerId)).totals.unquantified_count).toBe(0);
+  });
+
+  it("🔴 send: miktarsız kalem varken 422 'Miktarı girilmemiş kalem var'; durum DEĞİŞMEZ; miktar girilince 200", async () => {
+    const { offerId, groupId } = await fresh();
+    const item = await createItem(offerId, groupId, CAT_A, { quantity: null, cost_unit_price: "100" });
+    const blocked = await api("POST", `${rev(offerId)}/send`);
+    expect(blocked.status).toBe(422);
+    expect(blocked.json.detail).toBe("Miktarı girilmemiş kalem var");
+    expect((await revisionOf(offerId)).status).toBe("draft");
+    await api("PATCH", `${rev(offerId)}/items/${item.id}`, { quantity: "1" });
+    expect((await api("POST", `${rev(offerId)}/send`)).status).toBe(200);
+  });
+
+  it("kalemsiz send hâlâ 'Teklifte kalem yok' (miktarsız denetimi ondan SONRA)", async () => {
+    const offer = await createOffer();
+    expect((await api("POST", `${rev(offer.id)}/send`)).json.detail).toBe(OFFER_MESSAGES.noItemsToSend);
+  });
+});
+
 describe("🔴 toplu ekleme HEP-YA-HİÇ (1–200)", () => {
   async function fresh(): Promise<{ offerId: string; groupId: string }> {
     const offer = await createOffer();

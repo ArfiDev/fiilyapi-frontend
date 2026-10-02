@@ -53,6 +53,7 @@ export const OFFER_MESSAGES = {
   indexRequired: "Fiyat farkı «TÜİK endeksli» iken endeks türü zorunludur",
   indexNotAllowed: "Sabit fiyatta endeks türü girilemez",
   noItemsToSend: "Teklifte kalem yok",
+  unquantifiedItems: "Miktarı girilmemiş kalem var",
   catalogMissing: "Katalog iş tipi bulunamadı",
   groupMissing: "Teklif grubu bulunamadı",
   groupForeign: "Grup bu revizyona ait değil",
@@ -429,6 +430,9 @@ export function transition(
   if (action === "send" && !state.items.some((item) => item.revisionId === revision.id)) {
     throw fail(422, OFFER_MESSAGES.noItemsToSend); // SO-9/SO-17: bos grup kalem SAYILMAZ
   }
+  if (action === "send" && state.items.some((item) => item.revisionId === revision.id && item.quantity === null)) {
+    throw fail(422, OFFER_MESSAGES.unquantifiedItems); // SO-21: taslakta serbest, gönderimde engelli
+  }
   const now = nowIso(state);
   const actor = port.actor.id;
   const patch: Partial<RevisionRec> = { status: target, updatedAt: now };
@@ -559,7 +563,7 @@ export function addItems(state: OffersState, port: OffersPort, offerId: string, 
       pozNo: entry.pozNo,
       description: entry.name,
       unit: entry.uom,
-      quantity: quantizeDecimal(text(body.quantity), 3),
+      quantity: body.quantity === null || body.quantity === undefined ? null : quantizeDecimal(text(body.quantity), 3), // SO-21: yok/null = girilmedi
       unitMhr: quantizeDecimal(body.unit_mhr === null || body.unit_mhr === undefined ? entry.standardUnitMhr : text(body.unit_mhr), 4),
       costUnitPrice: cost,
       overheadPct: nullable(body.overhead_pct, 2),

@@ -46,6 +46,8 @@ export interface CustomerSourceRevision extends PrintRevisionSource {
   groups: readonly CustomerSourceGroup[];
   totals: {
     unpriced_count: number;
+    /** SO-21: miktarı girilmemiş kalem sayısı (sayaç; tutar değil). */
+    unquantified_count: number;
     customer: { net: string | null; vat: string | null; gross: string | null };
   };
 }
@@ -70,7 +72,7 @@ export interface CustomerPrintModel {
   frame: PrintFrame;
   pages: OfferPrintPage<CustomerPrintRow>[];
   totals: TotalRow[];
-  /** "* Fiyatı belirlenmemiş N kalem toplama dahil değildir." — fiyatsız yoksa `null`. */
+  /** "* Fiyatı belirlenmemiş N kalem …" ve/veya "* Miktarı girilmemiş N kalem …" — ikisi de yoksa `null`. */
   footnote: string | null;
 }
 
@@ -129,6 +131,19 @@ function unpricedNote(count: number): string | null {
   return count > 0 ? `* Fiyatı belirlenmemiş ${count} kalem toplama dahil değildir.` : null;
 }
 
+/** SO-21: miktarsız kalem de toplama girmez; satırında Miktar/Tutar "—" (B.F. basılır). */
+function unquantifiedNote(count: number): string | null {
+  return count > 0 ? `* Miktarı girilmemiş ${count} kalem toplama dahil değildir.` : null;
+}
+
+/** İki dipnot (fiyatsız · miktarsız) tek paragrafta; ikisi de yoksa `null`. */
+function footnoteOf(totals: CustomerSourceRevision["totals"]): string | null {
+  const notes = [unpricedNote(totals.unpriced_count), unquantifiedNote(totals.unquantified_count)].filter(
+    (note): note is string => note !== null,
+  );
+  return notes.length === 0 ? null : notes.join(" ");
+}
+
 function totalRows(revision: CustomerSourceRevision): TotalRow[] {
   const { customer } = revision.totals;
   return [
@@ -151,6 +166,6 @@ export function buildCustomerPrintModel({ offer, revision, company }: CustomerPr
     frame,
     pages: paginateOfferRows(rows, PORTRAIT_LAYOUT, closingPartsOf(frame)),
     totals: totalRows(revision),
-    footnote: unpricedNote(revision.totals.unpriced_count),
+    footnote: footnoteOf(revision.totals),
   };
 }

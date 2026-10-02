@@ -15,9 +15,14 @@
 //    GG = ROUND(c x (1+g) x miktar) - maliyet · kâr = tutar - maliyet - GG.
 //  🔴 DEĞİŞMEZ: maliyet + GG + kâr = tutar BİREBİR (kâr tutardan KALAN olarak türer).
 //
+// ## Miktarsız kalem (SO-21, F4.2)
+// `quantity === null` = "miktar girilmedi": B.F. (fiyatlıysa) hesaplanır; tutar, maliyet, GG, kâr VE adam-saat
+// `null` (bilinmiyor — 0 DEĞİL); kalem toplamlara girmez; AYRI sayaç `unquantified_count` (`unpriced_count`la
+// bağımsız: hem fiyatsız hem miktarsız kalem İKİSİNDE de sayılır).
+//
 // ## Toplam (revizyon)
 // net = Σ tutar · KDV = ROUND(net x kdv %) · brüt = net + KDV · adam-saat = Σ miktar x a-s
-// (fiyatsız DAHİL) · genel kâr % = ROUND(Σkâr / (Σmaliyet + ΣGG) x 100) (payda 0 ise null).
+// (fiyatsız DAHİL; miktarsız kalem KATKISIZ — toplam kısmi olabilir) · genel kâr % = ROUND(Σkâr / (Σmaliyet + ΣGG) x 100) (payda 0 ise null).
 //
 // ## Yuvarlama
 // ROUND_HALF_UP = en yakına, yarım sıfırdan UZAĞA (negatifte de). Python `Decimal` ölçek
@@ -38,7 +43,8 @@ export const MANUAL_PRICE_WITHOUT_COST_MESSAGE =
 
 /** Kalemin hesap girdisi; `null` = girilmemiş (revizyon değeri / hesaplanır). Yüzdeler 12 = %12. */
 export interface ItemInput {
-  quantity: string;
+  /** `null` = miktar girilmedi (SO-21). */
+  quantity: string | null;
   unit_mhr: string;
   cost_unit_price: string | null;
   overhead_pct: string | null;
@@ -48,9 +54,10 @@ export interface ItemInput {
 
 export interface ItemResult {
   priced: boolean;
-  customer: { unit_price: string; amount: string } | null;
+  customer: { unit_price: string; amount: string | null } | null;
   internal: {
-    man_hours: string;
+    /** `null` = miktar girilmedi (adam-saat BİLİNMİYOR, 0 değil). */
+    man_hours: string | null;
     cost: string | null;
     overhead: string | null;
     profit: string | null;
@@ -74,6 +81,8 @@ export interface RevisionResult {
     man_hours: string;
   };
   unpriced_count: number;
+  /** Miktarı boş kalem sayısı (SO-21); `unpriced_count`tan bağımsız. */
+  unquantified_count: number;
 }
 
 // ------------------------------------------------------------------ ondalık (bigint)
@@ -204,7 +213,9 @@ function pick(own: string | null, general: string): Dec {
 }
 
 export function calcItem(item: ItemInput, revision: RevisionPercents): ItemResult {
-  const manHours = mul(parse(item.quantity), parse(item.unit_mhr));
+  const quantity = item.quantity === null ? null : parse(item.quantity);
+  const manHours = quantity === null ? null : mul(quantity, parse(item.unit_mhr));
+  const manHoursText = manHours === null ? null : format(manHours);
   if (item.cost_unit_price === null) {
     if (item.offer_unit_price !== null) {
       throw new ManualPriceWithoutCostError(MANUAL_PRICE_WITHOUT_COST_MESSAGE);
@@ -212,10 +223,9 @@ export function calcItem(item: ItemInput, revision: RevisionPercents): ItemResul
     return {
       priced: false,
       customer: null,
-      internal: { man_hours: format(manHours), cost: null, overhead: null, profit: null, profit_pct: null },
+      internal: { man_hours: manHoursText, cost: null, overhead: null, profit: null, profit_pct: null },
     };
   }
-  const quantity = parse(item.quantity);
   const cost = parse(item.cost_unit_price);
   const overheadPct = pick(item.overhead_pct, revision.overhead_pct);
   const profitPct = pick(item.profit_pct, revision.profit_pct);
@@ -232,6 +242,20 @@ export function calcItem(item: ItemInput, revision: RevisionPercents): ItemResul
     profitPctOut = profitPct;
   }
 
+  if (quantity === null) {
+    // SO-21: B.F. var; tutar/maliyet/GG/kâr/adam-saat YOK (null, 0 değil).
+    return {
+      priced: true,
+      customer: { unit_price: format(unitPrice), amount: null },
+      internal: {
+        man_hours: null,
+        cost: null,
+        overhead: null,
+        profit: null,
+        profit_pct: profitPctOut === null ? null : format(profitPctOut),
+      },
+    };
+  }
   const amount = quantize(mul(unitPrice, quantity));
   const costTotal = quantize(mul(cost, quantity));
   const overhead = sub(quantize(mul(loadedUnit, quantity)), costTotal);
@@ -240,7 +264,7 @@ export function calcItem(item: ItemInput, revision: RevisionPercents): ItemResul
     priced: true,
     customer: { unit_price: format(unitPrice), amount: format(amount) },
     internal: {
-      man_hours: format(manHours),
+      man_hours: format(mul(quantity, parse(item.unit_mhr))),
       cost: format(costTotal),
       overhead: format(overhead),
       profit: format(profit),
@@ -260,8 +284,9 @@ export function calcRevision(
   revision: RevisionPercents & { vat_pct: string },
 ): RevisionResult {
   const results = items.map((entry) => calcItem(entry, revision));
-  const lines = results.filter((r): r is ItemResult & { customer: NonNullable<ItemResult["customer"]> } => r.customer !== null);
-  const net = sumOf(lines.map((r) => parse(r.customer.amount)));
+  // Toplama YALNIZ fiyatlı ∧ miktarlı kalem girer (calc.py: `customer.amount is not None`).
+  const lines = results.filter((r) => r.customer !== null && r.customer.amount !== null);
+  const net = sumOf(lines.map((r) => parse(r.customer?.amount ?? "0")));
   const cost = sumOf(lines.map((r) => parse(r.internal.cost ?? "0")));
   const overhead = sumOf(lines.map((r) => parse(r.internal.overhead ?? "0")));
   const profit = sumOf(lines.map((r) => parse(r.internal.profit ?? "0")));
@@ -275,9 +300,10 @@ export function calcRevision(
       overhead: format(overhead),
       profit: format(profit),
       profit_pct: compare(base, ZERO) > 0 ? format(ratioPercent(profit, base)) : null,
-      man_hours: format(sumOf(results.map((r) => parse(r.internal.man_hours)))),
+      man_hours: format(sumOf(results.flatMap((r) => (r.internal.man_hours === null ? [] : [parse(r.internal.man_hours)])))),
     },
-    unpriced_count: results.length - lines.length,
+    unpriced_count: results.filter((r) => !r.priced).length,
+    unquantified_count: items.filter((entry) => entry.quantity === null).length,
   };
 }
 

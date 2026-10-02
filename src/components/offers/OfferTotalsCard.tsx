@@ -68,7 +68,7 @@ export function OfferTotalsCard({ totals, vatPct }: OfferTotalsCardProps) {
           </div>
         ))}
         <div className="offer-totals__row">
-          <dt>Toplam adam-saat</dt>
+          <dt>{totals.unquantified_count > 0 ? "Toplam adam-saat (kısmi)" : "Toplam adam-saat"}</dt>
           <dd className="offer-totals__pct" />
           <dd className="offer-totals__value">{formatWholeNumber(internal.man_hours)} a-s</dd>
         </div>
@@ -77,6 +77,12 @@ export function OfferTotalsCard({ totals, vatPct }: OfferTotalsCardProps) {
         <p className="offer-totals__warn">
           <WarningTriangleIcon className="offer-totals__warn-icon" />
           <span>Fiyatı girilmemiş {totals.unpriced_count} kalem toplamlara dahil değil</span>
+        </p>
+      )}
+      {totals.unquantified_count > 0 && (
+        <p className="offer-totals__warn">
+          <WarningTriangleIcon className="offer-totals__warn-icon" />
+          <span>Miktarı girilmemiş {totals.unquantified_count} kalem toplamlara dahil değil</span>
         </p>
       )}
     </section>

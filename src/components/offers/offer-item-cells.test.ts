@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { makeItem, makeManualItem, makeUnpricedItem } from "./offer-item-fixtures";
+import { makeItem, makeManualItem, makeUnpricedItem, makeUnquantifiedItem } from "./offer-item-fixtures";
 import {
   amountText,
   catalogResetBody,
@@ -13,6 +13,7 @@ import {
   isQuantityMissing,
   isUnpriced,
   offerPriceHint,
+  quantityBasisOf,
   type CellContext,
 } from "./offer-item-cells";
 
@@ -67,7 +68,6 @@ describe("commitCell — hücre → PATCH gövdesi tablosu (plan §3.2, her sat�
     });
     it("0 / boş / belirsiz nokta / 4 kesir hane / negatif → istek UÇMAZ, sebep döner", () => {
       expect(commitCell("quantity", "0", ctx())).toEqual({ kind: "error", message: "Miktar 0'dan büyük olmalı" });
-      expect(commitCell("quantity", "", ctx())).toEqual({ kind: "error", message: "Miktar girin" });
       expect(commitCell("quantity", "1.5", ctx())).toEqual({
         kind: "error",
         message: "Ondalık için virgül kullanın (ör. 28,50)",
@@ -256,9 +256,21 @@ describe("satır durumu", () => {
     expect(amountText(makeUnpricedItem({ id: "x" }))).toBe("—");
     expect(amountText(makeItem({ id: "x", quantity: null, customer: { unit_price: "128.80", amount: null } }))).toBe("—");
   });
-  it("miktar eksik mi (B5 satır uyarısı için yer)", () => {
-    expect(isQuantityMissing(makeItem({ id: "x", quantity: null }))).toBe(true);
-    expect(isQuantityMissing(ITEM)).toBe(false);
+  it("🔴 F4.2 miktar eksik mi: null ∧ sayaç = null-miktarlı kalem sayısı (maske ≠ miktarsız)", () => {
+    const missing = makeUnquantifiedItem({ id: "x" });
+    expect(isQuantityMissing(missing, quantityBasisOf([missing, ITEM], 1))).toBe(true);
+    expect(isQuantityMissing(ITEM, quantityBasisOf([missing, ITEM], 1))).toBe(false);
+    // finance maskesi: miktar null ama sunucu sayacı 0 → miktarsız DEĞİL (uyarı yok)
+    const masked = makeItem({ id: "m", quantity: null });
+    expect(isQuantityMissing(masked, quantityBasisOf([masked, makeItem({ id: "n", quantity: null })], 0))).toBe(false);
+    // hepsi gerçekten miktarsız → sayılar eşit → hepsi miktarsız
+    expect(isQuantityMissing(masked, quantityBasisOf([masked], 1))).toBe(true);
+    // karışım (maskeli + gerçek miktarsız; sayılar eşit değil) → ayırt EDİLEMEZ → yanlış-pozitif YOK
+    expect(isQuantityMissing(masked, quantityBasisOf([masked, missing, makeItem({ id: "o", quantity: null })], 1))).toBe(false);
+  });
+  it("🔴 F4.2 dolu miktarı boşaltmak istemci hatası 'Miktar boşaltılamaz' (SO-24); a-s için 'girin' kalır", () => {
+    expect(commitCell("quantity", "", ctx())).toEqual({ kind: "error", message: "Miktar boşaltılamaz" });
+    expect(commitCell("unitMhr", "", ctx())).toEqual({ kind: "error", message: "A-s girin" });
   });
 });
 

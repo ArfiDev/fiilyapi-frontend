@@ -13,8 +13,8 @@ import {
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 
-/** TD:421 — "+ Grup" yeni grubu bu adla açar. */
-const NEW_GROUP_NAME = "Yeni grup";
+import { MSG_GROUP_NAME_TAKEN, isGroupNameTaken, nextGroupName } from "./offer-group-names";
+
 const CREATE_FAILED = "Grup eklenemedi.";
 const RENAME_FAILED = "Grup adı kaydedilemedi.";
 const DELETE_FAILED = "Grup silinemedi.";
@@ -33,6 +33,7 @@ export interface OfferGroupActions {
 
 /**
  * TKL-F3.6 · grup yazmaları (ekle · yeniden adlandır · BOŞ grubu sil). Hata metni AYNEN; sıralı değil, tek istek tek sonuç.
+ * TKL-F4.2: "+ Grup" çakışmada "Yeni grup 2"… üretir; aynı adla yeniden adlandırma istemcide reddedilir (SO-30).
  *
  * TKL-F3.6.1: silme önbelleğe GÜVENMEZ — "×" basınca revizyon önce tazelenir; grupta kalem varsa SİLİNMEZ
  * (backend `delete_group` kalemleri ZİNCİRLEME siler), mesaj basılır ve tablo zaten taze görünür. 404/409'da
@@ -68,6 +69,19 @@ export function useOfferGroupActions(offerId: string, revNo: number, onForbidden
     }
   }
 
+  /** Ad kararı için en son bilinen gruplar (önbellek; bilinmiyorsa boş → backend yine serbest bırakır). */
+  function knownGroups(): OfferRevisionRead["groups"] {
+    return queryClient.getQueryData<OfferRevisionRead>(offerRevisionKey(offerId, revNo))?.groups ?? [];
+  }
+
+  function renameChecked(groupId: string, name: string): void {
+    if (isGroupNameTaken(knownGroups(), name, groupId)) {
+      setError(MSG_GROUP_NAME_TAKEN); // SO-30: istek UÇMAZ
+      return;
+    }
+    void run(() => update.mutateAsync({ groupId, body: { name } }), RENAME_FAILED);
+  }
+
   /** Taze revizyon (ağdan); okunamazsa hata fırlatır (silme kararı bayat veriyle VERİLMEZ). */
   async function freshRevision(): Promise<OfferRevisionRead | undefined> {
     const queryKey = offerRevisionKey(offerId, revNo);
@@ -88,8 +102,8 @@ export function useOfferGroupActions(offerId: string, revNo: number, onForbidden
   }
 
   return {
-    add: () => void run(() => create.mutateAsync({ name: NEW_GROUP_NAME }), CREATE_FAILED),
-    rename: (groupId, name) => void run(() => update.mutateAsync({ groupId, body: { name } }), RENAME_FAILED),
+    add: () => void run(() => create.mutateAsync({ name: nextGroupName(knownGroups()) }), CREATE_FAILED),
+    rename: renameChecked,
     remove: (groupId) => void run(() => removeIfEmpty(groupId), DELETE_FAILED),
     isBusy: create.isPending || update.isPending || remove.isPending,
     error,
