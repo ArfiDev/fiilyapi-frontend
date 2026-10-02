@@ -373,6 +373,9 @@
   gap: 10px;
   padding: var(--space-1) 0;
   font-size: 12.5px;
+  /* TAM PİKSEL satır (CI #165 teklif-yeni-hata oynaklığı): 12,5px × 1,5 = 18,75px satır → 27,75px aralık, yapışkan kartta
+     yazılar ¼ piksel fazlarına düşüyor ve Linux'ta her koşuda farklı pikselleniyordu (12 koşuda 3 varyant → 18px ile 12/12 aynı). */
+  line-height: 18px;
   border-bottom: 1px solid var(--color-divider);
 }
 .offer-summary__row dt {
