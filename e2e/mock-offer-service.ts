@@ -213,6 +213,8 @@ export function createOffer(state: OffersState, port: OffersPort, body: Record<s
     scopeSummary: sourceOffer === null ? (given("scope_summary") ? text(body.scope_summary) : null) : explicit("scope_summary", sourceOffer.scopeSummary, text),
     preparedByUserId: port.actor.id,
     templateId: sources.template?.id ?? null, // yalnız şablondan; kopyada MİRAS ALINMAZ (SO-23)
+    projectId: null,
+    convertedAt: null,
     createdAt: now,
     updatedAt: now,
   };

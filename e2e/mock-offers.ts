@@ -45,6 +45,7 @@ import {
   type OfferAction,
 } from "./mock-offer-service";
 import type { GroupRec, ItemRec, OffersPort, OffersState } from "./mock-offer-types";
+import { handleConvert } from "./mock-offer-convert";
 import { handleOfferTemplates } from "./mock-offer-templates";
 import { listOffers, readItem, readOfferDetail, readRevision } from "./mock-offer-views";
 
@@ -102,6 +103,7 @@ function dispatch(state: OffersState, port: OffersPort, withBody: (run: (body: R
     if (method !== "PATCH") return notAllowed();
     return withBody((body) => send(200, readOfferDetail(state, updateOffer(state, port, offerId, body))));
   }
+  if (segments[1] === "convert" && segments.length === 2) return method === "POST" ? handleConvert(state, port, offerId, withBody) : notAllowed();
   if (segments[1] !== "revisions") return notFound();
 
   if (segments.length === 2) {

@@ -280,6 +280,8 @@ export function createOffersState(input: OffersSeedInput): OffersState {
       scopeSummary: spec.scope,
       preparedByUserId: actor.id,
       templateId: spec.template === undefined ? null : (templateIds.get(spec.template) ?? null),
+      projectId: null,
+      convertedAt: null,
       createdAt: spec.createdAt,
       updatedAt: latestStamp(spec),
     };

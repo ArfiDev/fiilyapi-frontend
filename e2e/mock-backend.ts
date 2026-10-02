@@ -26,6 +26,8 @@ import {
 import { QURR_FIXTURE_EMPTY, QURR_FIXTURE_READY } from "@/components/earned-value/reports/qurr/qurr-fixtures";
 // TKL-F3.2 · Teklif Hazırlama (`/offers*`) sahte backend'i AYRI dosyalardadır; burası YALNIZ yönlendirir.
 import { createOffersState, handleOffers, tklLastPrices, type OfferCatalogEntry, type TklLastPrice } from "./mock-offers";
+import { addDecimal, multiplyDecimal, quantizeDecimal } from "./mock-offer-calc";
+import { istanbulYear, type ConvertedProjectResult, type ConvertedProjectSpec } from "./mock-offer-types";
 import { handleOfferExport } from "./mock-offer-export";
 
 /* ══════════════ SÖZLEŞME SORGU KISITLARI (F-BORDRO T1) ══════════════════════
@@ -1105,6 +1107,11 @@ interface MockState {
    */
   contractGroups: MockContractGroup[];
   contractGroupSeq: number;
+  /**
+   * TKL-F5.1 · teklif → proje DÖNÜŞTÜRMESİYLE doğan işveren sözleşmeleri (projeId → sözleşme). Fikstür projeleri
+   * (`p-1`, `p-4`) burada YOKTUR; `GET /projects/{id}/contract` bu kayıttan okur, kalemler `contractItems`tedir.
+   */
+  convertedContracts: Record<string, ConvertedContractRecord>;
   /**
    * 🔴 F-BLMPOZ — poz ↔ bölüm tahsisleri artık DEĞİŞTİRİLEBİLİR durumdadır.
    *
@@ -2307,6 +2314,174 @@ function buildEmployerContractItemsResponse(
   };
 }
 
+/* ─────────────── TKL-F5.1 · teklif → proje DÖNÜŞTÜRME yazımı (`e2e/mock-offer-convert.ts` portu) ───────────────
+ *
+ * Doğrulama ve hata sırası `mock-offer-convert.ts`tedir; burası YALNIZ yazar: proje (`PRJ-{yıl}-{NNN}` max+1, taahhüt),
+ * sözleşme, sözleşme kalemleri (grup adı/sırası = gövde), `open_site` ise şantiye + TAM dağıtım (S-D2). EV tohumu
+ * (Rev.0 taslağı, oran yuvaları) sahte EV durumuna YAZILMAZ — bütçe ekranı için `fill-from-contract` ayrı uçtur. */
+interface ConvertedContractRecord {
+  contractNo: string;
+  signatureDate: string;
+  amount: string;
+  advancePct: string;
+  retainagePct: string;
+  vatPct: string;
+  latePenaltyDaily: string | null;
+  hasPriceEscalation: boolean;
+  indexType: string | null;
+  baseIndexValue: string | null;
+  startDate: string;
+  endDate: string;
+  employerName: string;
+}
+
+/** Sözleşmesi olan projeler: fikstür `p-1`, boş sözleşme fikstürü `p-4` ve dönüştürmeyle doğanlar. */
+function hasEmployerContract(state: MockState, projectId: string): boolean {
+  return projectId === "p-1" || projectId === EMPTY_CONTRACT_PROJECT_ID || state.convertedContracts[projectId] !== undefined;
+}
+
+/** Aynı yılın en büyük `PRJ-{yıl}-{NNN}` sırası + 1 (silinen kod yeniden kullanılmaz; backend `_next_project_code`). */
+function nextConvertedProjectCode(state: MockState, year: number): string {
+  const prefix = `PRJ-${year}-`;
+  const top = state.projects.reduce((max, project) => {
+    const suffix = project.code.startsWith(prefix) ? project.code.slice(prefix.length) : "";
+    return /^\d+$/.test(suffix) ? Math.max(max, parseInt(suffix, 10)) : max;
+  }, 0);
+  return `${prefix}${String(top + 1).padStart(3, "0")}`;
+}
+
+/** Şirket geneli tekil slug (çakışırsa `-2`, `-3`…; backend `allocate_slug`). */
+function uniqueProjectSlug(state: MockState, name: string): string | null {
+  const base = slugify(name);
+  if (!base) return null;
+  const taken = new Set(state.projects.map((project) => project.slug));
+  for (let n = 1; ; n += 1) {
+    const candidate = n === 1 ? base : `${base}-${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
+function writeConvertedProject(state: MockState, spec: ConvertedProjectSpec, year: number, nowIso: string): ConvertedProjectResult {
+  const projectId = `p-${state.projects.length + 1}`;
+  const code = nextConvertedProjectCode(state, year);
+  const project: MockProject = {
+    id: projectId,
+    slug: uniqueProjectSlug(state, spec.project.name),
+    code,
+    name: spec.project.name,
+    project_type: "taahhut",
+    status: "active",
+    category: spec.project.category,
+    city: spec.project.city,
+    employer_name: spec.employerName,
+    contract_no: spec.contract.contractNo,
+    contract_amount: spec.contract.amount,
+    start_date: spec.project.startDate,
+    end_date: spec.project.endDate,
+    budget: "0",
+    progress_pct: "0",
+    contracting: CONTRACTING_PLACEHOLDERS(),
+    investment: null,
+    land_share: null,
+  };
+  // 🔴 yeniden atama, `push` DEĞİL: `state.projects` modül sabiti `PROJECT_FIXTURES`i gösterir; yerinde yazmak aynı süreçteki
+  // başka ikizlere (vitest) sızar.
+  state.projects = [...state.projects, project];
+
+  let site: MockSite | null = null;
+  if (spec.site !== null) {
+    const siteNo = state.sites.length + 1;
+    site = {
+      ...siteContractDefaults(),
+      id: `s-${siteNo}`,
+      slug: slugify(spec.site.name),
+      project_id: projectId,
+      code: `SNT-${year}-${siteNo}`,
+      name: spec.site.name,
+      status: "active",
+      address: spec.project.address,
+      city: spec.project.city,
+      city_inherited: true,
+      site_manager_name: null,
+      start_date: spec.project.startDate,
+      end_date: spec.project.endDate,
+      delivery_date: null,
+      remaining_days: null,
+    };
+    state.sites = [...state.sites, site];
+  }
+
+  const base = state.contractItems.length;
+  let offset = 0;
+  spec.groups.forEach((group, groupIndex) => {
+    for (const item of group.items) {
+      offset += 1;
+      state.contractItems = [...state.contractItems, {
+        id: `ci-conv-${base + offset}`,
+        projectId,
+        code: item.code,
+        description: item.description,
+        unit: item.unit,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        groupName: group.name,
+        groupSortOrder: groupIndex,
+        // S-D2: şantiye açıldıysa TÜM kalemler TAM miktarla ona dağıtılır.
+        allocations: site === null ? [] : [{ site_id: site.id, quantity: item.quantity }],
+        catalogItemId: item.catalogItemId,
+        priceChangedAt: nowIso,
+      }];
+    }
+  });
+  const { contract } = spec;
+  state.convertedContracts[projectId] = {
+    contractNo: contract.contractNo,
+    signatureDate: contract.signatureDate,
+    amount: contract.amount,
+    advancePct: contract.advancePct,
+    retainagePct: contract.retainagePct,
+    vatPct: contract.vatPct,
+    latePenaltyDaily: contract.latePenaltyDaily,
+    hasPriceEscalation: contract.hasPriceEscalation,
+    indexType: contract.indexType,
+    baseIndexValue: contract.baseIndexValue,
+    startDate: spec.project.startDate,
+    endDate: spec.project.endDate,
+    employerName: spec.employerName,
+  };
+  return { projectId, projectSlug: project.slug, projectCode: code, siteId: site?.id ?? null };
+}
+
+/** Dönüştürmeyle doğan sözleşmenin `GET /projects/{id}/contract` yanıtı (alanlar `EMPLOYER_CONTRACT_P1` şeklinden). */
+function convertedContractRead(state: MockState, projectId: string, contract: ConvertedContractRecord): components["schemas"]["EmployerContractDetail"] {
+  const itemsTotal = state.contractItems
+    .filter((item) => item.projectId === projectId)
+    .reduce((sum, item) => addDecimal(sum, quantizeDecimal(multiplyDecimal(item.quantity, item.unit_price), 2)), "0");
+  return {
+    ...EMPLOYER_CONTRACT_P1,
+    project_id: projectId,
+    contract_no: contract.contractNo,
+    signature_date: contract.signatureDate,
+    amount: contract.amount,
+    advance_pct: contract.advancePct,
+    retainage_pct: contract.retainagePct,
+    vat_pct: contract.vatPct,
+    late_penalty_daily: contract.latePenaltyDaily,
+    has_price_escalation: contract.hasPriceEscalation,
+    index_type: contract.indexType as components["schemas"]["PriceIndexType"] | null,
+    start_date: contract.startDate,
+    end_date: contract.endDate,
+    employer_name: contract.employerName,
+    items_total: quantizeDecimal(itemsTotal, 2),
+    items_total_diff: quantizeDecimal(addDecimal(contract.amount, `-${itemsTotal}`), 2),
+    advance_amount: quantizeDecimal(multiplyDecimal(contract.amount, multiplyDecimal(contract.advancePct, "0.01")), 2),
+    progress_payment_summary: buildProgressPaymentSummary(state, projectId),
+    milestones: null,
+    documents: null,
+    pending_modules: [] as string[],
+  };
+}
+
 /* ─────────────── TKL-F2.2 · katalog "SON FİYAT" türetmesi (backend ikizi) ───────────────
  *
  * Backend: `core/last_price.py` (birleştirme) + `contracts/last_price_provider.py` (SZL) +
@@ -3362,6 +3537,7 @@ function seedState(): MockState {
     // F-POZGRUP · BOŞ başlar: `p-1` grupları eskisi gibi kalemlerden türer.
     contractGroups: [],
     contractGroupSeq: 0,
+    convertedContracts: {},
     // F-BLMPOZ · DERİN kopya — `PUT .../allocations` bu haritayı yerinde
     // değiştirir, `BOQ_FIXTURE` kirlenmemelidir.
     boqAllocations: Object.fromEntries(
@@ -8998,6 +9174,12 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         employers: () => state.employers,
         lastPrices: () => lastPricesByCatalogItem(state, tklLastPrices(offersState)),
         actor: offersActor,
+        convert: {
+          disciplineExists: (id) => evState.disciplines.some((discipline) => discipline.id === id),
+          disciplineOfCatalog: (id) => evState.catalog.find((entry) => entry.id === id)?.disciplineId ?? null,
+          createConvertedProject: (spec) =>
+            writeConvertedProject(state, spec, istanbulYear(offersState.clock()), offersState.clock().toISOString()),
+        },
       })
     ) {
       return;
@@ -9982,6 +10164,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           pending_modules: [] as string[],
         });
       }
+      const convertedContract = state.convertedContracts[projectId];
+      if (convertedContract !== undefined) return send(200, convertedContractRead(state, projectId, convertedContract));
       if (projectId !== "p-1") return send(404, { detail: "bu proje icin sozlesme yok" });
       return send(200, {
         ...EMPLOYER_CONTRACT_P1,
@@ -10001,7 +10185,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       if (!state.projects.some((p) => p.id === projectId)) return send(404, { detail: "proje yok" });
       // F-POZGRUP · `p-4` BOŞ sözleşmedir: 200 + boş `groups` döner (eskiden
       // 404'tü, bu yüzden grupsuz sözleşme hâli mock'ta hiç üretilemiyordu).
-      if (projectId !== "p-1" && projectId !== EMPTY_CONTRACT_PROJECT_ID) {
+      if (!hasEmployerContract(state, projectId)) {
         return send(404, { detail: "bu proje icin sozlesme yok" });
       }
       return send(200, buildEmployerContractItemsResponse(state, projectId));
@@ -10014,7 +10198,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     if (method === "POST" && contractGroupsMatch) {
       const projectId = contractGroupsMatch[1];
       if (!state.projects.some((p) => p.id === projectId)) return send(404, { detail: "proje yok" });
-      if (projectId !== "p-1" && projectId !== EMPTY_CONTRACT_PROJECT_ID) {
+      if (!hasEmployerContract(state, projectId)) {
         return send(404, { detail: "bu proje icin sozlesme yok" });
       }
       return withBody((body) => {
@@ -10046,7 +10230,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     if (method === "POST" && contractItemsMatch) {
       const projectId = contractItemsMatch[1];
       if (!state.projects.some((p) => p.id === projectId)) return send(404, { detail: "proje yok" });
-      if (projectId !== "p-1" && projectId !== EMPTY_CONTRACT_PROJECT_ID) {
+      if (!hasEmployerContract(state, projectId)) {
         return send(404, { detail: "bu proje icin sozlesme yok" });
       }
       return withBody((body) => {
@@ -10120,7 +10304,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         if (violation !== null) return send(422, violation);
         const hasContract =
           state.projects.some((p) => p.id === projectId) &&
-          (projectId === "p-1" || projectId === EMPTY_CONTRACT_PROJECT_ID);
+          hasEmployerContract(state, projectId);
         if (!hasContract) return send(404, { detail: CONTRACT_MISSING_MESSAGE });
 
         const entries = body.items as Array<Record<string, unknown>>;
@@ -22562,6 +22746,7 @@ function evBudgetWriteRoute(state: EvState, req: EvRequest, site: { id: string; 
     "/distributions": { method: "PUT", run: (body) => evPutDistributions(state, req, site, body) },
     "/windows": { method: "PUT", run: (body) => evPutWindows(state, req, site, body) },
     "/fill-from-catalog": { method: "POST", run: () => evFillFromCatalog(state, req, site) },
+    "/fill-from-contract": { method: "POST", run: () => evFillFromContract(state, req, site) },
     "/schedule": { method: "GET", run: () => evSchedule(state, req, site.id) },
     "/preview": { method: "POST", run: (body) => evPreview(state, req, site.id, body) },
     "/freeze": { method: "POST", run: (body) => evFreeze(state, req, site, body) },
@@ -22736,6 +22921,52 @@ function evFillFromCatalog(state: EvState, req: EvRequest, site: { id: string; s
     ambiguous_count: ambiguous.length,
     unmatched_count: unmatched,
     ambiguous,
+  };
+  req.send(200, out);
+}
+
+/**
+ * TKL-F5.1 · "Sözleşmeden doldur" (`earned_value/router.py::fill_budget_from_contract`, `contract_rates.apply_contract_to_draft`).
+ * Sıra: tamamlanmış şantiye 409 → aktif revizyon var + TASLAK yok 409 "Açık taslak revizyon yok" (SO-57) → yaz.
+ * Yalnız oranı BOŞ yapraklar dolar (SO-53); oran kaynağı = kalemin katalog bağındaki standart a-s (sahte durumda
+ * sözleşme↔BOQ bağı ve oran yuvası YOKTUR: `linked_item_count`/`mapped_group_count` hep 0, bağsız boş kalem `unrated`).
+ * Yazılacak şey yoksa taslak AÇILMAZ (backend: yazma yoksa taslak açmaz). Sahte durum sözleşme uyarısı üretmez.
+ */
+function evFillFromContract(state: EvState, req: EvRequest, site: { id: string; status: string }): void {
+  if (site.status === "completed") return req.send(409, { detail: EV_MSG.budgetCompleted });
+  const revisions = evRevisionsOf(state, site.id);
+  if (revisions.length > 0 && !revisions.some((r) => r.out.status === "draft")) {
+    return req.send(409, { detail: EV_MSG.noDraft });
+  }
+  const tree = evBuildTree(state, site.id, evCurrentRevision(state, site.id));
+  const plan: { item: EvItemNode; entry: EvCatalogEntry }[] = [];
+  let unrated = 0;
+  for (const item of tree.disciplines.flatMap((node) => node.groups.flatMap((g) => g.items))) {
+    if (!item.leaves.some((lf) => lf.unitMhr === null)) continue;
+    const entry = state.catalog.find((candidate) => candidate.id === item.catalogItemId);
+    if (entry === undefined) unrated += 1;
+    else plan.push({ item, entry });
+  }
+  let leafCount = 0;
+  if (plan.length > 0) {
+    const draft = evDraftForWrite(state, req, site);
+    if (draft === null) return;
+    const leaves = { ...draft.inputs.leaves };
+    for (const { item, entry } of plan) {
+      for (const leaf of item.leaves.filter((lf) => lf.unitMhr === null)) {
+        leaves[leaf.key] = { ...leaves[leaf.key], unitMhr: entry.standardUnitMhr, rateSource: "catalog" };
+        leafCount += 1;
+      }
+    }
+    evWriteDraft(state, site.id, draft, { ...draft.inputs, leaves });
+  }
+  const out: EvSchemas["FillFromContractOut"] = {
+    filled_item_count: plan.length,
+    filled_leaf_count: leafCount,
+    linked_item_count: 0,
+    mapped_group_count: 0,
+    unrated_item_count: unrated,
+    warnings: [],
   };
   req.send(200, out);
 }

@@ -557,6 +557,11 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
             // Ekran adı "Yazdır / PDF"; kırıntı son parçası. `rev`/`tur` URL durumudur (kırıntı bağlantısı
             // çıplak adrestir; sayfanın kendisi `?rev=`/`?tur=` okur, eksikse güncel revizyon + işveren).
             yazdir: { label: "Yazdır", href: (k) => routes.offers.print({ offerId: k.entityId }) },
+            // TKL-F5.1 · TDN:65 kırıntı metni birebir; `?rev=` yok (uç hep son revizyon).
+            donustur: {
+              label: "Proje ve Sözleşmeye Dönüştür",
+              href: (k) => routes.offers.convert({ offerId: k.entityId }),
+            },
           },
         },
       },

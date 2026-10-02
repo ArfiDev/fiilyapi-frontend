@@ -201,6 +201,11 @@ export function addDecimal(a: string, b: string): string {
   return format(add(parse(a), parse(b)));
 }
 
+/** İki ondalık dizenin KESİN çarpımı (Python `Decimal` çarpma ölçeği: ölçeklerin toplamı). */
+export function multiplyDecimal(a: string, b: string): string {
+  return format(mul(parse(a), parse(b)));
+}
+
 /** Ondalık dizenin sayısal olarak sıfırdan büyük olup olmadığı. */
 export function isPositiveDecimal(text: string): boolean {
   return compare(parse(text), ZERO) > 0;

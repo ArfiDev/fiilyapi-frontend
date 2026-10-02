@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import {
   useCreateEvDraft,
   useDeleteEvDraft,
+  useFillBudgetFromContract,
   useFillEvFromCatalog,
   useFreezeEvBudget,
   usePatchEvItem,
@@ -148,6 +149,65 @@ describe("useFillEvFromCatalog", () => {
       { params: { path: { site_id: SITE } } },
     );
     expect(invalidate.mock.calls.map((c) => c[0]?.queryKey)).toContainEqual([EV_BUDGET_KEY, SITE]);
+  });
+});
+
+describe("useFillBudgetFromContract", () => {
+  const OUT = {
+    filled_item_count: 2,
+    filled_leaf_count: 5,
+    linked_item_count: 0,
+    mapped_group_count: 1,
+    unrated_item_count: 0,
+    warnings: [],
+  };
+
+  async function run(hook: () => { result: { current: { mutateAsync: () => Promise<unknown> } } }) {
+    const spy = vi.spyOn(client, "invalidateQueries");
+    const { result } = hook();
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
+    return spy.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey)).sort();
+  }
+
+  it("POST /fill-from-contract → FillFromContractOut döner, gövde YOK", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(OUT));
+    const { result } = renderHook(() => useFillBudgetFromContract(SITE), { wrapper });
+    let out: unknown;
+    await act(async () => {
+      out = await result.current.mutateAsync();
+    });
+    expect(out).toEqual(OUT);
+    expect(backendClient.POST).toHaveBeenCalledWith("/sites/{site_id}/earned-value/budget/fill-from-contract", {
+      params: { path: { site_id: SITE } },
+    });
+  });
+
+  it("geçersizleme kümesi `fill-from-catalog` kardeşiyle AYNI (bütçe ağacı + dört türev) ve boş değil", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(OUT));
+    const fromContract = await run(() => renderHook(() => useFillBudgetFromContract(SITE), { wrapper }));
+    vi.clearAllMocks();
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(OUT));
+    const fromCatalog = await run(() => renderHook(() => useFillEvFromCatalog(SITE), { wrapper }));
+    expect(fromContract).toEqual(fromCatalog);
+    expect(fromContract).toHaveLength(5);
+  });
+
+  it("409 'Açık taslak revizyon yok' olduğu gibi fırlar", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: undefined,
+      error: { detail: "Açık taslak revizyon yok" },
+      response: new Response(null, { status: 409 }),
+    } as never);
+    const { result } = renderHook(() => useFillBudgetFromContract(SITE), { wrapper });
+    let caught: unknown;
+    await act(async () => {
+      caught = await result.current.mutateAsync().catch((e: unknown) => e);
+    });
+    expect(caught).toBeInstanceOf(BackendError);
+    expect((caught as BackendError).body).toEqual({ detail: "Açık taslak revizyon yok" });
   });
 });
 

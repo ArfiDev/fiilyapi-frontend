@@ -43,6 +43,12 @@ export const itemInput = (item: ItemRec): ItemInput => ({
   offer_unit_price: item.offerUnitPrice,
 });
 
+/** Backend `offer_views.conversion_state` (T14): dönüştürülmüşse `converted`; değilse son revizyon `won` ise `won_not_converted`. */
+export function conversionState(offer: OfferRec, lastRevision: RevisionRec): S["OfferDetailRead"]["conversion_state"] {
+  if (offer.projectId !== null) return "converted";
+  return lastRevision.status === "won" ? "won_not_converted" : null;
+}
+
 export function validUntil(revision: RevisionRec): string {
   return addDays(revision.offerDate, revision.validityDays);
 }
@@ -209,8 +215,8 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
     status: last.status,
     latest_rev_no: last.revNo,
     template_id: offer.templateId,
-    conversion_state: null,
-    project_id: null,
+    conversion_state: conversionState(offer, last),
+    project_id: offer.projectId,
     created_at: offer.createdAt,
     updated_at: offer.updatedAt,
     revisions: revisions.map((rev) => {
@@ -303,8 +309,8 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
       gross: result.customer.gross,
       unpriced_count: result.unpriced_count,
       unquantified_count: result.unquantified_count,
-      conversion_state: null,
-      project_id: null,
+      conversion_state: conversionState(offer, revision),
+      project_id: offer.projectId,
       created_at: offer.createdAt,
     })),
     total: shown.length,
@@ -317,7 +323,7 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
         net: nets.get(status) ?? "0",
       })),
       expired_count: expired,
-      won_not_converted_count: 0,
+      won_not_converted_count: entries.filter(({ offer, revision }) => conversionState(offer, revision) === "won_not_converted").length,
       win_rate: decided === 0 ? null : percentOfIntegers(won, decided),
     },
   };

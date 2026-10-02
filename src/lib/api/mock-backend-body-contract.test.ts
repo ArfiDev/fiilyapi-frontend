@@ -1586,6 +1586,45 @@ describe("🔴 test ikizi ↔ TEKLİF uçları (TKL-F3.2): gövde kısıtları +
     expect([longReason.status, firstViolation(longReason.json).type]).toEqual([422, "string_too_long"]);
   });
 
+  it("POST /offers/{id}/convert (TKL-F5.1) — fazla/eksik alan 422; geçerli gövde 200 ve yanıtlar ConvertResponse / OfferDetailRead / OfferListResponse / EmployerContractDetail / FillFromContractOut şemasına UYAR", async () => {
+    const offer = (await send("POST", "/offers", createBody())).json as unknown as { id: string };
+    const revUrl = `/offers/${offer.id}/revisions/0`;
+    const group = (await send("POST", `${revUrl}/groups`, { name: "Kaba" })).json as unknown as { id: string };
+    const catalog = (await (await fetch(`${base}/catalog/items`, { headers: { authorization: "Bearer t" } })).json()) as { items: Array<{ id: string }> };
+    const catalogId = catalog.items[0]?.id;
+    await send("POST", `${revUrl}/items`, { catalog_item_id: catalogId, group_id: group.id, quantity: "2" });
+    await send("POST", `${revUrl}/send`, undefined);
+    await send("POST", `${revUrl}/win`, undefined);
+
+    const convertBody = {
+      project: { name: "P", city: "Bursa", start_date: "2026-11-01", end_date: "2026-12-01" },
+      contract: { contract_no: "S-1", signature_date: "2026-10-30", has_price_escalation: false },
+      groups: [{ name: "Kaba", items: [{ catalog_item_id: catalogId, code: "A", description: "d", unit: "m²", quantity: "2", unit_price: "10.00" }] }],
+      open_site: true,
+    };
+    const extra = await send("POST", `/offers/${offer.id}/convert`, { ...convertBody, kod: "PRJ-1" }); // `code` YOK (sunucu üretir)
+    expect([extra.status, firstViolation(extra.json).type, firstViolation(extra.json).loc]).toEqual([422, "extra_forbidden", ["body", "kod"]]);
+    const noFlag = await send("POST", `/offers/${offer.id}/convert`, { ...convertBody, contract: { contract_no: "S-1", signature_date: "2026-10-30" } });
+    expect([noFlag.status, firstViolation(noFlag.json).type]).toEqual([422, "missing"]);
+
+    const converted = await send("POST", `/offers/${offer.id}/convert`, convertBody);
+    expect(converted.status, JSON.stringify(converted.json)).toBe(200);
+    expect(responseProblems({ $ref: "#/components/schemas/ConvertResponse" }, converted.json, "ConvertResponse")).toEqual([]);
+    const { project_id: projectId, site_id: siteId } = converted.json as unknown as { project_id: string; site_id: string };
+
+    const detail = await send("GET", `/offers/${offer.id}`, undefined);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferDetailRead" }, detail.json, "OfferDetailRead")).toEqual([]);
+    expect(detail.json).toMatchObject({ conversion_state: "converted", project_id: projectId });
+    const list = await send("GET", "/offers", undefined);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferListResponse" }, list.json, "OfferListResponse")).toEqual([]);
+    const contract = await send("GET", `/projects/${projectId}/contract`, undefined);
+    expect(responseProblems({ $ref: "#/components/schemas/EmployerContractDetail" }, contract.json, "EmployerContractDetail")).toEqual([]);
+    const fill = await send("POST", `/sites/s-1/earned-value/budget/fill-from-contract`, undefined);
+    expect(fill.status).toBe(200);
+    expect(responseProblems({ $ref: "#/components/schemas/FillFromContractOut" }, fill.json, "FillFromContractOut")).toEqual([]);
+    expect(siteId).toBeTruthy();
+  });
+
   it("GET /offers + /offers/settings yanıtları şemaya UYAR (liste özeti, kalem iç/dış alt yapıları)", async () => {
     const list = await send("GET", "/offers", undefined);
     expect(list.status).toBe(200);

@@ -136,6 +136,26 @@ export function useFillEvFromCatalog(siteId: string) {
   });
 }
 
+export type EvFillFromContractOut = DeepScale<components["schemas"]["FillFromContractOut"]>;
+
+/**
+ * "Sözleşmeden doldur" (TKL-B6.4): oran yuvası → katalog standardı; yalnız BOŞLARI doldurur (SO-53).
+ * Taslak revizyon yoksa sunucu 409 "Açık taslak revizyon yok" verir. Geçersizleme `fill-from-catalog`
+ * kardeşiyle AYNI (bütçe ağacı + türevler).
+ */
+export function useFillBudgetFromContract(siteId: string) {
+  const client = useQueryClient();
+  return useMutation<EvFillFromContractOut, Error, void>({
+    mutationFn: async () =>
+      unwrap(
+        await backendClient.POST("/sites/{site_id}/earned-value/budget/fill-from-contract", {
+          params: { path: { site_id: siteId } },
+        }),
+      ),
+    onSuccess: () => invalidateAll(client, siteId),
+  });
+}
+
 /** "Taslak aç": aktif revizyon Rev N+1 taslağına kopyalanır (B1-5, F0-5 draft). */
 export function useCreateEvDraft(siteId: string) {
   const client = useQueryClient();
