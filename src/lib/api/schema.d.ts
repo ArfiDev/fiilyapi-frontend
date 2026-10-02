@@ -23543,6 +23543,12 @@ export interface components {
          *     kalemler govdedeki SIRAYLA siralanir (`sort_order` = dizin).
          */
         TemplateContentReplace: {
+            /**
+             * Expected Updated At
+             * Format: date-time
+             * @description Şablonun okunan `updated_at` değeri (iyimser kilit; uyuşmazsa 409).
+             */
+            expected_updated_at: string;
             /** Groups */
             groups: components["schemas"]["TemplateGroupInput"][];
         };
@@ -23715,6 +23721,12 @@ export interface components {
         TemplateUpdate: {
             /** Description */
             description?: string | null;
+            /**
+             * Expected Updated At
+             * Format: date-time
+             * @description Şablonun okunan `updated_at` değeri (iyimser kilit; uyuşmazsa 409).
+             */
+            expected_updated_at: string;
             /** Is Default */
             is_default?: boolean | null;
             /** Name */

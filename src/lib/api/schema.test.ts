@@ -722,6 +722,21 @@ describe("TKL-B5/B6 tip üretimi (TKL-F4.1 kapısı)", () => {
     expectTypeOf<S["TemplateContentReplace"]>().toHaveProperty("groups");
   });
 
+  it("Template PUT/PATCH expected_updated_at ZORUNLU (TKL-B5.4 iyimser kilit)", () => {
+    expectTypeOf<S["TemplateUpdate"]["expected_updated_at"]>().toEqualTypeOf<string>();
+    expectTypeOf<S["TemplateContentReplace"]["expected_updated_at"]>().toEqualTypeOf<string>();
+    expectTypeOf<
+      Record<string, never> extends Pick<S["TemplateUpdate"], "expected_updated_at">
+        ? true
+        : false
+    >().toEqualTypeOf<false>();
+    expectTypeOf<
+      Record<string, never> extends Pick<S["TemplateContentReplace"], "expected_updated_at">
+        ? true
+        : false
+    >().toEqualTypeOf<false>();
+  });
+
   it("ExportView, ConvertRequest/Response, RateSource", () => {
     expectTypeOf<S["ExportView"]>().toEqualTypeOf<"employer" | "internal">();
     expectTypeOf<S["ConvertRequest"]>().toHaveProperty("open_site");
