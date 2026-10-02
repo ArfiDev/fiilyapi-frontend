@@ -128,6 +128,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Sözleşme & Mali",
     items: [
+      // TKL-F3.3 · T31: "Teklif Hazırlama" grubun İLK öğesi (Sözleşmeler'in ÜSTÜ; mockup
+      // `Teklif - Liste.dc.html` 61-63). Rozet YOK, izinle SÜZÜLMEZ (F1 ÜS-14): `contracts:none`
+      // kullanıcı öğeyi görür, ekran AccessDenied basar. Simge Sözleşmeler ile paylaşılır.
+      { label: "Teklif Hazırlama", href: routes.offers.list(), Icon: FileTextIcon },
       { label: "Sözleşmeler", href: routes.contracts.list(), Icon: FileTextIcon },
       // F-P8 T2: SY (`Satış Yönetimi.dc.html` 40) mockup'ın PROJE bloğunda
       // çizilir; kabuk canon'unda karşılığı YOKTU — ünite satışı/tahsilatı
