@@ -18,6 +18,7 @@ import {
   makeItem,
   makeManualItem,
   makeRevisionWithItems,
+  makeUnpricedItem,
 } from "./offer-item-fixtures";
 import { OfferItemsCard } from "./OfferItemsCard";
 
@@ -395,6 +396,135 @@ describe("kalem / grup yazmaları", () => {
   });
 });
 
+describe("TKL-F3.6.1 madde 5 — boş grup '×': önbelleğe DEĞİL taze veriye göre karar", () => {
+  const GROUP_HAS_ITEMS = "Grupta kalem var; önce kalemleri silin";
+  const withItemInB = () =>
+    makeRevisionWithItems([
+      makeGroup("g-a", "KABA İNŞAAT", 0, [makeItem({ id: "it-1" }), makeUnpricedItem({ id: "it-2", sort_order: 1 })]),
+      makeGroup("g-b", "İNCE İŞLER", 1, [makeItem({ id: "it-3", poz_no: "KAB-0003" })]),
+    ]);
+
+  it("🔴 önbellek 'boş' ama sunucuda artık kalem var → DELETE ATILMAZ (kaskad silme yok), mesaj + tablo tazelenir", async () => {
+    await renderCard();
+    revision = withItemInB(); // başkası gruba kalem ekledi; ekran henüz bilmiyor
+    await userEvent.click(within(screen.getByTestId("oit-group-g-b")).getByRole("button", { name: /grubunu sil/ }));
+    expect(await screen.findByText(GROUP_HAS_ITEMS)).toBeInTheDocument();
+    expect(calls("DELETE", GROUP_PATH)).toHaveLength(0);
+    await waitFor(() => expect(within(screen.getByTestId("oit-group-g-b")).getByText("1 kalem")).toBeInTheDocument());
+    expect(rowOf("it-3")).toBeInTheDocument();
+  });
+
+  it("🔴 DELETE 409 (backend metni) → metin AYNEN görünür ve revizyon tazelenir", async () => {
+    vi.mocked(backendClient.DELETE).mockResolvedValue(fail(409, GROUP_HAS_ITEMS));
+    await renderCard();
+    const before = calls("GET", REVISION_PATH).length;
+    await userEvent.click(within(screen.getByTestId("oit-group-g-b")).getByRole("button", { name: /grubunu sil/ }));
+    expect(await screen.findByText(GROUP_HAS_ITEMS)).toBeInTheDocument();
+    expect(calls("DELETE", GROUP_PATH)).toHaveLength(1);
+    await waitFor(() => expect(calls("GET", REVISION_PATH).length).toBeGreaterThanOrEqual(before + 2));
+  });
+
+  it("DELETE 404 (grup zaten silinmiş) → revizyon tazelenir", async () => {
+    vi.mocked(backendClient.DELETE).mockResolvedValue(fail(404, "Grup bulunamadı"));
+    await renderCard();
+    const before = calls("GET", REVISION_PATH).length;
+    await userEvent.click(within(screen.getByTestId("oit-group-g-b")).getByRole("button", { name: /grubunu sil/ }));
+    expect(await screen.findByText("Grup bulunamadı")).toBeInTheDocument();
+    await waitFor(() => expect(calls("GET", REVISION_PATH).length).toBeGreaterThanOrEqual(before + 2));
+  });
+
+  it("grup adı PATCH 409/404 da revizyonu tazeler", async () => {
+    vi.mocked(backendClient.PATCH).mockResolvedValueOnce(fail(404, "Grup bulunamadı"));
+    await renderCard();
+    const before = calls("GET", REVISION_PATH).length;
+    await userEvent.click(within(screen.getByTestId("oit-group-g-a")).getByRole("button", { name: "KABA İNŞAAT" }));
+    const input = screen.getByRole("textbox", { name: "Grup adı" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "YAPI");
+    await userEvent.tab();
+    await waitFor(() => expect(calls("GET", REVISION_PATH).length).toBeGreaterThan(before));
+  });
+});
+
+describe("TKL-F3.6.1 madde 7 — 404 tazeler · 403 → AccessDenied (SO-19)", () => {
+  const DENIED = "Bu alana yetkiniz yok";
+
+  it("🔴 kalem PATCH 404 → revizyon yeniden okunur", async () => {
+    vi.mocked(backendClient.PATCH).mockResolvedValueOnce(fail(404, "Kalem bulunamadı"));
+    await renderCard();
+    const before = calls("GET", REVISION_PATH).length;
+    await typeAndBlur(cell("it-1", "miktar"), "5");
+    expect(await within(rowOf("it-1")).findByText("Kalem bulunamadı")).toBeInTheDocument();
+    await waitFor(() => expect(calls("GET", REVISION_PATH).length).toBeGreaterThan(before));
+  });
+
+  it("🔴 kalem DELETE 404 → revizyon yeniden okunur", async () => {
+    vi.mocked(backendClient.DELETE).mockResolvedValue(fail(404, "Kalem bulunamadı"));
+    await renderCard();
+    const before = calls("GET", REVISION_PATH).length;
+    await userEvent.click(within(rowOf("it-2")).getByRole("button", { name: /kalemi sil/ }));
+    expect(await within(rowOf("it-2")).findByText("Kalem bulunamadı")).toBeInTheDocument();
+    await waitFor(() => expect(calls("GET", REVISION_PATH).length).toBeGreaterThan(before));
+  });
+
+  it("🔴 kalem PATCH 403 → AccessDenied", async () => {
+    vi.mocked(backendClient.PATCH).mockResolvedValueOnce(fail(403, "Yetkiniz yok"));
+    await renderCard();
+    await typeAndBlur(cell("it-1", "miktar"), "5");
+    expect(await screen.findByText(DENIED)).toBeInTheDocument();
+  });
+
+  it("🔴 kalem DELETE 403 → AccessDenied", async () => {
+    vi.mocked(backendClient.DELETE).mockResolvedValue(fail(403, "Yetkiniz yok"));
+    await renderCard();
+    await userEvent.click(within(rowOf("it-2")).getByRole("button", { name: /kalemi sil/ }));
+    expect(await screen.findByText(DENIED)).toBeInTheDocument();
+  });
+
+  it("🔴 grup yazımı (+ Grup POST) 403 → AccessDenied", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(fail(403, "Yetkiniz yok"));
+    await renderCard();
+    await userEvent.click(screen.getByRole("button", { name: "+ Grup" }));
+    expect(await screen.findByText(DENIED)).toBeInTheDocument();
+  });
+
+  it("🔴 seçici bulk 403 → AccessDenied", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(fail(403, "Yetkiniz yok"));
+    await renderCard();
+    await userEvent.click(screen.getByRole("button", { name: "+ Katalogdan Ekle" }));
+    const dialog = await screen.findByRole("dialog", { name: "Katalogdan Kalem Ekle" });
+    await within(dialog).findByText(SIVA.poz_no);
+    await userEvent.type(within(within(dialog).getByText(LAST_SZL.poz_no).closest("tr") as HTMLElement).getByLabelText(`${LAST_SZL.poz_no} miktar`), "3");
+    await userEvent.click(within(dialog).getByRole("button", { name: /Kalemi Ekle/ }));
+    expect(await screen.findByText(DENIED)).toBeInTheDocument();
+  });
+});
+
+describe("TKL-F3.6.1 madde 16 — '↺ kat.' teklif a-s sınırını aşıyorsa kapalı", () => {
+  it("🔴 katalog a-s 2.000.000 → düğme PASİF + açıklama; tıklayınca PATCH atılmaz; sığan değerde açık", async () => {
+    revision = makeRevisionWithItems([
+      makeGroup("g-a", "A", 0, [
+        makeItem({ id: "it-1", unit_mhr: "5.0000" }),
+        makeItem({ id: "it-2", unit_mhr: "5.0000", catalog_item_id: DEMIR.id, poz_no: "KAB-0002", sort_order: 1 }),
+      ]),
+    ]);
+    vi.mocked(backendClient.GET).mockImplementation((async (path: string) => {
+      if (path === REVISION_PATH) return ok(revision);
+      if (path === "/catalog/disciplines") return ok({ items: [D_KAB, D_DUV] });
+      if (path === "/catalog/items") return ok({ items: [BETON, { ...DEMIR, standard_unit_mhr: "2000000.0000" }, SIVA] });
+      throw new Error(`beklenmeyen GET ${path}`);
+    }) as never);
+    await renderCard();
+    const ok1 = await within(rowOf("it-1")).findByRole("button", { name: /kat\. 1,80/ });
+    expect(ok1).toBeEnabled();
+    const blocked = await within(rowOf("it-2")).findByRole("button", { name: /kat\./ });
+    expect(blocked).toBeDisabled();
+    expect(blocked).toHaveAttribute("title", "Katalog a-s değeri teklif sınırını aşıyor");
+    await userEvent.click(blocked);
+    expect(calls("PATCH", ITEM_PATH)).toHaveLength(0);
+  });
+});
+
 describe("katalog seçicisi (F3.6 teklif hedefi)", () => {
   async function openPicker() {
     await userEvent.click(screen.getByRole("button", { name: "+ Katalogdan Ekle" }));
@@ -425,7 +555,7 @@ describe("katalog seçicisi (F3.6 teklif hedefi)", () => {
     const dialog = screen.getByRole("dialog");
     await within(dialog).findByText(SIVA.poz_no);
     await userEvent.type(within(pickerRow(LAST_SZL.poz_no)).getByLabelText(`${LAST_SZL.poz_no} miktar`), "3");
-    await userEvent.click(within(dialog).getByRole("button", { name: /Pozu Ekle/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /Kalemi Ekle/ }));
     await waitFor(() => expect(calls("POST", BULK_PATH)).toHaveLength(1));
     expect(calls("POST", GROUPS_PATH)).toHaveLength(0);
     const item = (bodyOf(calls("POST", BULK_PATH)[0]) as { items: Record<string, unknown>[] }).items[0] as Record<string, unknown>;
@@ -441,7 +571,7 @@ describe("katalog seçicisi (F3.6 teklif hedefi)", () => {
     await within(dialog).findByText(SIVA.poz_no);
     await userEvent.type(within(dialog).getByLabelText("Grup Adı"), "ZEMİN");
     await userEvent.type(within(pickerRow(DEMIR.poz_no)).getByLabelText(`${DEMIR.poz_no} miktar`), "2");
-    await userEvent.click(within(dialog).getByRole("button", { name: /Pozu Ekle/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /Kalemi Ekle/ }));
     await waitFor(() => expect(calls("POST", BULK_PATH)).toHaveLength(1));
     expect(bodyOf(calls("POST", GROUPS_PATH)[0])).toEqual({ name: "ZEMİN", sort_order: 0 });
     expect((bodyOf(calls("POST", BULK_PATH)[0]) as { items: Record<string, unknown>[] }).items[0]).toMatchObject({
@@ -462,12 +592,38 @@ describe("katalog seçicisi (F3.6 teklif hedefi)", () => {
     await within(dialog).findByText(SIVA.poz_no);
     await userEvent.type(within(dialog).getByLabelText("Grup Adı"), "ZEMİN");
     await userEvent.type(within(pickerRow(DEMIR.poz_no)).getByLabelText(`${DEMIR.poz_no} miktar`), "2");
-    await userEvent.click(within(dialog).getByRole("button", { name: /Pozu Ekle/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /Kalemi Ekle/ }));
     expect(await within(dialog).findByText("Kalem eklenemedi")).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: /Pozu Ekle/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /Kalemi Ekle/ }));
     await waitFor(() => expect(calls("POST", BULK_PATH)).toHaveLength(2));
     expect(calls("POST", GROUPS_PATH)).toHaveLength(1);
+  });
+
+  it("🔴 bulk 409 (revizyon artık taslak değil): seçici KAPANIR, sunucu metni sayfada AYNEN, revizyon yeniden okunur (plan §3.1)", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(fail(409, "Revizyon taslak değil; içerik yalnız taslak revizyonda değiştirilebilir."));
+    await renderCard();
+    await openPicker();
+    const dialog = screen.getByRole("dialog");
+    await within(dialog).findByText(SIVA.poz_no);
+    await userEvent.type(within(pickerRow(LAST_SZL.poz_no)).getByLabelText(`${LAST_SZL.poz_no} miktar`), "2");
+    const before = calls("GET", REVISION_PATH).length;
+    await userEvent.click(within(dialog).getByRole("button", { name: /Kalemi Ekle/ }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByText(/Revizyon taslak değil; içerik yalnız taslak revizyonda/)).toBeInTheDocument();
+    await waitFor(() => expect(calls("GET", REVISION_PATH).length).toBeGreaterThan(before));
+  });
+
+  it("bulk 422 ise seçici AÇIK kalır (yalnız 409 kapatır) ve revizyon yine tazelenir", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(fail(422, "Kalem eklenemedi"));
+    await renderCard();
+    await openPicker();
+    const dialog = screen.getByRole("dialog");
+    await within(dialog).findByText(SIVA.poz_no);
+    await userEvent.type(within(pickerRow(LAST_SZL.poz_no)).getByLabelText(`${LAST_SZL.poz_no} miktar`), "2");
+    await userEvent.click(within(dialog).getByRole("button", { name: /Kalemi Ekle/ }));
+    expect(await within(dialog).findByText("Kalem eklenemedi")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("'Kataloğa yeni kalem ekle' İş Kalemi Kataloğu'nu YENİ çalışma sekmesinde açar (seçici kapanmaz)", async () => {

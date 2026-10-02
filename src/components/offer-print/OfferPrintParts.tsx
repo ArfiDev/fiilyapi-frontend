@@ -108,10 +108,25 @@ export function PrintSignatures({ signatures }: { signatures: PrintFrame["signat
   );
 }
 
-/** Tablo gövdesinde `colSpan`lı tek hücrelik satır (grup başlığı / devam işareti). */
-export function PrintSpanRow({ columns, children, className }: { columns: number; children: ReactNode; className: string }) {
+/**
+ * Tablo gövdesinde `colSpan`lı tek hücrelik satır (grup başlığı / devam işareti). `rowKey` → ölçüm anahtarı
+ * (`data-print-row`); `isContinuation` → bölünmüş grubun "(devam)" başlığı (`data-print-continued`, ölçülür).
+ */
+export function PrintSpanRow({
+  columns,
+  children,
+  className,
+  rowKey,
+  isContinuation = false,
+}: {
+  columns: number;
+  children: ReactNode;
+  className: string;
+  rowKey?: string;
+  isContinuation?: boolean;
+}) {
   return (
-    <tr className={className}>
+    <tr className={className} data-print-row={rowKey} data-print-continued={isContinuation ? "" : undefined}>
       <td colSpan={columns}>{children}</td>
     </tr>
   );

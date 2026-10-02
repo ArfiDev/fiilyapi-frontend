@@ -61,7 +61,7 @@ function renderPicker(over: Partial<CatalogPickerModalProps<OfferBody>> = {}) {
 const rowOf = (pozNo: string) => screen.getByText(pozNo).closest("tr") as HTMLElement;
 const quantityOf = (pozNo: string) => within(rowOf(pozNo)).getByLabelText(`${pozNo} miktar`);
 const priceOf = (pozNo: string) => within(rowOf(pozNo)).getByLabelText(`${pozNo} maliyet B.F.`);
-const submit = () => screen.getByRole("button", { name: /Pozu Ekle|^Poz Ekle$|Ekleniyor/ });
+const submit = () => screen.getByRole("button", { name: /Kalemi Ekle|^Kalem Ekle$|Ekleniyor/ });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -94,6 +94,33 @@ describe("teklif hedefi — kabuk (plan §3.1)", () => {
     await userEvent.click(hide);
     expect(screen.getByText("Teklifte var · KABA İNŞAAT")).toBeInTheDocument();
     expect(within(rowOf(BETON.poz_no)).getByRole("checkbox", { name: `${BETON.poz_no} seç` })).toBeDisabled();
+  });
+});
+
+describe("teklif hedefi — sözlük: 'poz' değil 'kalem' (TKL-F3.6.1 madde 14)", () => {
+  it("🔴 sayaç · altbilgi · düğme · grup sayısı · tümünü seç 'kalem' der; 'poz' sözcüğü (Poz No sütunu/arama hariç) YOK", async () => {
+    renderPicker();
+    await screen.findByText(DEMIR.poz_no);
+    expect(screen.getByTestId("wip-count")).toHaveTextContent("0 kalem seçili · 2 kalem listede");
+    expect(screen.getByText(/Seçili Kalem/)).toBeInTheDocument();
+    expect(submit()).toHaveTextContent("Kalem Ekle");
+    expect(screen.getByRole("checkbox", { name: "Görünen kalemlerin tümünü seç" })).toBeInTheDocument();
+    await userEvent.type(quantityOf(DEMIR.poz_no), "1");
+    expect(submit()).toHaveTextContent("1 Kalemi Ekle");
+    const dialog = screen.getByRole("dialog");
+    const visibleText = (dialog.textContent ?? "").replace(/Poz no veya|Poz No|Poz no,/g, "");
+    expect(visibleText).not.toMatch(/\bpoz/i);
+  });
+
+  it("🔴 hata bandı ve 'Süzgece uyan' metni 'kalem' der", async () => {
+    renderPicker();
+    await screen.findByText(DEMIR.poz_no);
+    await userEvent.type(quantityOf(DEMIR.poz_no), "1");
+    await userEvent.clear(priceOf(DEMIR.poz_no));
+    await userEvent.type(priceOf(DEMIR.poz_no), "abc");
+    expect(screen.getByTestId("wip-band")).toHaveTextContent("1 kalemde eksik ya da hatalı değer var");
+    await userEvent.type(screen.getByPlaceholderText("Poz no veya tanımda ara..."), "zzzzzz");
+    expect(await screen.findByText("Süzgece uyan kalem yok.")).toBeInTheDocument();
   });
 });
 

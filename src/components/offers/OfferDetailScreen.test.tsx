@@ -8,6 +8,7 @@ import type { OfferDetailRead, OfferRevisionRead } from "@/lib/api/hooks/useOffe
 
 import { OFFER_ID, makeDetail, makeRevision } from "./offer-detail-fixtures";
 import { OfferDetailScreen, parseRevParam } from "./OfferDetailScreen";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 const perm = vi.hoisted(() => ({ levels: { contracts: "full", projects: "admin" } as Record<string, string | undefined> }));
 const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
@@ -290,6 +291,67 @@ describe("Taslak Kaydet — iki PATCH akışı (§3.3)", () => {
   });
 });
 
+describe("TKL-F3.6.1 madde 2 — kirli formda kapanış eylemi / canEdit düşünce düzenleme", () => {
+  it("🔴 kirli formda (GG 12→13) 'Vazgeçildi…' KAPALI ve gerekçe 'Önce taslağı kaydedin'", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await loaded();
+    const gg = screen.getByRole("textbox", { name: /Genel gider/ });
+    await user.clear(gg);
+    await user.type(gg, "13");
+    expect(button("Vazgeçildi…")).toBeDisabled();
+    expect(button("Vazgeçildi…")).toHaveAttribute("title", "Önce taslağı kaydedin");
+  });
+
+  it("🔴 başka yoldan canEdit düşerse (409 → revizyon artık gönderilmiş) alan SUNUCU değerine (12) döner, kayıt temiz, Taslak Kaydet kapalı", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.PATCH).mockImplementation((async () => {
+      // Başkası revizyonu gönderdi: sunucu artık gönderilmiş; kayıt 409 döner, tazeleme yeni durumu getirir.
+      backend.revisions[2] = makeRevision({ rev_no: 2, status: "sent", is_editable: false, sent_at: "2026-09-29T09:00:00Z" });
+      backend.detail = makeDetail({ status: "sent" });
+      return fail(409, "Revizyon gönderilmiş durumda; bu işlem yapılamaz");
+    }) as never);
+    renderScreen();
+    await loaded();
+    const gg = screen.getByRole("textbox", { name: /Genel gider/ });
+    await user.clear(gg);
+    await user.type(gg, "13");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+    await user.click(button("Taslak Kaydet"));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /Genel gider/ })).toBeDisabled());
+    expect(screen.getByRole("textbox", { name: /Genel gider/ })).toHaveValue("12");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    expect(button("Taslak Kaydet")).toBeDisabled();
+
+    // Düzenleme geri açılırsa (sunucu yeniden taslak) ESKİ kaydedilmemiş değer geri GELMEZ.
+    backend.revisions[2] = makeRevision({ rev_no: 2 });
+    backend.detail = makeDetail();
+    await queryClient.invalidateQueries();
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /Genel gider/ })).toBeEnabled());
+    expect(screen.getByRole("textbox", { name: /Genel gider/ })).toHaveValue("12");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+});
+
+describe("TKL-F3.6.1 madde 12 — 'Son kayıt' damgası", () => {
+  it("🔴 kalem yazımı revizyonun updated_at'ini ilerletir ama teklif updated_at geride → İKİSİNİN en yenisi gösterilir", async () => {
+    backend.detail = makeDetail({ updated_at: "2026-09-28T10:30:00Z" });
+    backend.revisions[2] = makeRevision({ rev_no: 2, updated_at: "2026-09-29T14:05:00Z" });
+    renderScreen();
+    await loaded();
+    expect(screen.getByText("29.09.2026 17:05")).toBeInTheDocument();
+    expect(screen.queryByText("28.09.2026 13:30")).not.toBeInTheDocument();
+  });
+
+  it("teklif damgası daha yeniyse o gösterilir (künye PATCH'i)", async () => {
+    backend.detail = makeDetail({ updated_at: "2026-09-30T08:00:00Z" });
+    backend.revisions[2] = makeRevision({ rev_no: 2, updated_at: "2026-09-29T14:05:00Z" });
+    renderScreen();
+    await loaded();
+    expect(screen.getByText("30.09.2026 11:00")).toBeInTheDocument();
+  });
+});
+
 describe("TÜİK ⇄ Sabit (fiyat farkı) gövdesi", () => {
   it("Sabit → TÜİK: endeks türü seçici açılır; seçilmeden kayıt YOK; seçilince {tuik, ufe}", async () => {
     const user = userEvent.setup();
@@ -339,12 +401,16 @@ describe("eski revizyon (?rev=1) — salt okunur", () => {
     expect(screen.getByRole("link", { name: "Güncel revizyona dön →" })).toHaveAttribute("href", "/teklif-hazirlama/offer-14");
   });
 
-  it("ilk teklif (Rev.0 gönderilmemiş) bandı 'ilk teklif · tarih' der", async () => {
+  it("gönderilip kaybedilmiş eski revizyonun bandı da GÖNDERİM gününü söyler (gerçek veri: lost ⇒ sent_at dolu)", async () => {
     backend.detail = makeDetail({
-      revisions: makeDetail().revisions.map((revision) => (revision.rev_no === 0 ? { ...revision, sent_at: null } : revision)),
+      revisions: makeDetail().revisions.map((revision) =>
+        revision.rev_no === 0 ? { ...revision, status: "lost", lost_at: "2026-09-02T12:00:00Z" } : revision,
+      ),
     });
     renderScreen("0");
-    expect(await screen.findByText(/ilk teklif · 28\.08\.2026/)).toBeInTheDocument();
+    expect(await screen.findByText(/işverene 28\.08\.2026 tarihinde gönderildi/)).toBeInTheDocument();
+    expect(screen.queryByText(/kaybedildi ·/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ilk teklif/)).not.toBeInTheDocument();
   });
 
   it("revizyon seçici: seçim URL'ye yazılır (?rev=); güncele dönüş rev'i KALDIRIR", async () => {

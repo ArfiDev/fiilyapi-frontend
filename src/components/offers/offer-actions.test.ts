@@ -15,7 +15,7 @@ const LATEST_TABLE: ReadonlyArray<{
   expected: readonly [boolean, boolean, boolean, boolean, boolean, boolean, boolean];
 }> = [
   { label: "draft · temiz", status: "draft", isDirty: false, expected: [false, false, true, false, false, true, true] },
-  { label: "draft · kirli", status: "draft", isDirty: true, expected: [true, false, false, false, false, true, true] },
+  { label: "draft · kirli", status: "draft", isDirty: true, expected: [true, false, false, false, false, false, true] },
   { label: "sent", status: "sent", isDirty: false, expected: [false, true, false, true, true, true, false] },
   { label: "won", status: "won", isDirty: false, expected: [false, false, false, false, false, false, false] },
   { label: "lost", status: "lost", isDirty: false, expected: [false, true, false, false, false, false, false] },
@@ -61,6 +61,37 @@ describe("eylem kapısı — yazma yetkisi yok", () => {
   }
 });
 
+describe("eylem kapısı — kalem yazım kuyruğu (TKL-F3.6.1 madde 4)", () => {
+  const busy = (status: OfferStatus, isDirty = false) =>
+    offerActionGate({ status, isLatest: true, isDirty, canWrite: true, isItemsBusy: true });
+
+  it("🔴 taslakta kuyruk doluyken Gönder/Vazgeçildi KAPALI 'Kalem kaydediliyor'; Taslak Kaydet ve düzenleme etkilenmez", () => {
+    const gate = busy("draft", true);
+    for (const action of ["send", "withdraw"] as const) {
+      const verdict = gate[action];
+      expect(verdict.enabled).toBe(false);
+      if (!verdict.enabled && action === "send") expect(verdict.reason).toBe("Önce taslağı kaydedin"); // mevcut gerekçe korunur
+    }
+    const clean = busy("draft");
+    expect(clean.send).toEqual({ enabled: false, reason: "Kalem kaydediliyor" });
+    expect(clean.withdraw).toEqual({ enabled: false, reason: "Kalem kaydediliyor" });
+    expect(gate.save.enabled).toBe(true);
+    expect(gate.edit.enabled).toBe(true);
+  });
+
+  it("gönderilmiş revizyonda da (kalem sırası sürüyorsa) kazan/kaybet/yeni revizyon kapanır", () => {
+    const gate = busy("sent");
+    for (const action of ["newRevision", "win", "lose", "withdraw"] as const) {
+      expect(gate[action]).toEqual({ enabled: false, reason: "Kalem kaydediliyor" });
+    }
+  });
+
+  it("kuyruk boşken (isItemsBusy yok/false) kapı DEĞİŞMEZ", () => {
+    expect(offerActionGate({ status: "draft", isLatest: true, isDirty: false, canWrite: true }).send.enabled).toBe(true);
+    expect(offerActionGate({ status: "draft", isLatest: true, isDirty: false, canWrite: true, isItemsBusy: false }).send.enabled).toBe(true);
+  });
+});
+
 describe("eylem kapısı — gerekçeler (devre-dışı düğme title + görünür metin)", () => {
   function reasonOf(status: OfferStatus, action: OfferAction, isDirty = false): string {
     const verdict = offerActionGate({ status, isLatest: true, isDirty, canWrite: true })[action];
@@ -75,6 +106,10 @@ describe("eylem kapısı — gerekçeler (devre-dışı düğme title + görün�
 
   it("taslak kirliyken Gönder kapalı: önce taslağı kaydedin", () => {
     expect(reasonOf("draft", "send", true)).toBe("Önce taslağı kaydedin");
+  });
+
+  it("🔴 TKL-F3.6.1/2: taslak kirliyken Vazgeçildi de kapalı (kaydedilmemiş değer kapanışta kalmasın): önce taslağı kaydedin", () => {
+    expect(reasonOf("draft", "withdraw", true)).toBe("Önce taslağı kaydedin");
   });
 
   it("taslakta yeni revizyon kapalı: gerekçe taslağın düzenlenebildiğini söyler", () => {

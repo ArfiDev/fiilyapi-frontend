@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui";
 
+import type { PickerWords } from "./picker-rules";
+
 export interface WorkItemPickerFooterProps {
   /** Altbilgi kırmızı bandı (PS:203-209): yalnız hata varken; satırlar ayrı satır basılır. */
   bandLines: readonly string[];
@@ -10,6 +12,8 @@ export interface WorkItemPickerFooterProps {
   totalText: string;
   /** "Eklenecek Tutar" (sözleşme) · "Eklenecek maliyet" (teklif). */
   totalLabel: string;
+  /** Nesne adı (poz / kalem): "Seçili Poz" · "3 Pozu Ekle". */
+  words: PickerWords;
   /** "Katalogda yok mu? …" bağlantı etiketi (`onManualAdd` verilince). */
   manualAddLabel: string;
   isSubmitting: boolean;
@@ -26,6 +30,7 @@ export function WorkItemPickerFooter({
   selectedCount,
   totalText,
   totalLabel,
+  words,
   manualAddLabel,
   isSubmitting,
   canSubmit,
@@ -33,7 +38,11 @@ export function WorkItemPickerFooter({
   onCancel,
   onManualAdd,
 }: WorkItemPickerFooterProps) {
-  const submitLabel = isSubmitting ? "Ekleniyor…" : selectedCount > 0 ? `${selectedCount} Pozu Ekle` : "Poz Ekle";
+  const submitLabel = isSubmitting
+    ? "Ekleniyor…"
+    : selectedCount > 0
+      ? `${selectedCount} ${words.accusativeCap} Ekle`
+      : `${words.nounCap} Ekle`;
   return (
     <div className="wip-footer">
       {bandLines.length > 0 && (
@@ -50,7 +59,8 @@ export function WorkItemPickerFooter({
           </Button>
         )}
         <span className="wip-footer__stat wip-footer__stat--first">
-          Seçili Poz <strong data-testid="wip-selected">{selectedCount}</strong>
+          {`Seçili ${words.nounCap} `}
+          <strong data-testid="wip-selected">{selectedCount}</strong>
         </span>
         <span className="wip-footer__stat">
           {totalLabel} <strong data-testid="wip-total">{totalText}</strong>

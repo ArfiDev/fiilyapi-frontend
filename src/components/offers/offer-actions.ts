@@ -20,6 +20,8 @@ export interface OfferActionInput {
   isDirty: boolean;
   /** `contracts:full` ∧ disiplin kısıtsız. */
   canWrite: boolean;
+  /** Kalem/grup yazım kuyruğu dolu mu (uçuştaki ya da sıradaki blur PATCH'i)? Açık GEÇİŞ eylemleri kapanır. */
+  isItemsBusy?: boolean;
 }
 
 const ENABLED: OfferActionVerdict = { enabled: true };
@@ -42,13 +44,14 @@ export const OFFER_ACTION_REASONS = {
   lostClosed: "Revizyon zaten kapandı",
   withdrawnClosed: "Vazgeçilen teklife yeni revizyon açılamaz",
   closed: "Teklif kapandı; bu işlem yapılamaz",
+  itemsSaving: "Kalem kaydediliyor",
 } as const;
 
 const R = OFFER_ACTION_REASONS;
 
 type StatusRow = Record<OfferAction, OfferActionVerdict>;
 
-/** `draft` — kirlilik `save`/`send`i belirler. */
+/** `draft` — kirlilik `save`/`send`/`withdraw`ı belirler. */
 function draftRow(isDirty: boolean): StatusRow {
   return {
     save: isDirty ? ENABLED : no(R.nothingToSave),
@@ -56,7 +59,8 @@ function draftRow(isDirty: boolean): StatusRow {
     send: isDirty ? no(R.saveFirst) : ENABLED,
     win: no(R.sendFirst),
     lose: no(R.sendFirst),
-    withdraw: ENABLED,
+    // Kirliyken kapanış eylemi KAPALI: kaydedilmemiş değer kapanan teklifte görünür kalmasın (TKL-F3.6.1).
+    withdraw: isDirty ? no(R.saveFirst) : ENABLED,
     edit: ENABLED,
   };
 }
@@ -110,6 +114,26 @@ function allDisabled(reason: string): StatusRow {
  * Yazma yetkisi yoksa (`contracts:full` ∧ kısıtsız değil) hepsi kapalı.
  */
 export function offerActionGate(input: OfferActionInput): Record<OfferAction, OfferActionVerdict> {
+  const gate = statusGate(input);
+  return input.isItemsBusy === true ? lockTransitions(gate) : gate;
+}
+
+const TRANSITIONS: readonly OfferAction[] = ["newRevision", "send", "win", "lose", "withdraw"];
+
+/**
+ * Kalem yazımı SIRADAYKEN (blur PATCH'i uçuşta) açık geçiş eylemleri kapanır: yoksa "Gönderildi İşaretle"
+ * kalemin kendi yazımıyla yarışır ve fiyatsız kararı bayat veriyle verilir (TKL-F3.6.1). Zaten kapalı olanın
+ * gerekçesi korunur.
+ */
+function lockTransitions(gate: Record<OfferAction, OfferActionVerdict>): Record<OfferAction, OfferActionVerdict> {
+  const locked = { ...gate };
+  for (const action of TRANSITIONS) {
+    if (locked[action].enabled) locked[action] = no(R.itemsSaving);
+  }
+  return locked;
+}
+
+function statusGate(input: OfferActionInput): Record<OfferAction, OfferActionVerdict> {
   if (!input.canWrite) return allDisabled(R.readOnlyUser);
   if (!input.isLatest) return allDisabled(R.oldRevision);
   switch (input.status) {

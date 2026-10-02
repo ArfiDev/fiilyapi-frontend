@@ -10,7 +10,7 @@
 import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
 import type { EmployerContractItemsBulkCreateRequest } from "@/lib/api/hooks/useContractMutations";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
-import { isZeroDecimalString, multiplyDecimalStrings, sumDecimalStrings } from "@/lib/decimal";
+import { compareDecimalStrings, isZeroDecimalString, multiplyDecimalStrings, sumDecimalStrings } from "@/lib/decimal";
 import {
   decimalDigitCounts,
   parseQuantityInput,
@@ -20,7 +20,7 @@ import {
 } from "@/lib/tr-decimal";
 import { filterWorkItems, formatPrice, sortByPozNo } from "@/components/work-item-catalog/work-item-model";
 
-import { CONTRACT_RULES, type PickerPriceMessages, type PickerRules } from "./picker-rules";
+import { CONTRACT_RULES, type DecimalBound, type PickerPriceMessages, type PickerRules } from "./picker-rules";
 
 /**
  * Tek istekte en çok kalem. Değer openapi `EmployerContractItemsBulkCreate.items.maxItems`tir;
@@ -30,23 +30,15 @@ import { CONTRACT_RULES, type PickerPriceMessages, type PickerRules } from "./pi
 export const MAX_BULK_ITEMS = 200;
 
 /**
- * ⚠️ Backend `quantity`/`unit_price` için hane sınırı TAŞIMAZ (openapi'de yok; kolonlar
- * `Numeric(14,3)` / `Numeric(18,2)`, fazla kesir PG'de SESSİZCE yuvarlanır) → bu istemci
- * korkuluğu TEK savunmadır (TKL-F2-PLAN §0, risk 5).
+ * Hane sınırları HEDEFE göredir (`picker-rules.ts` `quantityBound`/`priceBound`): sözleşmede backend sınır
+ * taşımaz (istemci korkuluğu TEK savunma, TKL-F2-PLAN §0 risk 5); teklifte backend `le=` sınırı kalem
+ * tablosuyla TEK KAYNAKtan gelir (TKL-F3.6.1).
  */
-const QUANTITY_FRACTION_DIGITS = 3;
-const QUANTITY_INTEGER_DIGITS = 11;
-const PRICE_FRACTION_DIGITS = 2;
-const PRICE_INTEGER_DIGITS = 16;
 
 const QUANTITY_REQUIRED = "Miktar girin";
 const QUANTITY_NOT_POSITIVE = "Miktar 0'dan büyük olmalı";
 /** `contract-item-form/validate.ts` ONAYLI metinleri (birebir; `picker-model.test.ts` drift bekçisi). Fiyat metinleri `picker-rules`te (hedefe göre). */
 const QUANTITY_NOT_A_NUMBER = "Miktar sayı olmalıdır.";
-const QUANTITY_FRACTION_LIMIT = "En fazla 3 ondalık";
-const PRICE_FRACTION_LIMIT = "En fazla 2 ondalık";
-const QUANTITY_DIGIT_LIMIT = "En fazla 11 basamak";
-const PRICE_DIGIT_LIMIT = "En fazla 16 basamak";
 
 export type BlockReason = { kind: "linked"; groupName: string } | { kind: "code" };
 
@@ -243,15 +235,12 @@ export function setUnitPrice(inputs: PickerInputs, row: PickerRow, text: string)
   return withInput(inputs, row.item.id, { ...current, unitPrice: text });
 }
 
-function digitLimitError(
-  value: string,
-  limits: { fraction: number; integer: number },
-  messages: { fraction: string; integer: string },
-): string | null {
+/** Önce kesir, sonra aşım (kalem tablosuyla aynı sıra). */
+function boundError(value: string, bound: DecimalBound): string | null {
   const digits = decimalDigitCounts(value);
-  if (digits.fraction > limits.fraction) return messages.fraction;
-  if (digits.integer > limits.integer) return messages.integer;
-  return null;
+  if (digits.fraction > bound.fraction) return bound.fractionMessage;
+  if (bound.kind === "digits") return digits.integer > bound.integer ? bound.integerMessage : null;
+  return compareDecimalStrings(value, bound.max) > 0 ? bound.maxMessage : null;
 }
 
 interface FieldMessages {
@@ -271,7 +260,7 @@ function syntaxError(raw: string, parse: (text: string) => TrDecimalParse, messa
   return isNegative ? messages.negative : null;
 }
 
-function quantityError(raw: string): string | null {
+function quantityError(raw: string, rules: PickerRules): string | null {
   const syntax = syntaxError(raw, parseQuantityInput, {
     required: QUANTITY_REQUIRED,
     notANumber: QUANTITY_NOT_A_NUMBER,
@@ -280,11 +269,7 @@ function quantityError(raw: string): string | null {
   if (syntax !== null) return syntax;
   const parsed = parseQuantityInput(raw);
   if (parsed.kind !== "ok") return QUANTITY_NOT_A_NUMBER;
-  const limit = digitLimitError(
-    parsed.value,
-    { fraction: QUANTITY_FRACTION_DIGITS, integer: QUANTITY_INTEGER_DIGITS },
-    { fraction: QUANTITY_FRACTION_LIMIT, integer: QUANTITY_DIGIT_LIMIT },
-  );
+  const limit = boundError(parsed.value, rules.quantityBound);
   if (limit !== null) return limit;
   return isZeroDecimalString(parsed.value) ? QUANTITY_NOT_POSITIVE : null;
 }
@@ -297,11 +282,7 @@ function priceError(raw: string, rules: PickerRules): string | null {
   if (syntax !== null) return syntax;
   const parsed = parseRefPriceInput(raw);
   if (parsed.kind !== "ok") return messages.notANumber;
-  return digitLimitError(
-    parsed.value,
-    { fraction: PRICE_FRACTION_DIGITS, integer: PRICE_INTEGER_DIGITS },
-    { fraction: PRICE_FRACTION_LIMIT, integer: PRICE_DIGIT_LIMIT },
-  );
+  return boundError(parsed.value, rules.priceBound);
 }
 
 /** Satırın TEK ilk hatası (miktar → birim fiyat); geçerliyse null. B.F. 0 serbesttir (backend ≥ 0). */
@@ -309,7 +290,7 @@ export function validateRow(
   input: Pick<RowInput, "quantity" | "unitPrice">,
   rules: PickerRules = CONTRACT_RULES,
 ): string | null {
-  return quantityError(input.quantity) ?? priceError(input.unitPrice, rules);
+  return quantityError(input.quantity, rules) ?? priceError(input.unitPrice, rules);
 }
 
 /** Seçili satırları doğrular ve gövdeye girecek kayıpsız değerleri çözer. Sıra: verilen satır sırası. */

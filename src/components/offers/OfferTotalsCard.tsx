@@ -15,11 +15,6 @@ export interface OfferTotalsCardProps {
   /** Sunucu toplamları (`calc.py`); istemci HESAPLAMAZ, yalnız kayıpsız gösterir (ÜS-F3-1). */
   totals: OfferTotals;
   vatPct: string;
-  /**
-   * `internal` (varsayılan, Detay): maliyet/GG/kâr/adam-saat dahil. `customer`: YALNIZ işverenin gördüğü
-   * KDV hariç / KDV / genel toplam — iç toplamlar bu görünümde ASLA basılmaz.
-   */
-  view?: "internal" | "customer";
 }
 
 /** `null`/boş bölen → yüzde basılmaz. */
@@ -36,7 +31,8 @@ interface Row {
   tone?: "net" | "gross";
 }
 
-export function OfferTotalsCard({ totals, vatPct, view = "internal" }: OfferTotalsCardProps) {
+/** İÇ görünüm (Detay): maliyet/GG/kâr/adam-saat dahil. İşveren görünümü yazdırmada AYRI modelle kurulur (TKL-F3.6.1: ölü `customer` dalı silindi). */
+export function OfferTotalsCard({ totals, vatPct }: OfferTotalsCardProps) {
   const { customer, internal } = totals;
   const costRows: Row[] = [
     { label: "Maliyet", pct: "", value: formatCurrencyPrecise(internal.cost) },
@@ -52,7 +48,7 @@ export function OfferTotalsCard({ totals, vatPct, view = "internal" }: OfferTota
     { label: "KDV", pct: `%${formatDecimal(vatPct, PCT_DISPLAY_DIGITS)}`, value: formatCurrencyPrecise(customer.vat) },
     { label: "Genel toplam", pct: "", value: formatCurrencyPrecise(customer.gross), tone: "gross" },
   ];
-  const rows = view === "internal" ? [...costRows, ...customerRows] : customerRows;
+  const rows = [...costRows, ...customerRows];
 
   return (
     <section className="offer-detail__card offer-totals" aria-labelledby="offer-totals-title">
@@ -67,13 +63,11 @@ export function OfferTotalsCard({ totals, vatPct, view = "internal" }: OfferTota
             <dd className="offer-totals__value">{row.value}</dd>
           </div>
         ))}
-        {view === "internal" && (
-          <div className="offer-totals__row">
-            <dt>Toplam adam-saat</dt>
-            <dd className="offer-totals__pct" />
-            <dd className="offer-totals__value">{formatDecimal(internal.man_hours, 1)} a-s</dd>
-          </div>
-        )}
+        <div className="offer-totals__row">
+          <dt>Toplam adam-saat</dt>
+          <dd className="offer-totals__pct" />
+          <dd className="offer-totals__value">{formatDecimal(internal.man_hours, 1)} a-s</dd>
+        </div>
       </dl>
       {totals.unpriced_count > 0 && (
         <p className="offer-totals__warn">

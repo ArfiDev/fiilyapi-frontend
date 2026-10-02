@@ -6,7 +6,9 @@ import {
   PORTRAIT_LAYOUT,
   buildPrintFrame,
   formatMoney,
+  paginateByHeights,
   paginateOfferRows,
+  type PageBudgets,
   type PageLayout,
 } from "./print-model";
 
@@ -156,5 +158,76 @@ describe("buildPrintFrame — başlık (Ayarlar › Şirket) + künye + koşulla
     expect(buildPrintFrame({ offer, revision, company: makeCompany(), kind: "ic" }).footerLabel).toBe(
       "TKL-2026-0014 · Rev.2 · İç döküm",
     );
+  });
+});
+
+/* ─── TKL-F3.6.1 · ölçüme dayalı sayfalama (madde 1) ─────────────────────── */
+interface HRow {
+  groupId: string;
+  id: string;
+}
+const hrows = (groupId: string, heights: number[]) =>
+  heights.map((height, index) => ({ row: { groupId, id: `${groupId}${index}` } as HRow, height }));
+const idsOf = (pages: ReturnType<typeof paginateByHeights<HRow>>) =>
+  pages.map((page) => page.parts.map((part) => part.rows.map((row) => row.id)));
+const BUDGETS: PageBudgets = { first: 100, rest: 200, closing: 80, continuedHead: 10 };
+
+describe("paginateByHeights — ölçülen yükseklikle sayfalama", () => {
+  it("satır yok → tek boş sayfa", () => {
+    expect(idsOf(paginateByHeights<HRow>([], BUDGETS))).toEqual([[]]);
+  });
+
+  it("uzun (yüksek) satırlar sayfa bütçesini aşınca bir sonraki sayfaya geçer; statik satır sayısı değil YÜKSEKLİK belirler", () => {
+    // 4 satır × 25 px = 100 > ilk sayfa 60; grup sonraki sayfaya (200) bütün sığar (100 + kapanış 80 ≤ 200).
+    const pages = paginateByHeights(hrows("a", [25, 25, 25, 25]), { ...BUDGETS, first: 60 });
+    expect(idsOf(pages)).toEqual([[], [["a0", "a1", "a2", "a3"]]]);
+  });
+
+  it("grup BÖLÜNMEZ: sığmayan grup tümüyle sonraki sayfaya; sığan yenisi yanına", () => {
+    const pages = paginateByHeights([...hrows("a", [30, 30]), ...hrows("b", [40, 40, 40])], BUDGETS);
+    expect(idsOf(pages)).toEqual([[["a0", "a1"]], [["b0", "b1", "b2"]]]);
+  });
+
+  it("tek başına sayfadan büyük grup satır satır bölünür; devam parçası işaretlenir ve devam başlığı yer tutar", () => {
+    // rest=200: parça 1 (ilk sayfa boş kalır: ilk satır 90 ≤ 100 → ilk sayfaya girer)
+    const pages = paginateByHeights(hrows("big", [90, 90, 90, 90, 90]), { ...BUDGETS, closing: 10 });
+    const parts = pages.flatMap((page) => page.parts);
+    expect(parts.flatMap((part) => part.rows.map((row) => row.id))).toEqual(["big0", "big1", "big2", "big3", "big4"]);
+    expect(parts.map((part) => part.continued)).toEqual([false, true, true]);
+    // devam parçası: 10 (başlık) + 90 + 90 = 190 ≤ 200; sonraki sayfaya 3. satır geçmez.
+    expect(idsOf(pages)).toEqual([[["big0"]], [["big1", "big2"]], [["big3", "big4"]]]);
+  });
+
+  it("tek satır sayfadan büyükse KENDİ sayfasına konur (kırpılmaz, döngüye girmez)", () => {
+    const pages = paginateByHeights([...hrows("a", [20]), ...hrows("b", [500]), ...hrows("c", [20])], BUDGETS);
+    expect(idsOf(pages).flat(2)).toEqual(["a0", "b0", "c0"]);
+    const holder = pages.find((page) => page.parts.some((part) => part.rows.some((row) => row.id === "b0")))!;
+    expect(holder.parts.flatMap((part) => part.rows)).toHaveLength(1);
+  });
+
+  it("kapanış bloğu son sayfada sığmazsa yeni (boş) sayfaya düşer; sığıyorsa ek sayfa YOK", () => {
+    // son sayfa 150 kullanır; 150 + 80 > 200 → boş son sayfa.
+    expect(idsOf(paginateByHeights(hrows("a", [150]), { ...BUDGETS, first: 200 }))).toEqual([[["a0"]], []]);
+    // 100 + 80 ≤ 200 → ek sayfa yok.
+    expect(idsOf(paginateByHeights(hrows("a", [100]), { ...BUDGETS, first: 200 }))).toEqual([[["a0"]]]);
+  });
+
+  it("ilk sayfa bütçesi (künye) ilk satıra yetmiyorsa ilk sayfa boş kalır, satırlar sonraki sayfada", () => {
+    expect(idsOf(paginateByHeights(hrows("a", [150]), { ...BUDGETS, first: 50, closing: 10 }))).toEqual([[], [["a0"]]]);
+  });
+});
+
+describe("paginateByHeights — bölünen grubun ilk parçası", () => {
+  it("önceki gruplarla dolu sayfada başlayan büyük grubun İLK parçası 'devam' DEĞİLDİR", () => {
+    const pages = paginateByHeights([...hrows("a", [90]), ...hrows("big", [150, 150, 150])], { ...BUDGETS, closing: 10 });
+    const bigParts = pages.flatMap((page) => page.parts).filter((part) => part.rows[0]!.groupId === "big");
+    expect(bigParts.map((part) => part.continued)).toEqual([false, true, true]);
+  });
+});
+
+describe("paginateByHeights — '(devam)' başlığı yer tutar", () => {
+  it("devam parçasında başlık satırı yüksekliği bütçeden düşer (10 + 100 + 100 > 200 → iki satır SIĞMAZ)", () => {
+    const pages = paginateByHeights(hrows("big", [100, 100, 100, 100]), { ...BUDGETS, closing: 10 });
+    expect(idsOf(pages)).toEqual([[["big0"]], [["big1"]], [["big2"]], [["big3"]]]);
   });
 });

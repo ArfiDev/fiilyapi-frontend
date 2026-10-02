@@ -2,6 +2,7 @@ import { PrintSheet } from "@/components/print-sheet/PrintSheet";
 
 import { PrintHeader, PrintKunye, PrintRunningHead, PrintSignatures, PrintSpanRow, PrintTerms, PrintTotals } from "./OfferPrintParts";
 import type { InternalPrintModel, InternalPrintRow } from "./print-model-internal";
+import { useMeasuredPages } from "./use-measured-pages";
 import "./offer-print.css";
 
 /**
@@ -14,11 +15,15 @@ const SUBTOTAL_LABEL_SPAN = 5;
 
 function RowView({ row }: { row: InternalPrintRow }) {
   if (row.kind === "group") {
-    return <PrintSpanRow columns={COLUMNS} className="offer-print__row offer-print__row--group">{row.name}</PrintSpanRow>;
+    return (
+      <PrintSpanRow columns={COLUMNS} className="offer-print__row offer-print__row--group" rowKey={row.key}>
+        {row.name}
+      </PrintSpanRow>
+    );
   }
   if (row.kind === "subtotal") {
     return (
-      <tr className="offer-print__row offer-print__row--subtotal">
+      <tr className="offer-print__row offer-print__row--subtotal" data-print-row={row.key}>
         <td colSpan={SUBTOTAL_LABEL_SPAN}>
           {row.name} · {row.manHours} a-s
         </td>
@@ -32,7 +37,7 @@ function RowView({ row }: { row: InternalPrintRow }) {
     );
   }
   return (
-    <tr className={row.isUnpriced ? "offer-print__row offer-print__row--unpriced" : "offer-print__row"}>
+    <tr className={row.isUnpriced ? "offer-print__row offer-print__row--unpriced" : "offer-print__row"} data-print-row={row.key}>
       <td>{row.poz}</td>
       <td>
         <span className="offer-print__description">{row.description}</span>
@@ -95,7 +100,7 @@ function PartRows({ part }: { part: InternalPrintModel["pages"][number]["parts"]
   return (
     <>
       {part.continued && first !== undefined && (
-        <PrintSpanRow columns={COLUMNS} className="offer-print__row offer-print__row--group">
+        <PrintSpanRow columns={COLUMNS} className="offer-print__row offer-print__row--group" isContinuation>
           {first.groupName} (devam)
         </PrintSpanRow>
       )}
@@ -107,9 +112,10 @@ function PartRows({ part }: { part: InternalPrintModel["pages"][number]["parts"]
 }
 
 export function OfferInternalPrint({ model }: { model: InternalPrintModel }) {
-  const { frame, pages } = model;
+  const { frame } = model;
+  const { pages, rootRef } = useMeasuredPages(model.pages);
   return (
-    <>
+    <div ref={rootRef} className="offer-print__pages">
       {pages.map((page, index) => {
         const isFirst = index === 0;
         const isLast = index === pages.length - 1;
@@ -131,7 +137,7 @@ export function OfferInternalPrint({ model }: { model: InternalPrintModel }) {
             )}
             <ItemsTable page={page} />
             {isLast && (
-              <div className="offer-print__closing offer-print__closing--wide">
+              <div className="offer-print__closing offer-print__closing--wide" data-print-closing="">
                 <PrintTerms rows={frame.terms} />
                 <PrintTotals rows={model.totals} />
                 <PrintSignatures signatures={frame.signatures} />
@@ -140,6 +146,6 @@ export function OfferInternalPrint({ model }: { model: InternalPrintModel }) {
           </PrintSheet>
         );
       })}
-    </>
+    </div>
   );
 }

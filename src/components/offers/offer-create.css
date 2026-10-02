@@ -281,7 +281,7 @@
   margin: 0;
   font-weight: var(--weight-medium);
   text-align: right;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   color: var(--color-text);
 }
 .offer-summary__row--empty dd {

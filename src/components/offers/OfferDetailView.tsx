@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { EmployerFormModal } from "@/components/project-form/EmployerFormModal";
 import { AccessDenied } from "@/components/settings/AccessDenied";
@@ -8,10 +9,11 @@ import { confirmDiscardIfDirty } from "@/components/settings/Modal";
 import { LockIcon } from "@/components/ui/icons";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useEmployers, type EmployerListItem } from "@/lib/api/hooks/useEmployers";
+import { offerRevisionKey } from "@/lib/api/hooks/offer-query-keys";
 import { useUpdateOffer, useUpdateOfferRevision } from "@/lib/api/hooks/useOfferMutations";
 import type { OfferDetailRead, OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
-import { formatDateTimeDots } from "@/lib/format";
+import { formatDateTimeDots, parseUtcOrOffsetTimestamp } from "@/lib/format";
 import { routes } from "@/lib/routes";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -61,6 +63,10 @@ export interface OfferItemsSlotContext {
   revision: OfferRevisionRead;
   /** Kalemler yazılabilir mi? (son revizyon ∧ taslak ∧ yazma yetkisi) */
   canEdit: boolean;
+  /** Kalem/grup yazım kuyruğu dolu → geçiş eylemleri kapanır ("Kalem kaydediliyor"). Yuva her değişimde çağırır. */
+  onWritesBusyChange: (isBusy: boolean) => void;
+  /** Yuvadaki kalem/grup/seçici yazımı 403 aldı (SO-19) → ekran AccessDenied. */
+  onForbidden: () => void;
 }
 
 interface OfferDetailViewProps {
@@ -96,10 +102,33 @@ export function OfferDetailView(props: OfferDetailViewProps) {
   const [isEmployerModalOpen, setIsEmployerModalOpen] = useState(false);
   const [justCreated, setJustCreated] = useState<EmployerListItem | null>(null);
   const [isSaveDenied, setIsSaveDenied] = useState(false);
+  const [isItemsDenied, setIsItemsDenied] = useState(false);
+  const [isItemsWriting, setIsItemsWriting] = useState(false);
+  const [isPreparingSend, setIsPreparingSend] = useState(false);
+  const queryClient = useQueryClient();
+
+  const isLatest = revision.is_latest;
+  // Düzenleme yetkisi KİRLİLİKTEN bağımsız tablo satırıdır (`edit` her taslak satırında açık): kirlilik önce hesaplanamaz.
+  const canEdit = offerActionGate({ status: detail.status, isLatest, isDirty: false, canWrite }).edit.enabled && revision.is_editable;
+
+  // TKL-F3.6.1: düzenleme kapanınca (geçiş, 409 tazelemesi) yerel düzenlemeler SIFIRLANIR; kapalı alan SUNUCU
+  // değerini gösterir, kayıt temiz sayılır (kaydedilemeyen değer ekranda/kayıt defterinde kalmaz).
+  const [wasEditable, setWasEditable] = useState(canEdit);
+  if (wasEditable !== canEdit) {
+    setWasEditable(canEdit);
+    if (!canEdit) {
+      setEdits({});
+      setAttempted(false);
+      setSaveError(null);
+    }
+  }
 
   const server = useMemo(() => detailFormValuesFromServer(detail, revision), [detail, revision]);
-  const values = useMemo(() => ({ ...server, ...edits }), [server, edits]);
-  const changed = useMemo(() => changedFormFields(values, detail, revision), [values, detail, revision]);
+  const values = useMemo(() => (canEdit ? { ...server, ...edits } : server), [canEdit, server, edits]);
+  const changed = useMemo(
+    () => (canEdit ? changedFormFields(values, detail, revision) : new Set<OfferDetailFormField>()),
+    [canEdit, values, detail, revision],
+  );
   const isDirty = changed.size > 0;
   useUnsavedChanges(isDirty, "Teklif taslağı");
 
@@ -130,9 +159,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     onRevisionOpened: (opened) => props.onSelectRevision(opened),
   });
 
-  const isLatest = revision.is_latest;
-  const gate = offerActionGate({ status: detail.status, isLatest, isDirty, canWrite });
-  const canEdit = gate.edit.enabled && revision.is_editable;
+  const gate = offerActionGate({ status: detail.status, isLatest, isDirty, canWrite, isItemsBusy: isItemsWriting });
 
   const employers = useMemo(() => {
     const listed = (employersQuery.data?.items ?? []).map((employer) => ({ id: employer.id, name: employer.name }));
@@ -178,7 +205,28 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     }
   }
 
-  if (actions.isDenied || isSaveDenied) return <AccessDenied />;
+  /**
+   * Gönder kararı TAZE veriyle: revizyon önce ağdan okunur (kalem yazımı/başkasının değişikliği `unpriced_count`ı
+   * değiştirmiş olabilir); önbellekteki bayat sayıyla onay sorulmaz/atlanmaz (TKL-F3.6.1).
+   */
+  async function requestSend() {
+    if (isPreparingSend) return;
+    setIsPreparingSend(true);
+    actions.clearError();
+    try {
+      const key = offerRevisionKey(offerId, revNo);
+      await queryClient.refetchQueries({ queryKey: key, exact: true }, { throwOnError: true });
+      const fresh = queryClient.getQueryData<OfferRevisionRead>(key) ?? revision;
+      if (fresh.totals.unpriced_count > 0) setModal("send");
+      else actions.send(() => undefined);
+    } catch (error) {
+      actions.reportError(error, "Revizyon tazelenemedi.");
+    } finally {
+      setIsPreparingSend(false);
+    }
+  }
+
+  if (actions.isDenied || isSaveDenied || isItemsDenied) return <AccessDenied />;
 
   const validUntil =
     changed.has("offerDate") || changed.has("validityDays")
@@ -202,17 +250,17 @@ export function OfferDetailView(props: OfferDetailViewProps) {
           }}
         />
         <span className="offer-detail__saved">
-          Son kayıt <b>{formatDateTimeDots(isLatest ? detail.updated_at : summary?.updated_at)}</b>
+          Son kayıt <b>{formatDateTimeDots(latestStamp(detail.updated_at, revision.updated_at))}</b>
         </span>
       </OfferDetailHeader>
 
       <OfferActionBar
         gate={gate}
-        isBusy={actions.isBusy || isSaving}
+        isBusy={actions.isBusy || isSaving || isPreparingSend}
         isSaving={isSaving}
         onSave={() => void save()}
         onNewRevision={actions.newRevision}
-        onSend={() => (revision.totals.unpriced_count > 0 ? setModal("send") : actions.send(() => undefined))}
+        onSend={() => void requestSend()}
         onWin={() => setModal("win")}
         onLose={() => setModal("lose")}
         onWithdraw={() => setModal("withdraw")}
@@ -278,7 +326,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
         <RevisionHistory history={detail.history} revisions={detail.revisions} />
       </div>
 
-      {renderItems?.({ offerId, revNo, revision, canEdit })}
+      {renderItems?.({ offerId, revNo, revision, canEdit, onWritesBusyChange: setIsItemsWriting, onForbidden: () => setIsItemsDenied(true) })}
 
       <div className="offer-detail__bottom">
         <OfferTermsCard values={values} errors={errors} onChange={change} disabled={!canEdit} />
@@ -319,6 +367,16 @@ export function OfferDetailView(props: OfferDetailViewProps) {
       )}
     </div>
   );
+}
+
+/**
+ * "Son kayıt": kalem/grup yazımları `offers.updated_at`'i ilerletmez, revizyon yazımları teklifinkini ilerletmez
+ * (plan §8-9) → ikisinin EN YENİSİ gösterilir.
+ */
+function latestStamp(offerStamp: string, revisionStamp: string): string {
+  return parseUtcOrOffsetTimestamp(revisionStamp).getTime() > parseUtcOrOffsetTimestamp(offerStamp).getTime()
+    ? revisionStamp
+    : offerStamp;
 }
 
 /** `predicate`i sağlayan alanların düzenlemesini düşürür (yeni nesne döner). */

@@ -8,6 +8,7 @@ import {
   cellTone,
   commitCell,
   generalProfitResetBody,
+  isCatalogResetAllowed,
   isOfferPriceEnabled,
   isQuantityMissing,
   isUnpriced,
@@ -258,5 +259,78 @@ describe("satır durumu", () => {
   it("miktar eksik mi (B5 satır uyarısı için yer)", () => {
     expect(isQuantityMissing(makeItem({ id: "x", quantity: null }))).toBe(true);
     expect(isQuantityMissing(ITEM)).toBe(false);
+  });
+});
+
+/* ─── TKL-F3.6.1 ─────────────────────────────────────────────────────────────────────────────────── */
+const negativeManual = makeManualItem({
+  id: "neg",
+  offer_unit_price: "95.00",
+  customer: { unit_price: "95.00", amount: "950.00" },
+  internal: { cost: "1000.00", man_hours: "18.0000", overhead: "120.00", profit: "-170.00", profit_pct: "-5.00" },
+});
+const zeroCostManual = makeManualItem({
+  id: "zero",
+  cost_unit_price: "0.00",
+  internal: { cost: "0.00", man_hours: "1.0000", overhead: "0.00", profit: "0.00", profit_pct: null },
+});
+
+describe("madde 8 — türev kâr T30 Türkçe biçim", () => {
+  it("🔴 negatif türev kâr virgüllü: hücre '-5', ipucu 'elle · kâr %-5,00' (noktalı '-5.00' DEĞİL)", () => {
+    expect(cellText("profitPct", withItem(negativeManual))).toBe("-5");
+    expect(offerPriceHint(withItem(negativeManual))).toBe("elle · kâr %-5,00");
+  });
+
+  it("🔴 maliyet 0 iken türev kâr yok → ipucu 'elle · kâr —' (sarkık '%' DEĞİL)", () => {
+    expect(offerPriceHint(withItem(zeroCostManual))).toBe("elle · kâr —");
+  });
+
+  it("negatif türev kâr hücresi AYNEN geri yazılırsa kilit korunur (noop); yeni değer kilidi açar", () => {
+    expect(commitCell("profitPct", "-5", withItem(negativeManual))).toEqual({ kind: "noop" });
+    expect(commitCell("profitPct", "7", withItem(negativeManual))).toEqual({
+      kind: "patch",
+      body: { profit_pct: "7", offer_unit_price: null },
+    });
+  });
+});
+
+describe("madde 9 — teklif B.F. no-op GÖSTERİLEN değerle", () => {
+  it("🔴 hesaplanan 128,80 gösterilirken '128,8' / '128,80' / '128,800' KİLİT KURMAZ (noop)", () => {
+    for (const text of ["128,8", "128,80", "128,800"]) {
+      expect(commitCell("offerUnitPrice", text, ctx())).toEqual({ kind: "noop" });
+    }
+  });
+
+  it("farklı değer kilit kurar; elle B.F.'nin aynı sayısı noop (mevcut)", () => {
+    expect(commitCell("offerUnitPrice", "128,9", ctx())).toEqual({ kind: "patch", body: { offer_unit_price: "128.90" } });
+    expect(commitCell("offerUnitPrice", "150,0", withItem(makeManualItem({ id: "x" })))).toEqual({ kind: "noop" });
+  });
+});
+
+describe("madde 10 — elle B.F. varken maliyeti silmek istemcide engellenir (SO-4 ters yön)", () => {
+  it("🔴 elle B.F. + maliyet boşaltma → hata, istek YOK", () => {
+    expect(commitCell("costUnitPrice", "", withItem(makeManualItem({ id: "x" })))).toEqual({
+      kind: "error",
+      message: "Önce teklif B.F.'yi temizleyin",
+    });
+  });
+
+  it("elle B.F. yoksa maliyet silme mevcut davranış (açık null); maliyet zaten boşsa noop; maliyet DEĞİŞTİRME serbest", () => {
+    expect(commitCell("costUnitPrice", "", ctx())).toEqual({ kind: "patch", body: { cost_unit_price: null } });
+    expect(commitCell("costUnitPrice", "", withItem(makeUnpricedItem({ id: "x" })))).toEqual({ kind: "noop" });
+    expect(commitCell("costUnitPrice", "200", withItem(makeManualItem({ id: "x" })))).toEqual({
+      kind: "patch",
+      body: { cost_unit_price: "200" },
+    });
+  });
+});
+
+describe("madde 16 — '↺ kat.' değeri teklif a-s sınırını aşıyorsa kapalı", () => {
+  it("🔴 ≤ 1.000.000 ve ≤ 4 kesir izinli; aşan/fazla kesirli değer KAPALI", () => {
+    expect(isCatalogResetAllowed("1.8000")).toBe(true);
+    expect(isCatalogResetAllowed("1000000.0000")).toBe(true);
+    expect(isCatalogResetAllowed("1000000.0001")).toBe(false);
+    expect(isCatalogResetAllowed("2000000")).toBe(false);
+    expect(isCatalogResetAllowed("1.23456")).toBe(false);
   });
 });

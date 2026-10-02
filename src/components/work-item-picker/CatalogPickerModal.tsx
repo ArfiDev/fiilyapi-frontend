@@ -39,7 +39,6 @@ import { WorkItemPickerTable, type PickerEmptyReason } from "./WorkItemPickerTab
 import { WorkItemPickerToolbar } from "./WorkItemPickerToolbar";
 import "./work-item-picker.css";
 
-const MAX_ITEMS_MESSAGE = `Tek seferde en fazla ${MAX_BULK_ITEMS} poz eklenebilir`;
 const GROUP_NAME_MESSAGE = "Yeni grup için ad girin";
 const NO_FILTER = "";
 
@@ -149,11 +148,11 @@ export function CatalogPickerModal<TBody>({
   const isGroupNameMissing = isNewGroup && newGroupName.trim() === "";
   const bandLines = [
     ...(submitError === null ? [] : [submitError]),
-    ...(selectedCount > MAX_BULK_ITEMS ? [MAX_ITEMS_MESSAGE] : []),
+    ...(selectedCount > MAX_BULK_ITEMS ? [`Tek seferde en fazla ${MAX_BULK_ITEMS} ${target.words.noun} eklenebilir`] : []),
     ...(problems[0] === undefined
       ? []
       : [
-          `${problems.length} pozda eksik ya da hatalı değer var`,
+          `${problems.length} ${target.words.locative} eksik ya da hatalı değer var`,
           `${problems[0].row.item.poz_no} ${problems[0].row.item.name} — ${problems[0].message}`,
         ]),
     ...(isGroupNameMissing && selectedCount > 0 ? [GROUP_NAME_MESSAGE] : []),
@@ -219,6 +218,7 @@ export function CatalogPickerModal<TBody>({
           selectedCount={selectedCount}
           totalText={totalText}
           totalLabel={target.totalLabel}
+          words={target.words}
           manualAddLabel={target.manualAddLabel}
           isSubmitting={isSubmitting}
           canSubmit={canSubmit}
@@ -245,6 +245,7 @@ export function CatalogPickerModal<TBody>({
         onNewGroupName={setNewGroupName}
         selectedCount={selectedCount}
         visibleCount={visible.length}
+        words={target.words}
         isDisabled={isSubmitting}
       />
       <p className="wip-note">

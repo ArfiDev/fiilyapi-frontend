@@ -8,6 +8,8 @@ export interface OfferResetButtonProps {
   /** "kat. 1,80" · "genel" — mockup'taki "↺" yerine geri-al oku SVG olarak basılır. */
   children: ReactNode;
   title?: string;
+  /** Pasif (ör. katalog değeri teklif sınırını aşıyor); `title` nedeni söyler. */
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -15,9 +17,9 @@ export interface OfferResetButtonProps {
  * TD:252, 377 — "↺ kat. x" / "↺ genel" geri dönüş düğmesi. `↺` (U+21BA) yazı tipi alt kümesi DIŞIDIR
  * (`symbol-subset-guard`) → ok inline SVG'dir (F-SEM kanonu); düğmenin erişilebilir adı yalnız metindir.
  */
-export function OfferResetButton({ children, title, onClick }: OfferResetButtonProps) {
+export function OfferResetButton({ children, title, disabled = false, onClick }: OfferResetButtonProps) {
   return (
-    <button type="button" className="oit-reset" title={title} onClick={onClick}>
+    <button type="button" className="oit-reset" title={title} disabled={disabled} onClick={onClick}>
       <svg
         {...inlineSymbolProps}
         viewBox="0 0 24 24"

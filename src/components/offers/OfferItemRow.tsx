@@ -14,6 +14,7 @@ import {
   catalogResetBody,
   cellTone,
   generalProfitResetBody,
+  isCatalogResetAllowed,
   isOfferPriceEnabled,
   isUnpriced,
   offerPriceHint,
@@ -31,6 +32,7 @@ export interface OfferItemRowProps {
 
 const MISSING_TEXT = "Fiyat girilmedi · tutara dahil değil";
 const DELETE_TITLE = "Kalemi sil";
+const CATALOG_MHR_OVER_LIMIT = "Katalog a-s değeri teklif sınırını aşıyor";
 
 /** `Ref ₺… · Son ₺…` alt satırı (maskeli/yoksa "—"); katalogda yoksa null. */
 function CatalogHints({ catalogItem }: { catalogItem: WorkItemRead | undefined }) {
@@ -87,7 +89,8 @@ export function OfferItemRow({ ctx, catalogItem, editor, canEdit }: OfferItemRow
         >
           {mhrOverridden && canEdit && catalogMhr !== null && (
             <OfferResetButton
-              title="Katalog değerine dön"
+              title={isCatalogResetAllowed(catalogMhr) ? "Katalog değerine dön" : CATALOG_MHR_OVER_LIMIT}
+              disabled={!isCatalogResetAllowed(catalogMhr)}
               onClick={() => editor.applyBody(item.id, "unitMhr", catalogResetBody(catalogMhr))}
             >
               {`kat. ${trPriceInputValue(catalogMhr)}`}

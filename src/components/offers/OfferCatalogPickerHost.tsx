@@ -11,13 +11,16 @@ import { CATALOG_ITEMS_QUERY_KEY } from "@/lib/api/hooks/catalog-query-keys";
 import { offerDetailKey, offerRevisionKey } from "@/lib/api/hooks/offer-query-keys";
 import { useCreateOfferGroup, useCreateOfferItemsBulk, type OfferItemsBulkBody } from "@/lib/api/hooks/useOfferMutations";
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
-import { BackendError } from "@/lib/api/unwrap";
+import { backendErrorMessage } from "@/lib/api/error-message";
+import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { routes } from "@/lib/routes";
 import { openTab } from "@/lib/workspace-tabs/tabs-reducer";
 import { workspaceTabsStore } from "@/lib/workspace-tabs/tabs-store";
 
 /** Kaynağın değiştiği/başkasının yazdığı anlamına gelen durumlar: revizyon + katalog görünümü bayatlamıştır. */
 const STALE_STATUSES: readonly number[] = [404, 409, 422];
+/** Revizyon artık taslak değil / durum çatıştı (plan §3.1): seçici KAPANIR. */
+const CONFLICT_STATUS = 409;
 
 export interface OfferCatalogPickerHostProps {
   offerId: string;
@@ -28,6 +31,10 @@ export interface OfferCatalogPickerHostProps {
   onClose: () => void;
   /** Başarıda, seçici kapanmadan ÖNCE: eklenen kalem sayısı. */
   onAdded: (count: number) => void;
+  /** 409 (revizyon artık taslak değil…): seçici kapanırken sunucu metni AYNEN sayfaya verilir (plan §3.1). */
+  onConflict?: (message: string) => void;
+  /** 403 (SO-19): ekran AccessDenied'a düşer. */
+  onForbidden?: () => void;
 }
 
 /** Teklif grubunu seçicinin yapısal grup görünümüne çevirir (`code` = poz no; teklifte çakışma kuralı yok). */
@@ -50,7 +57,16 @@ function toPickerGroups(groups: OfferRevisionRead["groups"]): PickerGroup[] {
  * (hep-ya-hiç); bulk düşerse açılan grup seçili kalır. Açılışta katalog sorgusu tazelenir — "Kataloğa yeni kalem
  * ekle" bağlantısıyla başka çalışma sekmesinde eklenen kalem seçicide görünür (ÜS-F3-19).
  */
-export function OfferCatalogPickerHost({ offerId, revNo, contextLabel, groups, onClose, onAdded }: OfferCatalogPickerHostProps) {
+export function OfferCatalogPickerHost({
+  offerId,
+  revNo,
+  contextLabel,
+  groups,
+  onClose,
+  onAdded,
+  onConflict,
+  onForbidden,
+}: OfferCatalogPickerHostProps) {
   const queryClient = useQueryClient();
   const createGroup = useCreateOfferGroup(offerId, revNo);
   const bulkCreate = useCreateOfferItemsBulk(offerId, revNo);
@@ -61,10 +77,18 @@ export function OfferCatalogPickerHost({ offerId, revNo, contextLabel, groups, o
   }, [queryClient]);
 
   function refreshStaleViews(error: unknown) {
+    if (isForbidden(error)) {
+      onForbidden?.();
+      return;
+    }
     if (!(error instanceof BackendError) || !STALE_STATUSES.includes(error.status)) return;
     void queryClient.invalidateQueries({ queryKey: offerRevisionKey(offerId, revNo), exact: true });
     void queryClient.invalidateQueries({ queryKey: offerDetailKey(offerId), exact: true });
     void queryClient.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
+    if (error.status === CONFLICT_STATUS) {
+      onConflict?.(backendErrorMessage(error));
+      onClose();
+    }
   }
 
   const { isSubmitting, submitError, createdGroup, submit } = useCatalogPickerSubmit<OfferItemsBulkBody>({

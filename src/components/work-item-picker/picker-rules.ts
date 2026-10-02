@@ -6,12 +6,60 @@
  * bunu parametre olarak alır, varsayılanı SÖZLEŞMEDİR (F2 davranışı birebir). Metin/gövde farkları
  * `picker-target.ts`te toplanır.
  */
+import {
+  OFFER_PRICE_LIMITS,
+  OFFER_QUANTITY_LIMITS,
+  fractionLimitMessage,
+  maxLimitMessage,
+  type DecimalLimits,
+} from "@/lib/offer-limits";
+
+/**
+ * Seçicinin KULLANICIYA gösterdiği nesne adı: sözleşmede "poz", teklifte "kalem" (TKL-F3.6.1). Sayaç, altbilgi,
+ * düğme, bant ve boş-durum metinleri buradan kurulur; "Poz No" sütunu/arama alanı gerçek alan adıdır, DEĞİŞMEZ.
+ */
+export interface PickerWords {
+  /** "poz" · "kalem". */
+  noun: string;
+  /** "Poz" · "Kalem" (cümle başı). */
+  nounCap: string;
+  /** "Pozu" · "Kalemi" (düğme: "3 Pozu Ekle"). */
+  accusativeCap: string;
+  /** "pozda" · "kalemde" ("2 pozda eksik …"). */
+  locative: string;
+  /** "pozların" · "kalemlerin" ("Görünen pozların tümünü seç"). */
+  pluralGenitive: string;
+}
+
+export const CONTRACT_WORDS: PickerWords = {
+  noun: "poz",
+  nounCap: "Poz",
+  accusativeCap: "Pozu",
+  locative: "pozda",
+  pluralGenitive: "pozların",
+};
+
+export const OFFER_WORDS: PickerWords = {
+  noun: "kalem",
+  nounCap: "Kalem",
+  accusativeCap: "Kalemi",
+  locative: "kalemde",
+  pluralGenitive: "kalemlerin",
+};
 
 export interface PickerPriceMessages {
   required: string;
   notANumber: string;
   negative: string;
 }
+
+/**
+ * Bir sayı alanının hane sınırı. `digits`: tam basamak sayısı (sözleşme — backend hane sınırı taşımaz, kolon
+ * `Numeric` taşması); `max`: üst DEĞER (teklif — backend `le=` sınırı). Önce kesir, sonra aşım denetlenir.
+ */
+export type DecimalBound =
+  | { kind: "digits"; fraction: number; integer: number; fractionMessage: string; integerMessage: string }
+  | { kind: "max"; fraction: number; max: string; fractionMessage: string; maxMessage: string };
 
 export interface PickerRules {
   /** Sözleşme: birim fiyat ZORUNLU. Teklif: maliyet B.F. isteğe bağlı (fiyatsız kalem, T31). */
@@ -23,6 +71,22 @@ export interface PickerRules {
   linkedLabel: string;
   /** Başka kalemde kullanılan poz no gerekçesi (yalnız `blocksOnCodeCollision`). */
   codeBlockText: string;
+  /** Miktar hane sınırı (hedefe göre). */
+  quantityBound: DecimalBound;
+  /** Fiyat (birim fiyat / maliyet B.F.) hane sınırı (hedefe göre). */
+  priceBound: DecimalBound;
+  /** Kullanıcıya gösterilen nesne adı (poz / kalem). */
+  words: PickerWords;
+}
+
+function maxBound(limits: DecimalLimits): DecimalBound {
+  return {
+    kind: "max",
+    fraction: limits.fraction,
+    max: limits.max,
+    fractionMessage: fractionLimitMessage(limits),
+    maxMessage: maxLimitMessage(limits),
+  };
 }
 
 /** `contract-item-form/validate.ts` ONAYLI metinleri (birebir; `picker-model.test.ts` drift bekçisi). */
@@ -36,6 +100,10 @@ export const CONTRACT_RULES: PickerRules = {
   blocksOnCodeCollision: true,
   linkedLabel: "Sözleşmede var",
   codeBlockText: "Bu poz no sözleşmede başka bir kalemde kullanılıyor",
+  // ⚠️ Backend hane sınırı TAŞIMAZ (openapi'de yok; kolonlar Numeric(14,3)/(18,2)) → istemci korkuluğu TEK savunma.
+  quantityBound: { kind: "digits", fraction: 3, integer: 11, fractionMessage: "En fazla 3 ondalık", integerMessage: "En fazla 11 basamak" },
+  priceBound: { kind: "digits", fraction: 2, integer: 16, fractionMessage: "En fazla 2 ondalık", integerMessage: "En fazla 16 basamak" },
+  words: CONTRACT_WORDS,
 };
 
 /** Teklif: maliyet B.F. isteğe bağlı; "Teklifte var · {grup}"; poz no kopya olduğundan kod çakışması engel DEĞİL. */
@@ -50,4 +118,8 @@ export const OFFER_RULES: PickerRules = {
   blocksOnCodeCollision: false,
   linkedLabel: "Teklifte var",
   codeBlockText: "",
+  // Kalem tablosuyla TEK KAYNAK (`lib/offer-limits`): backend `le=` sınırı; metinler de aynı.
+  quantityBound: maxBound(OFFER_QUANTITY_LIMITS),
+  priceBound: maxBound(OFFER_PRICE_LIMITS),
+  words: OFFER_WORDS,
 };

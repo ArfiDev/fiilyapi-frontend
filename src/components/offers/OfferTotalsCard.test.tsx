@@ -43,14 +43,4 @@ describe("OfferTotalsCard", () => {
     expect(document.body.textContent).toContain("Genel toplam—");
     expect(document.body.textContent).toContain("12.840 a-s");
   });
-
-  it("🔴 İŞVEREN görünümü: iç toplamlar (maliyet/GG/kâr/adam-saat ve değerleri) ASLA basılmaz", () => {
-    render(<OfferTotalsCard totals={TOTALS} vatPct="20.00" view="customer" />);
-    const text = document.body.textContent ?? "";
-    for (const secret of ["Maliyet", "Genel gider", "Kâr", "adam-saat", "a-s", "50.000.000", "6.000.000", "8.400.000", "12.840"]) {
-      expect(text).not.toContain(secret);
-    }
-    expect(text).toContain("Teklif tutarı (KDV hariç)₺ 73.982.140");
-    expect(text).toContain("Genel toplam₺ 88.778.568");
-  });
 });

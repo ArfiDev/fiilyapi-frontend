@@ -70,6 +70,117 @@ export function paginateOfferRows<Row extends { groupId: string }>(
   return result;
 }
 
+/* ─── Ölçüme dayalı sayfalama (TKL-F3.6.1 · madde 1) ──────────────────────── */
+
+/**
+ * Statik `PageLayout` yalnız İLK TAHMİNDİR (satır 28px sanılır). Uzun iş adı/kapsam/koşul metni satırı
+ * büyütür; gerçek yüksekliği tarayıcıda ÖLÇEN bileşen (`use-measured-pages.ts`) aşağıdaki saf fonksiyonla
+ * yeniden böler. Hiçbir metin kırpılmaz: sığmayan satır/grup/kapanış sonraki sayfaya geçer.
+ */
+export interface PageBudgets {
+  /** İlk sayfada tablo satırlarına kalan yükseklik (px; başlık + künye + tablo başı düşülmüş). */
+  readonly first: number;
+  /** Sonraki sayfalarda tablo satırlarına kalan yükseklik (px). */
+  readonly rest: number;
+  /** Son sayfada toplam + dipnot + koşul + imza bloğunun yüksekliği (boşluklarıyla). */
+  readonly closing: number;
+  /** Bölünmüş grubun "(devam)" başlık satırının yüksekliği. */
+  readonly continuedHead: number;
+}
+
+export interface MeasuredRow<Row> {
+  readonly row: Row;
+  /** Ölçülen satır yüksekliği (px). */
+  readonly height: number;
+}
+
+interface Cluster<Row> {
+  readonly entries: MeasuredRow<Row>[];
+  readonly height: number;
+}
+
+function clusterByGroup<Row extends { groupId: string }>(entries: readonly MeasuredRow<Row>[]): Cluster<Row>[] {
+  const clusters: { entries: MeasuredRow<Row>[]; height: number }[] = [];
+  for (const entry of entries) {
+    const last = clusters[clusters.length - 1];
+    if (last !== undefined && last.entries[0]!.row.groupId === entry.row.groupId) {
+      last.entries.push(entry);
+      last.height += entry.height;
+    } else {
+      clusters.push({ entries: [entry], height: entry.height });
+    }
+  }
+  return clusters;
+}
+
+/**
+ * Ölçülen yüksekliklerle sayfalama. Kurallar: (1) GRUP BÖLÜNMEZ — sığmazsa tümüyle sonraki sayfaya;
+ * (2) tek başına sonraki sayfadan büyük grup satır satır bölünür, devam parçası "(devam)" başlığı yüksekliği
+ * kadar yer tutar; (3) tek satır sayfadan büyükse KENDİ sayfasına konur (kırpılmaz); (4) son sayfada
+ * kapanış bloğu sığmazsa boş bir son sayfa eklenir. Satır yoksa tek boş sayfa.
+ */
+export function paginateByHeights<Row extends { groupId: string }>(
+  entries: readonly MeasuredRow<Row>[],
+  budgets: PageBudgets,
+): OfferPrintPage<Row>[] {
+  if (entries.length === 0) return [{ parts: [] }];
+  const budgetOf = (pageIndex: number) => (pageIndex === 0 ? budgets.first : budgets.rest);
+  const pages: OfferPrintPage<Row>[] = [];
+  let parts: PaginatedGroup<Row>[] = [];
+  let used = 0;
+  const closePage = () => {
+    pages.push({ parts });
+    parts = [];
+    used = 0;
+  };
+
+  for (const cluster of clusterByGroup(entries)) {
+    if (used + cluster.height <= budgetOf(pages.length)) {
+      parts.push({ rows: cluster.entries.map((entry) => entry.row), continued: false });
+      used += cluster.height;
+      continue;
+    }
+    if (cluster.height <= budgetOf(pages.length + 1)) {
+      closePage();
+      parts.push({ rows: cluster.entries.map((entry) => entry.row), continued: false });
+      used += cluster.height;
+      continue;
+    }
+    // Grup tek başına bir sayfadan büyük: satır satır bölünür.
+    let current: Row[] = [];
+    let isContinued = false;
+    const flushPart = () => {
+      if (current.length > 0) parts.push({ rows: current, continued: isContinued });
+      current = [];
+    };
+    for (const entry of cluster.entries) {
+      const headCost = current.length === 0 && isContinued ? budgets.continuedHead : 0;
+      const fits = used + headCost + entry.height <= budgetOf(pages.length);
+      const isPageEmpty = used === 0 && current.length === 0;
+      if (!fits && !isPageEmpty) {
+        const hadRows = current.length > 0;
+        flushPart();
+        closePage();
+        if (hadRows) isContinued = true;
+      }
+      // Yeni sayfadaki ilk satır: devam başlığı yer tutar (yalnız bölünmüş grubun ikinci+ parçası).
+      if (current.length === 0 && isContinued) used += budgets.continuedHead;
+      current.push(entry.row);
+      used += entry.height;
+    }
+    flushPart();
+  }
+
+  const lastIndex = pages.length;
+  if (used + budgets.closing > budgetOf(lastIndex)) {
+    closePage();
+    pages.push({ parts: [] });
+  } else {
+    closePage();
+  }
+  return pages;
+}
+
 /* ─── Biçim ──────────────────────────────────────────────────────────────── */
 
 /** Tutar/B.F. (₺ sembolsüz; sütun başlığı "(₺)"): hep iki kuruş hanesi. `null` → "—" (sıfır DEĞİL). */

@@ -17,6 +17,7 @@ import {
   type ResolvedEntry,
 } from "./picker-model";
 import type { PickerRules } from "./picker-rules";
+import type { PickerWords } from "./picker-rules";
 import type { PickerTarget } from "./picker-target";
 import { WorkItemPickerRow } from "./WorkItemPickerRow";
 import "./work-item-picker.css";
@@ -30,12 +31,18 @@ function columnsOf(priceHeader: string): readonly string[] {
 
 export type PickerEmptyReason = "loading" | "error" | "forbidden" | "catalog-empty" | "restricted-empty" | "no-match" | null;
 
-const EMPTY_TEXT: Record<Exclude<PickerEmptyReason, null | "catalog-empty" | "restricted-empty">, string> = {
-  loading: "Yükleniyor…",
-  error: "İş kalemi kataloğu yüklenemedi",
-  forbidden: "Kataloğu görme yetkiniz yok.",
-  "no-match": "Süzgece uyan poz yok.",
-};
+function emptyText(reason: Exclude<PickerEmptyReason, null | "catalog-empty" | "restricted-empty">, words: PickerWords): string {
+  switch (reason) {
+    case "loading":
+      return "Yükleniyor…";
+    case "error":
+      return "İş kalemi kataloğu yüklenemedi";
+    case "forbidden":
+      return "Kataloğu görme yetkiniz yok.";
+    case "no-match":
+      return `Süzgece uyan ${words.noun} yok.`;
+  }
+}
 
 export interface WorkItemPickerTableProps {
   sections: readonly DisciplineSection[];
@@ -54,7 +61,15 @@ export interface WorkItemPickerTableProps {
   onUnitPrice: (row: PickerRow, text: string) => void;
 }
 
-function EmptyBody({ reason, restrictedNames }: { reason: Exclude<PickerEmptyReason, null>; restrictedNames: readonly string[] }) {
+function EmptyBody({
+  reason,
+  restrictedNames,
+  words,
+}: {
+  reason: Exclude<PickerEmptyReason, null>;
+  restrictedNames: readonly string[];
+  words: PickerWords;
+}) {
   if (reason === "restricted-empty") return <RestrictedEmptyNotice names={restrictedNames} />;
   if (reason === "catalog-empty") {
     return (
@@ -65,7 +80,7 @@ function EmptyBody({ reason, restrictedNames }: { reason: Exclude<PickerEmptyRea
       </>
     );
   }
-  return <>{EMPTY_TEXT[reason]}</>;
+  return <>{emptyText(reason, words)}</>;
 }
 
 /** PS:86-199 — disiplin başlık satırları + poz satırları; yatay kaydırma (`boq-assignment.css:108-112` dersi). */
@@ -95,7 +110,7 @@ export function WorkItemPickerTable({
                 checked={header.isChecked}
                 indeterminate={header.isIndeterminate}
                 disabled={header.isDisabled || isDisabled}
-                aria-label="Görünen pozların tümünü seç"
+                aria-label={`Görünen ${target.words.pluralGenitive} tümünü seç`}
                 onChange={onToggleAll}
               />
             </th>
@@ -110,7 +125,7 @@ export function WorkItemPickerTable({
           {emptyReason !== null ? (
             <tr>
               <td colSpan={COLUMN_COUNT} className="wip-empty">
-                <EmptyBody reason={emptyReason} restrictedNames={restrictedNames} />
+                <EmptyBody reason={emptyReason} restrictedNames={restrictedNames} words={target.words} />
               </td>
             </tr>
           ) : (
@@ -153,7 +168,7 @@ function SectionRows({ section, inputs, entryById, target, isDisabled, onToggle,
         <td colSpan={COLUMN_COUNT}>
           <DisciplineSwatch color={discipline.color} />
           <span className="wip-group__title">{`${discipline.code} — ${discipline.name}`}</span>
-          <span className="wip-group__count">{`${rows.length} poz`}</span>
+          <span className="wip-group__count">{`${rows.length} ${target.words.noun}`}</span>
         </td>
       </tr>
       {rows.map((row) => {

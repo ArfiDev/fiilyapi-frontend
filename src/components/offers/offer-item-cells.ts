@@ -16,6 +16,14 @@ import type { OfferItemRead } from "@/lib/api/hooks/useOffers";
 import { compareDecimalStrings, isZeroDecimalString } from "@/lib/decimal";
 import { EMPTY_CELL } from "@/lib/format";
 import {
+  OFFER_MHR_LIMITS,
+  OFFER_PRICE_LIMITS,
+  OFFER_QUANTITY_LIMITS,
+  fractionLimitMessage,
+  maxLimitMessage,
+  type DecimalLimits,
+} from "@/lib/offer-limits";
+import {
   REF_PRICE_AMBIGUOUS_DOT,
   decimalDigitCounts,
   parseQuantityInput,
@@ -44,13 +52,15 @@ export type CellCommit =
 
 export type CellTone = "general" | "override" | "missing";
 
-/** Backend sınırları (`offer_schemas.py`): miktar ≤ 1e9 / 3 kesir · a-s ≤ 1e6 / 4 kesir · fiyat ≤ 1e12 / 2 kesir · yüzde 2 kesir. */
-const QUANTITY_LIMITS = { fraction: 3, max: "1000000000", maxText: "1.000.000.000" } as const;
-const MHR_LIMITS = { fraction: 4, max: "1000000", maxText: "1.000.000" } as const;
-const PRICE_LIMITS = { fraction: 2, max: "1000000000000", maxText: "1.000.000.000.000" } as const;
+/** Hane sınırları `lib/offer-limits` TEK KAYNAĞINDAN (katalog seçicisinin teklif hedefiyle ortak); yüzde 2 kesir. */
+const QUANTITY_LIMITS = OFFER_QUANTITY_LIMITS;
+const MHR_LIMITS = OFFER_MHR_LIMITS;
+const PRICE_LIMITS = OFFER_PRICE_LIMITS;
 const PCT_FRACTION = 2;
 const MAX_OVERHEAD_PCT = "100";
 const MAX_PROFIT_PCT = "999.99";
+
+export const MSG_CLEAR_OFFER_FIRST = "Önce teklif B.F.'yi temizleyin";
 
 const LABEL: Readonly<Record<ItemCellField, string>> = {
   quantity: "Miktar",
@@ -69,6 +79,17 @@ const MSG_PROFIT_RANGE = "0–999,99 arasında olmalı";
 
 // ───────────────────────────────────────────────────────────────────────── gösterim
 
+/**
+ * T30 gösterimi İŞARETLİ değer için: `trInputValue` yalnız işaretsiz ondalığı Türkçeleştirir ("-5.00" → olduğu
+ * gibi, noktalı). Türev kâr negatif olabilir (B.F. maliyetin altında): işaret ayrılır, kalan T30 biçimlenir.
+ * ASCII "-" kalır — hücre aynen geri yazılınca `parseBounded`/`commitProfit` aynı metni okur.
+ */
+function signedDisplay(raw: string | null, format: (unsigned: string | null) => string): string {
+  if (raw === null) return "";
+  const trimmed = raw.trim();
+  return trimmed.startsWith("-") ? `-${format(trimmed.slice(1))}` : format(trimmed);
+}
+
 /** Hücrede GÖSTERİLEN metin (kayıt kararı bununla kıyaslanır). */
 export function cellText(field: ItemCellField, ctx: CellContext): string {
   const { item } = ctx;
@@ -82,7 +103,7 @@ export function cellText(field: ItemCellField, ctx: CellContext): string {
     case "overheadPct":
       return trQuantityInputValue(item.overhead_pct ?? ctx.revisionOverheadPct);
     case "profitPct":
-      return trQuantityInputValue(profitPctShown(ctx));
+      return signedDisplay(profitPctShown(ctx), trQuantityInputValue);
     case "offerUnitPrice":
       return trPriceInputValue(item.customer?.unit_price ?? null);
   }
@@ -137,23 +158,23 @@ function isMhrOverridden(item: OfferItem, catalogUnitMhr: string | null): boolea
   return catalogUnitMhr !== null && compareDecimalStrings(item.unit_mhr, catalogUnitMhr) !== 0;
 }
 
+/** Elle B.F.'nin türev kâr %'si ("%33,93" · "%-5,00"); maliyet 0 iken türev YOK → "—" (sarkık "%" basılmaz). */
+function derivedProfitText(ctx: CellContext): string {
+  const derived = profitPctShown(ctx);
+  return derived === null ? EMPTY_CELL : `%${signedDisplay(derived, trPriceInputValue)}`;
+}
+
 /** Teklif B.F. alt satırı (TD:380). */
 export function offerPriceHint(ctx: CellContext): string {
   const { item } = ctx;
   if (!isOfferPriceEnabled(item)) return "önce maliyet girin";
-  if (item.offer_unit_price !== null) return `elle · kâr %${cellText("profitPct", ctx)}`;
+  if (item.offer_unit_price !== null) return `elle · kâr ${derivedProfitText(ctx)}`;
   return "hesaplanan";
 }
 
 // ───────────────────────────────────────────────────────────────────────── yazma
 
 type ParsedValue = { ok: true; value: string } | { ok: false; message: string };
-
-interface DecimalLimits {
-  fraction: number;
-  max: string;
-  maxText: string;
-}
 
 function parseBounded(
   text: string,
@@ -171,10 +192,10 @@ function parseBounded(
     return { ok: false, message: mustBePositive ? `${label} 0'dan büyük olmalı` : `${label} negatif olamaz.` };
   }
   if (decimalDigitCounts(parsed.value).fraction > limits.fraction) {
-    return { ok: false, message: `En fazla ${limits.fraction} ondalık` };
+    return { ok: false, message: fractionLimitMessage(limits) };
   }
   if (compareDecimalStrings(parsed.value, limits.max) > 0) {
-    return { ok: false, message: `En fazla ${limits.maxText}` };
+    return { ok: false, message: maxLimitMessage(limits) };
   }
   if (mustBePositive && isZeroDecimalString(parsed.value)) {
     return { ok: false, message: `${label} 0'dan büyük olmalı` };
@@ -210,7 +231,7 @@ export function commitCell(field: ItemCellField, draft: string | undefined, ctx:
     case "unitMhr":
       return commitRequired(field, text, "unit_mhr", parseBounded(text, field, parseQuantityInput, MHR_LIMITS, true), ctx);
     case "costUnitPrice":
-      return commitNullable(text, ctx.item.cost_unit_price, parsePrice(text, field), (value) => ({ cost_unit_price: value }));
+      return commitCost(text, ctx);
     case "overheadPct":
       return commitOverhead(text, ctx);
     case "profitPct":
@@ -255,6 +276,18 @@ function commitNullable(
   return { kind: "patch", body: body(parsed.value) };
 }
 
+/**
+ * 🔴 SO-4 TERS YÖN: elle teklif B.F. varken maliyeti SİLMEK backend'de 422'dir (kâr % geri hesabı maliyet ister);
+ * istek uçmadan engellenir. Maliyet zaten boşsa (kayıtta) noop; değiştirmek serbesttir.
+ */
+function commitCost(text: string, ctx: CellContext): CellCommit {
+  const { item } = ctx;
+  if (text === "" && item.cost_unit_price !== null && item.offer_unit_price !== null) {
+    return { kind: "error", message: MSG_CLEAR_OFFER_FIRST };
+  }
+  return commitNullable(text, item.cost_unit_price, parsePrice(text, "costUnitPrice"), (value) => ({ cost_unit_price: value }));
+}
+
 function commitOverhead(text: string, ctx: CellContext): CellCommit {
   const { item } = ctx;
   const parsed = text === "" ? null : parsePct(text, MAX_OVERHEAD_PCT, MSG_OVERHEAD_RANGE);
@@ -288,9 +321,24 @@ function commitOfferPrice(text: string, ctx: CellContext): CellCommit {
   const { item } = ctx;
   // 🔴 SO-4: maliyet boşken elle B.F. YOK — istek uçmaz (sunucu da 422 verirdi).
   if (text !== "" && !isOfferPriceEnabled(item)) return { kind: "error", message: MSG_COST_FIRST };
-  return commitNullable(text, item.offer_unit_price, parsePrice(text, "offerUnitPrice"), (value) => ({
-    offer_unit_price: value,
-  }));
+  const parsed = parsePrice(text, "offerUnitPrice");
+  // GÖSTERİLEN hesaplanan B.F. ("128,80") başka yazımla ("128,8") yazılırsa kilit KURULMAZ — GG/kâr deseninin aynısı.
+  const shown = item.customer?.unit_price ?? null;
+  if (parsed.ok && text !== "" && item.offer_unit_price === null && shown !== null && sameNumber(parsed.value, shown)) {
+    return { kind: "noop" };
+  }
+  return commitNullable(text, item.offer_unit_price, parsed, (value) => ({ offer_unit_price: value }));
+}
+
+/**
+ * "↺ kat." yalnız katalog a-s'si TEKLİF sınırına sığıyorsa açıktır (≤ 1.000.000, 4 kesir): sığmayan değeri yazmak
+ * backend'de 422 olurdu (katalog sınırı teklifinkinden geniş olabilir).
+ */
+export function isCatalogResetAllowed(catalogUnitMhr: string): boolean {
+  return (
+    decimalDigitCounts(catalogUnitMhr).fraction <= MHR_LIMITS.fraction &&
+    compareDecimalStrings(catalogUnitMhr, MHR_LIMITS.max) <= 0
+  );
 }
 
 /** "↺ kat.": a-s'yi katalog değerine geri yazar (T10). */

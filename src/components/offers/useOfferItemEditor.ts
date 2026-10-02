@@ -7,11 +7,12 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { offerDetailKey, offerRevisionKey } from "@/lib/api/hooks/offer-query-keys";
 import { useDeleteOfferItem, useUpdateOfferItem, type OfferItemUpdateBody } from "@/lib/api/hooks/useOfferMutations";
 import type { OfferItemRead, OfferRevisionRead } from "@/lib/api/hooks/useOffers";
-import { BackendError } from "@/lib/api/unwrap";
+import { BackendError, isForbidden } from "@/lib/api/unwrap";
 
 import { commitCell, type CellContext, type ItemCellField } from "./offer-item-cells";
 
-const CONFLICT_STATUS = 409;
+/** Kaynağın değiştiği/silindiği anlamına gelen durumlar: revizyon yeniden okunur (409 durum çatışması · 404 kalem/grup yok). */
+const STALE_STATUSES: readonly number[] = [404, 409];
 const SAVE_FAILED = "Kalem kaydedilemedi.";
 const DELETE_FAILED = "Kalem silinemedi.";
 /** Satır düzeyi hata (silme) anahtarı. */
@@ -34,6 +35,8 @@ export interface OfferItemEditor {
   removeItem: (itemId: string) => void;
   isPending: (itemId: string, field: ItemCellField) => boolean;
   isRowBusy: (itemId: string) => boolean;
+  /** Herhangi bir satırın yazımı uçuşta ya da sırada (eylem kapısı bunu görür, TKL-F3.6.1). */
+  isAnyBusy: boolean;
   errorOf: (itemId: string, field: ErrorField) => string | null;
 }
 
@@ -44,6 +47,8 @@ interface EditorArgs {
   revision: OfferRevisionRead;
   /** Katalog kalem kimliği → standart a-s ("↺ kat." karşılaştırması). */
   catalogUnitMhrOf: (catalogItemId: string) => string | null;
+  /** 403 (SO-19: izin yarışı / kısıtlı kullanıcı) → ekran AccessDenied'a düşer. */
+  onForbidden?: () => void;
 }
 
 function findItem(revision: OfferRevisionRead, itemId: string): OfferItemRead | undefined {
@@ -65,7 +70,7 @@ function findItem(revision: OfferRevisionRead, itemId: string): OfferItemRead | 
  * · Uçuştaki hücre `isPending` (yalnız O hücre kilitlenir; Tab akışı bozulmaz); taslak uçuş boyunca
  *   görünür kalır. Hata hücrenin altına AYNEN basılır, hücre sunucu değerine döner; 409'da revizyon yeniden okunur.
  */
-export function useOfferItemEditor({ offerId, revNo, revision, catalogUnitMhrOf }: EditorArgs): OfferItemEditor {
+export function useOfferItemEditor({ offerId, revNo, revision, catalogUnitMhrOf, onForbidden }: EditorArgs): OfferItemEditor {
   const queryClient = useQueryClient();
   const updateItem = useUpdateOfferItem(offerId, revNo);
   const deleteItem = useDeleteOfferItem(offerId, revNo);
@@ -78,8 +83,8 @@ export function useOfferItemEditor({ offerId, revNo, revision, catalogUnitMhrOf 
   // Sıradaki görevin okuyacağı değerler render'dan BAĞIMSIZ, anında güncel olmalı.
   const draftsRef = useRef<Record<string, string>>({});
   const tailsRef = useRef(new Map<string, Promise<void>>());
-  const latest = useRef({ revision, catalogUnitMhrOf, updateItem, deleteItem });
-  latest.current = { revision, catalogUnitMhrOf, updateItem, deleteItem };
+  const latest = useRef({ revision, catalogUnitMhrOf, updateItem, deleteItem, onForbidden });
+  latest.current = { revision, catalogUnitMhrOf, updateItem, deleteItem, onForbidden };
 
   const setDraftValue = useCallback((key: string, text: string | undefined) => {
     const next = { ...draftsRef.current };
@@ -154,17 +159,29 @@ export function useOfferItemEditor({ offerId, revNo, revision, catalogUnitMhrOf 
     void queryClient.invalidateQueries({ queryKey: offerDetailKey(offerId), exact: true });
   }, [queryClient, offerId, revNo]);
 
+  /** Yazım hatası: 403 → AccessDenied; aksi hâlde metin hücreye AYNEN, 404/409'da revizyon yeniden okunur. */
+  const fail = useCallback(
+    (error: unknown, key: string, fallback: string) => {
+      if (isForbidden(error)) {
+        latest.current.onForbidden?.();
+        return;
+      }
+      setError(key, backendErrorMessage(error, fallback));
+      if (error instanceof BackendError && STALE_STATUSES.includes(error.status)) refreshAfterConflict();
+    },
+    [setError, refreshAfterConflict],
+  );
+
   const send = useCallback(
     async (itemId: string, body: OfferItemUpdateBody, key: string) => {
       try {
         await latest.current.updateItem.mutateAsync({ itemId, body });
         setError(key, null);
       } catch (error) {
-        setError(key, backendErrorMessage(error, SAVE_FAILED));
-        if (error instanceof BackendError && error.status === CONFLICT_STATUS) refreshAfterConflict();
+        fail(error, key, SAVE_FAILED);
       }
     },
-    [setError, refreshAfterConflict],
+    [setError, fail],
   );
 
   const commit = useCallback(
@@ -210,12 +227,11 @@ export function useOfferItemEditor({ offerId, revNo, revision, catalogUnitMhrOf 
           await latest.current.deleteItem.mutateAsync(itemId);
           setError(key, null);
         } catch (error) {
-          setError(key, backendErrorMessage(error, DELETE_FAILED));
-          if (error instanceof BackendError && error.status === CONFLICT_STATUS) refreshAfterConflict();
+          fail(error, key, DELETE_FAILED);
         }
       });
     },
-    [enqueue, refreshAfterConflict, setError],
+    [enqueue, fail, setError],
   );
 
   return {
@@ -227,6 +243,7 @@ export function useOfferItemEditor({ offerId, revNo, revision, catalogUnitMhrOf 
     removeItem,
     isPending: (itemId, field) => pendingKeys.has(cellKey(itemId, field)),
     isRowBusy: (itemId) => busyRows.has(itemId),
+    isAnyBusy: busyRows.size > 0,
     errorOf: (itemId, field) => errors[cellKey(itemId, field)] ?? null,
   };
 }
