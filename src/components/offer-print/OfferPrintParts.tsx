@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { cx } from "@/lib/cx";
 
-import type { LabelValue, PrintFrame, TotalRow } from "./print-model";
+import type { ClosingPartId, LabelValue, PrintFrame, TotalRow } from "./print-model";
 import "./offer-print.css";
 
 /**
@@ -77,6 +77,16 @@ export function PrintTerms({ rows }: { rows: readonly LabelValue[] }) {
   );
 }
 
+/** TKL-F3.8.1 · notlar AYRI kapanış parçası (2000 karaktere kadar; kırpılmaz). */
+export function PrintNotes({ text }: { text: string }) {
+  return (
+    <section className="offer-print__terms" aria-label="Notlar">
+      <h3 className="offer-print__block-title">Notlar</h3>
+      <p className="offer-print__notes-text">{text}</p>
+    </section>
+  );
+}
+
 export function PrintTotals({ rows }: { rows: readonly TotalRow[] }) {
   return (
     <dl className="offer-print__totals">
@@ -129,5 +139,41 @@ export function PrintSpanRow({
     <tr className={className} data-print-row={rowKey} data-print-continued={isContinuation ? "" : undefined}>
       <td colSpan={columns}>{children}</td>
     </tr>
+  );
+}
+
+/**
+ * TKL-F3.8.1 (CEO kararı a) · sayfanın kapanış parçaları: toplamlar | koşullar | notlar | imza. Her parça
+ * `data-print-closing-part` ile AYRI ölçülür (`use-measured-pages`) ve sayfalar arasında bölünebilir; parçanın
+ * içi bölünmez. Dikey ve yatay çıktıda TEK düzen (alt alta). Parça yoksa hiçbir şey basılmaz.
+ */
+export function PrintClosing({
+  parts,
+  frame,
+  totals,
+  footnote = null,
+}: {
+  parts: readonly ClosingPartId[];
+  frame: PrintFrame;
+  totals: readonly TotalRow[];
+  footnote?: string | null;
+}) {
+  if (parts.length === 0) return null;
+  return (
+    <div className="offer-print__closing" data-print-closing="">
+      {parts.map((id) => (
+        <div key={id} className="offer-print__closing-part" data-print-closing-part={id}>
+          {id === "totals" && (
+            <>
+              <PrintTotals rows={totals} />
+              {footnote !== null && <p className="offer-print__footnote">{footnote}</p>}
+            </>
+          )}
+          {id === "terms" && <PrintTerms rows={frame.terms} />}
+          {id === "notes" && frame.notes !== null && <PrintNotes text={frame.notes} />}
+          {id === "signature" && <PrintSignatures signatures={frame.signatures} />}
+        </div>
+      ))}
+    </div>
   );
 }

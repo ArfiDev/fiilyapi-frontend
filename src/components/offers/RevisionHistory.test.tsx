@@ -54,7 +54,7 @@ describe("RevisionHistory", () => {
     const rows = items();
     const sentRev1 = rows.find((row) => row.includes("Rev.1") && row.includes("gönderildi"));
     const openedRev1 = rows.find((row) => row.includes("Rev.1") && row.includes("açıldı"));
-    expect(sentRev1).toContain("₺ 73.982.140");
+    expect(sentRev1).toContain("₺73.982.140,00"); // TD mockup geçmiş tutarı: tl() kuruşlu, boşluksuz
     expect(openedRev1).not.toContain("₺");
   });
 
@@ -72,7 +72,7 @@ describe("RevisionHistory", () => {
     const history = [{ at: "2026-10-01T09:00:00Z", kind: "lost" as const, rev_no: 0, user_id: null, user_name: null }];
     render(<RevisionHistory history={history} revisions={revisions} />);
     expect(items()[0]).toContain("Kayıp nedeni: Rakip daha düşük");
-    expect(items()[0]).toContain("Kazanan teklif tutarı: ₺ 61.250.000,5");
+    expect(items()[0]).toContain("Kazanan teklif tutarı: ₺61.250.000,50");
   });
 
   it("neden ve tutar boşsa Kaybedildi satırı bu iki satırı BASMAZ", () => {

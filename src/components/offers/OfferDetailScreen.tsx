@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui";
@@ -26,6 +26,8 @@ const WRITE_LEVEL = "full";
 const EMPLOYER_ADD_LEVEL = "admin";
 const NOT_FOUND_STATUS = 404;
 const REV_DIGITS = /^\d+$/;
+/** Başarı bildiriminin ekranda kalma süresi (KIK/KAT emsali). */
+const TOAST_MS = 2800;
 
 /** `?rev=` metni → revizyon no; rakam olmayan/boş → `undefined` (güncel revizyon). */
 export function parseRevParam(raw: string | null): number | undefined {
@@ -57,6 +59,13 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
   const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
   const detailQuery = useOffer(offerId);
+  // Toast revizyon ANAHTARININ ÜSTÜNDE yaşar: yeni revizyona geçişte görünüm yeniden kurulur, bildirim kalır.
+  const [toast, setToast] = useState<{ text: string } | null>(null);
+  useEffect(() => {
+    if (toast === null) return;
+    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   if (isForbidden(detailQuery.error)) return <AccessDenied />;
   if (detailQuery.data === undefined) {
@@ -85,6 +94,8 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
       canAddEmployer={hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL)}
       readOnlyText={readOnlyMessage(level, scope.isRestricted)}
       renderItems={renderItems}
+      toast={toast?.text ?? null}
+      onToast={(text) => setToast({ text })}
       onSelectRevision={(next) =>
         router.replace(routes.offers.detail({ offerId, ...(next === null ? {} : { rev: next }) }))
       }
@@ -100,6 +111,8 @@ interface OfferRevisionLoaderProps {
   readOnlyText: string;
   renderItems?: (context: OfferItemsSlotContext) => ReactNode;
   onSelectRevision: (revNo: number | null) => void;
+  toast: string | null;
+  onToast: (text: string) => void;
 }
 
 /** Revizyon okuması (koşullar + toplamlar) detay ÖZETİ varken açılır. */

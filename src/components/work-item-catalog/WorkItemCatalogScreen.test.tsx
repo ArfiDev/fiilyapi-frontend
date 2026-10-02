@@ -159,12 +159,14 @@ describe("liste (KIK:128-147)", () => {
     expect(screen.queryByText(/Eksikleri göster/)).not.toBeInTheDocument();
   });
 
-  it("dipnot ÜS-F2-17: ÜS-8 bekletmesi kalktı — son fiyat + '+%' maddeleri basılır, SA/teklif vaadi YOK", async () => {
+  it("dipnot ÜS-F2-17 + TKL-F3.8: son fiyat kaynakları sözleşme, onaylı hakediş ve kazanılan teklifler; SA vaadi YOK", async () => {
     renderScreen();
     await screen.findByText("Beton döküm");
-    expect(screen.getByText(/son fiyat işveren sözleşmeleri ve onaylı hakedişlerden gelir/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/son fiyat işveren sözleşmeleri, onaylı hakedişler ve kazanılan tekliflerden gelir/),
+    ).toBeInTheDocument();
     expect(screen.getByText("6 aydan eski fiyat")).toBeInTheDocument();
-    expect(screen.queryByText(/satınalma, hakediş ve kazanılan tekliflerden/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/satınalma/i)).not.toBeInTheDocument();
   });
 });
 
@@ -826,7 +828,7 @@ describe("Son fiyat kolonu (TKL-F2.5 · KIK:138-141, 252-256)", () => {
     await screen.findByTestId("wik-row-i-szl");
     expect(
       screen.getByText(
-        "Referans fiyat elle girilir; son fiyat işveren sözleşmeleri ve onaylı hakedişlerden gelir",
+        "Referans fiyat elle girilir; son fiyat işveren sözleşmeleri, onaylı hakedişler ve kazanılan tekliflerden gelir",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("+%")).toBeInTheDocument();

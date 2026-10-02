@@ -252,6 +252,8 @@ button.oit-group__name:hover {
   font-size: var(--text-small);
   font-weight: var(--weight-semibold);
   text-align: right;
+  /* değer + birim ("5.044,00 a-s", "maliyet ₺…") dar kolonda hece ortasından bölünmez */
+  white-space: nowrap;
   color: var(--color-text-muted);
 }
 .oit-group__amount {

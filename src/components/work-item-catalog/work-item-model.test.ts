@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   countByDiscipline,
   filterWorkItems,
+  formatMoneyTl,
   formatPrice,
   formatPriceUpdated,
   formatStandardRate,
+  formatWholeNumber,
   isPriceStale,
   sortByPozNo,
   tabCounts,
@@ -95,6 +97,21 @@ describe("biçimleyiciler — kayıpsız, tr-TR", () => {
     expect(formatStandardRate("1.8000")).toBe("1,80");
     expect(formatStandardRate("0.1234")).toBe("0,1234");
     expect(formatStandardRate("11.5000")).toBe("11,50");
+  });
+
+  it("formatMoneyTl: TD tl(v) — '₺' boşluksuz + 2 haneli kuruş; null → —", () => {
+    expect(formatMoneyTl("73982140")).toBe("₺73.982.140,00");
+    expect(formatMoneyTl("61250000.50")).toBe("₺61.250.000,50");
+    expect(formatMoneyTl(null)).toBe("—");
+  });
+
+  it("formatWholeNumber: TD nf(v) — kuruşsuz, binlik nokta, yarım sıfırdan uzağa (Intl halfExpand); null → —", () => {
+    expect(formatWholeNumber("5044.0000")).toBe("5.044");
+    expect(formatWholeNumber("360.4999")).toBe("360");
+    expect(formatWholeNumber("1234.5")).toBe("1.235");
+    expect(formatWholeNumber("-0.5")).toBe("-1");
+    expect(formatWholeNumber("12345678901234567.5")).toBe("12.345.678.901.234.568");
+    expect(formatWholeNumber(null)).toBe("—");
   });
 
   it("formatPriceUpdated: GG.AA.YYYY (İstanbul günü); null → —", () => {

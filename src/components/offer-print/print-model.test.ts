@@ -5,9 +5,11 @@ import {
   EMPTY_PRICE,
   PORTRAIT_LAYOUT,
   buildPrintFrame,
+  closingPartsOf,
   formatMoney,
   paginateByHeights,
   paginateOfferRows,
+  type ClosingPartId,
   type PageBudgets,
   type PageLayout,
 } from "./print-model";
@@ -121,14 +123,15 @@ describe("buildPrintFrame — başlık (Ayarlar › Şirket) + künye + koşulla
     ]);
   });
 
-  it("koşullar: ödeme · teslim süresi · fiyat farkı (endeks türüyle) · notlar", () => {
+  it("koşullar: ödeme · teslim süresi · fiyat farkı (endeks türüyle); notlar AYRI kapanış parçası (TKL-F3.8.1)", () => {
     const sabit = buildPrintFrame({ offer, revision, company: makeCompany(), kind: "isveren" });
     expect(sabit.terms).toEqual([
       { label: "Ödeme koşulları", value: "Aylık hakediş, 30 gün vadeli" },
       { label: "Teslim süresi", value: "420 takvim günü" },
       { label: "Fiyat farkı", value: "Sabit fiyat" },
-      { label: "Notlar", value: "Şantiye elektrik ve su aboneliği işverene aittir." },
     ]);
+    expect(sabit.notes).toBe("Şantiye elektrik ve su aboneliği işverene aittir.");
+    expect(closingPartsOf(sabit)).toEqual(["totals", "terms", "notes", "signature"]);
     const tuik = buildPrintFrame({
       offer,
       revision: makePrintRevision({ price_escalation: "tuik", price_index_type: "tufe" }),
@@ -146,6 +149,8 @@ describe("buildPrintFrame — başlık (Ayarlar › Şirket) + künye + koşulla
       kind: "isveren",
     });
     expect(frame.terms.map((term) => term.label)).toEqual(["Fiyat farkı"]);
+    expect(frame.notes).toBeNull();
+    expect(closingPartsOf(frame)).toEqual(["totals", "terms", "signature"]);
   });
 
   it("imza: Hazırlayan adı dolu, Onaylayan boş; altlık tür etiketi", () => {
@@ -170,7 +175,9 @@ const hrows = (groupId: string, heights: number[]) =>
   heights.map((height, index) => ({ row: { groupId, id: `${groupId}${index}` } as HRow, height }));
 const idsOf = (pages: ReturnType<typeof paginateByHeights<HRow>>) =>
   pages.map((page) => page.parts.map((part) => part.rows.map((row) => row.id)));
-const BUDGETS: PageBudgets = { first: 100, rest: 200, closing: 80, continuedHead: 10 };
+/** Tek parçalık kapanış (eski "tek blok" vakaları): öncü/ara boşluk 0 → maliyet = yükseklik. */
+const block = (height: number) => [{ id: "totals" as const, height }];
+const BUDGETS: PageBudgets = { first: 100, rest: 200, closing: block(80), closingLead: 0, closingGap: 0, continuedHead: 10 };
 
 describe("paginateByHeights — ölçülen yükseklikle sayfalama", () => {
   it("satır yok → tek boş sayfa", () => {
@@ -190,7 +197,7 @@ describe("paginateByHeights — ölçülen yükseklikle sayfalama", () => {
 
   it("tek başına sayfadan büyük grup satır satır bölünür; devam parçası işaretlenir ve devam başlığı yer tutar", () => {
     // rest=200: parça 1 (ilk sayfa boş kalır: ilk satır 90 ≤ 100 → ilk sayfaya girer)
-    const pages = paginateByHeights(hrows("big", [90, 90, 90, 90, 90]), { ...BUDGETS, closing: 10 });
+    const pages = paginateByHeights(hrows("big", [90, 90, 90, 90, 90]), { ...BUDGETS, closing: block(10) });
     const parts = pages.flatMap((page) => page.parts);
     expect(parts.flatMap((part) => part.rows.map((row) => row.id))).toEqual(["big0", "big1", "big2", "big3", "big4"]);
     expect(parts.map((part) => part.continued)).toEqual([false, true, true]);
@@ -213,13 +220,13 @@ describe("paginateByHeights — ölçülen yükseklikle sayfalama", () => {
   });
 
   it("ilk sayfa bütçesi (künye) ilk satıra yetmiyorsa ilk sayfa boş kalır, satırlar sonraki sayfada", () => {
-    expect(idsOf(paginateByHeights(hrows("a", [150]), { ...BUDGETS, first: 50, closing: 10 }))).toEqual([[], [["a0"]]]);
+    expect(idsOf(paginateByHeights(hrows("a", [150]), { ...BUDGETS, first: 50, closing: block(10) }))).toEqual([[], [["a0"]]]);
   });
 });
 
 describe("paginateByHeights — bölünen grubun ilk parçası", () => {
   it("önceki gruplarla dolu sayfada başlayan büyük grubun İLK parçası 'devam' DEĞİLDİR", () => {
-    const pages = paginateByHeights([...hrows("a", [90]), ...hrows("big", [150, 150, 150])], { ...BUDGETS, closing: 10 });
+    const pages = paginateByHeights([...hrows("a", [90]), ...hrows("big", [150, 150, 150])], { ...BUDGETS, closing: block(10) });
     const bigParts = pages.flatMap((page) => page.parts).filter((part) => part.rows[0]!.groupId === "big");
     expect(bigParts.map((part) => part.continued)).toEqual([false, true, true]);
   });
@@ -227,7 +234,79 @@ describe("paginateByHeights — bölünen grubun ilk parçası", () => {
 
 describe("paginateByHeights — '(devam)' başlığı yer tutar", () => {
   it("devam parçasında başlık satırı yüksekliği bütçeden düşer (10 + 100 + 100 > 200 → iki satır SIĞMAZ)", () => {
-    const pages = paginateByHeights(hrows("big", [100, 100, 100, 100]), { ...BUDGETS, closing: 10 });
+    const pages = paginateByHeights(hrows("big", [100, 100, 100, 100]), { ...BUDGETS, closing: block(10) });
     expect(idsOf(pages)).toEqual([[["big0"]], [["big1"]], [["big2"]], [["big3"]]]);
+  });
+});
+
+/* ─── TKL-F3.8.1 · kapanış PARÇALARI (toplamlar | koşullar | notlar | imza) ─────────────── */
+const closingOf = (pages: ReturnType<typeof paginateByHeights<HRow>>) => pages.map((page) => page.closing);
+const parts4 = (totals: number, terms: number, notes: number, signature: number) => [
+  { id: "totals" as const, height: totals },
+  { id: "terms" as const, height: terms },
+  { id: "notes" as const, height: notes },
+  { id: "signature" as const, height: signature },
+];
+const SPLIT: PageBudgets = { first: 200, rest: 200, closing: parts4(40, 120, 150, 60), closingLead: 8, closingGap: 4, continuedHead: 10 };
+
+describe("paginateByHeights — kapanış parçaları (TKL-F3.8.1, CEO kararı a)", () => {
+  it("🔴 parçalar arasında sayfa geçilir; her parça bütün kalır; sıra korunur; İMZA son sayfada SON parça", () => {
+    // s1: a0 150 + (8+40) = 198 ≤ 200 → toplamlar · koşullar 4+120 sığmaz → s2: 8+120 · notlar 4+150 sığmaz →
+    // s3: 8+150 · imza 4+60 sığmaz → s4: imza.
+    const pages = paginateByHeights(hrows("a", [150]), SPLIT);
+    expect(closingOf(pages)).toEqual([["totals"], ["terms"], ["notes"], ["signature"]]);
+    expect(idsOf(pages)).toEqual([[["a0"]], [], [], []]);
+  });
+
+  it("sığan parçalar aynı sayfada kalır (gereksiz sayfa açılmaz)", () => {
+    const pages = paginateByHeights(hrows("a", [20]), { ...SPLIT, closing: parts4(20, 30, 30, 40) });
+    expect(closingOf(pages)).toEqual([["totals", "terms", "notes", "signature"]]);
+  });
+
+  it("🔴 tek parça sayfadan büyükse KENDİ sayfasında (metin kırpılmaz); sonraki parça yeni sayfada", () => {
+    const pages = paginateByHeights(hrows("a", [20]), { ...SPLIT, closing: parts4(20, 30, 500, 40) });
+    expect(closingOf(pages)).toEqual([["totals", "terms"], ["notes"], ["signature"]]);
+  });
+
+  it("satır yoksa kapanış ilk sayfadan başlar (başlık + künye yine basılır)", () => {
+    const pages = paginateByHeights<HRow>([], { ...SPLIT, closing: parts4(20, 30, 30, 40) });
+    expect(closingOf(pages)).toEqual([["totals", "terms", "notes", "signature"]]);
+    expect(idsOf(pages)).toEqual([[]]);
+  });
+
+  it("boş parça (not yok) listede yoksa basılmaz; imza yine son", () => {
+    const closing = parts4(40, 120, 0, 60).filter((part) => part.id !== "notes");
+    const pages = paginateByHeights(hrows("a", [150]), { ...SPLIT, closing });
+    expect(closingOf(pages)).toEqual([["totals"], ["terms", "signature"]]);
+  });
+
+  it("🔴 çağıran sırası karışık verse de sıra kanoniktir: toplamlar → koşullar → notlar → imza", () => {
+    const shuffled = [...parts4(20, 30, 30, 40)].reverse();
+    const pages = paginateByHeights(hrows("a", [20]), { ...SPLIT, closing: shuffled });
+    expect(pages.flatMap((page) => page.closing)).toEqual(["totals", "terms", "notes", "signature"]);
+  });
+
+  it("değişmez (rastgele 300 vaka): her parça TAM BİR kez, imza son sayfanın son parçası, sayfa başına kapanış sıralı", () => {
+    let seed = 7;
+    const rand = (max: number) => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return 1 + (seed % max);
+    };
+    for (let round = 0; round < 300; round += 1) {
+      const closing = parts4(rand(250), rand(250), rand(250), rand(250));
+      const rowsIn = hrows(`g${round}`, Array.from({ length: rand(6) }, () => rand(120)));
+      const pages = paginateByHeights(rowsIn, { ...SPLIT, closing });
+      const flat = pages.flatMap((page) => page.closing);
+      expect(flat).toEqual<ClosingPartId[]>(["totals", "terms", "notes", "signature"]);
+      expect(pages[pages.length - 1]!.closing.at(-1)).toBe("signature");
+      expect(pages.slice(0, -1).every((page) => !page.closing.includes("signature"))).toBe(true);
+    }
+  });
+});
+
+describe("paginateOfferRows — statik ilk tahmin: kapanış parçaları son sayfada", () => {
+  it("verilen parçalar son sayfada, diğer sayfalarda kapanış YOK", () => {
+    const pages = paginateOfferRows([...rows("a", 4), ...rows("b", 8)], LAYOUT, ["totals", "terms", "signature"]);
+    expect(pages.map((page) => page.closing)).toEqual([...pages.slice(0, -1).map(() => []), ["totals", "terms", "signature"]]);
   });
 });

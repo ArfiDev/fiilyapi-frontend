@@ -13,12 +13,15 @@ import { buildInternalPrintModel } from "./print-model-internal";
  * Gerçek tarayıcı doğrulaması F3.8 playwright'ındadır (tüm alanlar azami uzunlukta fikstür).
  */
 let rowHeights: Record<string, number> = {};
+/** Kapanış parçası yükseklikleri (TKL-F3.8.1: `data-print-closing-part` ayrı ölçülür). */
+let partHeights: Record<string, number> = {};
 let contentHeight = 1097;
 
 function fakeHeight(element: Element): number {
   const key = element.getAttribute("data-print-row");
   if (key !== null) return rowHeights[key] ?? 28;
-  if (element.hasAttribute("data-print-closing")) return 300;
+  const part = element.getAttribute("data-print-closing-part");
+  if (part !== null) return partHeights[part] ?? 70;
   if (element.tagName === "THEAD") return 24;
   if (element.classList.contains("offer-print__header")) return 100;
   if (element.classList.contains("offer-print__kunye")) return 60;
@@ -28,6 +31,7 @@ function fakeHeight(element: Element): number {
 
 beforeEach(() => {
   rowHeights = {};
+  partHeights = {};
   contentHeight = 1097;
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
     const height = fakeHeight(this);
@@ -63,16 +67,29 @@ describe("işveren yazdırma — ölçüme dayalı sayfalama (madde 1)", () => {
     });
   });
 
-  it("🔴 kapanış (toplam + koşul + imza) sığmıyorsa yeni sayfaya geçer ve YALNIZ son sayfada basılır", () => {
-    // Tablo ilk sayfayı doldurur: kalan yer < kapanış (300 + boşluklar).
+  it("🔴 kapanış PARÇALARI sığmayınca sayfa geçer; her parça TAM BİR kez; İMZA yalnız son sayfada (TKL-F3.8.1)", () => {
+    // Tablo ilk sayfayı doldurur: kalan yer kapanışın tamamına yetmez.
     for (let index = 0; index < 6; index += 1) rowHeights[`g1-i${index}`] = 120;
     const { container } = render(<OfferCustomerPrint model={customerModel()} />);
     const all = sheets(container);
     expect(all.length).toBeGreaterThan(1);
+    const partIds = Array.from(container.querySelectorAll("[data-print-closing-part]")).map((el) => el.getAttribute("data-print-closing-part"));
+    expect(partIds).toEqual(["totals", "terms", "notes", "signature"]);
     const last = all[all.length - 1]!;
-    expect(container.querySelectorAll("[data-print-closing]")).toHaveLength(1);
-    expect(last.querySelector("[data-print-closing]")).not.toBeNull();
+    expect(last.querySelector('[data-print-closing-part="signature"]')).not.toBeNull();
     expect(within(last).getByText("Hazırlayan")).toBeInTheDocument();
+  });
+
+  it("🔴 sayfadan büyük tek parça (uzun notlar) KENDİ sayfasında; sonraki parça (imza) yeni sayfada, metin kırpılmaz", () => {
+    partHeights = { totals: 80, terms: 120, notes: 1500, signature: 90 };
+    const { container } = render(<OfferCustomerPrint model={customerModel()} />);
+    const all = sheets(container);
+    const pageOf = (id: string) => all.findIndex((sheet) => sheet.querySelector(`[data-print-closing-part="${id}"]`) !== null);
+    const notesPage = all[pageOf("notes")]!;
+    expect(Array.from(notesPage.querySelectorAll("[data-print-closing-part]")).map((el) => el.getAttribute("data-print-closing-part"))).toEqual(["notes"]);
+    expect(pageOf("signature")).toBe(all.length - 1);
+    expect(pageOf("signature")).toBeGreaterThan(pageOf("notes"));
+    expect(within(notesPage).getByText("Şantiye elektrik ve su aboneliği işverene aittir.")).toBeInTheDocument();
   });
 
   it("ölçülen yükseklikler yetiyorsa sayfa sayısı DEĞİŞMEZ (gereksiz sayfa açılmaz)", () => {

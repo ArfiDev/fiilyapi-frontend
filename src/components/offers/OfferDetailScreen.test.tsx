@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import type { OfferDetailRead, OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 
-import { OFFER_ID, makeDetail, makeRevision } from "./offer-detail-fixtures";
+import { OFFER_ID, makeDetail, makeRevision, makeRevisionSummary } from "./offer-detail-fixtures";
 import { OfferDetailScreen, parseRevParam } from "./OfferDetailScreen";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
@@ -528,6 +528,44 @@ describe("durum geçişleri", () => {
     backend = singleRevisionBackend("sent");
     mockBackend();
     vi.mocked(backendClient.POST).mockResolvedValue(ok(makeRevision({ rev_no: 1 })));
+    renderScreen();
+    await loaded();
+    await user.click(button("Yeni Revizyon"));
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/teklif-hazirlama/offer-14?rev=1"));
+    expect(callsTo("POST", NEW_REV)).toHaveLength(1);
+    expect(await screen.findByText("Rev.1 oluşturuldu · Rev.0 salt okunur")).toBeInTheDocument();
+  });
+
+  it("Yeni Revizyon (URL'de rev YOK): detay tazelemesi görünümü yeni güncel revizyona çevirse de ?rev=1'e geçer + toast görünür", async () => {
+    // TKL-F3.8 AŞAMA B kırmızısı (e2e offers.spec): gerçek ağda tazelemeler AYRI döner; detay (latest_rev_no=1)
+    // eski revizyonun okumasından ÖNCE inerse görünüm yeni anahtarla yeniden kurulur ve `mutate()` geri çağrıları
+    // (yönlendirme + toast) SÖNERDİ. Arka uç burada DURUMLUDUR: POST sonrası detay iki revizyon döner.
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("sent");
+    mockBackend();
+    const rev1: OfferRevisionRead = { ...makeRevision({ rev_no: 1 }), status: "draft", is_latest: true, is_editable: true };
+    vi.mocked(backendClient.POST).mockImplementation((async (path: string) => {
+      if (path !== NEW_REV) throw new Error(`beklenmeyen POST ${path}`);
+      const sent0 = backend.revisions[0]!;
+      backend = {
+        detail: {
+          ...backend.detail,
+          latest_rev_no: 1,
+          status: "draft",
+          revisions: [...backend.detail.revisions, makeRevisionSummary({ rev_no: 1 })],
+        },
+        revisions: { 0: { ...sent0, is_latest: false, is_editable: false }, 1: rev1 },
+      };
+      return ok(rev1, 201);
+    }) as never);
+    const baseGet = vi.mocked(backendClient.GET).getMockImplementation() as unknown as (path: string, init?: unknown) => Promise<unknown>;
+    const REFETCH_LAG_MS = 50;
+    vi.mocked(backendClient.GET).mockImplementation((async (path: string, init?: { params?: { path?: { rev_no?: number } } }) => {
+      if (path === "/offers/{offer_id}/revisions/{rev_no}" && init?.params?.path?.rev_no === 0 && backend.detail.latest_rev_no === 1) {
+        await new Promise((resolve) => setTimeout(resolve, REFETCH_LAG_MS));
+      }
+      return baseGet(path, init);
+    }) as never);
     renderScreen();
     await loaded();
     await user.click(button("Yeni Revizyon"));

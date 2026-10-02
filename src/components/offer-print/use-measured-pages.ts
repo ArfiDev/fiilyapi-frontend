@@ -2,13 +2,20 @@
 
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 
-import { paginateByHeights, type MeasuredRow, type OfferPrintPage, type PageBudgets } from "./print-model";
+import {
+  paginateByHeights,
+  type ClosingMeasure,
+  type ClosingPartId,
+  type MeasuredRow,
+  type OfferPrintPage,
+  type PageBudgets,
+} from "./print-model";
 
 /**
  * TKL-F3.6.1 · madde 1 — teklif yazdırma sayfalarını tarayıcıda ÖLÇÜLEN yükseklikle yeniden böler.
  *
  * Statik tahmin (`PageLayout`: satır 28px) ilk render içindir. Düzen sonrası (`useLayoutEffect`, boyamadan ÖNCE)
- * her tablo satırının, kapanış bloğunun ve sayfa çerçevesinin GERÇEK yüksekliği okunur; `paginateByHeights`
+ * her tablo satırının, her kapanış PARÇASININ (`data-print-closing-part`, TKL-F3.8.1) ve sayfa çerçevesinin GERÇEK yüksekliği okunur; `paginateByHeights`
  * (saf) yeni sayfa kümesini verir. Hiçbir metin kırpılmaz: uzun iş adı/kapsam/koşul/grup adı satırı büyütür,
  * sayfa bölünmesi buna uyar. Yerleşim ölçülemezse (jsdom/SSR: yükseklikler 0) statik sayfalama aynen kalır.
  *
@@ -27,6 +34,8 @@ const SAFETY = 6;
 const CONTENT_GAP = 10;
 /** `.offer-print__closing` üst boşluğu (offer-print.css). */
 const CLOSING_MARGIN = 8;
+/** `.offer-print__closing` parçaları arası boşluk (offer-print.css `gap`). */
+const CLOSING_PART_GAP = 12;
 /** Yalnız tek sayfa ölçülmüşken sonraki sayfa çerçevesi için tahmin: çalışan başlık satırı. */
 const RUNNING_HEAD_ESTIMATE = 28;
 const DEFAULT_CONTINUED_HEAD = 28;
@@ -61,20 +70,31 @@ function budgetOf(measure: SheetMeasure): number {
   return measure.contentHeight - FOOTER_RESERVE - SAFETY - measure.chrome;
 }
 
-function readBudgets(root: HTMLElement): PageBudgets | null {
+/** Basılacak her kapanış parçasının ölçülen yüksekliği; biri ölçülemezse `null`. */
+function readClosing(root: HTMLElement, ids: readonly ClosingPartId[]): ClosingMeasure[] | null {
+  const measures = ids.map((id) => {
+    const element = root.querySelector(`[data-print-closing-part="${id}"]`);
+    return { id, height: element === null ? 0 : heightOf(element) };
+  });
+  return measures.some((measure) => measure.height <= 0) ? null : measures;
+}
+
+function readBudgets(root: HTMLElement, closingIds: readonly ClosingPartId[]): PageBudgets | null {
   const sheets = Array.from(root.querySelectorAll(SHEET));
   const first = sheets[0] === undefined ? null : measureSheet(sheets[0]);
   if (first === null || first.contentHeight <= 0) return null;
   const second = sheets[1] === undefined ? null : measureSheet(sheets[1]);
   const restChrome = second === null ? first.chrome - firstOnlyHeight(root) + RUNNING_HEAD_ESTIMATE : second.chrome;
   const rest = budgetOf({ contentHeight: first.contentHeight, chrome: restChrome });
-  const closingElement = root.querySelector("[data-print-closing]");
-  const closing = closingElement === null ? 0 : heightOf(closingElement) + CLOSING_MARGIN + CONTENT_GAP;
+  const closing = readClosing(root, closingIds);
+  if (closing === null) return null;
   const continuedElement = root.querySelector("[data-print-continued]");
   return {
     first: budgetOf(first),
     rest,
     closing,
+    closingLead: CLOSING_MARGIN + CONTENT_GAP,
+    closingGap: CLOSING_PART_GAP,
     continuedHead: continuedElement === null ? DEFAULT_CONTINUED_HEAD : heightOf(continuedElement),
   };
 }
@@ -98,7 +118,10 @@ function readHeights(root: HTMLElement): Map<string, number> {
 
 export function pagesSignature<Row extends MeasurableRow>(pages: readonly OfferPrintPage<Row>[]): string {
   return pages
-    .map((page) => page.parts.map((part) => `${part.continued ? "~" : ""}${part.rows.map((row) => row.key).join(",")}`).join("|"))
+    .map(
+      (page) =>
+        `${page.parts.map((part) => `${part.continued ? "~" : ""}${part.rows.map((row) => row.key).join(",")}`).join("|")}#${page.closing.join(",")}`,
+    )
     .join("||");
 }
 
@@ -106,8 +129,9 @@ export function pagesSignature<Row extends MeasurableRow>(pages: readonly OfferP
 export function remeasurePages<Row extends MeasurableRow>(
   root: HTMLElement,
   rows: readonly Row[],
+  closingIds: readonly ClosingPartId[],
 ): OfferPrintPage<Row>[] | null {
-  const budgets = readBudgets(root);
+  const budgets = readBudgets(root, closingIds);
   if (budgets === null) return null;
   const heights = readHeights(root);
   if (rows.some((row) => (heights.get(row.key) ?? 0) <= 0)) return null;
@@ -134,7 +158,8 @@ export function useMeasuredPages<Row extends MeasurableRow>(
     if (passes.current.count >= MAX_PASSES) return;
     passes.current.count += 1;
     const rows = staticPages.flatMap((page) => page.parts.flatMap((part) => part.rows));
-    const next = remeasurePages(root, rows);
+    const closingIds = staticPages.flatMap((page) => page.closing);
+    const next = remeasurePages(root, rows, closingIds);
     if (next !== null && pagesSignature(next) !== signature) setMeasured({ source, pages: next });
     // `staticPages` kimliği her üst render'da değişebilir; içerik kimliği `source`tur.
     // eslint-disable-next-line react-hooks/exhaustive-deps

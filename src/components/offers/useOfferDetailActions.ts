@@ -19,6 +19,7 @@ interface UseOfferDetailActionsArgs {
   /** Görüntülenen (= geçişin uygulanacağı SON) revizyon. */
   revNo: number;
   validityDays: number;
+  /** Kapsayıcının toast'ı (görünüm yeniden kurulsa da kalır). */
   onToast: (text: string) => void;
   /** Yeni revizyon açılınca o revizyona geç (`?rev=`). */
   onRevisionOpened: (revNo: number) => void;
@@ -85,17 +86,18 @@ export function useOfferDetailActions(args: UseOfferDetailActionsArgs) {
       run("lose", body, "Kaybedildi olarak işaretlendi", "Kaybedildi işaretlenemedi.", onDone),
     withdraw: (onDone: () => void) =>
       run("withdraw", undefined, "Vazgeçildi olarak işaretlendi", "Vazgeçildi işaretlenemedi.", onDone),
+    // `mutateAsync` (mutate() geri çağrısı DEĞİL): başarı tazelemesi detayın `latest_rev_no`sunu ilerletir; URL'de
+    // `rev` yoksa görünüm yeni güncel revizyonun anahtarıyla YENİDEN KURULUR ve gözlemcisi sökülen `mutate()`
+    // geri çağrıları hiç çalışmaz (yönlendirme + toast sönerdi — TKL-F3.8 e2e). Söz gözlemciden bağımsız çözülür;
+    // `onToast`/`onRevisionOpened` yeniden kurulmayan kapsayıcıya (`OfferDetailContent`) bağlıdır.
     newRevision: () => {
       setError(null);
-      createRevision.mutate(
-        { offerId },
-        {
-          onSuccess: (revision) => {
-            onToast(`Rev.${revision.rev_no} oluşturuldu · Rev.${revNo} salt okunur`);
-            onRevisionOpened(revision.rev_no);
-          },
-          onError: (err) => fail(err, "Yeni revizyon açılamadı."),
+      void createRevision.mutateAsync({ offerId }).then(
+        (revision) => {
+          onToast(`Rev.${revision.rev_no} oluşturuldu · Rev.${revNo} salt okunur`);
+          onRevisionOpened(revision.rev_no);
         },
+        (err: unknown) => fail(err, "Yeni revizyon açılamadı."),
       );
     },
   };

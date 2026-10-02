@@ -32,12 +32,12 @@ describe("iç döküm modeli", () => {
 
   it("toplamlar: KDV hariç · KDV · genel · maliyet · genel gider · kâr · adam-saat · fiyatsız", () => {
     expect(model().totals.map((row) => [row.label, row.value])).toEqual([
-      ["Toplam (KDV hariç)", "₺ 73.982.140,00"],
-      ["KDV %20", "₺ 14.796.428,00"],
-      ["Genel toplam", "₺ 88.778.568,00"],
-      ["Maliyet", "₺ 99.999.999,99"],
-      ["Genel gider (%12)", "₺ 88.888.888,88"],
-      ["Kâr (%22,22)", "₺ 77.777.777,77"],
+      ["Toplam (KDV hariç)", "₺73.982.140,00"],
+      ["KDV %20", "₺14.796.428,00"],
+      ["Genel toplam", "₺88.778.568,00"],
+      ["Maliyet", "₺99.999.999,99"],
+      ["Genel gider (%12)", "₺88.888.888,88"],
+      ["Kâr (%22,22)", "₺77.777.777,77"],
       ["Toplam adam-saat", "555.666"],
       ["Fiyatsız kalem", "1"],
     ]);

@@ -1,6 +1,7 @@
 import { WarningTriangleIcon } from "@/components/ui/icons";
+import { formatMoneyTl, formatWholeNumber } from "@/components/work-item-catalog/work-item-model";
 import { divideDecimalStrings, multiplyDecimalStrings } from "@/lib/decimal";
-import { formatCurrencyPrecise, formatDecimal } from "@/lib/format";
+import { formatDecimal } from "@/lib/format";
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 
 import "./offer-detail.css";
@@ -16,6 +17,9 @@ export interface OfferTotalsCardProps {
   totals: OfferTotals;
   vatPct: string;
 }
+
+/** TD:422-429 `tl(v)` — kuruşlu, grup/kalem satırlarıyla aynı biçim; dize tabanlı, kayıpsız; maskeli → "—". */
+const money = formatMoneyTl;
 
 /** `null`/boş bölen → yüzde basılmaz. */
 function pctText(part: string | null, base: string | null): string {
@@ -35,18 +39,18 @@ interface Row {
 export function OfferTotalsCard({ totals, vatPct }: OfferTotalsCardProps) {
   const { customer, internal } = totals;
   const costRows: Row[] = [
-    { label: "Maliyet", pct: "", value: formatCurrencyPrecise(internal.cost) },
-    { label: "Genel gider", pct: pctText(internal.overhead, internal.cost), value: formatCurrencyPrecise(internal.overhead) },
+    { label: "Maliyet", pct: "", value: money(internal.cost) },
+    { label: "Genel gider", pct: pctText(internal.overhead, internal.cost), value: money(internal.overhead) },
     {
       label: "Kâr",
       pct: internal.profit_pct === null ? "" : `%${formatDecimal(internal.profit_pct, PCT_DISPLAY_DIGITS)}`,
-      value: formatCurrencyPrecise(internal.profit),
+      value: money(internal.profit),
     },
   ];
   const customerRows: Row[] = [
-    { label: "Teklif tutarı (KDV hariç)", pct: "", value: formatCurrencyPrecise(customer.net), tone: "net" },
-    { label: "KDV", pct: `%${formatDecimal(vatPct, PCT_DISPLAY_DIGITS)}`, value: formatCurrencyPrecise(customer.vat) },
-    { label: "Genel toplam", pct: "", value: formatCurrencyPrecise(customer.gross), tone: "gross" },
+    { label: "Teklif tutarı (KDV hariç)", pct: "", value: money(customer.net), tone: "net" },
+    { label: "KDV", pct: `%${formatDecimal(vatPct, PCT_DISPLAY_DIGITS)}`, value: money(customer.vat) },
+    { label: "Genel toplam", pct: "", value: money(customer.gross), tone: "gross" },
   ];
   const rows = [...costRows, ...customerRows];
 
@@ -66,7 +70,7 @@ export function OfferTotalsCard({ totals, vatPct }: OfferTotalsCardProps) {
         <div className="offer-totals__row">
           <dt>Toplam adam-saat</dt>
           <dd className="offer-totals__pct" />
-          <dd className="offer-totals__value">{formatDecimal(internal.man_hours, 1)} a-s</dd>
+          <dd className="offer-totals__value">{formatWholeNumber(internal.man_hours)} a-s</dd>
         </div>
       </dl>
       {totals.unpriced_count > 0 && (

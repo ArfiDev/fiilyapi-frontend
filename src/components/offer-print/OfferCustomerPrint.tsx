@@ -1,6 +1,6 @@
 import { PrintSheet } from "@/components/print-sheet/PrintSheet";
 
-import { PrintHeader, PrintKunye, PrintRunningHead, PrintSignatures, PrintSpanRow, PrintTerms, PrintTotals } from "./OfferPrintParts";
+import { PrintClosing, PrintHeader, PrintKunye, PrintRunningHead, PrintSpanRow } from "./OfferPrintParts";
 import type { CustomerPrintModel, CustomerPrintRow } from "./print-model-customer";
 import { useMeasuredPages } from "./use-measured-pages";
 import "./offer-print.css";
@@ -100,7 +100,6 @@ export function OfferCustomerPrint({ model }: { model: CustomerPrintModel }) {
     <div ref={rootRef} className="offer-print__pages">
       {pages.map((page, index) => {
         const isFirst = index === 0;
-        const isLast = index === pages.length - 1;
         return (
           <PrintSheet
             key={index}
@@ -118,14 +117,7 @@ export function OfferCustomerPrint({ model }: { model: CustomerPrintModel }) {
               <PrintRunningHead frame={frame} />
             )}
             <ItemsTable page={page} />
-            {isLast && (
-              <div className="offer-print__closing" data-print-closing="">
-                <PrintTotals rows={model.totals} />
-                {model.footnote !== null && <p className="offer-print__footnote">{model.footnote}</p>}
-                <PrintTerms rows={frame.terms} />
-                <PrintSignatures signatures={frame.signatures} />
-              </div>
-            )}
+            <PrintClosing parts={page.closing} frame={frame} totals={model.totals} footnote={model.footnote} />
           </PrintSheet>
         );
       })}

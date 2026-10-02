@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { XIcon } from "@/components/ui/icons";
-import { formatPrice, formatStandardRate } from "@/components/work-item-catalog/work-item-model";
+import { formatMoneyTl, formatWholeNumber } from "@/components/work-item-catalog/work-item-model";
 import { Input } from "@/components/ui";
 import { EMPTY_CELL } from "@/lib/format";
 
@@ -24,12 +24,9 @@ export interface OfferGroupHeaderRowProps {
 
 const NAME_MAX_LENGTH = 200;
 
-function money(value: string | null): string {
-  return value === null ? EMPTY_CELL : `₺${formatPrice(value)}`;
-}
-
+/** TD `nf(S.as) + ' a-s'` — kuruşsuz ("5.044 a-s"). */
 function manHoursText(totals: GroupTotals): string {
-  return totals.manHours === null ? EMPTY_CELL : `${formatStandardRate(totals.manHours)} a-s`;
+  return totals.manHours === null ? EMPTY_CELL : `${formatWholeNumber(totals.manHours)} a-s`;
 }
 
 /** TD:238-245 — grup başlığı: kod harfi · ad (tıkla-düzenle, ÜS-F3-11) · n kalem · Σ a-s · maliyet · Σ tutar. */
@@ -101,8 +98,8 @@ export function OfferGroupHeaderRow({ code, groupId, name, items, canEdit, onRen
         )}
       </td>
       <td className="oit-group__num">{manHoursText(totals)}</td>
-      <td colSpan={4} className="oit-group__num">{`maliyet ${money(totals.cost)}`}</td>
-      <td className="oit-group__num oit-group__amount">{money(totals.amount)}</td>
+      <td colSpan={4} className="oit-group__num">{`maliyet ${formatMoneyTl(totals.cost)}`}</td>
+      <td className="oit-group__num oit-group__amount">{formatMoneyTl(totals.amount)}</td>
       <td />
     </tr>
   );

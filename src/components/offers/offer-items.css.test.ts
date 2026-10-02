@@ -21,6 +21,10 @@ describe("offer-items.css — token disiplini (TKL-F3.6)", () => {
     expect(/\.oit-row--missing td\s*{([^}]*)}/.exec(declarations)?.[1]).toContain("var(--color-warning-tint)");
   });
 
+  it("grup başlığı toplamları (Σ a-s · maliyet · tutar) değer+birim bölünmez — dar a-s kolonunda '360,00 a-\\ns' kırığı", () => {
+    expect(/\.oit-group__num\s*{([^}]*)}/.exec(declarations)?.[1]).toContain("white-space: nowrap");
+  });
+
   it("tablo yatay kaydırılır (dar ekranda kabuktan taşmaz); layout özelliği ANİMASYONU yok", () => {
     expect(/\.oit-scroll\s*{([^}]*)}/.exec(declarations)?.[1]).toContain("overflow-x: auto");
     expect(declarations).not.toMatch(/transition\s*:/);

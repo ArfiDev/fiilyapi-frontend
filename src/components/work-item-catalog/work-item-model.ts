@@ -3,8 +3,8 @@
  * Kaynak: `projedesign/Katalog - İş Kalemleri.dc.html` (KIK) + TKL-F1-PLAN §1.2.
  * ÇEKİRDEK bölge: `earned-value` ithal edilmez (§2.7).
  */
-import { divideDecimalStrings, toDecimalString } from "@/lib/decimal";
-import { EMPTY_CELL, formatDateDots, toIstanbulDateOnly } from "@/lib/format";
+import { toDecimalString } from "@/lib/decimal";
+import { EMPTY_CELL, formatDateDots, formatFixedDecimal, toIstanbulDateOnly } from "@/lib/format";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 
 /** KIK:240 — fiyat bu günden eskiyse (`> 182`) tarih turuncu. */
@@ -15,7 +15,6 @@ const MS_PER_DAY = 86_400_000;
 const PRICE_DIGITS = 2;
 const RATE_MIN_DIGITS = 2;
 const RATE_MAX_DIGITS = 4;
-const THOUSANDS_GROUP = /\B(?=(\d{3})+(?!\d))/g;
 
 export interface WorkItemFilter {
   query: string;
@@ -77,19 +76,24 @@ export function isPriceStale(priceUpdatedAt: string | null, now: Date): boolean 
 }
 
 /** Ondalık metni kayıpsız yuvarlar ve tr-TR basar (binlik nokta, ondalık virgül). `Number()` YOK. */
-function formatFixed(value: string, digits: number): string {
-  const rounded = divideDecimalStrings(value, "1", digits) ?? value;
-  const negative = rounded.startsWith("-");
-  const [whole = "0", fraction = ""] = rounded.replace(/^-/, "").split(".");
-  const grouped = whole.replace(THOUSANDS_GROUP, ".");
-  const sign = negative ? "-" : "";
-  return fraction === "" ? `${sign}${grouped}` : `${sign}${grouped},${fraction}`;
-}
+const formatFixed = formatFixedDecimal;
 
 /** KIK:253 `nf(ref,2)` — sabit 2 ondalık; fiyat yoksa EMPTY_CELL. */
 export function formatPrice(value: string | null): string {
   const decimal = toDecimalString(value);
   return decimal === null ? EMPTY_CELL : formatFixed(decimal, PRICE_DIGITS);
+}
+
+/** TD `tl(v)` — `@/lib/format`ta tanımlı (teklif PDF'i de kullanır; sızıntı bekçisi `lib/format`a izin verir). */
+export { formatMoneyTl } from "@/lib/format";
+
+/**
+ * Kuruşsuz tam sayı — TD `nf(v)` (= `toLocaleString('tr-TR', {maximumFractionDigits: 0})`, yarım SIFIRDAN
+ * UZAĞA). Dize tabanlı (`Number()` yok, kayıpsız); null/boş → EMPTY_CELL. Teklif grup Σ a-s + toplam adam-saat.
+ */
+export function formatWholeNumber(value: string | null): string {
+  const decimal = toDecimalString(value);
+  return decimal === null ? EMPTY_CELL : formatFixed(decimal, 0);
 }
 
 /**

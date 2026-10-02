@@ -8,7 +8,7 @@
  */
 import { paginateByGroup, type PaginatedGroup } from "@/components/print-sheet/paginate";
 import { PRICE_INDEX_TYPE_LABELS, type PriceIndexType } from "@/lib/contract-labels";
-import { EMPTY_CELL, formatAmount, formatDateDots, formatDecimal } from "@/lib/format";
+import { EMPTY_CELL, formatAmount, formatDateDots, formatDecimal, formatMoneyTl } from "@/lib/format";
 
 export type PrintKind = "isveren" | "ic";
 export const EMPTY_PRICE = EMPTY_CELL;
@@ -46,28 +46,51 @@ export interface PageLayout {
 export const PORTRAIT_LAYOUT: PageLayout = { firstCapacity: 30, capacity: 36, lastReserve: 12 };
 export const LANDSCAPE_LAYOUT: PageLayout = { firstCapacity: 19, capacity: 24, lastReserve: 8 };
 
+/**
+ * TKL-F3.8.1 (CEO kararı a) · kapanış BÖLÜNEBİLİR PARÇALARDAN oluşur: toplamlar | koşullar | notlar | imza.
+ * Her parça kendi içinde bölünmez; parçalar arasında sayfa geçilebilir; İMZA her zaman SON parça (son sayfada).
+ * Dikey (işveren) ve yatay (iç) çıktıda TEK kural. Boş parça (not yoksa notlar) listeye hiç girmez.
+ */
+export type ClosingPartId = "totals" | "terms" | "notes" | "signature";
+export const CLOSING_ORDER: readonly ClosingPartId[] = ["totals", "terms", "notes", "signature"];
+
+/** Kanonik sıra (çağıran karışık verse de): toplamlar → koşullar → notlar → imza. */
+function inClosingOrder<Part extends { id: ClosingPartId }>(parts: readonly Part[]): Part[] {
+  return [...parts].sort((a, b) => CLOSING_ORDER.indexOf(a.id) - CLOSING_ORDER.indexOf(b.id));
+}
+
+/** Basılacak kapanış parçaları: notlar yalnız doluysa. */
+export function closingPartsOf(frame: Pick<PrintFrame, "notes">): ClosingPartId[] {
+  return CLOSING_ORDER.filter((id) => id !== "notes" || frame.notes !== null);
+}
+
 export interface OfferPrintPage<Row> {
   /** Sayfadaki grup parçaları; `continued` → grup önceki sayfadan devam eder (yalnız sayfadan büyük gruplar). */
   readonly parts: readonly PaginatedGroup<Row>[];
+  /** Bu sayfada basılan kapanış parçaları (kanonik sırada; çoğu sayfada boş). */
+  readonly closing: readonly ClosingPartId[];
 }
 
 /**
  * Satırları sayfalara böler: GRUP BÖLÜNMEZ (sığmazsa tümüyle sonraki sayfaya); ilk sayfa daha az satır
- * alır; son sayfada toplam+koşul+imza payı sığmıyorsa sonuna BOŞ sayfa eklenir (toplam ayrı sayfada).
- * Satır yoksa tek boş sayfa (başlık + toplam + imza yine basılır).
+ * alır; son sayfada kapanış payı sığmıyorsa sonuna BOŞ sayfa eklenir (kapanış ayrı sayfada). Bu yalnız İLK
+ * TAHMİNDİR — tüm kapanış parçaları son sayfada; ölçüm (`paginateByHeights`) parçaları gerekirse böler.
+ * Satır yoksa tek sayfa (başlık + kapanış yine basılır).
  */
 export function paginateOfferRows<Row extends { groupId: string }>(
   rows: readonly Row[],
   layout: PageLayout,
+  closing: readonly ClosingPartId[] = CLOSING_ORDER,
 ): OfferPrintPage<Row>[] {
-  if (rows.length === 0) return [{ parts: [] }];
+  const ordered = inClosingOrder(closing.map((id) => ({ id }))).map((part) => part.id);
+  if (rows.length === 0) return [{ parts: [], closing: ordered }];
   const capacityOf = (pageIndex: number) => (pageIndex === 0 ? layout.firstCapacity : layout.capacity);
   const pages = paginateByGroup(rows, capacityOf, (row) => row.groupId);
   const lastIndex = pages.length - 1;
   const used = pages[lastIndex]!.reduce((sum, part) => sum + part.rows.length, 0);
-  const result = pages.map((parts) => ({ parts }));
-  if (used + layout.lastReserve > capacityOf(lastIndex)) result.push({ parts: [] });
-  return result;
+  const result: OfferPrintPage<Row>[] = pages.map((parts) => ({ parts, closing: [] }));
+  if (used + layout.lastReserve > capacityOf(lastIndex)) result.push({ parts: [], closing: [] });
+  return result.map((page, index) => (index === result.length - 1 ? { ...page, closing: ordered } : page));
 }
 
 /* ─── Ölçüme dayalı sayfalama (TKL-F3.6.1 · madde 1) ──────────────────────── */
@@ -82,10 +105,20 @@ export interface PageBudgets {
   readonly first: number;
   /** Sonraki sayfalarda tablo satırlarına kalan yükseklik (px). */
   readonly rest: number;
-  /** Son sayfada toplam + dipnot + koşul + imza bloğunun yüksekliği (boşluklarıyla). */
-  readonly closing: number;
+  /** Kapanış parçalarının ölçülen yükseklikleri (yalnız basılacak parçalar). */
+  readonly closing: readonly ClosingMeasure[];
+  /** Sayfadaki İLK kapanış parçasının önündeki pay (kapanış kabının üst boşluğu + içerik aralığı). */
+  readonly closingLead: number;
+  /** Aynı sayfadaki iki kapanış parçası arasındaki boşluk. */
+  readonly closingGap: number;
   /** Bölünmüş grubun "(devam)" başlık satırının yüksekliği. */
   readonly continuedHead: number;
+}
+
+export interface ClosingMeasure {
+  readonly id: ClosingPartId;
+  /** Ölçülen parça yüksekliği (px; boşluklar hariç). */
+  readonly height: number;
 }
 
 export interface MeasuredRow<Row> {
@@ -116,21 +149,23 @@ function clusterByGroup<Row extends { groupId: string }>(entries: readonly Measu
 /**
  * Ölçülen yüksekliklerle sayfalama. Kurallar: (1) GRUP BÖLÜNMEZ — sığmazsa tümüyle sonraki sayfaya;
  * (2) tek başına sonraki sayfadan büyük grup satır satır bölünür, devam parçası "(devam)" başlığı yüksekliği
- * kadar yer tutar; (3) tek satır sayfadan büyükse KENDİ sayfasına konur (kırpılmaz); (4) son sayfada
- * kapanış bloğu sığmazsa boş bir son sayfa eklenir. Satır yoksa tek boş sayfa.
+ * kadar yer tutar; (3) tek satır sayfadan büyükse KENDİ sayfasına konur (kırpılmaz); (4) kapanış parçaları
+ * tablonun ardından SIRAYLA yerleşir: sığmayan parça yeni sayfaya geçer (parça bölünmez), boş sayfada sayfadan
+ * büyük parça yine de konur (kırpılmaz); imza son parça olduğundan HEP son sayfadadır.
  */
 export function paginateByHeights<Row extends { groupId: string }>(
   entries: readonly MeasuredRow<Row>[],
   budgets: PageBudgets,
 ): OfferPrintPage<Row>[] {
-  if (entries.length === 0) return [{ parts: [] }];
   const budgetOf = (pageIndex: number) => (pageIndex === 0 ? budgets.first : budgets.rest);
   const pages: OfferPrintPage<Row>[] = [];
   let parts: PaginatedGroup<Row>[] = [];
+  let closing: ClosingPartId[] = [];
   let used = 0;
   const closePage = () => {
-    pages.push({ parts });
+    pages.push({ parts, closing });
     parts = [];
+    closing = [];
     used = 0;
   };
 
@@ -171,13 +206,14 @@ export function paginateByHeights<Row extends { groupId: string }>(
     flushPart();
   }
 
-  const lastIndex = pages.length;
-  if (used + budgets.closing > budgetOf(lastIndex)) {
-    closePage();
-    pages.push({ parts: [] });
-  } else {
-    closePage();
+  for (const part of inClosingOrder(budgets.closing)) {
+    const spaceFor = () => part.height + (closing.length === 0 ? budgets.closingLead : budgets.closingGap);
+    const isPageEmpty = used === 0 && parts.length === 0 && closing.length === 0;
+    if (used + spaceFor() > budgetOf(pages.length) && !isPageEmpty) closePage();
+    used += spaceFor();
+    closing.push(part.id);
   }
+  closePage();
   return pages;
 }
 
@@ -192,9 +228,9 @@ export function formatMoney(value: string | null | undefined): string {
   return text + "0".repeat(Math.max(0, MONEY_DIGITS - (text.length - comma - 1)));
 }
 
-/** Toplam satırı tutarı: "₺ 1.234,50"; `null` → "—". */
+/** Toplam satırı tutarı: "₺1.234,50" (detay ekranıyla aynı, TKL-F3.8.1); `null` → "—". */
 export function formatTotal(value: string | null | undefined): string {
-  return value === null || value === undefined ? EMPTY_PRICE : `₺ ${formatMoney(value)}`;
+  return formatMoneyTl(value);
 }
 
 export function formatPct(value: string | null | undefined): string {
@@ -247,7 +283,10 @@ export interface PrintFrame {
   /** "TKL-2026-0014 · Rev.2" */
   heading: string;
   kunye: LabelValue[];
+  /** Koşullar (ödeme · teslim · fiyat farkı); notlar AYRI parçadır (`notes`). */
   terms: LabelValue[];
+  /** Notlar (boşsa `null` → "notlar" parçası basılmaz). */
+  notes: string | null;
   signatures: { role: string; name: string | null }[];
   footerLabel: string;
 }
@@ -284,7 +323,6 @@ function termRows(revision: PrintRevisionSource): LabelValue[] {
     filled(revision.payment_terms) ? { label: "Ödeme koşulları", value: revision.payment_terms } : null,
     revision.delivery_days === null ? null : { label: "Teslim süresi", value: `${revision.delivery_days} takvim günü` },
     { label: "Fiyat farkı", value: escalationText(revision) },
-    filled(revision.notes) ? { label: "Notlar", value: revision.notes } : null,
   ].filter((row): row is LabelValue => row !== null);
 }
 
@@ -309,6 +347,7 @@ export function buildPrintFrame({ offer, revision, company, kind }: FrameInput):
     heading,
     kunye,
     terms: termRows(revision),
+    notes: filled(revision.notes) ? revision.notes : null,
     signatures: [
       { role: "Hazırlayan", name: filled(offer.prepared_by_name) ? offer.prepared_by_name : null },
       { role: "Onaylayan", name: null },

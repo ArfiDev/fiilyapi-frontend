@@ -15,6 +15,7 @@ import {
   EMPTY_PRICE,
   PORTRAIT_LAYOUT,
   buildPrintFrame,
+  closingPartsOf,
   formatMoney,
   formatPct,
   formatTotal,
@@ -145,9 +146,10 @@ export interface CustomerPrintInput {
 
 export function buildCustomerPrintModel({ offer, revision, company }: CustomerPrintInput): CustomerPrintModel {
   const rows = revision.groups.filter((group) => group.items.length > 0).flatMap(groupRows);
+  const frame = buildPrintFrame({ offer, revision, company, kind: "isveren" });
   return {
-    frame: buildPrintFrame({ offer, revision, company, kind: "isveren" }),
-    pages: paginateOfferRows(rows, PORTRAIT_LAYOUT),
+    frame,
+    pages: paginateOfferRows(rows, PORTRAIT_LAYOUT, closingPartsOf(frame)),
     totals: totalRows(revision),
     footnote: unpricedNote(revision.totals.unpriced_count),
   };

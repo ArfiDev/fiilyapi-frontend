@@ -30,7 +30,7 @@ import {
   parseRefPriceInput,
   type TrDecimalParse,
 } from "@/lib/tr-decimal";
-import { formatPrice } from "@/components/work-item-catalog/work-item-model";
+import { formatMoneyTl } from "@/components/work-item-catalog/work-item-model";
 
 export type OfferItem = OfferItemRead;
 export type ItemCellField = "quantity" | "unitMhr" | "costUnitPrice" | "overheadPct" | "profitPct" | "offerUnitPrice";
@@ -133,7 +133,7 @@ export function isQuantityMissing(item: OfferItem): boolean {
 /** "₺1.288,00" ya da "—" (fiyatsız / maskeli / B5 miktarsız kalem). */
 export function amountText(item: OfferItem): string {
   const amount = item.customer?.amount ?? null;
-  return amount === null ? EMPTY_CELL : `₺${formatPrice(amount)}`;
+  return formatMoneyTl(amount);
 }
 
 export function cellTone(field: ItemCellField, ctx: CellContext): CellTone {

@@ -191,10 +191,12 @@
   margin-top: 8px;
 }
 
-.offer-print__closing--wide {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px 24px;
+/* TKL-F3.8.1 · kapanış parçası (toplamlar | koşullar | notlar | imza): içi bölünmez, ayrı ölçülür.
+   Dikey ve yatay çıktıda TEK düzen (alt alta); `gap` = parça içi aralık (toplam ↔ dipnot). */
+.offer-print__closing-part {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .offer-print__totals {
@@ -250,6 +252,12 @@
 .offer-print__terms dl {
   margin: 0;
   font-size: 9.5px;
+}
+
+.offer-print__notes-text {
+  margin: 0;
+  font-size: 9.5px;
+  overflow-wrap: break-word;
 }
 
 .offer-print__term {

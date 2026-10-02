@@ -1,6 +1,6 @@
 import { PrintSheet } from "@/components/print-sheet/PrintSheet";
 
-import { PrintHeader, PrintKunye, PrintRunningHead, PrintSignatures, PrintSpanRow, PrintTerms, PrintTotals } from "./OfferPrintParts";
+import { PrintClosing, PrintHeader, PrintKunye, PrintRunningHead, PrintSpanRow } from "./OfferPrintParts";
 import type { InternalPrintModel, InternalPrintRow } from "./print-model-internal";
 import { useMeasuredPages } from "./use-measured-pages";
 import "./offer-print.css";
@@ -118,7 +118,6 @@ export function OfferInternalPrint({ model }: { model: InternalPrintModel }) {
     <div ref={rootRef} className="offer-print__pages">
       {pages.map((page, index) => {
         const isFirst = index === 0;
-        const isLast = index === pages.length - 1;
         return (
           <PrintSheet
             key={index}
@@ -136,13 +135,7 @@ export function OfferInternalPrint({ model }: { model: InternalPrintModel }) {
               <PrintRunningHead frame={frame} />
             )}
             <ItemsTable page={page} />
-            {isLast && (
-              <div className="offer-print__closing offer-print__closing--wide" data-print-closing="">
-                <PrintTerms rows={frame.terms} />
-                <PrintTotals rows={model.totals} />
-                <PrintSignatures signatures={frame.signatures} />
-              </div>
-            )}
+            <PrintClosing parts={page.closing} frame={frame} totals={model.totals} />
           </PrintSheet>
         );
       })}

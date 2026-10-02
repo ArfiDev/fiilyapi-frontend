@@ -12,6 +12,7 @@ import {
   EMPTY_PRICE,
   LANDSCAPE_LAYOUT,
   buildPrintFrame,
+  closingPartsOf,
   formatMoney,
   formatPct,
   formatTotal,
@@ -179,9 +180,10 @@ export interface InternalPrintInput {
 
 export function buildInternalPrintModel({ offer, revision, company }: InternalPrintInput): InternalPrintModel {
   const rows = revision.groups.filter((group) => group.items.length > 0).flatMap((group) => groupRows(group, revision));
+  const frame = buildPrintFrame({ offer, revision, company, kind: "ic" });
   return {
-    frame: buildPrintFrame({ offer, revision, company, kind: "ic" }),
-    pages: paginateOfferRows(rows, LANDSCAPE_LAYOUT),
+    frame,
+    pages: paginateOfferRows(rows, LANDSCAPE_LAYOUT, closingPartsOf(frame)),
     totals: totalRows(revision),
   };
 }

@@ -1,4 +1,5 @@
-import { formatCurrencyPrecise, formatDateTimeDots } from "@/lib/format";
+import { formatMoneyTl } from "@/components/work-item-catalog/work-item-model";
+import { formatDateTimeDots } from "@/lib/format";
 import type { OfferDetailRead } from "@/lib/api/hooks/useOffers";
 
 import "./offer-detail.css";
@@ -55,14 +56,14 @@ export function RevisionHistory({ history, revisions }: RevisionHistoryProps) {
                 {event.user_name ? ` · ${event.user_name}` : ""}
               </span>
               {AMOUNT_KINDS.has(event.kind) && revision && (
-                <span className="offer-history__amount">{formatCurrencyPrecise(revision.net)}</span>
+                <span className="offer-history__amount">{formatMoneyTl(revision.net)}</span>
               )}
               {event.kind === "lost" && revision?.lost_reason && (
                 <span className="offer-history__note">Kayıp nedeni: {revision.lost_reason}</span>
               )}
               {event.kind === "lost" && revision?.winning_amount != null && (
                 <span className="offer-history__note">
-                  Kazanan teklif tutarı: {formatCurrencyPrecise(revision.winning_amount)}
+                  Kazanan teklif tutarı: {formatMoneyTl(revision.winning_amount)}
                 </span>
               )}
             </li>

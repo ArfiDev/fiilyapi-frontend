@@ -46,8 +46,6 @@ import "./offers.css";
 import "./offer-create.css";
 import "./offer-detail.css";
 
-/** Başarı bildiriminin ekranda kalma süresi (KIK/KAT emsali). */
-const TOAST_MS = 2800;
 /** ÜS-F3-8: işveren kartoteksine yazma proje yönetici yetkisidir. */
 const EMPLOYER_ADD_DENIED_TITLE = "İşveren eklemek proje yönetici yetkisi ister";
 const RATE_FORMULA_NOTE =
@@ -79,6 +77,9 @@ interface OfferDetailViewProps {
   renderItems?: (context: OfferItemsSlotContext) => ReactNode;
   /** `null` = güncel revizyon (URL'den `rev` kalkar). */
   onSelectRevision: (revNo: number | null) => void;
+  /** Bildirim metni — durumu KAPSAYICIDA (`OfferDetailContent`): revizyon değişince görünüm yeniden kurulur, toast kalır. */
+  toast: string | null;
+  onToast: (text: string) => void;
 }
 
 /** TKL-F3.5 · Teklif Detay gövdesi: künye + oranlar + koşullar TEK kirli form, durum eylemleri, geçmiş, toplamlar. */
@@ -97,7 +98,6 @@ export function OfferDetailView(props: OfferDetailViewProps) {
   const [attempted, setAttempted] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState<{ text: string } | null>(null);
   const [modal, setModal] = useState<ConfirmTransitionKind | "lose" | null>(null);
   const [isEmployerModalOpen, setIsEmployerModalOpen] = useState(false);
   const [justCreated, setJustCreated] = useState<EmployerListItem | null>(null);
@@ -141,15 +141,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [errors]);
 
-  useEffect(() => {
-    if (toast === null) return;
-    const timer = setTimeout(() => setToast(null), TOAST_MS);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  function showToast(text: string) {
-    setToast({ text });
-  }
+  const showToast = props.onToast;
 
   const actions = useOfferDetailActions({
     offerId,
@@ -255,6 +247,8 @@ export function OfferDetailView(props: OfferDetailViewProps) {
       </OfferDetailHeader>
 
       <OfferActionBar
+        offerId={offerId}
+        revNo={revNo}
         gate={gate}
         isBusy={actions.isBusy || isSaving || isPreparingSend}
         isSaving={isSaving}
@@ -272,9 +266,9 @@ export function OfferDetailView(props: OfferDetailViewProps) {
           <span>{props.readOnlyText}</span>
         </div>
       )}
-      {toast && (
+      {props.toast && (
         <div className="offers-toast" role="status">
-          {toast.text}
+          {props.toast}
         </div>
       )}
       {modal === null && (saveError ?? actions.error) && (

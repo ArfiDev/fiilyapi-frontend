@@ -58,9 +58,9 @@ describe("işveren modeli — satırlar", () => {
 describe("işveren modeli — toplamlar + dipnot", () => {
   it("KDV hariç · KDV %n · genel toplam (yalnız customer toplamları, ₺)", () => {
     expect(build().totals).toEqual([
-      { label: "Toplam (KDV hariç)", value: "₺ 73.982.140,00", tone: "net" },
-      { label: "KDV %20", value: "₺ 14.796.428,00" },
-      { label: "Genel toplam", value: "₺ 88.778.568,00", tone: "gross" },
+      { label: "Toplam (KDV hariç)", value: "₺73.982.140,00", tone: "net" },
+      { label: "KDV %20", value: "₺14.796.428,00" },
+      { label: "Genel toplam", value: "₺88.778.568,00", tone: "gross" },
     ]);
   });
 

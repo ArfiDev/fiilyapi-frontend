@@ -155,10 +155,10 @@ describe("görünüm (TD:209-274)", () => {
     expect(within(rowOf("it-1")).getByText("hesaplanan")).toBeInTheDocument();
   });
 
-  it("grup Σ kayıpsız: a-s · maliyet · tutar (fiyatsız kalem maliyet/tutara girmez, a-s'ye girer)", async () => {
+  it("grup Σ kayıpsız: a-s (TD nf(S.as) kuruşsuz) · maliyet · tutar (fiyatsız kalem maliyet/tutara girmez, a-s'ye girer)", async () => {
     await renderCard();
     const group = screen.getByTestId("oit-group-g-a");
-    expect(within(group).getByText("41,00 a-s")).toBeInTheDocument();
+    expect(within(group).getByText("41 a-s")).toBeInTheDocument();
     expect(within(group).getByText("maliyet ₺1.000,00")).toBeInTheDocument();
     expect(within(group).getByText("₺1.288,00")).toBeInTheDocument();
   });
