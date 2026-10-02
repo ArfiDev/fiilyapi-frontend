@@ -668,7 +668,11 @@ describe("🔴 ConvertProject.code: verilirse kullanılır (strip), çakışırs
     const seeded = await offer();
     const reply = await convert(seeded.id, withCode(seeded, "OZEL-7"));
     expect(reply.status).toBe(409);
-    expect(reply.json).toEqual({ detail: "Bu proje kodu zaten kullanılıyor" });
+    // TKL-B6.9 R5 (F5.0b): 409 yapısal `errors` taşır — `loc == ["project", "code"]`, `detail` AYNEN.
+    expect(reply.json).toEqual({
+      detail: "Bu proje kodu zaten kullanılıyor",
+      errors: [{ loc: ["project", "code"], message: "Bu proje kodu zaten kullanılıyor" }],
+    });
     expect(written).toHaveLength(0);
     expect((await api("GET", `/offers/${seeded.id}`)).json.project_id).toBeNull();
   });

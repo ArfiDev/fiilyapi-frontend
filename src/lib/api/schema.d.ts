@@ -10868,8 +10868,18 @@ export interface components {
         };
         /**
          * ConvertValidationErrorOut
-         * @description Donusturme 422 gövdesi: `detail` (insan metni, `; ` ile birlesik; Pydantic sema
-         *     422'lerinde standart FastAPI listesi) + servis dogrulamasinda `errors` (yapisal).
+         * @description Donusturme hata gövdesi (422 ve proje kodu 409'u). IKI BICIM SOZLESMESI:
+         *
+         *     * IS KURALI hatasi (servis dogrulamasi: tarih araligi, `open_site`/`site_name` tutarliligi,
+         *       grup/kalem/endeks/bedel kurallari, `group_disciplines` cakismasi; ve 409 "proje kodu
+         *       kullaniliyor"): `detail` = `str` (`; ` ile birlesik insan metni) + `errors` =
+         *       `[{loc, message}]` (yapisal; FE alan vurgusu icin).
+         *     * GOVDE SEKLI hatasi (tip, eksik alan, uzunluk/aralik, 2000 kalem tavani, bilinmeyen alan —
+         *       Pydantic): STANDART FastAPI 422 — `detail` = hata LISTESI, `errors` YOK.
+         *
+         *     `group_disciplines` hatalarinda `loc[1]` gonderilen HAM anahtar degil NORMALIZE (strip)
+         *     anahtardir (grup adiyla ayni bicim; FE grup adiyla eslestirir). Gerekce: ham anahtar bos
+         *     olabilir/birden cok ham anahtar tek normalize anahtara iner; normalize anahtar tekildir.
          */
         ConvertValidationErrorOut: {
             /** Detail */
@@ -34663,14 +34673,16 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Zaten dönüştürüldü / kazanılmamış / proje kodu kullanılıyor */
+            /** @description Zaten dönüştürüldü / kazanılmamış (yalnız `detail`) / proje kodu kullanılıyor (`detail` + `errors[0].loc == ["project", "code"]`) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConvertValidationErrorOut"];
+                };
             };
-            /** @description Doğrulama hatası; servis doğrulamasında `errors[].loc` yapısaldır */
+            /** @description İş kuralı 422'si: `detail` str + `errors`; gövde şekli 422'si: standart `detail` listesi */
             422: {
                 headers: {
                     [name: string]: unknown;

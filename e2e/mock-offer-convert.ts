@@ -11,7 +11,7 @@
 //  5. STATİK hatalar, tek 422 (`{"detail": "a; b", "errors": [{loc, message}]}`, `OfferValidationError` + TKL-B6.8 `_Issue`):
 //     grup adı / kalem kodu tekilliği, `offer_item_id` ilişkisi, `group_disciplines` anahtarı, fiyat farkı tutarlılığı, bedel tavanı
 //  6. 404 katalog iş tipi → 404 disiplin (ikisi de yazmadan önce)
-//  6b. 409 "Bu proje kodu zaten kullanılıyor" — yalnız ELLE `project.code` verilmişse (TKL-B6.8 BD-2; yazmadan önce)
+//  6b. 409 "Bu proje kodu zaten kullanılıyor" — yalnız ELLE `project.code` verilmişse (TKL-B6.8 BD-2; yazmadan önce); gövde `detail` + `errors[{loc:["project","code"],message}]` (TKL-B6.9)
 //  7. yaz (`port.convert.createConvertedProject`) → teklif `project_id`/`converted_at` (arşiv)
 // Hata = HİÇBİR yazma (backend tek işlem, ara commit yok).
 //
@@ -348,7 +348,8 @@ export function handleConvert(
     }
     // BD-2: elle verilen kod yazmadan ÖNCE denetlenir (üretilen kod danışma kilidi altında çakışmaz).
     if (request.project.code !== null && convert.projectCodeExists(request.project.code)) {
-      throw fail(409, CONVERT_MESSAGES.projectCodeTaken);
+      // TKL-B6.9 R5: backend `ConflictError(PROJECT_CODE_TAKEN, [{"loc": ["project","code"], ...}])` — `detail` AYNEN + yapısal `errors`.
+      throw new Failure(409, { detail: CONVERT_MESSAGES.projectCodeTaken, errors: [{ loc: ["project", "code"], message: CONVERT_MESSAGES.projectCodeTaken }] });
     }
 
     const warnings = warningsOf(request, port, rates, new Map(items.map((item) => [item.id, item.unitMhr])));
