@@ -142,6 +142,17 @@ describe("ön değerler ve başlangıç", () => {
     expect(screen.getByRole("textbox", { name: /Geçerlilik/ })).toHaveValue("30");
   });
 
+  // TKL-F4.8 · K-F4-5: "30gün" — "gün" son eki sayının altına girmesin (payı son ek uzunluğundan ayrılır); % kutuları varsayılan paylı.
+  it("Geçerlilik 'gün' son ekine pay ayırır; % kutuları ayırmaz", async () => {
+    mockGets();
+    renderScreen();
+    await loaded();
+    const wrapOf = (name: RegExp) => screen.getByRole("textbox", { name }).parentElement as HTMLElement;
+    expect(wrapOf(/Geçerlilik/).className).toContain("input-wrap--suffix");
+    expect(wrapOf(/Geçerlilik/).style.getPropertyValue("--input-suffix-chars")).toBe("3");
+    expect(wrapOf(/Genel gider/).className).not.toContain("input-wrap--suffix");
+  });
+
   it("ayar 10/18/8/45 ise form onunla açılır (sabit yazılmamış)", async () => {
     mockGets(
       ok({ ...SETTINGS, default_overhead_pct: "10.00", default_profit_pct: "18.50", default_vat_pct: "8.00", default_validity_days: 45 }),

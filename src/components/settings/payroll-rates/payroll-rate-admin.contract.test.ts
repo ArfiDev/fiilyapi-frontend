@@ -96,9 +96,12 @@ describe("uçların VARLIĞI", () => {
    * `copy` içeren TEK BİR yol yok. Ekran kopyalamayı İSTEMCİDE yapar
    * (kaynak yılı okur, hedef yılın FORMUNU doldurur, kullanıcı kaydeder).
    * Bu bekçi, ileride böyle bir uç açılırsa kırmızıya dönüp kararı yeniden
-   * açar — sessizce eskimiş bir gerekçe bırakmaz.
+   * açar — sessizce eskimiş bir gerekçe bırakmaz. Kapsam yalnız bordro/ayar kökleri:
+   * başka modüllerin kopya uçları (ör. TKL-B5 `/offers/templates/{id}/copy`) bu kararı ilgilendirmez.
    */
-  it("`copy` içeren bir uç YOKTUR (istemci-tarafı kopyalamanın gerekçesi)", () => {
-    expect(Object.keys(OPENAPI.paths).filter((p) => p.includes("copy"))).toEqual([]);
+  it("bordro/ayar köklerinde `copy` içeren bir uç YOKTUR (istemci-tarafı kopyalamanın gerekçesi)", () => {
+    const payrollPaths = Object.keys(OPENAPI.paths).filter((p) => p.startsWith("/payroll") || p.startsWith("/settings"));
+    expect(payrollPaths.length).toBeGreaterThan(0);
+    expect(payrollPaths.filter((p) => p.includes("copy"))).toEqual([]);
   });
 });

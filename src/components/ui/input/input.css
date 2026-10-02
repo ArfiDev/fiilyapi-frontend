@@ -23,6 +23,9 @@
 
 .input-wrap--left .input { padding-left: var(--space-8); }
 .input-wrap--right .input { padding-right: var(--space-8); }
+/* Metin son eki (gün / takvim günü): sağ pay = simge boşluğu + son ek uzunluğu (`suffixChars` → `--input-suffix-chars`);
+   aksi hâlde sayı son ekin altına girer ("30gün"). % ve ₺ gibi tek karakterli simgeler varsayılan payla yetinir. */
+.input-wrap--suffix .input { padding-right: calc(var(--space-3) + var(--space-2) + var(--input-suffix-chars) * 1ch); }
 .input-icon { position: absolute; display: inline-flex; color: var(--color-text-muted); pointer-events: none; }
 /* Yuva `React.ReactNode` kabul ediyor: dekoratif ikon icin pass-through
    (tiklama input'a gecer) dogru davranis, ama yuvaya etkilesimli bir dugum

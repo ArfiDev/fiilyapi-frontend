@@ -15,6 +15,7 @@ import "./offer-create.css";
 
 const VALIDITY_MAX_DIGITS = 3;
 const NOT_DIGIT = /\D/g;
+const DAYS_SUFFIX = "gün";
 const EMPLOYER_HINT = "İşveren listesinden seçin";
 const UNTIL_HINT = "Bitiş tarihi otomatik hesaplanır";
 
@@ -101,7 +102,8 @@ export function OfferInfoFields(props: OfferInfoFieldsProps) {
               value={values.validityDays}
               disabled={disabled}
               status={errors.validityDays ? "error" : "default"}
-              rightIcon={<span aria-hidden="true">gün</span>}
+              rightIcon={<span aria-hidden="true">{DAYS_SUFFIX}</span>}
+              suffixChars={DAYS_SUFFIX.length}
               onChange={(event) =>
                 onChange("validityDays", event.target.value.replace(NOT_DIGIT, "").slice(0, VALIDITY_MAX_DIGITS))
               }

@@ -90,8 +90,10 @@ export function validUntilIso(offerDate: string, validityDays: string): string |
   return new Date(start + days * MS_PER_DAY).toISOString().slice(0, 10);
 }
 
+export type PctParse = { value: string } | { error: string };
+
 /** Yüzde metni → kayıpsız ondalık dizge ya da satır hatası. */
-function parsePct(text: string, max: string, rangeMessage: string): { value: string } | { error: string } {
+function parsePct(text: string, max: string, rangeMessage: string): PctParse {
   const parsed = parseQuantityInput(text);
   if (parsed.kind === "ambiguous") return { error: REF_PRICE_AMBIGUOUS_DOT };
   if (parsed.kind === "invalid") return { error: OFFER_FORM_MESSAGES.pctInvalid };
@@ -100,6 +102,15 @@ function parsePct(text: string, max: string, rangeMessage: string): { value: str
   }
   if (compareDecimalStrings(parsed.value, max) > 0) return { error: rangeMessage };
   return { value: parsed.value };
+}
+
+/** TEK oran doğrulayıcısı: Yeni Teklif formu ve Şablon oranları (`template-rates.ts`) bunu kullanır (T30). */
+export function parseOverheadPct(text: string): PctParse {
+  return parsePct(text, MAX_PCT, OFFER_FORM_MESSAGES.pctRange100);
+}
+
+export function parseProfitPct(text: string): PctParse {
+  return parsePct(text, MAX_PROFIT_PCT, OFFER_FORM_MESSAGES.pctRangeProfit);
 }
 
 const PCT_FIELDS = [

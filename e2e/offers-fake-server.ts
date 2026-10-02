@@ -26,6 +26,8 @@ import {
 
 const BACKEND_PREFIX = "/api/backend";
 const OFFERS_ROUTE = /\/api\/backend\/offers(\/|\?|$)/;
+/** Excel çıktısı (`…/revisions/{n}/export`): ikili gövde `handleOffers`e sığmaz → paylaşılan mock'a GEÇER (salt okur; tohum teklifler). */
+const EXPORT_PATH = /\/offers\/[^/]+\/revisions\/\d+\/export$/;
 const ACTOR = { id: "11111111-1111-1111-1111-111111111111", fullName: "Ahmet Yılmaz" } as const;
 const TRANSITION_ACTIONS = new Set(["send", "win", "lose", "withdraw"]);
 const NO_CONTENT = 204;
@@ -170,6 +172,7 @@ export async function installFakeOffersServer(page: Page, options: FakeOffersOpt
   };
 
   await page.route(OFFERS_ROUTE, async (route) => {
+    if (EXPORT_PATH.test(new URL(route.request().url()).pathname)) return route.continue();
     const captured = { status: 0, body: undefined as unknown, rawBody: null as Json | null };
     const port = toPort(route, { catalog, employers }, captured);
     const handled = handleOffers(state, port);

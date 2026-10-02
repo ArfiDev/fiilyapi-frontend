@@ -13,6 +13,7 @@ import "./offer-detail.css";
 
 const DELIVERY_MAX_DIGITS = 5;
 const NOT_DIGIT = /\D/g;
+const DELIVERY_SUFFIX = "takvim günü";
 
 const ESCALATION_OPTIONS: ReadonlyArray<SegmentedOption<PriceEscalation>> = [
   { value: "tuik", label: "TÜİK endeksli" },
@@ -61,7 +62,8 @@ export function OfferTermsCard({ values, errors, onChange, disabled }: OfferTerm
               value={values.deliveryDays}
               disabled={disabled}
               status={errors.deliveryDays ? "error" : "default"}
-              rightIcon={<span aria-hidden="true">takvim günü</span>}
+              rightIcon={<span aria-hidden="true">{DELIVERY_SUFFIX}</span>}
+              suffixChars={DELIVERY_SUFFIX.length}
               onChange={(event) =>
                 onChange("deliveryDays", event.target.value.replace(NOT_DIGIT, "").slice(0, DELIVERY_MAX_DIGITS))
               }

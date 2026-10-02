@@ -1,20 +1,13 @@
-import { OFFER_FORM_MESSAGES, pctToInputText } from "@/components/offers/offer-form";
+import { parseOverheadPct, parseProfitPct, pctToInputText, type PctParse } from "@/components/offers/offer-form";
 import { EMPTY_CELL } from "@/lib/format";
 import { compareDecimalStrings } from "@/lib/decimal";
-import { REF_PRICE_AMBIGUOUS_DOT, decimalDigitCounts, parseQuantityInput } from "@/lib/tr-decimal";
 
 /**
  * TKL-F4.5 · şablon varsayılan oranları (GG / Kâr) — T30 Türkçe ondalık.
  *
- * F3 `offer-form.ts` aynı doğrulamayı yapar ama tek-alan ayrıştırıcısı (`parsePct`) DIŞA AÇIK DEĞİL ve dosya
- * F4.7'nin; bu modül AYNI ilkelleri (`parseQuantityInput`, `decimalDigitCounts`) ve AYNI metinleri
- * (`OFFER_FORM_MESSAGES`) kullanır. Sınırlar backend `Numeric(5,2)`/`(6,2)` ile aynıdır. Boş metin = oran
- * YOK (teklif ayarı geçerli olur) → `null`.
+ * TKL-F4.8: doğrulama `offer-form.ts`teki TEK ayrıştırıcıdan gelir (`parseOverheadPct`/`parseProfitPct`);
+ * burada yalnız "boş metin = oran YOK (teklif ayarı geçerli olur) → `null`" kuralı vardır.
  */
-const MAX_OVERHEAD_PCT = "100";
-const MAX_PROFIT_PCT = "999.99";
-const MAX_FRACTION_DIGITS = 2;
-
 export type RateField = "overhead" | "profit";
 
 export type RatesParse =
@@ -23,19 +16,13 @@ export type RatesParse =
 
 type OneRate = { value: string | null } | { error: string };
 
-function parseOne(text: string, max: string, rangeMessage: string): OneRate {
-  if (text.trim() === "") return { value: null };
-  const parsed = parseQuantityInput(text);
-  if (parsed.kind === "ambiguous") return { error: REF_PRICE_AMBIGUOUS_DOT };
-  if (parsed.kind === "invalid") return { error: OFFER_FORM_MESSAGES.pctInvalid };
-  if (decimalDigitCounts(parsed.value).fraction > MAX_FRACTION_DIGITS) return { error: OFFER_FORM_MESSAGES.pctFraction };
-  if (compareDecimalStrings(parsed.value, max) > 0) return { error: rangeMessage };
-  return { value: parsed.value };
+function parseOne(text: string, parse: (text: string) => PctParse): OneRate {
+  return text.trim() === "" ? { value: null } : parse(text);
 }
 
 export function parseTemplateRates(overheadText: string, profitText: string): RatesParse {
-  const overhead = parseOne(overheadText, MAX_OVERHEAD_PCT, OFFER_FORM_MESSAGES.pctRange100);
-  const profit = parseOne(profitText, MAX_PROFIT_PCT, OFFER_FORM_MESSAGES.pctRangeProfit);
+  const overhead = parseOne(overheadText, parseOverheadPct);
+  const profit = parseOne(profitText, parseProfitPct);
   const errors: Partial<Record<RateField, string>> = {
     ...("error" in overhead ? { overhead: overhead.error } : {}),
     ...("error" in profit ? { profit: profit.error } : {}),
