@@ -12,21 +12,26 @@ interface OfferTabsProps {
   catalogCount: number | null;
   /** Detay: "Teklifler" sekmesi listeye bağlantı olur (TD:77-79). Verilmezse liste ekranındaki etkin düğme. */
   listHref?: string;
+  /** Etkin sekme (TKL-F4.5): Şablonlar ekranında "templates" — "Teklifler" bağlantıya döner (`listHref` ŞART). */
+  active?: "offers" | "templates";
+  /** "Teklif Şablonları N" — şablon sayısı; bilinmiyorsa (`null`/verilmedi) sayaç basılmaz. */
+  templateCount?: number | null;
 }
 
 /** TL:78-81, 246 · TD:77-82 — Liste ve Detay'ın ortak sekme şeridi. */
-export function OfferTabs({ offerCount, catalogCount, listHref }: OfferTabsProps) {
+export function OfferTabs({ offerCount, catalogCount, listHref, active = "offers", templateCount }: OfferTabsProps) {
+  const offersCount = offerCount !== null && <span className="offers-tab__count">{offerCount}</span>;
   return (
     <div className="offers-tabs" role="group" aria-label="Teklif sekmeleri">
       {listHref === undefined ? (
         <button type="button" className="offers-tab offers-tab--active" aria-current="page">
           Teklifler
-          {offerCount !== null && <span className="offers-tab__count">{offerCount}</span>}
+          {offersCount}
         </button>
       ) : (
-        <Link href={listHref} className="offers-tab offers-tab--active">
+        <Link href={listHref} className={active === "offers" ? "offers-tab offers-tab--active" : "offers-tab"}>
           Teklifler
-          {offerCount !== null && <span className="offers-tab__count">{offerCount}</span>}
+          {offersCount}
         </Link>
       )}
       {/* T9: poz kütüphanesi = şirket geneli İş Kalemi Kataloğu; ayrı bir teklif kataloğu YOK. */}
@@ -34,10 +39,14 @@ export function OfferTabs({ offerCount, catalogCount, listHref }: OfferTabsProps
         Poz Kütüphanesi
         {catalogCount !== null && <span className="offers-tab__count">{catalogCount}</span>}
       </Link>
-      <button type="button" className="offers-tab" disabled title={SOON_TITLE}>
+      <Link
+        href={routes.offers.templates()}
+        className={active === "templates" ? "offers-tab offers-tab--active" : "offers-tab"}
+        {...(active === "templates" ? { "aria-current": "page" as const } : {})}
+      >
         Teklif Şablonları
-        <span className="offers-tab__soon">Yakında</span>
-      </button>
+        {templateCount !== null && templateCount !== undefined && <span className="offers-tab__count">{templateCount}</span>}
+      </Link>
       <button type="button" className="offers-tab" disabled title={SOON_TITLE}>
         İşverenler
         <span className="offers-tab__soon">Yakında</span>

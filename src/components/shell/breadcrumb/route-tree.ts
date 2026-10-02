@@ -544,6 +544,8 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
       href: () => routes.offers.list(),
       children: {
         yeni: { label: "Yeni Teklif", href: () => routes.offers.new() },
+        // TKL-F4.5 · statik segment `[offerId]`den önce eşleşir; kırıntı adı TS:65 birebir.
+        sablonlar: { label: "Teklif Şablonları", href: () => routes.offers.templates() },
       },
       dynamic: {
         param: "entityId",

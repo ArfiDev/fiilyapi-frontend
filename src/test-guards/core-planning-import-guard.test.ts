@@ -33,6 +33,8 @@ const CORE_DIRS = [
   // TKL-F3.7 · Teklif PDF yazdırma + onun A4 kit çekirdeği (EV `kit/` buraya yeniden ihraç eder, ters yön YASAK).
   "components/print-sheet",
   "components/offer-print",
+  // TKL-F4.5 · Teklif Şablonları (`contracts` kapısı): planlama (EV) ithali yasak (TKL-F4-PLAN §1).
+  "components/offer-templates",
 ];
 
 /** Planlama modülünün yolları: bileşenleri, saf kütüphanesi ve `useEv*` sorguları. */

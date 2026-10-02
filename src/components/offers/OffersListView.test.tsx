@@ -42,6 +42,7 @@ function renderView(overrides: Partial<OffersListViewProps> = {}) {
     onClear: vi.fn(),
     employers: [{ id: "emp-1", name: "Kuzey Gayrimenkul A.Ş." }],
     catalogCount: 412,
+    templateCount: null,
     canWrite: true,
     readOnlyText: "",
     now: NOW,
@@ -69,13 +70,22 @@ describe("sekme şeridi (§1.2)", () => {
     expect(poz).toHaveTextContent("412");
   });
 
-  it("'Teklif Şablonları' ve 'İşverenler' devre-dışı 'Yakında'", () => {
-    renderView();
-    for (const name of [/Teklif Şablonları/, /İşverenler/]) {
-      const tab = screen.getByRole("button", { name });
-      expect(tab).toBeDisabled();
-      expect(tab).toHaveTextContent("Yakında");
-    }
+  it("'Teklif Şablonları N' Şablonlar ekranına BAĞLANTI (TKL-F4.5); 'İşverenler' devre-dışı 'Yakında' KALIR", () => {
+    renderView({ templateCount: 4 });
+    const tabs = screen.getByRole("group", { name: "Teklif sekmeleri" });
+    const templates = within(tabs).getByRole("link", { name: /Teklif Şablonları/ });
+    expect(templates).toHaveAttribute("href", "/teklif-hazirlama/sablonlar");
+    expect(templates).toHaveTextContent("4");
+    expect(templates).not.toHaveTextContent("Yakında");
+    const employers = screen.getByRole("button", { name: /İşverenler/ });
+    expect(employers).toBeDisabled();
+    expect(employers).toHaveTextContent("Yakında");
+  });
+
+  it("şablon sayısı bilinmiyorsa (yüklenmedi / 403) bağlantı sayaçsız basılır", () => {
+    renderView({ templateCount: null });
+    const templates = screen.getByRole("link", { name: /Teklif Şablonları/ });
+    expect(templates).toHaveTextContent(/^Teklif Şablonları$/);
   });
 
   it("süzgeç (işveren/arama) açıkken 'Teklifler' sayacı basılmaz", () => {

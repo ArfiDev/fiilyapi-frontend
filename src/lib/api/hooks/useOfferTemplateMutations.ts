@@ -43,12 +43,12 @@ function invalidateTemplateList(queryClient: QueryClient): Promise<unknown> {
 }
 
 /** ÖN EK (exact YOK): TÜM şablon detaylarını tazeler; liste (`offer-templates`, çoğul) bu önekin altında DEĞİLDİR. */
-function invalidateAllTemplateDetails(queryClient: QueryClient): Promise<unknown> {
+export function invalidateAllTemplateDetails(queryClient: QueryClient): Promise<unknown> {
   return queryClient.invalidateQueries({ queryKey: [OFFER_TEMPLATE_QUERY_KEY] });
 }
 
 /** Yanıt = güncel detay: önbelleğe yaz (ek GET yok) + liste sayaçlarını tazele. */
-function storeDetail(queryClient: QueryClient, detail: OfferTemplateDetail): Promise<unknown> {
+export function storeDetail(queryClient: QueryClient, detail: OfferTemplateDetail): Promise<unknown> {
   queryClient.setQueryData(offerTemplateKey(detail.id), detail);
   return invalidateTemplateList(queryClient);
 }
