@@ -26,32 +26,47 @@ import { describe, expect, it } from "vitest";
 
 const TWIN = path.join(process.cwd(), "e2e", "mock-backend.ts");
 
+/**
+ * TKL-F3.2 · teklif sahte backend'i `mock-backend.ts`ten AYRI dosyalardadır (tek giriş noktası
+ * `handleOffers`); AYNI bekçi onları da tarar — yanıt üreticilerinin dönüş tipi openapi'ye
+ * (`components["schemas"]["Offer…"]`) bağlıdır, tipsiz üretici sözleşmeyle HİÇ karşılaşmaz.
+ */
+const TWIN_FILES: readonly string[] = [
+  TWIN,
+  path.join(process.cwd(), "e2e", "mock-offers.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-service.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-views.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-calc.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-body.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-seed.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-types.ts"),
+];
+
 interface TwinFunction {
   readonly name: string;
   readonly line: number;
+  readonly file: string;
   readonly returnType: string | null;
 }
 
 /** İkizi DİSKTEN okur ve AST'den fonksiyon bildirimlerini toplar. */
 function twinFunctions(): readonly TwinFunction[] {
-  const source = ts.createSourceFile(
-    TWIN,
-    readFileSync(TWIN, "utf8"),
-    ts.ScriptTarget.ESNext,
-    true,
-  );
   const found: TwinFunction[] = [];
-  const visit = (node: ts.Node): void => {
-    if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
-      found.push({
-        name: node.name.text,
-        line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
-        returnType: node.type === undefined ? null : node.type.getText(),
-      });
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
+  for (const file of TWIN_FILES) {
+    const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.ESNext, true);
+    const visit = (node: ts.Node): void => {
+      if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
+        found.push({
+          name: node.name.text,
+          line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
+          file: path.basename(file),
+          returnType: node.type === undefined ? null : node.type.getText(),
+        });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
   return found;
 }
 
@@ -96,7 +111,7 @@ describe("🔴 test ikizi (`e2e/mock-backend.ts`) dönüş tipleri ↔ sözleşm
   it("her fonksiyonun dönüş tipi YAZILIDIR (kayıttakiler hariç)", () => {
     const untyped = FUNCTIONS.filter(
       (fn) => fn.returnType === null && SOZLESMEDEN_SAPAN[fn.name] === undefined,
-    ).map((fn) => `${fn.name} (mock-backend.ts:${fn.line})`);
+    ).map((fn) => `${fn.name} (${fn.file}:${fn.line})`);
     expect(
       untyped,
       "dönüş tipi YAZILMAMIŞ fonksiyon(lar) — tipsiz üretici sözleşmeyle HİÇ " +

@@ -75,6 +75,27 @@ describe("BFF /api/backend/[...path]", () => {
     expect(String(fetchMock.mock.calls[0][0])).toBe("http://backend:8000/catalog/items");
   });
 
+  // TKL-F3.2 — Teklif Hazirlama (`/offers`, `/offers/{id}/revisions/{rev}/...`, `/offers/settings`)
+  // kendi kokunden gecer. Eksikse tum teklif ekranlari YALNIZ CANLIDA 404 alir; jsdom ve
+  // e2e mock-backend BFF'yi atladigi icin GORMEZ. Yazma (POST/PATCH) de ayni kokten gecer.
+  it("offers koku — GET /offers ve POST /offers/{id}/revisions/0/send 404 DEGIL, backend'e proxylenir", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const cookies = { [ACCESS_COOKIE]: "acc", [REFRESH_COOKIE]: "ref" };
+    const list = await GET(req("/api/backend/offers?status=draft", "GET", cookies), ctx(["offers"]));
+    expect(list.status).toBe(200);
+    const send = await POST(
+      req("/api/backend/offers/o-1/revisions/0/send", "POST", cookies),
+      ctx(["offers", "o-1", "revisions", "0", "send"]),
+    );
+    expect(send.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toBe("http://backend:8000/offers?status=draft");
+    expect(String(fetchMock.mock.calls[1][0])).toBe("http://backend:8000/offers/o-1/revisions/0/send");
+  });
+
   it("izinsiz kok — 404 doner, backend cagrilmaz", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

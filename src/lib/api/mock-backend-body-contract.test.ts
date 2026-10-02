@@ -1435,3 +1435,178 @@ describe("🔴 test ikizi ↔ günlük iskelet önizlemesi + POST birleştirmesi
     }
   });
 });
+
+// ═══════════ TKL-F3.2 · TEKLİF UÇLARI (`/offers*`) — gövde + yanıt şeması ═══════════════════════
+//
+// Sınırlar `openapi.json`dan OKUNUR (elle sayı yok). İkiz, gerçek backend'in REDDEDECEĞİ gövdeyi
+// kabul ederse bir ONAYLAYICIDIR: formun korkuluğunu kaldıran mutasyon hiçbir e2e'yi kırmazdı.
+// Yanıt tarafı: ikizin döndürdüğü her teklif yanıtı sözleşme şemasına UYAR (zorunlu alan eksik /
+// sözleşmede olmayan fazla alan / tür sapması) — sahte backend sözleşmeden saparsa ekran sahte-yeşil.
+
+interface OpenApiSchema {
+  type?: string;
+  format?: string;
+  enum?: string[];
+  properties?: Record<string, OpenApiSchema>;
+  required?: string[];
+  items?: OpenApiSchema;
+  anyOf?: OpenApiSchema[];
+  $ref?: string;
+}
+
+function openapiSchemas(): Record<string, OpenApiSchema> {
+  const spec = JSON.parse(readFileSync(path.join(process.cwd(), "openapi", "openapi.json"), "utf8")) as {
+    components: { schemas: Record<string, OpenApiSchema> };
+  };
+  return spec.components.schemas;
+}
+
+const OFFER_SCHEMAS = openapiSchemas();
+
+/** Yanıt değerini şemaya karşı gezer; ihlalleri `yol: sorun` olarak toplar. */
+function responseProblems(schema: OpenApiSchema, value: unknown, where: string): string[] {
+  if (schema.$ref !== undefined) {
+    const target = OFFER_SCHEMAS[schema.$ref.replace("#/components/schemas/", "")];
+    return target === undefined ? [`${where}: şema yok (${schema.$ref})`] : responseProblems(target, value, where);
+  }
+  if (schema.anyOf !== undefined) {
+    if (value === null) return schema.anyOf.some((option) => option.type === "null") ? [] : [`${where}: null olamaz`];
+    const attempts = schema.anyOf.filter((option) => option.type !== "null").map((option) => responseProblems(option, value, where));
+    return attempts.some((found) => found.length === 0) ? [] : (attempts[0] ?? []);
+  }
+  if (schema.enum !== undefined) return schema.enum.includes(String(value)) ? [] : [`${where}: enum dışı (${String(value)})`];
+  switch (schema.type) {
+    case "string":
+      return typeof value === "string" ? [] : [`${where}: string beklenir (${typeof value})`];
+    case "integer":
+      return Number.isInteger(value) ? [] : [`${where}: integer beklenir`];
+    case "number":
+      return typeof value === "number" || typeof value === "string" ? [] : [`${where}: sayı beklenir`];
+    case "boolean":
+      return typeof value === "boolean" ? [] : [`${where}: boolean beklenir`];
+    case "array": {
+      if (!Array.isArray(value)) return [`${where}: dizi beklenir`];
+      return value.flatMap((entry, index) => (schema.items === undefined ? [] : responseProblems(schema.items, entry, `${where}[${index}]`)));
+    }
+    case "object":
+    default: {
+      if (schema.properties === undefined) return [];
+      if (typeof value !== "object" || value === null) return [`${where}: nesne beklenir`];
+      const record = value as Record<string, unknown>;
+      const problems: string[] = [];
+      for (const name of schema.required ?? []) if (!(name in record)) problems.push(`${where}.${name}: zorunlu alan EKSİK`);
+      for (const [name, entry] of Object.entries(record)) {
+        const property = schema.properties[name];
+        if (property === undefined) problems.push(`${where}.${name}: sözleşmede OLMAYAN alan`);
+        else problems.push(...responseProblems(property, entry, `${where}.${name}`));
+      }
+      return problems;
+    }
+  }
+}
+
+describe("🔴 test ikizi ↔ TEKLİF uçları (TKL-F3.2): gövde kısıtları + yanıt şeması", () => {
+  const OFFER_LIMITS = {
+    title: fieldSchema("OfferCreate", "title")?.maxLength,
+    notes: fieldSchema("OfferCreate", "notes")?.maxLength,
+    groupName: fieldSchema("OfferGroupCreate", "name")?.maxLength,
+    lostReason: fieldSchema("OfferLoseRequest", "lost_reason")?.maxLength,
+    paymentTerms: fieldSchema("OfferSettingsUpdate", "default_payment_terms")?.maxLength,
+    bulkMax: OFFER_SCHEMAS["OfferItemsBulkCreate"]?.properties?.["items"] as (OpenApiSchema & { maxItems?: number }) | undefined,
+  };
+
+  const createBody = (over: Record<string, unknown> = {}) => ({ employer_id: "emp-1", title: "Kaba inşaat", ...over });
+
+  it("bekçi GERÇEKTEN ölçüyor (kısıtlar sözleşmeden okundu)", () => {
+    expect(OFFER_LIMITS.title, "OfferCreate.title.maxLength").toBeGreaterThan(0);
+    expect(OFFER_LIMITS.notes, "OfferCreate.notes.maxLength").toBeGreaterThan(0);
+    expect(OFFER_LIMITS.groupName, "OfferGroupCreate.name.maxLength").toBeGreaterThan(0);
+    expect(OFFER_LIMITS.lostReason, "OfferLoseRequest.lost_reason.maxLength").toBeGreaterThan(0);
+    expect(OFFER_LIMITS.paymentTerms, "OfferSettingsUpdate.default_payment_terms.maxLength").toBeGreaterThan(0);
+    expect((OFFER_LIMITS.bulkMax as { maxItems?: number } | undefined)?.maxItems, "bulk maxItems").toBe(200);
+  });
+
+  it("POST /offers — sözleşmeye UYAN gövde 201 (fazla reddetmez); yanıt OfferDetailRead şemasına UYAR", async () => {
+    const { status, json } = await send("POST", "/offers", createBody());
+    expect(status, JSON.stringify(json)).toBe(201);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferDetailRead" }, json, "OfferDetailRead")).toEqual([]);
+  });
+
+  it.each([
+    ["title maxLength+1", () => ({ title: "x".repeat((OFFER_LIMITS.title ?? 0) + 1) }), "string_too_long", "title"],
+    ["notes maxLength+1", () => ({ notes: "x".repeat((OFFER_LIMITS.notes ?? 0) + 1) }), "string_too_long", "notes"],
+    ["price_escalation enum dışı", () => ({ price_escalation: "bilinmeyen" }), "enum", "price_escalation"],
+    ["bilinmeyen alan", () => ({ para_birimi: "USD" }), "extra_forbidden", "para_birimi"],
+    ["validity_days > 365", () => ({ validity_days: 366 }), "less_than_equal", "validity_days"],
+    ["profit_pct > 999,99", () => ({ profit_pct: "1000" }), "less_than_equal", "profit_pct"],
+    ["overhead_pct 3 ondalık", () => ({ overhead_pct: "12.345" }), "decimal_max_places", "overhead_pct"],
+  ] as const)("POST /offers — %s → 422", async (_label, over, type, field) => {
+    const { status, json } = await send("POST", "/offers", createBody(over()));
+    expect(status, "ikiz, gerçek backend'in 422 vereceği gövdeyi KABUL ediyor").toBe(422);
+    const violation = firstViolation(json);
+    expect([violation.type, violation.loc]).toEqual([type, ["body", field]]);
+  });
+
+  it("revizyon / grup / kalem / geçiş yazmaları: geçersiz gövde 422, geçerli gövde kabul; yanıtlar şemaya UYAR", async () => {
+    const offer = (await send("POST", "/offers", createBody())).json as unknown as { id: string };
+    const revUrl = `/offers/${offer.id}/revisions/0`;
+
+    const revision = await send("PATCH", revUrl, { vat_pct: "10", notes: "Not" });
+    expect(revision.status).toBe(200);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferRevisionRead" }, revision.json, "OfferRevisionRead")).toEqual([]);
+    expect(firstViolation((await send("PATCH", revUrl, { offer_unit_price: "1" })).json).type).toBe("extra_forbidden");
+
+    const group = await send("POST", `${revUrl}/groups`, { name: "Kaba" });
+    expect(group.status).toBe(201);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferGroupBasicRead" }, group.json, "OfferGroupBasicRead")).toEqual([]);
+    const longName = await send("POST", `${revUrl}/groups`, { name: "x".repeat((OFFER_LIMITS.groupName ?? 0) + 1) });
+    expect([longName.status, firstViolation(longName.json).type]).toEqual([422, "string_too_long"]);
+
+    const catalog = (await (await fetch(`${base}/catalog/items`, { headers: { authorization: "Bearer t" } })).json()) as { items: Array<{ id: string }> };
+    const itemBody = { catalog_item_id: catalog.items[0]?.id, group_id: (group.json as unknown as { id: string }).id, quantity: "2" };
+    const item = await send("POST", `${revUrl}/items`, itemBody);
+    expect(item.status, JSON.stringify(item.json)).toBe(201);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferItemRead" }, item.json, "OfferItemRead")).toEqual([]);
+    expect(firstViolation((await send("POST", `${revUrl}/items`, { ...itemBody, quantity: "0" })).json).type).toBe("greater_than");
+
+    const tooMany = await send("POST", `${revUrl}/items/bulk`, { items: Array.from({ length: 201 }, () => itemBody) });
+    expect([tooMany.status, firstViolation(tooMany.json).type]).toEqual([422, "too_long"]);
+    const bulk = await send("POST", `${revUrl}/items/bulk`, { items: [itemBody, itemBody] });
+    expect(bulk.status).toBe(201);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferItemsBulkResponse" }, bulk.json, "OfferItemsBulkResponse")).toEqual([]);
+    const read = (await send("GET", revUrl, undefined)).json as unknown as { groups: Array<{ items: unknown[] }> };
+    expect(read.groups[0]?.items).toHaveLength(3); // 201'lik toplu istek HİÇBİR kalem yazmadı
+
+    const sent = await send("POST", `${revUrl}/send`, undefined);
+    expect(sent.status).toBe(200);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferDetailRead" }, sent.json, "OfferDetailRead")).toEqual([]);
+    const lose = await send("POST", `${revUrl}/lose`, { winning_amount: "-1" });
+    expect([lose.status, firstViolation(lose.json).type]).toEqual([422, "greater_than_equal"]);
+    const longReason = await send("POST", `${revUrl}/lose`, { lost_reason: "x".repeat((OFFER_LIMITS.lostReason ?? 0) + 1) });
+    expect([longReason.status, firstViolation(longReason.json).type]).toEqual([422, "string_too_long"]);
+  });
+
+  it("GET /offers + /offers/settings yanıtları şemaya UYAR (liste özeti, kalem iç/dış alt yapıları)", async () => {
+    const list = await send("GET", "/offers", undefined);
+    expect(list.status).toBe(200);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferListResponse" }, list.json, "OfferListResponse")).toEqual([]);
+    const settings = await send("GET", "/offers/settings", undefined);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferSettingsRead" }, settings.json, "OfferSettingsRead")).toEqual([]);
+    const seededId = (list.json.items as Array<{ id: string; status: string }>)[0]?.id;
+    const detail = await send("GET", `/offers/${seededId}`, undefined);
+    expect(responseProblems({ $ref: "#/components/schemas/OfferDetailRead" }, detail.json, "OfferDetailRead")).toEqual([]);
+    for (const row of list.json.items as Array<{ id: string }>) {
+      const rev = await send("GET", `/offers/${row.id}/revisions/0`, undefined);
+      if (rev.status === 200) {
+        expect(responseProblems({ $ref: "#/components/schemas/OfferRevisionRead" }, rev.json, `OfferRevisionRead(${row.id})`)).toEqual([]);
+      }
+    }
+  });
+
+  it("şema gezgini KENDİSİ çalışıyor (negatif kontrol): eksik zorunlu alan / fazla alan / tür sapması YAKALANIR", () => {
+    const schema: OpenApiSchema = { $ref: "#/components/schemas/OfferGroupBasicRead" };
+    expect(responseProblems(schema, { id: "x", name: "A" }, "g")).toContain("g.sort_order: zorunlu alan EKSİK");
+    expect(responseProblems(schema, { id: "x", name: "A", sort_order: 0, fazla: 1 }, "g")).toContain("g.fazla: sözleşmede OLMAYAN alan");
+    expect(responseProblems(schema, { id: "x", name: "A", sort_order: "0" }, "g").join()).toContain("integer beklenir");
+  });
+});

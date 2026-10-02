@@ -295,6 +295,20 @@ export async function buildScaleUrls(
     skip("GET /progress-payments/{payment_id}", "hiç işveren hakedişi fikstürü yok");
   }
 
+  // TKL-F3.2 · teklif uçları. Revizyon okuması TÜM tohum tekliflerin SON revizyonlarıyla gezilir:
+  // kalem düzeyi GG/kâr ezmesi, elle B.F. (türev kâr %), fiyatsız kalem ve negatif/boş türevler
+  // farklı tekliflerde yaşar — tek teklif ölçeği ters kaydıran bir değeri gizleyebilirdi.
+  await tryAdd("GET /offers/settings", "/offers/settings");
+  const offersList = await tryAdd("GET /offers", "/offers");
+  const offerRows = (offersList?.body as { items?: Array<{ id: string; rev_no: number }> } | null)?.items ?? [];
+  if (offerRows.length > 0) {
+    for (const row of offerRows) {
+      await tryAdd("GET /offers/{offer_id}/revisions/{rev_no}", `/offers/${row.id}/revisions/${row.rev_no}`);
+    }
+  } else {
+    skip("GET /offers/{offer_id}/revisions/{rev_no}", "hiç teklif fikstürü yok");
+  }
+
   if (subcontractorContractId) {
     await tryAdd("GET /subcontractor-contracts/{contract_id}", `/subcontractor-contracts/${subcontractorContractId}`);
   } else {
@@ -389,6 +403,19 @@ export const MOCK_DISI_STATIC: readonly MockDisiFieldEntry[] = [
   { schema: "UnitSaleUpdate", field: "term_interest_pct", reason: "yalnız istek gövdesi (PATCH /sales/{id})" },
   { schema: "UnitSaleUpdate", field: "vat_pct", reason: "yalnız istek gövdesi (PATCH /sales/{id})" },
   { schema: "UnitUpdate", field: "vat_rate", reason: "yalnız istek gövdesi (girdi şeması)" },
+  { schema: "OfferCreate", field: "overhead_pct", reason: "yalnız istek gövdesi (POST /offers)" },
+  { schema: "OfferCreate", field: "profit_pct", reason: "yalnız istek gövdesi (POST /offers)" },
+  { schema: "OfferCreate", field: "vat_pct", reason: "yalnız istek gövdesi (POST /offers)" },
+  { schema: "OfferItemCreate", field: "overhead_pct", reason: "yalnız istek gövdesi (POST /offers/{id}/revisions/{rev}/items[/bulk])" },
+  { schema: "OfferItemCreate", field: "profit_pct", reason: "yalnız istek gövdesi (POST /offers/{id}/revisions/{rev}/items[/bulk])" },
+  { schema: "OfferItemUpdate", field: "overhead_pct", reason: "yalnız istek gövdesi (PATCH /offers/{id}/revisions/{rev}/items/{item_id})" },
+  { schema: "OfferItemUpdate", field: "profit_pct", reason: "yalnız istek gövdesi (PATCH /offers/{id}/revisions/{rev}/items/{item_id})" },
+  { schema: "OfferRevisionUpdate", field: "overhead_pct", reason: "yalnız istek gövdesi (PATCH /offers/{id}/revisions/{rev})" },
+  { schema: "OfferRevisionUpdate", field: "profit_pct", reason: "yalnız istek gövdesi (PATCH /offers/{id}/revisions/{rev})" },
+  { schema: "OfferRevisionUpdate", field: "vat_pct", reason: "yalnız istek gövdesi (PATCH /offers/{id}/revisions/{rev})" },
+  { schema: "OfferSettingsUpdate", field: "default_overhead_pct", reason: "yalnız istek gövdesi (PUT /offers/settings)" },
+  { schema: "OfferSettingsUpdate", field: "default_profit_pct", reason: "yalnız istek gövdesi (PUT /offers/settings)" },
+  { schema: "OfferSettingsUpdate", field: "default_vat_pct", reason: "yalnız istek gövdesi (PUT /offers/settings)" },
 
   // ── 2. mock bu ucu sunmuyor: settings/preview (handler yok, openapi'de var) ──
   // Ölçüldü: `SettingsPreview`/`PreviewOut` zinciri (`DisciplinePreviewOut` →
