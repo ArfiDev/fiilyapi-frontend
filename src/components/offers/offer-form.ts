@@ -3,6 +3,8 @@ import type { OfferCreateBody } from "@/lib/api/hooks/useOfferMutations";
 import type { OfferSettingsRead } from "@/lib/api/hooks/useOffers";
 import { REF_PRICE_AMBIGUOUS_DOT, decimalDigitCounts, parseQuantityInput } from "@/lib/tr-decimal";
 
+import type { OfferBodyStart } from "./offer-start";
+
 /**
  * TKL-F3.4 · "Yeni teklif" formunun SAF modeli (bileşenlerden bağımsız; Detay künye/oran kartları
  * da aynı doğrulamayı kullanacak — plan §3.3).
@@ -20,7 +22,7 @@ const MAX_VALIDITY_DAYS = 365;
 export const OFFER_TITLE_MAX_LENGTH = 200;
 export const OFFER_SCOPE_MAX_LENGTH = 2000;
 
-/** Başlangıç tipi seçici yalnız bunu etkinleştirir (şablon / kopya B5-F4'te). */
+/** Kaynaksız (boş) ve şablondan teklifin fiyat farkı varsayılanı (SO-5); kopya KAYNAĞINDAN alır. */
 export const OFFER_PRICE_ESCALATION_DEFAULT = "fixed" as const;
 
 export interface OfferFormValues {
@@ -130,12 +132,19 @@ function pctBodyValue(text: string): string {
 }
 
 /**
- * `POST /offers` gövdesi — YALNIZ doğrulanmış form için.
- * · `payment_terms` GÖNDERİLMEZ: Yeni'de alanı yok, sunucu ayar metnini kopyalar (plan §7).
- * · `price_escalation` AÇIKÇA gönderilir (K-F3-5: TS'te zorunlu; varsayılan Sabit, SO-5).
- * · Yüzdeler METİN, geçerlilik tam sayı; boş teklif tarihi/kapsam özeti gönderilmez.
+ * `POST /offers` gövdesi — YALNIZ doğrulanmış form için. Başlangıç × alan tablosu `offer-form.test.ts`te.
+ * · `payment_terms` / `delivery_days` / `notes` HİÇBİR başlangıçta GÖNDERİLMEZ: Yeni'de alanı yok; sunucu ayar
+ *   metnini (boş/şablon) ya da kaynak revizyonun koşulunu (kopya) kendisi alır (plan §4, §7).
+ * · `price_escalation`: boş/şablonda AÇIKÇA `fixed` (K-F3-5); kopyada KAYNAĞIN fiyat farkı + endeks tipi AÇIKÇA
+ *   (sabit `fixed` kaynağın TÜİK'ini ezerdi — K-F4-3).
+ * · `template_id` ya da `copy_from` — İKİSİ BİRDEN ASLA (sunucu 422).
+ * · Yüzdeler METİN, geçerlilik tam sayı; boş teklif tarihi/kapsam özeti gönderilmez. Oranlar formdan gider:
+ *   şablon/kopya seçilince form o değerlerle DOLDURULUR (`offer-start.ts`), yoksa kaynağın oranı ezilirdi.
  */
-export function buildOfferCreateBody(values: OfferFormValues): OfferCreateBody {
+export function buildOfferCreateBody(
+  values: OfferFormValues,
+  start: OfferBodyStart = { kind: "blank" },
+): OfferCreateBody {
   const validityDays = parseValidity(values.validityDays);
   if (validityDays === null) throw new Error("buildOfferCreateBody: doğrulanmamış geçerlilik");
   const scope = values.scopeSummary.trim();
@@ -147,7 +156,21 @@ export function buildOfferCreateBody(values: OfferFormValues): OfferCreateBody {
     overhead_pct: pctBodyValue(values.overheadPct),
     profit_pct: pctBodyValue(values.profitPct),
     vat_pct: pctBodyValue(values.vatPct),
-    price_escalation: OFFER_PRICE_ESCALATION_DEFAULT,
     ...(scope === "" ? {} : { scope_summary: scope }),
+    ...sourceBodyFields(start),
   };
+}
+
+function sourceBodyFields(start: OfferBodyStart): Partial<OfferCreateBody> & Pick<OfferCreateBody, "price_escalation"> {
+  if (start.kind === "template") {
+    return { price_escalation: OFFER_PRICE_ESCALATION_DEFAULT, template_id: start.templateId };
+  }
+  if (start.kind === "copy") {
+    return {
+      price_escalation: start.priceEscalation,
+      price_index_type: start.priceIndexType,
+      copy_from: { offer_id: start.offerId, rev_no: start.revNo },
+    };
+  }
+  return { price_escalation: OFFER_PRICE_ESCALATION_DEFAULT };
 }

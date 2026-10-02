@@ -12,6 +12,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { useEmployers, type EmployerListItem } from "@/lib/api/hooks/useEmployers";
 import { useCreateOffer } from "@/lib/api/hooks/useOfferMutations";
 import { useOfferSettings } from "@/lib/api/hooks/useOffers";
+import { useOfferTemplates, type OfferTemplateListItem } from "@/lib/api/hooks/useOfferTemplates";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
@@ -33,7 +34,9 @@ import {
   type OfferFormField,
   type OfferFormValues,
 } from "./offer-form";
+import { conditionsFromTemplate, pickTemplate } from "./offer-start";
 import { istanbulToday } from "./offer-status";
+import { useOfferCreateStart } from "./useOfferCreateStart";
 import "./offer-create.css";
 
 /** T25: teklif YAZMA = `contracts:full` + disiplin kısıtsız. */
@@ -48,7 +51,7 @@ const SETTINGS_ERROR_TEXT = "Teklif ayarları yüklenemedi";
  * Kapı: yazamayan (contracts < full ya da disiplin kısıtlı) ve 403 alan → AccessDenied (plan §2.3, SO-19);
  * form açılışta `GET /offers/settings` ön değerlerini bekler.
  */
-export function OfferCreateScreen() {
+export function OfferCreateScreen({ initialTemplateId }: { initialTemplateId?: string } = {}) {
   const { level } = useModulePermission("contracts");
   const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
@@ -56,11 +59,22 @@ export function OfferCreateScreen() {
   const canWrite = hasAtLeast(level, WRITE_LEVEL) && !scope.isRestricted && level !== "none";
   // Yetkisiz kullanıcı için HİÇBİR uç çağrılmaz: ayar sorgusu bu kapının ALTINDAKİ bileşendedir.
   if (!canWrite) return <AccessDenied />;
-  return <OfferCreateSettingsGate canAddEmployer={hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL)} />;
+  return (
+    <OfferCreateSettingsGate
+      canAddEmployer={hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL)}
+      initialTemplateId={initialTemplateId}
+    />
+  );
 }
 
 /** Form açılışta teklif ayarlarını (ön değerler) bekler; ayar ucu 403 → AccessDenied. */
-function OfferCreateSettingsGate({ canAddEmployer }: { canAddEmployer: boolean }) {
+function OfferCreateSettingsGate({
+  canAddEmployer,
+  initialTemplateId,
+}: {
+  canAddEmployer: boolean;
+  initialTemplateId: string | undefined;
+}) {
   const settings = useOfferSettings();
   if (isForbidden(settings.error)) return <AccessDenied />;
 
@@ -77,22 +91,51 @@ function OfferCreateSettingsGate({ canAddEmployer }: { canAddEmployer: boolean }
     );
   }
 
+  if (initialTemplateId !== undefined) {
+    return <TemplateParamGate settings={settings.data} canAddEmployer={canAddEmployer} templateId={initialTemplateId} />;
+  }
   return <OfferCreateForm settings={settings.data} canAddEmployer={canAddEmployer} />;
 }
 
-interface OfferCreateFormProps {
-  settings: NonNullable<ReturnType<typeof useOfferSettings>["data"]>;
+type OfferSettings = NonNullable<ReturnType<typeof useOfferSettings>["data"]>;
+
+/**
+ * `?sablon=` ile gelindi: form, şablon listesi gelince AÇILIR (oranlar ilk çizimde şablondan dolu, form kirli
+ * sayılmaz). Liste okunamazsa form boş başlangıçla açılır. İstenen kimlik listede yoksa varsayılan şablon.
+ */
+function TemplateParamGate({
+  settings,
+  canAddEmployer,
+  templateId,
+}: {
+  settings: OfferSettings;
   canAddEmployer: boolean;
+  templateId: string;
+}) {
+  const templates = useOfferTemplates();
+  if (templates.data === undefined && !templates.isError) return <p className="offer-create__state">Şablonlar yükleniyor</p>;
+  const initialTemplate = templates.data === undefined ? undefined : pickTemplate(templates.data.items, templateId);
+  return <OfferCreateForm settings={settings} canAddEmployer={canAddEmployer} initialTemplate={initialTemplate} />;
 }
 
-function OfferCreateForm({ settings, canAddEmployer }: OfferCreateFormProps) {
+interface OfferCreateFormProps {
+  settings: OfferSettings;
+  canAddEmployer: boolean;
+  /** `?sablon=` çözümü: `undefined` = boş başlangıç; `null` = Şablondan açık ama şablon yok. */
+  initialTemplate?: OfferTemplateListItem | null;
+}
+
+function OfferCreateForm({ settings, canAddEmployer, initialTemplate }: OfferCreateFormProps) {
   const router = useRouter();
   const { me } = useSession();
   const employersQuery = useEmployers({ activeOnly: true });
   const createOffer = useCreateOffer();
 
   // Taban BİR KEZ yakalanır (ön değerler ayardan): dokunulmamış form kirli sayılmaz.
-  const [baseline] = useState<OfferFormValues>(() => initialOfferFormValues(settings, istanbulToday(new Date())));
+  const [baseline] = useState<OfferFormValues>(() => {
+    const initial = initialOfferFormValues(settings, istanbulToday(new Date()));
+    return initialTemplate ? conditionsFromTemplate(initial, initialTemplate, settings) : initial;
+  });
   const [values, setValues] = useState<OfferFormValues>(baseline);
   const [attempted, setAttempted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -100,6 +143,8 @@ function OfferCreateForm({ settings, canAddEmployer }: OfferCreateFormProps) {
   const [isEmployerModalOpen, setIsEmployerModalOpen] = useState(false);
   // Yeni işveren, liste yeniden çekilene kadar seçenekte görünsün.
   const [justCreated, setJustCreated] = useState<EmployerListItem | null>(null);
+
+  const start = useOfferCreateStart({ settings, setValues, initialTemplate });
 
   const isDirty = JSON.stringify(values) !== JSON.stringify(baseline);
   useUnsavedChanges(isDirty && !isCreated, "Teklif taslağı");
@@ -118,10 +163,13 @@ function OfferCreateForm({ settings, canAddEmployer }: OfferCreateFormProps) {
 
   const employers = useMemo(() => {
     const listed = (employersQuery.data?.items ?? []).map((employer) => ({ id: employer.id, name: employer.name }));
-    return justCreated && !listed.some((employer) => employer.id === justCreated.id)
-      ? [...listed, { id: justCreated.id, name: justCreated.name }]
-      : listed;
-  }, [employersQuery.data, justCreated]);
+    // Listede olmayan işverenler (yeni açılan, pasif kaynak işvereni) seçenek olarak eklenir.
+    const extras = [justCreated, start.copyEmployer].filter(
+      (extra): extra is { id: string; name: string } =>
+        extra !== null && !listed.some((employer) => employer.id === extra.id),
+    );
+    return [...listed, ...extras.map((extra) => ({ id: extra.id, name: extra.name }))];
+  }, [employersQuery.data, justCreated, start.copyEmployer]);
 
   function change(field: OfferFormField, value: string) {
     setValues((previous) => ({ ...previous, [field]: value }));
@@ -135,13 +183,19 @@ function OfferCreateForm({ settings, canAddEmployer }: OfferCreateFormProps) {
       shouldFocusRef.current = true;
       return;
     }
-    createOffer.mutate(buildOfferCreateBody(values), {
+    if (start.bodyStart === null) {
+      setServerError(start.startProblem);
+      return;
+    }
+    createOffer.mutate(buildOfferCreateBody(values, start.bodyStart), {
       onSuccess: (offer) => {
         setIsCreated(true);
         router.replace(routes.offers.detail({ offerId: offer.id }));
       },
       onError: (error) => {
-        if (!isForbidden(error)) setServerError(backendErrorMessage(error, "Teklif oluşturulamadı."));
+        if (isForbidden(error)) return;
+        setServerError(backendErrorMessage(error, "Teklif oluşturulamadı."));
+        start.refreshSourcesOn404(error);
       },
     });
   }
@@ -173,7 +227,14 @@ function OfferCreateForm({ settings, canAddEmployer }: OfferCreateFormProps) {
       >
         <div className="offer-create__layout">
           <div className="offer-create__main">
-            <OfferStartChoice />
+            <OfferStartChoice
+              kind={start.kind}
+              onKindChange={start.selectKind}
+              templateId={start.templateId}
+              onTemplateSelect={start.selectTemplate}
+              copyOfferId={start.copyOfferId}
+              onCopySelect={start.selectCopy}
+            />
             <section className="offer-create__card" aria-labelledby="offer-info-title">
               <h2 className="offer-create__card-title" id="offer-info-title">
                 Teklif bilgileri
@@ -183,9 +244,9 @@ function OfferCreateForm({ settings, canAddEmployer }: OfferCreateFormProps) {
                   <b>{missingFieldsText(errorCount)}</b> Teklifi oluşturmadan önce işaretli alanları doldurun.
                 </p>
               )}
-              {serverError && (
+              {(serverError ?? start.sourceError) && (
                 <p className="offer-create__band" role="status">
-                  {serverError}
+                  {serverError ?? start.sourceError}
                 </p>
               )}
               <OfferInfoFields
@@ -220,6 +281,7 @@ function OfferCreateForm({ settings, canAddEmployer }: OfferCreateFormProps) {
             />
           </div>
           <OfferCreateSummary
+            startLabel={start.summaryLabel}
             employerName={selectedEmployer?.name ?? ""}
             title={values.title}
             validityDays={values.validityDays}

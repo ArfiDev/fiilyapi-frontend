@@ -1,35 +1,40 @@
+import Link from "next/link";
+
+import type { OfferListItem } from "@/lib/api/hooks/useOffers";
+import type { OfferTemplateListItem } from "@/lib/api/hooks/useOfferTemplates";
+import { routes } from "@/lib/routes";
+
+import { OfferStartCopy } from "./OfferStartCopy";
+import { OfferStartTemplates } from "./OfferStartTemplates";
+import type { OfferStartKind } from "./offer-start";
 import "./offer-create.css";
 
-/** B5/F4 gelene kadar yalnız boş teklif çalışır; diğer ikisi F-TH kanonuyla silinmez, gerekçeyle pasif basılır (GECE KURALI). */
-const TEMPLATE_SOON_TITLE = "Yakında · şablondan başlama sonraki sürümde açılacak";
-const COPY_SOON_TITLE = "Yakında · mevcut tekliften kopyalama sonraki sürümde açılacak";
-const MANAGE_SOON_TITLE = "Yakında · şablon yönetimi sonraki sürümde açılacak";
-
 interface StartOption {
-  key: "blank" | "template" | "copy";
+  key: OfferStartKind;
   label: string;
   description: string;
-  soonTitle: string | null;
 }
 
 const OPTIONS: readonly StartOption[] = [
-  { key: "blank", label: "Boş teklif", description: "Kalemleri katalogdan tek tek ekleyin", soonTitle: null },
-  {
-    key: "template",
-    label: "Şablondan",
-    description: "Hazır kalem setiyle başlayın, miktarları girin",
-    soonTitle: TEMPLATE_SOON_TITLE,
-  },
-  {
-    key: "copy",
-    label: "Mevcut tekliften kopyala",
-    description: "Benzer bir işin kalem ve fiyatlarını alın",
-    soonTitle: COPY_SOON_TITLE,
-  },
+  { key: "blank", label: "Boş teklif", description: "Kalemleri katalogdan tek tek ekleyin" },
+  { key: "template", label: "Şablondan", description: "Hazır kalem setiyle başlayın, miktarları girin" },
+  { key: "copy", label: "Mevcut tekliften kopyala", description: "Benzer bir işin kalem ve fiyatlarını alın" },
 ];
 
-/** TY:77-109 — "Nereden başlansın?". Seçim DAİMA "Boş teklif" (şablon / kopya B5-F4'te açılır). */
-export function OfferStartChoice() {
+interface OfferStartChoiceProps {
+  kind: OfferStartKind;
+  onKindChange: (kind: OfferStartKind) => void;
+  /** Seçili şablon (üstte tutulur; `null` = henüz yok → varsayılan önerilir). */
+  templateId: string | null;
+  onTemplateSelect: (template: OfferTemplateListItem | null) => void;
+  /** Seçili kopya kaynağı teklifi (`null` = yok). */
+  copyOfferId: string | null;
+  onCopySelect: (offer: OfferListItem) => void;
+}
+
+/** TY:77-109 — "Nereden başlansın?". DENETİMLİ: seçim ve alt liste durumu üstte tutulur (gövde + özet + form doldurma). */
+export function OfferStartChoice(props: OfferStartChoiceProps) {
+  const { kind } = props;
   return (
     <section className="offer-create__card" aria-labelledby="offer-start-title">
       <div>
@@ -38,36 +43,36 @@ export function OfferStartChoice() {
         </h2>
         <span className="offer-create__card-sub">
           Kalemler başlangıca göre doldurulur; sonradan hepsi düzenlenebilir ·{" "}
-          <button type="button" className="offer-start__manage" disabled title={MANAGE_SOON_TITLE}>
+          <Link href={routes.offers.templates()} className="offer-start__manage">
             Şablonları yönet →
-          </button>
+          </Link>
         </span>
       </div>
       <div className="offer-start" role="radiogroup" aria-labelledby="offer-start-title">
         {OPTIONS.map((option) => {
-          const isBlank = option.soonTitle === null;
+          const isSelected = option.key === kind;
           return (
             <button
               key={option.key}
               type="button"
               role="radio"
-              aria-checked={isBlank}
-              disabled={!isBlank}
-              title={option.soonTitle ?? undefined}
+              aria-checked={isSelected}
               className="offer-start__option"
+              onClick={() => props.onKindChange(option.key)}
             >
               <span className="offer-start__top">
                 <span className="offer-start__radio" aria-hidden="true">
-                  {isBlank && <span className="offer-start__dot" />}
+                  {isSelected && <span className="offer-start__dot" />}
                 </span>
                 {option.label}
-                {!isBlank && <span className="offer-start__soon">Yakında</span>}
               </span>
               <span className="offer-start__desc">{option.description}</span>
             </button>
           );
         })}
       </div>
+      {kind === "template" && <OfferStartTemplates selectedId={props.templateId} onSelect={props.onTemplateSelect} />}
+      {kind === "copy" && <OfferStartCopy selectedOfferId={props.copyOfferId} onSelect={props.onCopySelect} />}
     </section>
   );
 }

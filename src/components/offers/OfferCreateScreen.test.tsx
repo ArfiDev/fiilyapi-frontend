@@ -163,16 +163,15 @@ describe("ön değerler ve başlangıç", () => {
     expect(screen.getByText("₺ Türk lirası")).toBeInTheDocument();
   });
 
-  it("yalnız 'Boş teklif' etkin ve seçili; Şablondan ve Kopyala devre-dışı 'Yakında'", async () => {
+  it("başlangıç: 'Boş teklif' seçili gelir; Şablondan ve Kopyala artık etkin (TKL-F4.7; ayrıntı OfferCreateStart.test.tsx)", async () => {
     mockGets();
     renderScreen();
     await loaded();
     expect(screen.getByRole("radio", { name: /Boş teklif/ })).toBeChecked();
     for (const name of [/Şablondan/, /Mevcut tekliften kopyala/]) {
       const option = screen.getByRole("radio", { name });
-      expect(option).toBeDisabled();
-      expect(within(option).getByText("Yakında")).toBeInTheDocument();
-      expect(option).toHaveAttribute("title");
+      expect(option).toBeEnabled();
+      expect(option).not.toBeChecked();
     }
   });
 });
