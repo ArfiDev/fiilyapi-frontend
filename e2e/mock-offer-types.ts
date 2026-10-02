@@ -19,6 +19,8 @@ export interface OfferRec {
   title: string;
   scopeSummary: string | null;
   preparedByUserId: string | null;
+  /** Şablondan oluşturulduysa şablon kimliği; şablon silinince NULL, `copy_from`da MİRAS ALINMAZ (SO-23). */
+  templateId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +80,33 @@ export interface ItemRec {
   offerUnitPrice: string | null;
 }
 
+/** Şablon kalemi: yalnız katalog bağı (fiyat/miktar/a-s YOK, T12); sıra = dizin. */
+export interface TemplateItemRec {
+  id: string;
+  catalogItemId: string;
+}
+
+/** Şablon grubu; `items` sırası = `sort_order`. */
+export interface TemplateGroupRec {
+  id: string;
+  name: string;
+  items: TemplateItemRec[];
+}
+
+export interface TemplateRec {
+  id: string;
+  name: string;
+  description: string | null;
+  /** DB `Numeric(5,2)` ölçeğinde metin ya da `null` (= ayardan). */
+  overheadPct: string | null;
+  profitPct: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  /** İyimser kilit değeri: MİKRO saniye (6 hane) — her yazma bir öncekinden KESİN büyük. */
+  updatedAt: string;
+  groups: TemplateGroupRec[];
+}
+
 export interface OfferSettingsRec {
   defaultOverheadPct: string;
   defaultProfitPct: string;
@@ -100,6 +129,8 @@ export interface OffersState {
   /** Yıl → DAĞITILAN son sıra. MONOTONDUR: silme sayacı geri almaz (numara tekrar kullanılmaz). */
   counters: Record<number, number>;
   settings: OfferSettingsRec;
+  /** TKL-F4 · teklif şablonları (`mock-offer-templates.ts`). */
+  templates: TemplateRec[];
   users: MockUser[];
   /** Kimlik üretici sayacı (belirleyici UUID'ler). */
   idSeq: Record<IdKind, number>;
@@ -107,13 +138,16 @@ export interface OffersState {
   clock: () => Date;
 }
 
-export type IdKind = "offer" | "revision" | "group" | "item";
+export type IdKind = "offer" | "revision" | "group" | "item" | "template" | "templateGroup" | "templateItem";
 
 const ID_PREFIX: Record<IdKind, string> = {
   offer: "0ff10000",
   revision: "0ff20000",
   group: "0ff30000",
   item: "0ff40000",
+  template: "0ff50000",
+  templateGroup: "0ff60000",
+  templateItem: "0ff70000",
 };
 
 /** Belirleyici, geçerli bir UUID (v4 biçimli): `0ff1…-0000-4000-8000-000000000001`. */
@@ -139,8 +173,9 @@ export function emptyOffersState(users: MockUser[], clock: () => Date = () => ne
     items: [],
     counters: {},
     settings: { ...DEFAULT_OFFER_SETTINGS, updatedAt: "2026-01-01T09:00:00.000Z" },
+    templates: [],
     users,
-    idSeq: { offer: 0, revision: 0, group: 0, item: 0 },
+    idSeq: { offer: 0, revision: 0, group: 0, item: 0, template: 0, templateGroup: 0, templateItem: 0 },
     clock,
   };
 }

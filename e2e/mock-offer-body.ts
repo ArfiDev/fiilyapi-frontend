@@ -193,6 +193,7 @@ function validateValue(schema: RawSchema, loc: Loc, value: unknown, field: strin
   if (first.type === "array") return arrayValue(first, loc, value);
   if (first.type === "object") return validateObject(first, loc, value);
   if (first.type === "integer") return integerValue(first, loc, value);
+  if (first.type === "boolean") return typeof value === "boolean" ? null : violation("bool_type", loc, "Input should be a valid boolean", value);
   return stringValue(first, loc, value, field);
 }
 

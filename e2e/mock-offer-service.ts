@@ -5,7 +5,9 @@
 import type { components } from "@/lib/api/schema";
 
 import { ManualPriceWithoutCostError, calcItem, quantizeDecimal, suggestCost } from "./mock-offer-calc";
-import { offerBodyViolation, offerImmutableItemFields, offerNullRejected, type BodyViolation } from "./mock-offer-body";
+import { offerImmutableItemFields } from "./mock-offer-body";
+import { assertSourceRules, conditionDefaults, lockSources, seedRevisionContent } from "./mock-offer-create-sources";
+import { OFFER_MESSAGES, Failure, fail, invalid, pathViolation, rejectNull, uuidParam, validate } from "./mock-offer-guards";
 import {
   OFFER_STATUSES,
   istanbulDate,
@@ -25,42 +27,8 @@ import { itemInput, latestRevision, type OfferListFilters } from "./mock-offer-v
 
 type S = components["schemas"];
 
-// -------------------------------------------------------------------------------- hata türleri
-
-export class Failure extends Error {
-  constructor(
-    readonly status: number,
-    readonly payload: unknown,
-  ) {
-    super(typeof payload === "object" ? JSON.stringify(payload) : String(payload));
-  }
-}
-
-export const fail = (status: number, detail: string): Failure => new Failure(status, { detail });
-export const invalid = (violation: BodyViolation): Failure => new Failure(422, violation);
-
-/** Backend metinleri (`locking.py`, `offer_service.py`, `item_service.py`) — AYNEN. */
-export const OFFER_MESSAGES = {
-  offerMissing: "Teklif bulunamadı",
-  revisionMissing: "Teklif revizyonu bulunamadı",
-  notLatest: "Yalnız en son revizyon üzerinde işlem yapılabilir",
-  notDraft:
-    "Revizyon taslak değil; içerik yalnız taslak revizyonda değiştirilebilir. Değişiklik için yeni revizyon açın",
-  employerMissing: "İşveren bulunamadı",
-  deleteNotAllowed: "Teklif yalnız tek revizyonlu ve taslak iken silinebilir",
-  newRevisionNotAllowed:
-    "Yeni revizyon yalnız son revizyon gönderilmiş ya da kaybedilmiş iken açılabilir",
-  indexRequired: "Fiyat farkı «TÜİK endeksli» iken endeks türü zorunludur",
-  indexNotAllowed: "Sabit fiyatta endeks türü girilemez",
-  noItemsToSend: "Teklifte kalem yok",
-  unquantifiedItems: "Miktarı girilmemiş kalem var",
-  catalogMissing: "Katalog iş tipi bulunamadı",
-  groupMissing: "Teklif grubu bulunamadı",
-  groupForeign: "Grup bu revizyona ait değil",
-  itemMissing: "Teklif kalemi bulunamadı",
-  dateRange: "Başlangıç tarihi bitiş tarihinden sonra olamaz",
-  blankPaymentTerms: "Ödeme koşulu boş olamaz",
-} as const;
+// Ortak hata/doğrulama yardımcıları `mock-offer-guards.ts`te (TKL-F4.4); `mock-offers.ts` buradan okumaya devam eder.
+export { OFFER_MESSAGES, Failure, fail, invalid, rejectNull, uuidParam, validate };
 
 const STATUS_LABEL: Record<OfferStatus, string> = {
   draft: "taslak",
@@ -82,7 +50,6 @@ const TRANSITIONS: Record<OfferAction, readonly [readonly OfferStatus[], OfferSt
 
 // ------------------------------------------------------------------------------------- yardımcı
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MIN_OFFER_DATE = "2000-01-01";
 const MAX_OFFER_DATE = "2999-12-31";
 const MAX_REV_NO = 100_000;
@@ -94,17 +61,6 @@ const nullable = (value: unknown, places: number): string | null =>
   value === null || value === undefined ? null : quantizeDecimal(text(value), places);
 const whole = (value: unknown): number => parseInt(text(value), 10);
 const nowIso = (state: OffersState): string => state.clock().toISOString();
-
-function pathViolation(name: string, input: string, type: string, msg: string): Failure {
-  return new Failure(422, { detail: [{ type, loc: ["path", name], msg, input }] });
-}
-
-export function uuidParam(name: string, value: string): string {
-  if (!UUID_PATTERN.test(value)) {
-    throw pathViolation(name, value, "uuid_parsing", "Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-]");
-  }
-  return value.toLowerCase();
-}
 
 export function revParam(value: string): number {
   if (!/^[+-]?\d+$/.test(value)) {
@@ -135,16 +91,6 @@ function checkOfferDate(value: unknown): void {
   if (date > MAX_OFFER_DATE) {
     throw invalid({ detail: [{ type: "less_than_equal", loc: ["body", "offer_date"], msg: `Input should be less than or equal to ${MAX_OFFER_DATE}`, input: value }] });
   }
-}
-
-export function validate(schema: string, body: unknown): void {
-  const violation = offerBodyViolation(schema, body);
-  if (violation !== null) throw invalid(violation);
-}
-
-export function rejectNull(body: Record<string, unknown>, fields: readonly string[]): void {
-  const violation = offerNullRejected(body, fields);
-  if (violation !== null) throw invalid(violation);
 }
 
 // ----------------------------------------------------------------- durum yazıcıları (immutable)
@@ -231,27 +177,42 @@ function offerNumber(state: OffersState): string {
   return `TKL-${year}-${String(sequence).padStart(4, "0")}`;
 }
 
+/**
+ * `POST /offers` (`offer_service.create_offer_with_origin`). Kaynak (en fazla biri): boş | `template_id` | `copy_from`
+ * (`mock-offer-create-sources.ts`). Koşul önceliği gövde ?? kaynak ?? ayar; `null` gövde alanı "verilmedi" sayılır
+ * (`pick`) — YALNIZ `payment_terms` / `delivery_days` / `notes` / `scope_summary` için açık `null` = boşalt.
+ */
 export function createOffer(state: OffersState, port: OffersPort, body: Record<string, unknown>): OfferRec {
   validate("OfferCreate", body);
+  assertSourceRules(body);
   if (body.offer_date !== null && body.offer_date !== undefined) checkOfferDate(body.offer_date);
-  const employer = findEmployer(port, body.employer_id);
+  const sources = lockSources(state, body);
+  const defaults = conditionDefaults(state, sources);
+  const sourceOffer = sources.copy?.offer ?? null;
+  const employer = findEmployer(port, body.employer_id ?? sourceOffer?.employerId);
   if (employer === undefined) throw fail(404, OFFER_MESSAGES.employerMissing);
-  const escalation = (body.price_escalation ?? "fixed") as PriceEscalation;
-  checkEscalation(escalation, body.price_index_type);
+  // Fiyat farkı: `price_escalation` verildiyse gövdenin endeksi (yoksa null); verilmediyse endeks yalnız verilirse gövdeden, yoksa kaynaktan.
+  const escalationGiven = Object.hasOwn(body, "price_escalation");
+  const escalation = (escalationGiven ? body.price_escalation : defaults.priceEscalation) as PriceEscalation;
+  const indexType =
+    escalationGiven || Object.hasOwn(body, "price_index_type") ? (body.price_index_type === undefined ? null : (body.price_index_type as string | null)) : defaults.priceIndexType;
+  checkEscalation(escalation, indexType);
 
   // Numara DOĞRULAMALARDAN SONRA harcanır (reddedilen oluşturma numara tüketmez).
-  const settings = state.settings;
   const now = nowIso(state);
   const offerId = nextId(state, "offer");
   const given = (name: string): boolean => body[name] !== null && body[name] !== undefined;
+  const explicit = <T,>(name: string, fallback: T, read: (value: unknown) => T): T =>
+    Object.hasOwn(body, name) ? (body[name] === null ? (null as T) : read(body[name])) : fallback;
   const offer: OfferRec = {
     id: offerId,
     offerNo: offerNumber(state),
     employerId: employer.id,
     employerName: employer.name,
-    title: text(body.title).trim(),
-    scopeSummary: given("scope_summary") ? text(body.scope_summary) : null,
+    title: given("title") ? text(body.title).trim() : (sourceOffer as OfferRec).title,
+    scopeSummary: sourceOffer === null ? (given("scope_summary") ? text(body.scope_summary) : null) : explicit("scope_summary", sourceOffer.scopeSummary, text),
     preparedByUserId: port.actor.id,
+    templateId: sources.template?.id ?? null, // yalnız şablondan; kopyada MİRAS ALINMAZ (SO-23)
     createdAt: now,
     updatedAt: now,
   };
@@ -261,16 +222,16 @@ export function createOffer(state: OffersState, port: OffersPort, body: Record<s
     revNo: 0,
     status: "draft",
     offerDate: given("offer_date") ? text(body.offer_date) : istanbulDate(state.clock()),
-    validityDays: given("validity_days") ? whole(body.validity_days) : settings.defaultValidityDays,
-    overheadPct: given("overhead_pct") ? quantizeDecimal(text(body.overhead_pct), 2) : settings.defaultOverheadPct,
-    profitPct: given("profit_pct") ? quantizeDecimal(text(body.profit_pct), 2) : settings.defaultProfitPct,
-    vatPct: given("vat_pct") ? quantizeDecimal(text(body.vat_pct), 2) : settings.defaultVatPct,
-    // Gönderilmezse ayar metni; AÇIK null = ödeme koşulu BOŞ.
-    paymentTerms: Object.hasOwn(body, "payment_terms") ? (body.payment_terms === null ? null : text(body.payment_terms)) : settings.defaultPaymentTerms,
-    deliveryDays: given("delivery_days") ? whole(body.delivery_days) : null,
+    validityDays: given("validity_days") ? whole(body.validity_days) : defaults.validityDays,
+    overheadPct: given("overhead_pct") ? quantizeDecimal(text(body.overhead_pct), 2) : defaults.overheadPct,
+    profitPct: given("profit_pct") ? quantizeDecimal(text(body.profit_pct), 2) : defaults.profitPct,
+    vatPct: given("vat_pct") ? quantizeDecimal(text(body.vat_pct), 2) : defaults.vatPct,
+    // Gönderilmezse kaynak/ayar metni; AÇIK null = ödeme koşulu BOŞ.
+    paymentTerms: explicit("payment_terms", defaults.paymentTerms, text),
+    deliveryDays: explicit("delivery_days", defaults.deliveryDays, whole),
     priceEscalation: escalation,
-    priceIndexType: given("price_index_type") ? text(body.price_index_type) : null,
-    notes: given("notes") ? text(body.notes) : null,
+    priceIndexType: indexType === null ? null : text(indexType),
+    notes: explicit("notes", defaults.notes, text),
     createdAt: now,
     updatedAt: now,
     sentAt: null,
@@ -287,6 +248,7 @@ export function createOffer(state: OffersState, port: OffersPort, body: Record<s
   };
   state.offers = [...state.offers, offer];
   state.revisions = [...state.revisions, revision];
+  seedRevisionContent(state, port, sources, revision.id);
   return offer;
 }
 

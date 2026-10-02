@@ -7,6 +7,8 @@
 //   ["offer", id]                            detay (künye + revizyon özetleri + geçmiş)
 //   ["offer", id, "revision", rev]           revizyon (koşullar + gruplar + kalemler + toplamlar)
 //   ["offer-settings"]                       teklif ayarları (varsayılan oranlar)
+//   ["offer-templates"]                      şablon listesi (+ sayaçlar: grup/kalem/kullanım)
+//   ["offer-template", id]                   şablon detayı (gruplar + kalemler, TKL-F4)
 //
 // 🔴 `["offer", id]` revizyon anahtarının ÖN EKİDİR: `exact` verilmeden geçersizleme tüm
 // revizyon okumalarını da tazeler (yeni revizyon açılınca eski revizyonların `is_latest`i
@@ -16,6 +18,8 @@ export const OFFERS_QUERY_KEY = "offers";
 export const OFFER_QUERY_KEY = "offer";
 export const OFFER_REVISION_SEGMENT = "revision";
 export const OFFER_SETTINGS_QUERY_KEY = "offer-settings";
+export const OFFER_TEMPLATES_QUERY_KEY = "offer-templates";
+export const OFFER_TEMPLATE_QUERY_KEY = "offer-template";
 
 /** Liste süzgeci — yalnız dolu alanlar anahtara girer (boş = süzgeç yok). */
 export interface OfferListFilter {
@@ -51,4 +55,15 @@ export function offerRevisionKey(offerId: string, revNo: number): readonly unkno
 
 export function offerSettingsKey(): readonly unknown[] {
   return [OFFER_SETTINGS_QUERY_KEY];
+}
+
+// 🔴 `["offer-template"]` (tekil) şablon DETAYLARININ ön ekidir; `["offer-templates"]` (çoğul) listedir —
+// iki dizi birbirinin öneki DEĞİLDİR (öğe eşitliği): "varsayılan yap" ön ekle TÜM detayları, listeyi AYRICA tazeler.
+
+export function offerTemplatesKey(): readonly unknown[] {
+  return [OFFER_TEMPLATES_QUERY_KEY];
+}
+
+export function offerTemplateKey(templateId: string): readonly unknown[] {
+  return [OFFER_TEMPLATE_QUERY_KEY, templateId];
 }

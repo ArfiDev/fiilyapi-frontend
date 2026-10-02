@@ -11,6 +11,8 @@ import {
   offerListKey,
   offerRevisionKey,
   offerSettingsKey,
+  offerTemplateKey,
+  offerTemplatesKey,
 } from "./offer-query-keys";
 import {
   useCreateOffer,
@@ -58,6 +60,9 @@ const KEYS: Record<string, QueryKey> = {
   revB0: offerRevisionKey(OTHER, 0),
   settings: offerSettingsKey(),
   catalog: [CATALOG_ITEMS_QUERY_KEY],
+  // TKL-F4.4: şablon listesi YALNIZ şablonlu oluşturmada tazelenir (usage_count); öteki yazmalarda DOKUNULMAZ.
+  templates: offerTemplatesKey(),
+  templateDetail: offerTemplateKey("tp-1"),
 };
 
 function prime(): void {
@@ -466,5 +471,43 @@ describe("uç yolları ve gövdeler", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toMatchObject({ status: 409, body: { detail: "Revizyon taslak değil" } });
     expect(invalidated()).toEqual([]);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────────────────
+// TKL-F4.4 · `useCreateOffer` + şablon: `usage_count` (şablon listesi) YALNIZ gövdede `template_id` varken tazelenir.
+// ──────────────────────────────────────────────────────────────────────────────────────────
+
+describe("useCreateOffer — şablon kullanım sayacı (usage_count)", () => {
+  const BASE = { employer_id: "emp-1", title: "A Blok", price_escalation: "fixed" as const };
+
+  it("template_id VAR → listeler + şablon LİSTESİ tazelenir (§2.1: yalnız liste; şablon detayı önbelleği dokunulmaz)", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok({ id: OFFER }, 201));
+    await run(hooks.create(), { ...BASE, template_id: "tp-1" });
+    expect(invalidated()).toEqual([...LISTS, "templates"].sort());
+  });
+
+  it("template_id YOK → şablon listesi DOKUNULMAZ (yalnız teklif listeleri)", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok({ id: OFFER }, 201));
+    await run(hooks.create(), BASE);
+    expect(invalidated()).toEqual([...LISTS].sort());
+  });
+
+  it("açık template_id: null (kaynak yok) → şablon listesi DOKUNULMAZ", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok({ id: OFFER }, 201));
+    await run(hooks.create(), { ...BASE, template_id: null });
+    expect(invalidated()).toEqual([...LISTS].sort());
+  });
+
+  it("copy_from (kopyadan) → şablon listesi DOKUNULMAZ (template_id miras alınmaz, SO-23)", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok({ id: OFFER }, 201));
+    await run(hooks.create(), { copy_from: { offer_id: "of-9", rev_no: 1 }, price_escalation: "fixed" });
+    expect(invalidated()).toEqual([...LISTS].sort());
+  });
+
+  it("gövde AYNEN yollanır (template_id dahil)", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok({ id: OFFER }, 201));
+    await run(hooks.create(), { ...BASE, template_id: "tp-1" });
+    expect(backendClient.POST).toHaveBeenCalledWith("/offers", { body: { ...BASE, template_id: "tp-1" } });
   });
 });

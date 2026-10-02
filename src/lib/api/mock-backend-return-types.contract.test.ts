@@ -40,6 +40,10 @@ const TWIN_FILES: readonly string[] = [
   path.join(process.cwd(), "e2e", "mock-offer-body.ts"),
   path.join(process.cwd(), "e2e", "mock-offer-seed.ts"),
   path.join(process.cwd(), "e2e", "mock-offer-types.ts"),
+  // TKL-F4.4: şablon ikizi + oluşturma kaynakları + (taşınan) hata/doğrulama yardımcıları.
+  path.join(process.cwd(), "e2e", "mock-offer-templates.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-create-sources.ts"),
+  path.join(process.cwd(), "e2e", "mock-offer-guards.ts"),
 ];
 
 interface TwinFunction {

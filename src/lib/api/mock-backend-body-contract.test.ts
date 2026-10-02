@@ -1603,6 +1603,35 @@ describe("🔴 test ikizi ↔ TEKLİF uçları (TKL-F3.2): gövde kısıtları +
     }
   });
 
+  it("TKL-F4.4 şablon uçları: liste/detay/oluştur/içerik/kopya/varsayılan/PATCH yanıtları şemaya UYAR; tohumlu liste de", async () => {
+    const problems = (name: string, value: unknown): string[] => responseProblems({ $ref: `#/components/schemas/${name}` }, value, name);
+    const list = await send("GET", "/offers/templates", undefined);
+    expect(list.status).toBe(200);
+    expect(problems("TemplateListResponse", list.json)).toEqual([]);
+    const seeded = (list.json.items as Array<{ id: string }>)[0] as { id: string };
+    const seededDetail = await send("GET", `/offers/templates/${seeded.id}`, undefined);
+    expect(problems("TemplateDetailRead", seededDetail.json)).toEqual([]);
+
+    const created = await send("POST", "/offers/templates", { name: "Sözleşme sınaması", overhead_pct: "11", profit_pct: "13" });
+    expect(created.status).toBe(201);
+    expect(problems("TemplateDetailRead", created.json)).toEqual([]);
+    const id = created.json.id as string;
+    const catalogId = ((await send("GET", `/offers/templates/${seeded.id}`, undefined)).json.groups as Array<{ items: Array<{ catalog_item_id: string }> }>)[0]?.items[0]?.catalog_item_id;
+    const filled = await send("PUT", `/offers/templates/${id}/content`, { groups: [{ name: "G", items: [{ catalog_item_id: catalogId }] }], expected_updated_at: created.json.updated_at });
+    expect(filled.status).toBe(200);
+    expect(problems("TemplateDetailRead", filled.json)).toEqual([]);
+    const patched = await send("PATCH", `/offers/templates/${id}`, { description: "d", expected_updated_at: filled.json.updated_at });
+    expect(problems("TemplateDetailRead", patched.json)).toEqual([]);
+    for (const [method, tail, body] of [["POST", "/default", undefined], ["POST", "/copy", {}]] as const) {
+      const reply = await send(method, `/offers/templates/${id}${tail}`, body);
+      expect([200, 201]).toContain(reply.status);
+      expect(problems("TemplateDetailRead", reply.json)).toEqual([]);
+    }
+    const fromOffer = await send("POST", "/offers/templates/from-offer", { offer_id: ((await send("GET", "/offers", undefined)).json.items as Array<{ id: string }>)[0]?.id, rev_no: 0, name: "Tekliften sınama" });
+    expect(fromOffer.status).toBe(201);
+    expect(problems("TemplateDetailRead", fromOffer.json)).toEqual([]);
+  });
+
   it("şema gezgini KENDİSİ çalışıyor (negatif kontrol): eksik zorunlu alan / fazla alan / tür sapması YAKALANIR", () => {
     const schema: OpenApiSchema = { $ref: "#/components/schemas/OfferGroupBasicRead" };
     expect(responseProblems(schema, { id: "x", name: "A" }, "g")).toContain("g.sort_order: zorunlu alan EKSİK");

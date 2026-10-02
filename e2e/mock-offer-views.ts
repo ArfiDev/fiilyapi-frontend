@@ -206,7 +206,7 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
     prepared_by_name: userName(state, offer.preparedByUserId),
     status: last.status,
     latest_rev_no: last.revNo,
-    template_id: null,
+    template_id: offer.templateId,
     conversion_state: null,
     project_id: null,
     created_at: offer.createdAt,

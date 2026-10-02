@@ -46,7 +46,12 @@
  * URL-3'ün kapsamı DIŞINDA, borç olarak kayıtlıdır.
  */
 
-import { OFFER_PRINT_KIND_PARAM, OFFER_REV_PARAM, type OfferPrintKind } from "./navigation-params";
+import {
+  OFFER_PRINT_KIND_PARAM,
+  OFFER_REV_PARAM,
+  OFFER_TEMPLATE_PARAM,
+  type OfferPrintKind,
+} from "./navigation-params";
 
 /** URL'ye giren kaynak kimliği — bugün UUID, yarın slug; ikisi de `string`. */
 export type RouteId = string;
@@ -521,7 +526,12 @@ export const routes = {
    */
   offers: {
     list: () => "/teklif-hazirlama",
-    new: () => "/teklif-hazirlama/yeni",
+    /** `templateId` → "Bu şablonla teklif başlat →" (`?sablon=` önseçim, TKL-F4). Çıplak çağrı eskisi gibidir. */
+    new: (p: { templateId?: RouteId } = {}) =>
+      `/teklif-hazirlama/yeni${qs({ [OFFER_TEMPLATE_PARAM]: p.templateId })}`,
+    /** Şablonlar ekranı (statik segment; `[offerId]`den önce eşleşir); `templateId` = seçili kart. */
+    templates: (p: { templateId?: RouteId } = {}) =>
+      `/teklif-hazirlama/sablonlar${qs({ [OFFER_TEMPLATE_PARAM]: p.templateId })}`,
     detail: (p: { offerId: RouteId; rev?: number }) =>
       `/teklif-hazirlama/${seg(p.offerId)}${qs({ [OFFER_REV_PARAM]: p.rev })}`,
     // `rev`/`kind` opsiyonel: kırıntı düğümü (`route-tree.ts`) çıplak yazdırma adresini üretir; ekranlar ikisini de verir.
