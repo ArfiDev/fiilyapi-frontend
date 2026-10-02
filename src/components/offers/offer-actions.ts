@@ -184,13 +184,17 @@ export interface OfferConvertInput {
   canWrite: boolean;
   /** `projects ≥ admin` (SO-42). */
   canAdminProjects: boolean;
+  /** Görüntülenen revizyon SON revizyon mu (T41: eski revizyonda eksen GİZLİ). */
+  isLatest: boolean;
 }
 
 /**
- * TKL-F5.5 · "Projeye Dönüştür" ekseni (plan §4, §6). Eylem tablosundan AYRI: `isLatest`e bakmaz (uç her zaman
- * son revizyonu dönüştürür; eski revizyon görüntülenirken de açık) ve kapalı eylemlerin tablosunu etkilemez.
+ * TKL-F5.5 · "Projeye Dönüştür" ekseni (plan §4, §6). Eylem tablosundan AYRI; kapalı eylemlerin tablosunu etkilemez.
+ * T41: eski revizyon görüntülenirken eksen HİÇ basılmaz (pasif değil, gizli); uç yine son revizyonu dönüştürür ama
+ * eksen yalnız son revizyon görünümünde görünür.
  */
 export function offerConvertGate(input: OfferConvertInput): OfferConvertVerdict {
+  if (!input.isLatest) return { visible: false };
   if (input.status !== "won" || input.conversionState !== "won_not_converted") return { visible: false };
   if (!input.canWrite) return { visible: true, enabled: false, reason: R.readOnlyUser };
   if (!input.canAdminProjects) return { visible: true, enabled: false, reason: R.convertNeedsProjectsAdmin };

@@ -11,7 +11,7 @@ import type { OfferStatus } from "./offer-types";
 const STATUSES: readonly OfferStatus[] = ["draft", "sent", "won", "lost", "withdrawn"];
 const STATES: ReadonlyArray<OfferConvertInput["conversionState"]> = ["won_not_converted", "converted", null, undefined];
 
-const ALLOWED: OfferConvertInput = { status: "won", conversionState: "won_not_converted", canWrite: true, canAdminProjects: true };
+const ALLOWED: OfferConvertInput = { status: "won", conversionState: "won_not_converted", canWrite: true, canAdminProjects: true, isLatest: true };
 
 describe("offerConvertGate · görünürlük matrisi (durum × dönüştürme durumu)", () => {
   for (const status of STATUSES) {
@@ -50,5 +50,16 @@ describe("offerConvertGate · yetki (SO-42)", () => {
     });
     expect(offerConvertGate({ ...ALLOWED, canWrite: false, conversionState: "converted" })).toEqual({ visible: false });
     expect(offerConvertGate({ ...ALLOWED, canAdminProjects: false, status: "sent" })).toEqual({ visible: false });
+  });
+});
+
+describe("offerConvertGate · eski revizyon (T41)", () => {
+  it("won × won_not_converted × yetkili ama isLatest=false → GİZLİ (pasif değil)", () => {
+    expect(offerConvertGate({ ...ALLOWED, isLatest: false })).toEqual({ visible: false });
+  });
+
+  it("yetkisiz kombinasyonda (canWrite=false / projects<admin) isLatest=false → yine GİZLİ, gerekçeli pasif DEĞİL", () => {
+    expect(offerConvertGate({ ...ALLOWED, canWrite: false, isLatest: false })).toEqual({ visible: false });
+    expect(offerConvertGate({ ...ALLOWED, canAdminProjects: false, isLatest: false })).toEqual({ visible: false });
   });
 });

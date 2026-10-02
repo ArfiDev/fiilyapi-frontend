@@ -56,11 +56,11 @@ function mockBackend() {
   }) as never);
 }
 
-function renderScreen() {
+function renderScreen(revParam: string | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <OfferDetailScreen offerId={OFFER_ID} revParam={null} />
+      <OfferDetailScreen offerId={OFFER_ID} revParam={revParam} />
     </QueryClientProvider>,
   );
 }
@@ -113,6 +113,37 @@ describe("kazanıldı · dönüştürülmedi (ÜS-F5-2/3)", () => {
     renderScreen();
     await loaded();
     expect(screen.queryByText(CONVERT_LABEL)).not.toBeInTheDocument();
+  });
+});
+
+describe("eski revizyon görünümü (T41)", () => {
+  /** Rev.1 son (kazanıldı, dönüştürülmedi); görüntülenen Rev.0 eski (is_latest=false). */
+  function viewingOldRevision() {
+    const { detail } = wonBackend();
+    const summary = detail.revisions[0]!;
+    backend = {
+      detail: { ...detail, latest_rev_no: 1, revisions: [{ ...summary, rev_no: 0, status: "sent" }, { ...summary, rev_no: 1, status: "won" }] },
+      revision: { ...makeRevision({ rev_no: 0 }), status: "sent", is_latest: false, is_editable: false },
+    };
+    mockBackend();
+  }
+
+  it("yetkili: 'Projeye Dönüştür' bağlantısı/düğmesi HİÇ yok", async () => {
+    viewingOldRevision();
+    renderScreen("0");
+    await loaded();
+    expect(screen.queryByText(CONVERT_LABEL)).toBeNull();
+    expect(screen.queryByRole("link", { name: CONVERT_LABEL })).toBeNull();
+    expect(screen.queryByRole("button", { name: CONVERT_LABEL })).toBeNull();
+  });
+
+  it("yetkisiz (projects:full): pasif düğme ve gerekçesi de HİÇ yok", async () => {
+    perm.levels.projects = "full";
+    viewingOldRevision();
+    renderScreen("0");
+    await loaded();
+    expect(screen.queryByRole("button", { name: CONVERT_LABEL })).toBeNull();
+    expect(screen.queryByText("Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)")).toBeNull();
   });
 });
 
