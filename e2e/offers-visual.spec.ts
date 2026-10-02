@@ -107,12 +107,18 @@ test("teklif secici gorsel", async ({ page }) => {
   await expect(page).toHaveScreenshot("teklif-secici.png", { fullPage: true });
 });
 
-for (const kind of ["isveren", "ic"] as const) {
-  test(`teklif pdf ${kind} gorsel`, async ({ page }) => {
-    await loginForOffers(page);
-    await openOfferPrint(page, SEED_NO.sentUnpriced, kind);
+test("teklif pdf isveren gorsel", async ({ page }) => {
+  await loginForOffers(page);
+  await openOfferPrint(page, SEED_NO.sentUnpriced, "isveren");
 
-    await prepareFrame(page);
-    await expect(page).toHaveScreenshot(`teklif-pdf-${kind}.png`, { fullPage: true });
-  });
-}
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-pdf-isveren.png", { fullPage: true });
+});
+
+test("teklif pdf ic gorsel", async ({ page }) => {
+  await loginForOffers(page);
+  await openOfferPrint(page, SEED_NO.sentUnpriced, "ic");
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-pdf-ic.png", { fullPage: true });
+});
