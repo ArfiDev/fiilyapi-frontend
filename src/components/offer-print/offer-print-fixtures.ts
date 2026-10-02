@@ -59,6 +59,7 @@ export function makeItem(spec: ItemSpec): OfferItemRead {
     profit_pct: LEAK_SENTINELS.itemProfitPct.raw,
     offer_unit_price: spec.unitPrice === null ? null : LEAK_SENTINELS.itemCostUnitPrice.raw,
     priced,
+    quantified: isQuantified,
     customer: priced
       ? { unit_price: spec.unitPrice, amount: !isQuantified ? null : spec.unitPrice === "0" ? "0" : PRICED_AMOUNT }
       : null,

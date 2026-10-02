@@ -722,6 +722,13 @@ describe("TKL-B5/B6 tip üretimi (TKL-F4.1 kapısı)", () => {
     expectTypeOf<S["TemplateContentReplace"]>().toHaveProperty("groups");
   });
 
+  it("OfferItemRead.quantified boolean ve ZORUNLU (TKL-B6.7 kimlik kovası; finance maskesinde quantity null olsa da doğru)", () => {
+    expectTypeOf<S["OfferItemRead"]["quantified"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<
+      Record<string, never> extends Pick<S["OfferItemRead"], "quantified"> ? true : false
+    >().toEqualTypeOf<false>();
+  });
+
   it("Template PUT/PATCH expected_updated_at ZORUNLU (TKL-B5.4 iyimser kilit)", () => {
     expectTypeOf<S["TemplateUpdate"]["expected_updated_at"]>().toEqualTypeOf<string>();
     expectTypeOf<S["TemplateContentReplace"]["expected_updated_at"]>().toEqualTypeOf<string>();

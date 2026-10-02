@@ -15459,6 +15459,8 @@ export interface components {
             priced: boolean;
             /** Profit Pct */
             profit_pct: string | null;
+            /** Quantified */
+            quantified: boolean;
             /** Quantity */
             quantity: string | null;
             /** Sort Order */

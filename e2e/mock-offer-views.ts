@@ -92,6 +92,8 @@ function buildItemRead(item: ItemRec, result: ItemResult): S["OfferItemRead"] {
     profit_pct: item.profitPct,
     offer_unit_price: item.offerUnitPrice,
     priced: result.priced,
+    // Backend `calc.py`: `quantified = item.quantity is not None` (kimlik kovası; mock maske taklit etmez).
+    quantified: item.quantity !== null,
     customer: result.customer,
     internal: result.internal,
   };
