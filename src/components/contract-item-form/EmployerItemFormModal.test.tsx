@@ -52,6 +52,7 @@ const GROUPS: EmployerContractItemsResponse["groups"] = [
         quantity: "100.000",
         unit_price: "1200.00",
         sort_order: 10,
+        catalog_item_id: null,
         distributed_quantity: "100.000",
         remaining_quantity: "0.000",
       },
@@ -94,8 +95,8 @@ function fillItemFields() {
     target: { value: "Perde betonu C30/37" },
   });
   fireEvent.change(screen.getByLabelText(TEXT.unit), { target: { value: "m³" } });
-  fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1240.5" } });
-  fireEvent.change(screen.getByLabelText(TEXT.unitPrice), { target: { value: "2850.75" } });
+  fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1.240,5" } });
+  fireEvent.change(screen.getByLabelText(TEXT.unitPrice), { target: { value: "2.850,75" } });
 }
 
 /** Mevcut bir grup seçili tam form. */
@@ -156,6 +157,7 @@ describe("EmployerItemFormModal (İŞV · Form - Poz Ekle Isveren)", () => {
       code: "03.012",
       description: "Perde betonu C30/37",
       unit: "m³",
+      // 🔴 K6: ham Türkçe girdi ("1.240,5" / "2.850,75") → kayıpsız nokta-ondalık metin.
       quantity: "1240.5",
       unit_price: "2850.75",
       // Grup içi en büyük sıra (10) + 1; mockup'ın "11"i göstermeliktir.
@@ -163,6 +165,63 @@ describe("EmployerItemFormModal (İŞV · Form - Poz Ekle Isveren)", () => {
     });
     expect(Object.keys(body)).not.toContain("has_price_escalation");
     expect(Object.keys(body)).not.toContain("index_type");
+  });
+
+  it("🔴 K6: miktar ve birim fiyat METİN girişidir (type=number Türkçe virgülü yutar) + ondalık klavye", () => {
+    renderModal();
+    for (const label of [TEXT.quantity, TEXT.unitPrice]) {
+      const input = screen.getByLabelText(label);
+      expect(input).not.toHaveAttribute("type", "number");
+      expect(input).toHaveAttribute("inputmode", "decimal");
+    }
+  });
+
+  it("🔴 K6: sözleşme bedeli önizlemesi T30 değerinden hesaplanır ('1.500' × '2,5' = 3.750), belirsizde 0", () => {
+    renderModal();
+    fillAll();
+    fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1.500" } });
+    fireEvent.change(screen.getByLabelText(TEXT.unitPrice), { target: { value: "2,5" } });
+    expect(screen.getByTestId("eci-summary-amount")).toHaveTextContent("₺ 3.750");
+    fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1.5" } });
+    expect(screen.getByTestId("eci-summary-amount")).toHaveTextContent("₺ 0");
+  });
+
+  it("🔴 K6: belirsiz miktar ('1.5') AĞA ÇIKMAZ ve onaylı metni basar", async () => {
+    renderModal();
+    fillAll();
+    fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1.5" } });
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("eci-error")).toHaveTextContent(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      ),
+    );
+    expect(createItem).not.toHaveBeenCalled();
+  });
+
+  it("🔴 K6: belirsiz birim fiyat ('28.5') AĞA ÇIKMAZ", async () => {
+    renderModal();
+    fillAll();
+    fireEvent.change(screen.getByLabelText(TEXT.unitPrice), { target: { value: "28.5" } });
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("eci-error")).toHaveTextContent(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      ),
+    );
+    expect(createItem).not.toHaveBeenCalled();
+  });
+
+  it("🔴 K6: '1.500' miktar 1500 olarak gider (bugüne dek 1,5 okunurdu)", async () => {
+    renderModal();
+    fillAll();
+    fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1.500" } });
+    fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
+
+    await waitFor(() => expect(createItem).toHaveBeenCalledTimes(1));
+    expect(createItem.mock.calls[0][0]).toMatchObject({ quantity: "1500" });
   });
 
   it("🔴 birim fiyat boşken AĞA ÇIKMAZ (TAŞ formunun tersi)", async () => {
@@ -340,8 +399,8 @@ describe("EmployerItemFormModal · ilk poz regresyonu (F-POZGRUP)", () => {
       expect(screen.getByLabelText(TEXT.code)).toHaveValue("03.012");
       expect(screen.getByLabelText(TEXT.description)).toHaveValue("Perde betonu C30/37");
       expect(screen.getByLabelText(TEXT.unit)).toHaveValue("m³");
-      expect(screen.getByLabelText(TEXT.quantity)).toHaveValue(1240.5);
-      expect(screen.getByLabelText(TEXT.unitPrice)).toHaveValue(2850.75);
+      expect(screen.getByLabelText(TEXT.quantity)).toHaveValue("1.240,5");
+      expect(screen.getByLabelText(TEXT.unitPrice)).toHaveValue("2.850,75");
     });
 
     it("(c3) grup açılırı YENİ GRUBA çekilir — 'tekrar dene' İKİNCİ grup yaratmaz", async () => {

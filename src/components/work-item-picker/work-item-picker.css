@@ -1,0 +1,231 @@
+/* TKL-F2.3 · "Katalogdan Poz Ekle" seçicisi (mockup `Form - Poz Secici`; boq-assignment.css dilinin ikizi).
+   Yalnız token: çıplak hex YOK. `LastPriceCell` sınıfları (`wik-*`) work-item-catalog.css'te yaşar. */
+.wip-modal {
+  max-width: 1100px;
+  /* 🔴 TKL-F2.4 (T13 kareleri ölçtü): `.modal` TÜM kutuyu kaydırır (`overflow-y:auto`) → uzun katalogda
+     altbilgi (hata bandı · Σ · "N Pozu Ekle" · "Elle poz ekle") kaydırma sonunda KALIYOR, görünmüyordu.
+     Başlık + altbilgi sabit. TKL-F2.4.1 (ORTA-3): gövde sütun-flex; araç çubuğu + bilgi bandı sabit, YALNIZ
+     tablo kabı (`.wip-table-scroll`) kayar — `.wip-th` sticky'si en yakın kaydırma kabı olan ona yapışır
+     (mockup PS:86-88: `max-height + overflow-y:auto` tablo kabında). Çok kısa pencerede gövde yine kayar (yedek). */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wip-modal .modal__head,
+.wip-modal .modal__footer {
+  flex: none;
+}
+.wip-modal .modal__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.wip-lead {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-8);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.wip-toolbar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+.wip-toolbar__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.wip-toolbar__row > .select-wrap,
+.wip-toolbar__row > .input-wrap {
+  width: auto;
+  min-width: 190px;
+}
+.wip-toolbar__search {
+  flex: 1 1 260px;
+}
+.wip-toolbar__label {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+}
+.wip-toolbar__count {
+  margin-left: auto;
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+}
+
+.wip-note {
+  flex: none;
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-radius: var(--radius-8);
+  font-size: var(--text-small);
+}
+
+/* Tablo kabı: DİKEY kaydırma burada (sticky başlığın kabı) + dar ekranda (≤768px) 9 sütunlu tablo kabuktan
+   taşmasın diye YATAY kaydırma (boq-assignment.css:108-112 dersi). Gövdenin kalanını doldurur; min-height
+   çok kısa pencerede tabloyu 0'a ezmez (gövde yedek olarak kayar). */
+.wip-table-scroll {
+  flex: 1 1 auto;
+  min-height: 240px;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+.wip-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+}
+.wip-th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  font-size: var(--text-table-head);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.wip-th--check {
+  width: 36px;
+}
+
+/* Disiplin başlık satırı (PS:101 mavi bant, ÜS-F2-23: tek renk + disiplin noktası). */
+.wip-group td {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary-soft);
+  border-bottom: 1px solid var(--color-primary-border-soft);
+  font-size: var(--text-small);
+}
+.wip-group__title {
+  margin-left: var(--space-2);
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+}
+.wip-group__count {
+  margin-left: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.wip-cell {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-divider);
+  font-size: var(--text-small);
+  color: var(--color-text);
+  vertical-align: top;
+}
+.wip-cell--check {
+  width: 36px;
+}
+.wip-cell--poz {
+  width: 104px;
+  white-space: nowrap;
+}
+.wip-poz {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
+}
+.wip-cell--name {
+  min-width: 220px;
+}
+.wip-name {
+  display: block;
+  font-weight: var(--weight-medium);
+}
+.wip-sub {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.wip-sub--error {
+  color: var(--color-danger-text);
+}
+.wip-sub--block {
+  color: var(--color-text-subtle);
+}
+.wip-cell--unit {
+  text-align: center;
+}
+.wip-cell--num,
+.wip-cell--last {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+.wip-cell--last {
+  min-width: 150px;
+}
+.wip-cell--input {
+  width: 118px;
+}
+.wip-cell--amount {
+  font-weight: var(--weight-semibold);
+}
+
+.wip-row--selected td {
+  background: var(--color-surface-muted);
+}
+.wip-row--error td {
+  background: var(--color-danger-tint-weak);
+  border-bottom-color: var(--color-danger-tint-border);
+}
+.wip-row--blocked td {
+  opacity: 0.55;
+}
+
+.wip-empty {
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-text-subtle);
+}
+
+/* Altbilgi: kırmızı bant yalnız hata varken (PS:203-209). */
+.wip-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+.wip-band {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-danger-tint-weak);
+  border: 1px solid var(--color-danger-tint-border);
+  border-radius: var(--radius-8);
+  color: var(--color-danger-text);
+  font-size: var(--text-small);
+}
+.wip-footer__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.wip-footer__stat {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+}
+.wip-footer__stat--first {
+  margin-left: auto;
+}
+.wip-footer__stat strong {
+  margin-left: var(--space-1);
+  font-family: var(--font-mono);
+  color: var(--color-text-strong);
+}

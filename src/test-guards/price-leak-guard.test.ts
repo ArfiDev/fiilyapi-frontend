@@ -38,6 +38,9 @@ const EV_HOOK_FILE = /^useEv.*\.tsx?$/;
 const FORBIDDEN_TEXT = [
   "ref_price",
   "price_updated_at",
+  "last_price",
+  "LastPriceRead",
+  "LastPriceCell",
   "useCatalogItems",
   "useCreateCatalogItem",
   "useUpdateCatalogItem",
@@ -105,6 +108,11 @@ describe("B1 · planlama kaynakları fiyat belirteci içermez", () => {
     expect(forbiddenTokensIn("// ref_price burada yok\n/* useCatalogItems */ const a = 1;")).toEqual([]);
   });
 
+  it("bekçinin kendisi: son fiyat (TKL-F2.5) alanı, tipi ve hücresi de yasak", () => {
+    expect(forbiddenTokensIn("const p = item.last_price;")).toEqual(["last_price"]);
+    expect(forbiddenTokensIn("let a: LastPriceRead; <LastPriceCell />")).toEqual(["LastPriceRead", "LastPriceCell"]);
+  });
+
   it("bekçinin kendisi: düz anahtar, anahtar sabiti, yazma hook'ları ve WorkItem* tipleri", () => {
     expect(forbiddenTokensIn('qc.invalidateQueries({ queryKey: ["catalog-items"] })')).toEqual(["catalog-items"]);
     expect(forbiddenTokensIn("import { CATALOG_ITEMS_QUERY_KEY } from './k';")).toEqual(["CATALOG_ITEMS_QUERY_KEY"]);
@@ -166,7 +174,7 @@ function loadSpec(): OpenApiSpec {
   return JSON.parse(readFileSync(OPENAPI_PATH, "utf8")) as OpenApiSpec;
 }
 
-const PRICE_PROPERTIES = ["ref_price", "price_updated_at"] as const;
+const PRICE_PROPERTIES = ["ref_price", "price_updated_at", "last_price"] as const;
 const EV_PATH_MARKER = "/earned-value";
 const SCHEMA_REF_PREFIX = "#/components/schemas/";
 
@@ -234,10 +242,10 @@ describe("B2 · openapi: /earned-value altındaki HİÇBİR yanıt/gövde şemas
     expect(reached).toEqual(expect.arrayContaining(["CatalogItemRead", "CatalogItemCreate", "CatalogItemUpdate", "ItemOut"]));
     expect(reached).not.toContain("WorkItemRead");
     const core = priceHitsReachableFrom(spec, { "/catalog/items": spec.paths["/catalog/items"] ?? null });
-    expect(core.hits).toEqual(expect.arrayContaining(["WorkItemRead.ref_price", "WorkItemRead.price_updated_at"]));
+    expect(core.hits).toEqual(expect.arrayContaining(["WorkItemRead.ref_price", "WorkItemRead.price_updated_at", "WorkItemRead.last_price"]));
   });
 
-  it("EV yanıt/gövde şemalarının hiçbirinde ref_price / price_updated_at YOK", () => {
+  it("EV yanıt/gövde şemalarının hiçbirinde ref_price / price_updated_at / last_price YOK", () => {
     const spec = loadSpec();
     expect(priceHitsReachableFrom(spec, evRoots(spec)).hits).toEqual([]);
   });

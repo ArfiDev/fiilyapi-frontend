@@ -16,8 +16,11 @@ const BASE: ContractItemFormValues = {
   sortOrder: "",
 };
 
+// 🔴 TKL-F2.6a (K6): İŞV formu girdisi HAM Türkçe metindir ("1.240,5"); gövde nokta-ondalık olur.
 const EMPLOYER_BASE: EmployerItemFormValues = {
   ...BASE,
+  quantity: "1.240,5",
+  unitPrice: "2.850,75",
   groupId: "gggggggg-0000-0000-0000-000000000001",
   groupName: "",
 };
@@ -77,7 +80,18 @@ describe("buildEmployerItemBody (İŞV)", () => {
     const body = buildEmployerItemBody(EMPLOYER_BASE, 0);
     expect(body.group_id).toBe(EMPLOYER_BASE.groupId);
     expect(body.unit_price).toBe("2850.75");
-    expect(body.quantity).toBe("1240.500");
+    expect(body.quantity).toBe("1240.5");
+  });
+
+  it("🔴 K6: ham Türkçe metin kayıpsız nokta-ondalık dizeye çevrilir ('1.500' → '1500', '28,5' → '28.50')", () => {
+    const body = buildEmployerItemBody({ ...EMPLOYER_BASE, quantity: "1.500", unitPrice: "28,5" }, 0);
+    expect(body.quantity).toBe("1500");
+    expect(body.unit_price).toBe("28.50");
+  });
+
+  it("🔴 K6: okunamayan miktar/fiyat sessizce geçirilmez — fırlatır (doğrulama atlanmış demektir)", () => {
+    expect(() => buildEmployerItemBody({ ...EMPLOYER_BASE, quantity: "1.5" }, 0)).toThrow();
+    expect(() => buildEmployerItemBody({ ...EMPLOYER_BASE, unitPrice: "28.5" }, 0)).toThrow();
   });
 
   it("🔴 SALT-OKUNUR fiyat farkı alanları gövdeye GİRMEZ", () => {
@@ -97,5 +111,9 @@ describe("buildEmployerItemBody (İŞV)", () => {
 
   it("Sıra boşken grup içi varsayılanı kullanır", () => {
     expect(buildEmployerItemBody(EMPLOYER_BASE, 11).sort_order).toBe(11);
+  });
+
+  it("🔴 TKL-F2.2: elle ekleme gövdesi `catalog_item_id` TAŞIMAZ (bağ yalnız katalog seçiciden toplu eklemede)", () => {
+    expect(Object.keys(buildEmployerItemBody(EMPLOYER_BASE, 0))).not.toContain("catalog_item_id");
   });
 });

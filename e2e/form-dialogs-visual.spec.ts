@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { pinEmployerContractItems } from "./contracts-visual-helpers";
+import { openManualItemForm } from "./employer-catalog-picker-helpers";
 import { prepareFrame } from "./visual-scroll";
 
 // F-BLG T3 · Altı FORM diyaloğunun görsel kadrajları.
@@ -136,9 +137,8 @@ test("poz ekle isveren diyalogu gorsel", async ({ page }) => {
   await expect(page.getByTestId("ecd-item-distributed").first()).toBeVisible();
   await expect(page.getByTestId("ecd-items-total")).toBeVisible();
 
-  await page.getByTestId("ecd-add-item").click();
-  const dialog = page.getByRole("dialog", { name: "İşveren Sözleşmesine Poz Ekle" });
-  await expect(dialog).toBeVisible();
+  // "+ Poz Ekle" katalog seçicisini açar; kadraj eski tekli formdur → "Elle poz ekle" köprüsü.
+  const dialog = await openManualItemForm(page);
   // YÜKLENDİ (a') grup listesi diyaloğa AKTARILDI — seçici gerçek grubu
   // taşıyor (boş bir seçici kadraja girmesin).
   await expect(

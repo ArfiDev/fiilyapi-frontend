@@ -11,6 +11,7 @@ import {
   type ContractDistributionResponse,
 } from "./useContract";
 import type { DeepScale } from "@/lib/api/scale";
+import { CATALOG_ITEMS_QUERY_KEY } from "./catalog-query-keys";
 
 // F-P5 T1 · POZ dağılımı KAYDETME (`PUT /projects/{id}/contract/distribution`).
 //
@@ -117,6 +118,50 @@ export function useCreateEmployerContractItem(
       queryClient.invalidateQueries({ queryKey: [CONTRACT_DISTRIBUTION_QUERY_KEY, projectId] });
       queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_QUERY_KEY, projectId] });
     },
+  });
+}
+
+export type EmployerContractItemsBulkCreateRequest =
+  DeepScale<components["schemas"]["EmployerContractItemsBulkCreate"]>;
+export type EmployerContractItemsBulkResponse =
+  DeepScale<components["schemas"]["EmployerContractItemsBulkResponse"]>;
+
+/**
+ * TKL-F2.2 · Katalogdan seçilen pozları işveren sözleşmesine TOPLU ekleme
+ * (`POST /projects/{project_id}/contract/items/bulk`; hep-ya-hiç — biri hatalıysa
+ * HİÇBİRİ eklenmez, bu yüzden hatada önbellek tazelenmez).
+ *
+ * Tekli ekleme ile AYNI üç sözleşme anahtarı + `["catalog-items"]` geçersiz kılınır:
+ * toplu ekleme katalog kalemine BAĞ kurar ve eklenen kalemin fiyatı o kalemin
+ * "son fiyat" kaynağı (SZL) olabilir — katalog listesindeki `last_price` değişir.
+ * Söz DÖNER: mutasyon tazelenmiş önbellek gelene dek "bitmez".
+ *
+ * `catalog_item_id` YALNIZ bu uçta gönderilir (T28: bağ yalnız eklemede); tekli ekleme
+ * ve PATCH gövdeleri onu taşımaz (PATCH'te gönderilirse backend 422 verir).
+ */
+export function useBulkCreateEmployerContractItems(
+  projectId: string,
+): UseMutationResult<
+  EmployerContractItemsBulkResponse,
+  Error,
+  EmployerContractItemsBulkCreateRequest
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body) =>
+      unwrap(
+        await backendClient.POST("/projects/{project_id}/contract/items/bulk", {
+          params: { path: { project_id: projectId } },
+          body,
+        }),
+      ),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_ITEMS_QUERY_KEY, projectId] }),
+        queryClient.invalidateQueries({ queryKey: [CONTRACT_DISTRIBUTION_QUERY_KEY, projectId] }),
+        queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_QUERY_KEY, projectId] }),
+        queryClient.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] }),
+      ]),
   });
 }
 

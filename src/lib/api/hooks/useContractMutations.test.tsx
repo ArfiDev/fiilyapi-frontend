@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import {
+  useBulkCreateEmployerContractItems,
   useCreateEmployerContractGroup,
   useCreateEmployerContractItem,
   useSaveContractDistribution,
@@ -16,6 +17,7 @@ import {
 } from "./useContract";
 import { buildDistributionSaveBody } from "@/lib/contract-distribution-save";
 import { backendClient } from "@/lib/api/client";
+import { CATALOG_ITEMS_QUERY_KEY } from "./catalog-query-keys";
 
 vi.mock("@/lib/api/client", () => ({
   backendClient: { PUT: vi.fn(), POST: vi.fn(), PATCH: vi.fn() },
@@ -314,5 +316,125 @@ describe("useUpdateEmployerContractItem · F-ISVPOZ satır-içi düzenleme", () 
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("useBulkCreateEmployerContractItems · TKL-F2.2 katalogdan toplu ekleme", () => {
+  const BULK_BODY = {
+    items: [
+      { ...CREATE_BODY, catalog_item_id: "cccccccc-0000-0000-0000-000000000001" },
+      {
+        ...CREATE_BODY,
+        code: "03.013",
+        quantity: "10",
+        unit_price: "0.10",
+        catalog_item_id: "cccccccc-0000-0000-0000-000000000002",
+      },
+    ],
+  };
+  const BULK_RESPONSE = {
+    items: [
+      { ...CREATED_ITEM, catalog_item_id: "cccccccc-0000-0000-0000-000000000001" },
+      { ...CREATED_ITEM, code: "03.013", catalog_item_id: "cccccccc-0000-0000-0000-000000000002" },
+    ],
+  };
+
+  it("gövdeyi `/contract/items/bulk`e proje kimliğiyle AYNEN POST eder (decimal string BOZULMAZ)", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: BULK_RESPONSE,
+      error: undefined,
+      response: new Response(),
+    } as never);
+
+    const { result } = renderHook(() => useBulkCreateEmployerContractItems(PROJECT_ID), { wrapper });
+    act(() => result.current.mutate(BULK_BODY));
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(backendClient.POST).toHaveBeenCalledTimes(1);
+    expect(backendClient.POST).toHaveBeenCalledWith(
+      "/projects/{project_id}/contract/items/bulk",
+      { params: { path: { project_id: PROJECT_ID } }, body: BULK_BODY },
+    );
+    expect(result.current.data).toEqual(BULK_RESPONSE);
+  });
+
+  it("başarıda kalem/dağıtım/sözleşme okumalarını VE katalog listesini (son fiyat) geçersiz kılar", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: BULK_RESPONSE,
+      error: undefined,
+      response: new Response(),
+    } as never);
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    const { result } = renderHook(() => useBulkCreateEmployerContractItems(PROJECT_ID), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync(BULK_BODY);
+    });
+
+    const keys = invalidateSpy.mock.calls.map(([filters]) => (filters as { queryKey: unknown[] }).queryKey);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        [EMPLOYER_CONTRACT_ITEMS_QUERY_KEY, PROJECT_ID],
+        [CONTRACT_DISTRIBUTION_QUERY_KEY, PROJECT_ID],
+        [EMPLOYER_CONTRACT_QUERY_KEY, PROJECT_ID],
+        [CATALOG_ITEMS_QUERY_KEY],
+      ]),
+    );
+    expect(keys).toHaveLength(4);
+  });
+
+  it("mutasyon, tazeleme (invalidate) BİTENE dek çözülmez", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: BULK_RESPONSE,
+      error: undefined,
+      response: new Response(),
+    } as never);
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.spyOn(client, "invalidateQueries").mockImplementation(() => gate);
+
+    const { result } = renderHook(() => useBulkCreateEmployerContractItems(PROJECT_ID), { wrapper });
+    let settled = false;
+    act(() => {
+      void result.current.mutateAsync(BULK_BODY).then(() => {
+        settled = true;
+      });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(settled).toBe(false);
+    release();
+    await waitFor(() => expect(settled).toBe(true));
+  });
+
+  it("backend hatasında (409 hep-ya-hiç) hiçbir önbellek tazelenmez", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: undefined,
+      error: { detail: "Bu poz numarası bu sözleşmede zaten kullanılıyor: 03.012" },
+      response: new Response(null, { status: 409 }),
+    } as never);
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    const { result } = renderHook(() => useBulkCreateEmployerContractItems(PROJECT_ID), { wrapper });
+    act(() => result.current.mutate(BULK_BODY));
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
+  it("🔴 tekli ekleme gövdesi `catalog_item_id` TAŞIMAZ (bağ yalnız katalog seçiciden toplu eklemede)", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: CREATED_ITEM,
+      error: undefined,
+      response: new Response(),
+    } as never);
+
+    const { result } = renderHook(() => useCreateEmployerContractItem(PROJECT_ID), { wrapper });
+    act(() => result.current.mutate(CREATE_BODY));
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const sentBody = vi.mocked(backendClient.POST).mock.calls[0][1] as unknown as { body: object };
+    expect(Object.keys(sentBody.body)).not.toContain("catalog_item_id");
   });
 });

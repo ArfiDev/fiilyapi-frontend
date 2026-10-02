@@ -105,7 +105,7 @@ test("birim fiyat hücresi ayrı PATCH'lenir; miktar gövdeye karışmaz", async
   await gotoLoadedItems(page);
 
   const price = page.locator("main").getByLabel("03.002 birim fiyatı");
-  await price.fill("2250.50");
+  await price.fill("2.250,50");
   await price.blur();
 
   await expect.poll(() => writes.length).toBe(1);
@@ -170,7 +170,7 @@ test("miktar SIFIR: istek HİÇ UÇMAZ, sebep görünür basılır, hücre eski 
   await expect(page.getByTestId("ecd-items-error")).toContainText(
     "Miktar sıfırdan büyük olmalıdır.",
   );
-  await expect(quantity).toHaveValue("3200");
+  await expect(quantity).toHaveValue("3.200");
   expect(writes).toEqual([]);
 });
 
@@ -203,7 +203,7 @@ test("satır-içi ekleme: taslak satır TABLONUN İÇİNDE açılır (modal AÇI
   await page.locator("main").getByLabel("Yeni poz adı").fill("Satır-içi eklenen poz");
   await page.locator("main").getByLabel("Yeni poz birimi").selectOption("m³");
   await page.locator("main").getByLabel("Yeni poz birim fiyatı").fill("1750");
-  await page.locator("main").getByLabel("Yeni poz miktarı").fill("42.5");
+  await page.locator("main").getByLabel("Yeni poz miktarı").fill("42,5");
   await page.getByTestId("ecd-new-row-submit").click();
 
   await expect.poll(() => writes.length).toBe(1);

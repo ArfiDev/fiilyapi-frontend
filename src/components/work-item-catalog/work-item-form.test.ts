@@ -192,7 +192,7 @@ describe("parseRefPriceInput — Türkçe kural: nokta binlik, virgül ondalık;
 
   it("noktalı gruplar (ilk hariç) TAM 3 hane olmalı; diğer her nokta kullanımı belirsiz", () => {
     expect(value("1.234.567")).toBe("1234567");
-    // TKL-F1.6-HF: "1234.567" Türkçede geçersiz binlik (ilk grup en çok 3 hane) → belirsiz (eskiden 1234567).
+    // TKL-F2.4.1 YÜKSEK-1: Türkçede ilk grup 1–3 hane olur; "1234.567" geçerli binlik DEĞİLDİR (eskiden 1234567 okunurdu).
     expect(value("1234.567")).toBe("ambiguous");
     expect(value("1.2.3")).toBe("ambiguous");
     expect(value("28.")).toBe("ambiguous");

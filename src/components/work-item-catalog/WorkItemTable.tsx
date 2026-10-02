@@ -72,6 +72,8 @@ export function WorkItemTable({
                 draft={draft}
                 pozNo={item.poz_no}
                 discipline={item.discipline}
+                lastPrice={item.last_price}
+                savedRefPrice={item.ref_price}
                 testId={`wik-edit-${item.id}`}
                 {...rowHandlers}
               />

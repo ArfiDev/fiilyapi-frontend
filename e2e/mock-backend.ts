@@ -856,6 +856,17 @@ interface MockContractItem {
   groupName: string;
   groupSortOrder: number;
   allocations: Array<{ site_id: string; quantity: string }>;
+  /**
+   * TKL-F2.2 · katalog bağı (`employer_contract_items.catalog_item_id`). YALNIZ oluşturmada
+   * verilir (PATCH'te sabit); yoksa/`null` = bağsız → "son fiyat" kaynağı OLMAZ.
+   */
+  catalogItemId?: string | null;
+  /**
+   * TKL-F2.2 · kalem fiyatının SON DEĞİŞTİĞİ an (ISO) — SZL kaynağının zamanı. Oluşturmada
+   * "şimdi"; `unit_price` 2 hane ölçeğinde DEĞERCE değişince ilerler. Yalnız katalog bağlı
+   * kalemlerde okunur.
+   */
+  priceChangedAt?: string;
 }
 
 /** F-POZGRUP · `POST /projects/{id}/contract/groups` ile yaratılan poz grubu. */
@@ -1531,6 +1542,20 @@ const CONTRACT_ITEMS_P1: MockContractItem[] = [
   },
 ];
 
+/**
+ * TKL-F2.2 · tohum katalog bağları (kalem id → katalog KODU + fiyat damgası). Katalog kimliği
+ * `evCatalogId` ile `seedState`te çözülür (EV tohumu bu noktada henüz tanımsız olabilir).
+ *
+ * 🔴 `ci-1`/`ci-2` BİLEREK bağsızdır: `pp-6` (fonksiyonel spec'in mutasyona uğrattığı taslak)
+ * onları kullanır; bağlansalardı onaylanan `pp-6` katalog "son fiyat"ını paralel karelerde
+ * oynatırdı. `ci-4` → SZL kaynaklı, `ci-3` → HK kaynaklı (`pp-hk-1`), kalan katalog kalemleri
+ * kaynaksız (F2.5 görsel karesi: üç durum).
+ */
+const CONTRACT_ITEM_CATALOG_LINKS: Readonly<Record<string, { catalogCode: string; priceChangedAt: string }>> = {
+  "ci-3": { catalogCode: "KAB-DEM", priceChangedAt: "2026-08-01T09:00:00Z" },
+  "ci-4": { catalogCode: "KAB-KAL", priceChangedAt: "2026-09-15T09:00:00Z" },
+};
+
 function findContractItem(itemId: string): MockContractItem | undefined {
   return CONTRACT_ITEMS_P1.find((i) => i.id === itemId);
 }
@@ -1946,7 +1971,33 @@ function buildProgressPaymentFixtures(): MockProgressPayment[] {
     createdAt: "2026-01-15T08:00:00Z", submittedAt: null, approvedAt: null, approvedBy: null, paidAt: null,
   });
 
-  return [pp7, pp2, pp3, pp4, pp5, pp6];
+  // #7 (TKL-F2.2) — HK "son fiyat" kaynağı: ONAYLI, `hiddenFromLists` (liste/özet DEĞİŞMEZ).
+  // Tek satır `ci-3` (katalog bağlı, `KAB-DEM`): taban 21500.00 = güncel sözleşme fiyatı,
+  // katsayı 1.142 → düzeltilmiş B.F. 24553.00 (ELLE: 21500 x 1.142). `computeLine` KULLANILMAZ:
+  // katsayıyı `money2` ile 2 haneye kırpardı (1.14).
+  const ppHk: MockProgressPayment = {
+    id: "pp-hk-1", project_id: "p-1", sequence_no: 7, period_year: 2026, period_month: 8,
+    description: "Demir teslimi (son fiyat kaynağı)", status: "approved",
+    vat_pct: "20.00", advance_pct: "20.00", retainage_pct: "5.00", default_coefficient: "1.142",
+    submitted_at: "2026-09-10T09:00:00Z", approved_at: "2026-09-12T10:00:00Z", approved_by: patronId, paid_at: null,
+    created_by: "u-2", created_at: "2026-09-08T08:00:00Z", updated_at: "2026-09-12T10:00:00Z",
+    lines: [
+      {
+        id: "ppl-pp-hk-1-1", contract_item_id: "ci-3", site_id: "s-1", code: "03.003",
+        description: "Nervürlü Demir Ø12–Ø20", unit: "Ton", contract_unit_price: "21500.00", coefficient: "1.142",
+        quantity: "10.000", group_name: "Betonarme İşleri", sort_order: 0, quantity_source: "manual",
+        adjusted_unit_price: "24553.00", line_total: "245530.00", previous_quantity: "0.000", previous_amount: "0.00",
+        cumulative_quantity: "10.000", cumulative_amount: "245530.00", is_price_stale: false,
+      },
+    ],
+    groups: [], calculation: { gross: "0.00", vat: "0.00", advance_deduction: "0.00", retention: "0.00", net: "0.00" },
+    progress: { financial_pct: null, physical_pct: null, duration_pct: null },
+    dropped_orphan_count: 0,
+    hiddenFromLists: true,
+  };
+  recomputePaymentTotals(ppHk);
+
+  return [pp7, pp2, pp3, pp4, pp5, pp6, ppHk];
 }
 
 // `GET .../contract/distribution` yanıtı — `state.contractItems`ten türetilir
@@ -2244,12 +2295,233 @@ function buildEmployerContractItemsResponse(
             quantity: item.quantity,
             unit_price: item.unit_price,
             sort_order: itemIndex,
+            catalog_item_id: item.catalogItemId ?? null,
             distributed_quantity: qty3(distributed),
             remaining_quantity: qty3(Number(item.quantity) - distributed),
           };
         }),
     })),
   };
+}
+
+/* ─────────────── TKL-F2.2 · katalog "SON FİYAT" türetmesi (backend ikizi) ───────────────
+ *
+ * Backend: `core/last_price.py` (birleştirme) + `contracts/last_price_provider.py` (SZL) +
+ * `progress_payments/last_price_provider.py` (HK). Mock'ta kaynak KOLEKSİYONLARDAN türer
+ * (canlı durum): sözleşme kalemleri (`catalogItemId` bağlı) ve İŞVEREN hakedişleri.
+ * TAŞERON hakedişi KAYNAK DEĞİLDİR (girdide yoktur).
+ *
+ * Para kayıpsızdır: ondalık dizeler `bigint` birimlerle işlenir, `Number()` KULLANILMAZ
+ * (büyük fiyat ve katsayı çarpımı float'ta bozulur).
+ *
+ * Kurallar (davranışın tanımı: `tests/modules/catalog/test_last_price_kaynaklar.py`):
+ *  · SZL: aynı projede aynı katalog kalemine bağlı BİRDEN ÇOK kalem → fiyat MAX, zaman
+ *    MAX(price_changed_at) (T29). Projeler arası: en yeni zaman; eşitlikte küçük proje kodu,
+ *    sonra küçük proje id.
+ *  · HK: YALNIZ `approved`/`paid` ve `approved_at` DOLU hakediş. Fiyat =
+ *    ROUND_HALF_UP(sözleşme B.F. x katsayı, 2); satırın tabanı GÜNCEL sözleşme fiyatına
+ *    EŞİT değilse (bayat taban) satır DIŞLANIR (T29/S6). Aynı hakedişte aynı kaleme birden çok
+ *    satır → en yüksek. Hakedişler arası: en yeni `approved_at`; eşitlikte küçük hakediş id.
+ *    Etiket `HK-{proje kodu}-{sıra}`, belge id = hakediş id.
+ *  · Birleştirme: en yeni zaman; eşitlikte kaynak önceliği HK > SZL (`SOURCE_ORDER`).
+ *    Kaynaksız kalem sonuçta YOKTUR (uç `null` basar).
+ */
+
+interface LpScaled {
+  units: bigint;
+  scale: number;
+}
+
+const LP_DECIMAL_PATTERN = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+const LP_PLACES = 2;
+const LP_EPOCH = "1970-01-01T00:00:00.000Z";
+
+function lpParse(text: string): LpScaled | null {
+  const trimmed = text.trim();
+  if (!LP_DECIMAL_PATTERN.test(trimmed)) return null;
+  const negative = trimmed.startsWith("-");
+  const [whole = "", fraction = ""] = trimmed.replace(/^[+-]/, "").split(".");
+  const units = BigInt(`${whole}${fraction}` || "0");
+  return { units: negative ? -units : units, scale: fraction.length };
+}
+
+/** `Numeric(18,2)` yazımı: `places` haneye ROUND_HALF_UP (sıfırdan uzağa), kayıpsız. */
+function lpRound(value: LpScaled, places: number): bigint {
+  if (value.scale <= places) return value.units * 10n ** BigInt(places - value.scale);
+  const divisor = 10n ** BigInt(value.scale - places);
+  const abs = value.units < 0n ? -value.units : value.units;
+  const quotient = abs / divisor + (abs % divisor * 2n >= divisor ? 1n : 0n);
+  return value.units < 0n ? -quotient : quotient;
+}
+
+function lpFormat(units: bigint, places: number): string {
+  const negative = units < 0n;
+  const digits = (negative ? -units : units).toString().padStart(places + 1, "0");
+  const whole = digits.slice(0, digits.length - places);
+  const fraction = digits.slice(digits.length - places);
+  return `${negative ? "-" : ""}${whole}${places === 0 ? "" : `.${fraction}`}`;
+}
+
+/** Ondalık dizeyi `places` haneye kanonlar (`"185"` → `"185.00"`); ayrıştırılamazsa `null`. */
+function lpFixed(raw: unknown, places: number): string | null {
+  const parsed = lpParse(typeof raw === "number" ? String(raw) : String(raw ?? ""));
+  return parsed === null ? null : lpFormat(lpRound(parsed, places), places);
+}
+
+function lpCents(raw: unknown): bigint | null {
+  const parsed = lpParse(typeof raw === "number" ? String(raw) : String(raw ?? ""));
+  return parsed === null ? null : lpRound(parsed, LP_PLACES);
+}
+
+function lpMs(iso: string | null | undefined): number {
+  const ms = Date.parse(iso ?? LP_EPOCH);
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+type LastPriceRead = components["schemas"]["LastPriceRead"];
+
+interface LpCandidate {
+  cents: bigint;
+  atIso: string;
+  atMs: number;
+  docNo: string;
+  docId: string;
+  tieBreak: string;
+}
+
+/** `LastPriceRead` + sıralama anahtarı. */
+function lpToRead(source: string, candidate: LpCandidate): LastPriceRead {
+  return {
+    price: lpFormat(candidate.cents, LP_PLACES),
+    at: candidate.atIso,
+    source,
+    doc_no: candidate.docNo,
+    doc_id: candidate.docId,
+  };
+}
+
+function lpMaxCents(a: bigint, b: bigint): bigint {
+  return a > b ? a : b;
+}
+
+type LpSourceState = Pick<MockState, "projects" | "contractItems" | "progressPayments">;
+
+/** SZL: katalog kalemi başına TEK aday (en yeni zaman → küçük proje kodu → küçük proje id). */
+function lpSzl(state: LpSourceState): Map<string, LpCandidate> {
+  const perProject = new Map<string, { catalogId: string; projectId: string; cents: bigint; atIso: string; atMs: number }>();
+  for (const item of state.contractItems) {
+    if (item.catalogItemId === undefined || item.catalogItemId === null) continue;
+    const cents = lpCents(item.unit_price);
+    if (cents === null) continue;
+    const projectId = item.projectId ?? "p-1";
+    const atIso = item.priceChangedAt ?? LP_EPOCH;
+    const atMs = lpMs(atIso);
+    const key = `${item.catalogItemId}\u0000${projectId}`;
+    const current = perProject.get(key);
+    perProject.set(key, {
+      catalogId: item.catalogItemId,
+      projectId,
+      cents: current === undefined ? cents : lpMaxCents(current.cents, cents),
+      // T29: zaman MAX(price_changed_at) — en yüksek fiyatın damgası DEĞİL.
+      atIso: current === undefined || atMs > current.atMs ? atIso : current.atIso,
+      atMs: current === undefined ? atMs : Math.max(current.atMs, atMs),
+    });
+  }
+  const best = new Map<string, LpCandidate>();
+  for (const row of perProject.values()) {
+    const code = state.projects.find((project) => project.id === row.projectId)?.code ?? row.projectId;
+    const candidate: LpCandidate = {
+      cents: row.cents,
+      atIso: row.atIso,
+      atMs: row.atMs,
+      docNo: code,
+      docId: row.projectId,
+      tieBreak: row.projectId,
+    };
+    const current = best.get(row.catalogId);
+    const wins =
+      current === undefined ||
+      candidate.atMs > current.atMs ||
+      (candidate.atMs === current.atMs &&
+        (candidate.docNo < current.docNo || (candidate.docNo === current.docNo && candidate.tieBreak < current.tieBreak)));
+    if (wins) best.set(row.catalogId, candidate);
+  }
+  return best;
+}
+
+/** HK: katalog kalemi başına TEK aday (en yeni `approved_at` → küçük hakediş id). */
+function lpHk(state: LpSourceState): Map<string, LpCandidate> {
+  const itemsById = new Map(state.contractItems.map((item) => [item.id, item] as const));
+  const best = new Map<string, LpCandidate>();
+  for (const payment of state.progressPayments) {
+    if (payment.status !== "approved" && payment.status !== "paid") continue;
+    if (payment.approved_at === null || Number.isNaN(Date.parse(payment.approved_at))) continue;
+    const perCatalog = new Map<string, bigint>();
+    for (const line of payment.lines) {
+      const item = line.contract_item_id === null ? undefined : itemsById.get(line.contract_item_id);
+      if (item === undefined || item.catalogItemId === undefined || item.catalogItemId === null) continue;
+      const base = lpCents(line.contract_unit_price);
+      // Bayat taban: satırın tabanı GÜNCEL sözleşme fiyatına eşit değilse satır kaynak olmaz.
+      if (base === null || base !== lpCents(item.unit_price)) continue;
+      const price = lpParse(line.contract_unit_price);
+      const coefficient = lpParse(line.coefficient);
+      if (price === null || coefficient === null) continue;
+      const adjusted = lpRound({ units: price.units * coefficient.units, scale: price.scale + coefficient.scale }, LP_PLACES);
+      const current = perCatalog.get(item.catalogItemId);
+      perCatalog.set(item.catalogItemId, current === undefined ? adjusted : lpMaxCents(current, adjusted));
+    }
+    const project = state.projects.find((p) => p.id === payment.project_id);
+    for (const [catalogId, cents] of perCatalog) {
+      const candidate: LpCandidate = {
+        cents,
+        atIso: payment.approved_at,
+        atMs: lpMs(payment.approved_at),
+        docNo: `HK-${project?.code ?? payment.project_id}-${payment.sequence_no}`,
+        docId: payment.id,
+        tieBreak: payment.id,
+      };
+      const current = best.get(catalogId);
+      if (
+        current === undefined ||
+        candidate.atMs > current.atMs ||
+        (candidate.atMs === current.atMs && candidate.tieBreak < current.tieBreak)
+      ) {
+        best.set(catalogId, candidate);
+      }
+    }
+  }
+  return best;
+}
+
+/** Backend `SOURCE_ORDER` — eşit zamanda önce gelen kazanır. */
+const LP_SOURCE_ORDER = ["HK", "SZL"] as const;
+
+/**
+ * Katalog kalemi id → son fiyat (kaynaksız kalem HARİTADA YOKTUR). Backend birleştirme anahtarı:
+ * en yeni zaman, sonra kaynak önceliği, sonra `doc_no` (büyük), sonra `doc_id` (büyük).
+ */
+export function lastPricesByCatalogItem(state: LpSourceState): Map<string, LastPriceRead> {
+  const sources: Array<[(typeof LP_SOURCE_ORDER)[number], Map<string, LpCandidate>]> = [
+    ["HK", lpHk(state)],
+    ["SZL", lpSzl(state)],
+  ];
+  const merged = new Map<string, { source: string; rank: number; candidate: LpCandidate }>();
+  for (const [source, candidates] of sources) {
+    const rank = LP_SOURCE_ORDER.indexOf(source);
+    for (const [catalogId, candidate] of candidates) {
+      const current = merged.get(catalogId);
+      const wins =
+        current === undefined ||
+        candidate.atMs > current.candidate.atMs ||
+        (candidate.atMs === current.candidate.atMs &&
+          (rank < current.rank ||
+            (rank === current.rank &&
+              (candidate.docNo > current.candidate.docNo ||
+                (candidate.docNo === current.candidate.docNo && candidate.docId > current.candidate.docId)))));
+      if (wins) merged.set(catalogId, { source, rank, candidate });
+    }
+  }
+  return new Map(Array.from(merged, ([catalogId, row]) => [catalogId, lpToRead(row.source, row.candidate)] as const));
 }
 
 function buildPaymentDetail(state: MockState, payment: MockProgressPayment): components["schemas"]["ProgressPaymentDetail"] {
@@ -3056,10 +3328,16 @@ function seedState(): MockState {
     progressPayments: buildProgressPaymentFixtures(),
     // F-P5 T1 — DERİN kopya: dağılım PUT'u `allocations`ı yerinde değiştirir,
     // modül sabiti kirlenmemelidir.
-    contractItems: CONTRACT_ITEMS_P1.map((item) => ({
-      ...item,
-      allocations: item.allocations.map((a) => ({ ...a })),
-    })),
+    contractItems: CONTRACT_ITEMS_P1.map((item) => {
+      const link = CONTRACT_ITEM_CATALOG_LINKS[item.id];
+      return {
+        ...item,
+        allocations: item.allocations.map((a) => ({ ...a })),
+        ...(link === undefined
+          ? {}
+          : { catalogItemId: evCatalogId(link.catalogCode), priceChangedAt: link.priceChangedAt }),
+      };
+    }),
     // F-POZGRUP · BOŞ başlar: `p-1` grupları eskisi gibi kalemlerden türer.
     contractGroups: [],
     contractGroupSeq: 0,
@@ -8663,6 +8941,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       },
       findSite: (siteId) => state.sites.find((site) => site.id === siteId),
       diary: evDiaryPort,
+      lastPrices: () => lastPricesByCatalogItem(state),
     });
     if (evHandled) return;
 
@@ -9701,6 +9980,15 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         const group = groups.find((g) => g.id === String(body.group_id ?? ""));
         if (!group) return send(404, { detail: "Poz grubu bulunamadı." });
 
+        // TKL-F2.2 · `catalog_item_id` OPSİYONELDİR (bugünkü formlar göndermez); verilirse
+        // katalog kaleminin VARLIĞI doğrulanır (backend `catalog_service.get_item` → 404).
+        // Sıra backend gibi: grup → katalog → kod tekilliği.
+        const catalogItemId =
+          body.catalog_item_id === undefined || body.catalog_item_id === null ? null : String(body.catalog_item_id);
+        if (catalogItemId !== null && !evState.catalog.some((entry) => entry.id === catalogItemId)) {
+          return send(404, { detail: EV_MSG.catalogMissing });
+        }
+
         const code = String(body.code ?? "").trim();
         if (!code) return send(422, { detail: "Poz numarası zorunludur." });
         // Poz No benzersizliği SÖZLEŞME içindedir (proje kapsamı).
@@ -9731,6 +10019,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           groupName: group.name,
           groupSortOrder: group.sort_order,
           allocations: [],
+          catalogItemId,
+          priceChangedAt: new Date().toISOString(),
         };
         state.contractItems = [...state.contractItems, created];
 
@@ -9739,6 +10029,79 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           ?.items.find((item) => item.id === created.id);
         if (!refreshed) return send(500, { detail: "kalem kurulamadi" });
         return send(201, refreshed);
+      });
+    }
+
+    // TKL-F2.2 · POST /projects/{project_id}/contract/items/bulk — katalogdan TOPLU poz ekleme.
+    // Backend ikizi: `contracts/service.py::create_employer_items_bulk` — HEP YA HİÇ ("önce
+    // doğrula sonra yaz": hata varsa HİÇBİR kalem state'e girmez). Sıra: gövde şeması (422,
+    // FastAPI işleyiciden ÖNCE) → proje/sözleşme (404 `Sözleşme bulunamadı`) → grup (422) →
+    // katalog (404) → gövde içi kod tekrarı (409) → sözleşmedeki kodla çakışma (409).
+    // Not: backend'de "kilitli/onaylı sözleşme" kapısı YOKTUR (yalnız yukarıdaki sıra).
+    const contractItemsBulkMatch = path.match(/^\/projects\/([^/]+)\/contract\/items\/bulk$/);
+    if (method === "POST" && contractItemsBulkMatch) {
+      const projectId = contractItemsBulkMatch[1];
+      return withBody((body) => {
+        const violation = employerItemsBulkViolation(body);
+        if (violation !== null) return send(422, violation);
+        const hasContract =
+          state.projects.some((p) => p.id === projectId) &&
+          (projectId === "p-1" || projectId === EMPTY_CONTRACT_PROJECT_ID);
+        if (!hasContract) return send(404, { detail: CONTRACT_MISSING_MESSAGE });
+
+        const entries = body.items as Array<Record<string, unknown>>;
+        const groups = buildEmployerContractItemsResponse(state, projectId).groups;
+        const requestedGroupIds = Array.from(new Set(entries.map((e) => String(e.group_id)))).sort();
+        if (requestedGroupIds.some((id) => !groups.some((g) => g.id === id))) {
+          return send(422, { detail: "Poz grubu bu sözleşmeye ait değil" });
+        }
+        const catalogIds = new Set(
+          entries.flatMap((e) => (e.catalog_item_id === undefined || e.catalog_item_id === null ? [] : [String(e.catalog_item_id)])),
+        );
+        if (Array.from(catalogIds).some((id) => !evState.catalog.some((entry) => entry.id === id))) {
+          return send(404, { detail: EV_MSG.catalogMissing });
+        }
+        const seen = new Set<string>();
+        for (const entry of entries) {
+          const code = String(entry.code);
+          if (seen.has(code)) return send(409, { detail: `${DUPLICATE_ITEM_CODE_MESSAGE}: ${code}` });
+          seen.add(code);
+        }
+        const taken = new Set(
+          state.contractItems.filter((item) => (item.projectId ?? "p-1") === projectId).map((item) => item.code),
+        );
+        for (const entry of entries) {
+          if (taken.has(String(entry.code))) return send(409, { detail: `${DUPLICATE_ITEM_CODE_MESSAGE}: ${String(entry.code)}` });
+        }
+
+        // Doğrulama BİTTİ → yazma (tek atama; yarım kalma yok).
+        const stamp = new Date().toISOString();
+        const created: MockContractItem[] = entries.map((entry, index) => {
+          const group = groups.find((g) => g.id === String(entry.group_id));
+          return {
+            id: `ci-new-${state.contractItemSeq + index + 1}`,
+            projectId,
+            code: String(entry.code),
+            description: String(entry.description),
+            unit: String(entry.unit),
+            // Kolon ölçeği (backend `Numeric(14,3)` / `Numeric(18,2)`): kayıpsız kanonlama.
+            quantity: lpFixed(entry.quantity, 3) ?? String(entry.quantity),
+            unit_price: lpFixed(entry.unit_price, LP_PLACES) ?? String(entry.unit_price),
+            groupName: group?.name ?? "",
+            groupSortOrder: group?.sort_order ?? 0,
+            allocations: [],
+            catalogItemId:
+              entry.catalog_item_id === undefined || entry.catalog_item_id === null ? null : String(entry.catalog_item_id),
+            priceChangedAt: stamp,
+          };
+        });
+        state.contractItemSeq += created.length;
+        state.contractItems = [...state.contractItems, ...created];
+
+        const listed = buildEmployerContractItemsResponse(state, projectId).groups.flatMap((g) => g.items);
+        const items = created.flatMap((item) => listed.filter((row) => row.id === item.id));
+        if (items.length !== created.length) return send(500, { detail: "kalemler kurulamadi" });
+        return send(201, { items } satisfies components["schemas"]["EmployerContractItemsBulkResponse"]);
       });
     }
 
@@ -9754,10 +10117,27 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     const employerItemMatch = path.match(/^\/contracts\/employer\/items\/([^/]+)$/);
     if (method === "PATCH" && employerItemMatch) {
       const itemId = employerItemMatch[1];
-      const existing = state.contractItems.find((item) => item.id === itemId);
-      if (!existing) return send(404, { detail: "Poz bulunamadı." });
-      const projectId = existing.projectId ?? "p-1";
       return withBody((body) => {
+        // TKL-F2.2 · katalog bağı SABİT: `catalog_item_id` anahtarı (değeri `null` olsa da)
+        // → 422 (backend `EmployerContractItemUpdate._katalog_bagi_degistirilemez`, model
+        // doğrulayıcısı `mode="before"` → `loc: ["body"]`). FastAPI gövdeyi işleyiciden ÖNCE
+        // doğruladığı için 404'ten da önce gelir.
+        if ("catalog_item_id" in body) {
+          return send(422, {
+            detail: [
+              {
+                type: "value_error",
+                loc: ["body"],
+                msg: `Value error, ${CATALOG_LINK_IMMUTABLE_MESSAGE}`,
+                input: body,
+                ctx: { error: {} },
+              },
+            ],
+          });
+        }
+        const existing = state.contractItems.find((item) => item.id === itemId);
+        if (!existing) return send(404, { detail: "Poz bulunamadı." });
+        const projectId = existing.projectId ?? "p-1";
         // Kısmi güncelleme: yalnız GÖNDERİLEN alanlar denetlenir.
         const patch: Partial<MockContractItem> = {};
 
@@ -9777,6 +10157,9 @@ export function startMockBackend(port: number): { server: Server; close: () => P
             return send(422, { detail: "Birim fiyat negatif olamaz." });
           }
           patch.unit_price = raw;
+          // TKL-F2.2 · fiyat DEĞER olarak değiştiyse damga ilerler (`1850.5` == `1850.50`;
+          // karşılaştırma kolon ölçeğinde, backend `_quantize_money`).
+          if (lpCents(raw) !== lpCents(existing.unit_price)) patch.priceChangedAt = new Date().toISOString();
         }
         if (body.code !== undefined && body.code !== null) {
           const code = String(body.code).trim();
@@ -19579,6 +19962,16 @@ const EV_ARRAYS = {
   preview: loadArrayBounds("PreviewBody"),
 } as const;
 
+/* TKL-F2.2 · işveren sözleşmesi TOPLU ekleme gövdesi (`EmployerContractItemsBulkCreate`):
+ * dizi sınırları (1..200) + her kalem `EmployerContractItemCreate` kısıtlarından geçer (sözleşmeden
+ * okunur). Mesajlar backend sabitleriyle BİREBİR (`contracts/guards.py`, `contracts/schemas.py`). */
+const EMPLOYER_BULK_SCHEMA = loadBodySchema("EmployerContractItemsBulkCreate");
+const EMPLOYER_BULK_ARRAYS = loadArrayBounds("EmployerContractItemsBulkCreate");
+const EMPLOYER_ITEM_CREATE_SCHEMA = loadBodySchema("EmployerContractItemCreate");
+const CONTRACT_MISSING_MESSAGE = "Sözleşme bulunamadı";
+const DUPLICATE_ITEM_CODE_MESSAGE = "Bu poz numarası bu sözleşmede zaten kullanılıyor";
+const CATALOG_LINK_IMMUTABLE_MESSAGE = "Katalog bağı sonradan değiştirilemez";
+
 type EvLoc = readonly (string | number)[];
 
 interface EvViolationBody {
@@ -19631,6 +20024,15 @@ function evArrayViolation(value: unknown, loc: EvLoc, bounds: EvArrayBounds | un
     );
   }
   return null;
+}
+
+/** Toplu ekleme gövdesi: üst düzey şema → `items` dizi sınırları → her kalemin alan kısıtları. */
+function employerItemsBulkViolation(body: Record<string, unknown>): EvViolationBody | null {
+  return (
+    (bodySchemaViolation(EMPLOYER_BULK_SCHEMA, body) as EvViolationBody | null) ??
+    evArrayViolation(body.items, ["items"], EMPLOYER_BULK_ARRAYS.get("items")) ??
+    evEachViolation(body.items as unknown[], EMPLOYER_ITEM_CREATE_SCHEMA, "items")
+  );
 }
 
 /** Dizinin her elemanını iç içe kapıdan geçirir; ilk ihlal döner. */
@@ -21181,6 +21583,8 @@ interface EvRequest {
   findSite: (siteId: string) => { id: string; status: string } | undefined;
   /** PLN-F2.5a · günlük/taşeron/bölüm okuma kapısı (EV gün uçları). */
   diary: EvDiaryPort;
+  /** TKL-F2.2 · katalog "son fiyat" (SZL/HK) — sözleşme + hakediş durumundan TÜRER (canlı). */
+  lastPrices: () => ReadonlyMap<string, components["schemas"]["LastPriceRead"]>;
 }
 
 type EvBody = Record<string, unknown>;
@@ -21632,7 +22036,11 @@ function evWorkItemTaken(state: EvState, disciplineId: string, name: string, uom
   );
 }
 
-function evWorkItemOut(state: EvState, entry: EvCatalogEntry): EvSchemas["WorkItemRead"] {
+function evWorkItemOut(
+  state: EvState,
+  entry: EvCatalogEntry,
+  lastPrice: EvSchemas["LastPriceRead"] | null,
+): EvSchemas["WorkItemRead"] {
   const discipline = state.disciplines.find((d) => d.id === entry.disciplineId);
   return {
     id: entry.id,
@@ -21650,6 +22058,7 @@ function evWorkItemOut(state: EvState, entry: EvCatalogEntry): EvSchemas["WorkIt
     default_contractor_type: entry.defaultContractorType,
     ref_price: entry.refPrice,
     price_updated_at: entry.priceUpdatedAt,
+    last_price: lastPrice,
     standard_updated_at: entry.standardUpdatedAt,
     created_at: entry.standardUpdatedAt,
     updated_at: entry.priceUpdatedAt !== null && entry.priceUpdatedAt > entry.standardUpdatedAt ? entry.priceUpdatedAt : entry.standardUpdatedAt,
@@ -21679,7 +22088,8 @@ function evCoreCatalogRoute(state: EvState, req: EvRequest): boolean {
     if (method === "GET") {
       // Backend `order_by(poz_no, id)`; süzgeçler istemcide (q/discipline_id gönderilmez).
       const ordered = [...state.catalog].sort((a, b) => (a.pozNo < b.pozNo ? -1 : a.pozNo > b.pozNo ? 1 : a.id < b.id ? -1 : 1));
-      req.send(200, { items: ordered.map((entry) => evWorkItemOut(state, entry)) });
+      const lastPrices = req.lastPrices();
+      req.send(200, { items: ordered.map((entry) => evWorkItemOut(state, entry, lastPrices.get(entry.id) ?? null)) });
       return true;
     }
     if (method === "POST") {
@@ -21722,7 +22132,7 @@ function evCreateWorkItem(state: EvState, req: EvRequest, body: EvBody): void {
     priceUpdatedAt: refPrice === null ? null : EV_NOW,
   };
   state.catalog = [...state.catalog, entry];
-  req.send(201, evWorkItemOut(state, entry));
+  req.send(201, evWorkItemOut(state, entry, req.lastPrices().get(entry.id) ?? null));
 }
 
 function evUpdateWorkItem(state: EvState, req: EvRequest, id: string, body: EvBody): void {
@@ -21766,7 +22176,7 @@ function evUpdateWorkItem(state: EvState, req: EvRequest, id: string, body: EvBo
     ...("description" in body ? { description: typeof body.description === "string" ? body.description : null } : {}),
   };
   state.catalog = state.catalog.map((entry) => (entry.id === id ? updated : entry));
-  req.send(200, evWorkItemOut(state, updated));
+  req.send(200, evWorkItemOut(state, updated, req.lastPrices().get(updated.id) ?? null));
 }
 
 /* ---- şantiye: ayarlar ---- */

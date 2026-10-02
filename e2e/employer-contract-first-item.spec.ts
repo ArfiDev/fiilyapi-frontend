@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { openManualItemForm } from "./employer-catalog-picker-helpers";
+
 // F-POZGRUP T3 · "Yeni bir işveren sözleşmesine İLK poz eklenemiyor" kusurunun
 // FONKSİYONEL regresyon bekçisi.
 //
@@ -41,11 +43,11 @@ test("grupsuz sözleşmede '+ Poz Ekle' KİLİTLİ DEĞİL — form yeni grup ki
   // 🔴 Düğme AÇIK (eskiden `disabled` idi → sözleşme sonsuza kadar pozsuz).
   const add = page.getByTestId("ecd-add-item");
   await expect(add).toBeEnabled();
-  await add.click();
+
+  // "+ Poz Ekle" katalog seçicisini açar; eski tekli form "Elle poz ekle" köprüsünden gelir.
+  const dialog = await openManualItemForm(page);
 
   // 🔴 Form doğrudan "+ Yeni Grup" kipinde: boş açılırla baş başa bırakılmaz.
-  const dialog = page.getByRole("dialog", { name: "İşveren Sözleşmesine Poz Ekle" });
-  await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel("Poz Grubu", { exact: true })).toHaveValue(NEW_GROUP_SENTINEL);
   await expect(dialog.getByLabel("Grup Adı", { exact: true })).toBeVisible();
 });
@@ -65,8 +67,7 @@ test("ilk poz eklenir: grup ÖNCE yaratılır, kalemin `group_id`si grup YANITIN
     if (pathname.endsWith("/contract/items")) calls.push("items");
   });
 
-  await page.getByTestId("ecd-add-item").click();
-  const dialog = page.getByRole("dialog", { name: "İşveren Sözleşmesine Poz Ekle" });
+  const dialog = await openManualItemForm(page);
 
   await dialog.getByLabel("Grup Adı", { exact: true }).fill(GROUP_NAME);
   await dialog.getByLabel("Poz No", { exact: true }).fill("03.099");

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -49,6 +49,35 @@ vi.mock("@/lib/api/hooks/useContractMutations", () => ({
   }),
   useCreateEmployerContractGroup: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateEmployerContractItem: () => ({ mutateAsync: updateItemMutate, isPending: updateIsPending }),
+}));
+// TKL-F2.4 · seçici + toplu ekleme sahibi (`EmployerCatalogPickerHost`) kendi dosyasında gerçek
+// seçici ve hook'larla sınanır (`EmployerCatalogPickerHost.test.tsx`); burada yalnız EKRANA BAĞLANTI
+// ölçülür — sahte, aldığı props'u yüzeye basar ve üç geri çağrıyı tetikler.
+vi.mock("./EmployerCatalogPickerHost", () => ({
+  EmployerCatalogPickerHost: (props: {
+    projectId: string;
+    projectName?: string;
+    groups: unknown[];
+    onClose: () => void;
+    onManualAdd: () => void;
+    onAdded: (count: number) => void;
+  }) => (
+    <div role="dialog" aria-label="Katalogdan Poz Ekle" data-testid="picker-stub">
+      <span data-testid="picker-stub-props">
+        {props.projectId}|{props.projectName ?? ""}|{props.groups.length}
+      </span>
+      <button onClick={props.onManualAdd}>stub-manual</button>
+      <button
+        onClick={() => {
+          props.onAdded(3);
+          props.onClose();
+        }}
+      >
+        stub-added
+      </button>
+      <button onClick={props.onClose}>stub-close</button>
+    </div>
+  ),
 }));
 vi.mock("@/lib/api/hooks/useProjects", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useProjects")>()),
@@ -172,6 +201,7 @@ const ITEMS: EmployerContractItemsResponse = {
           quantity: "3200.000",
           unit_price: "1850.00",
           sort_order: 0,
+          catalog_item_id: null,
           distributed_quantity: "3200.000",
           remaining_quantity: "0.000",
         },
@@ -184,6 +214,7 @@ const ITEMS: EmployerContractItemsResponse = {
           quantity: "620.000",
           unit_price: "2100.00",
           sort_order: 1,
+          catalog_item_id: null,
           distributed_quantity: "400.000",
           remaining_quantity: "220.000",
         },
@@ -646,16 +677,102 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       );
     });
 
-    it("'+ Poz Ekle' poz ekleme diyalogunu açar (F-BLG T2a)", () => {
+    // TKL-F2.4 · ÜS-F2-1: "+ Poz Ekle" artık KATALOG SEÇİCİSİNİ açar; eski tekli form
+    // seçicideki "Elle poz ekle" köprüsüyle erişilir.
+    it("'+ Poz Ekle' KATALOG SEÇİCİSİNİ açar (eski tekli form açılmaz)", () => {
       mockAll();
       render(<EmployerContractDetailView projectId="p-1" />);
 
       const add = screen.getByTestId("ecd-add-item");
       expect(add).toBeEnabled();
+      expect(screen.queryByTestId("picker-stub")).not.toBeInTheDocument();
       fireEvent.click(add);
+      expect(screen.getByRole("dialog", { name: "Katalogdan Poz Ekle" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("dialog", { name: "İşveren Sözleşmesine Poz Ekle" }),
+      ).not.toBeInTheDocument();
+      // Seçiciye proje kimliği + adı + GRUPLAR (sözleşmenin 1 grubu) gider.
+      expect(screen.getByTestId("picker-stub-props")).toHaveTextContent(
+        "p-1|Güneşkent Konut A-Blok İnşaatı|1",
+      );
+    });
+
+    it("🔴 kalemler yüklenmeden '+ Poz Ekle' seçiciyi AÇMAZ (gruplar bilinmeden hedef grup kurulamaz)", () => {
+      mockAll({ itemsExtra: { data: undefined, isLoading: true } });
+      render(<EmployerContractDetailView projectId="p-1" />);
+
+      fireEvent.click(screen.getByTestId("ecd-add-item"));
+      expect(screen.queryByTestId("picker-stub")).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("seçiciden 'Elle poz ekle' → seçici KAPANIR, eski tekli form açılır", () => {
+      mockAll();
+      render(<EmployerContractDetailView projectId="p-1" />);
+
+      fireEvent.click(screen.getByTestId("ecd-add-item"));
+      fireEvent.click(screen.getByText("stub-manual"));
+      expect(screen.queryByTestId("picker-stub")).not.toBeInTheDocument();
       expect(
         screen.getByRole("dialog", { name: "İşveren Sözleşmesine Poz Ekle" }),
       ).toBeInTheDocument();
+    });
+
+    it("seçici kapatılınca hiçbir diyalog kalmaz", () => {
+      mockAll();
+      render(<EmployerContractDetailView projectId="p-1" />);
+
+      fireEvent.click(screen.getByTestId("ecd-add-item"));
+      fireEvent.click(screen.getByText("stub-close"));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    describe("başarı bildirimi (ÜS-F2-7)", () => {
+      afterEach(() => vi.useRealTimers());
+
+      it("🔴 'N poz eklendi' tablo başlığında role=status, 2800 ms sonra kalkar", () => {
+        vi.useFakeTimers();
+        mockAll();
+        render(<EmployerContractDetailView projectId="p-1" />);
+
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
+        fireEvent.click(screen.getByTestId("ecd-add-item"));
+        fireEvent.click(screen.getByText("stub-added"));
+        const status = screen.getByRole("status");
+        expect(status).toHaveTextContent("3 poz eklendi");
+        expect(screen.getByTestId("ecd-add-item").closest(".ecd-items__head")).toContainElement(status);
+
+        act(() => {
+          vi.advanceTimersByTime(2799);
+        });
+        expect(screen.getByRole("status")).toBeInTheDocument();
+        act(() => {
+          vi.advanceTimersByTime(1);
+        });
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      });
+
+      it("ikinci ekleme sayacı SIFIRLAR (ilk bildirimin zamanlayıcısı ikincisini erken kapatmaz)", () => {
+        vi.useFakeTimers();
+        mockAll();
+        render(<EmployerContractDetailView projectId="p-1" />);
+
+        fireEvent.click(screen.getByTestId("ecd-add-item"));
+        fireEvent.click(screen.getByText("stub-added"));
+        act(() => {
+          vi.advanceTimersByTime(2000);
+        });
+        fireEvent.click(screen.getByTestId("ecd-add-item"));
+        fireEvent.click(screen.getByText("stub-added"));
+        act(() => {
+          vi.advanceTimersByTime(1000);
+        });
+        expect(screen.getByRole("status")).toHaveTextContent("3 poz eklendi");
+        act(() => {
+          vi.advanceTimersByTime(1800);
+        });
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      });
     });
 
     // 🔴 F-POZGRUP · DAVRANIŞ BİLİNÇLİ DEĞİŞTİ. Eskiden düğme grup yokken
@@ -678,10 +795,10 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       );
     });
 
-    // 🔴 F-POZGRUP T3 (a) · İKİ HALKA TEK İDDİADA: düğme açılır VE açılan form
-    // doğrudan "+ Yeni Grup" kipindedir. Halkalardan biri kopsa (düğme yine
-    // kapatılsa YA DA form boş açılırla açılsa) ilk poz gene eklenemez.
-    it("🔴 grup yokken '+ Poz Ekle' diyaloğu '+ Yeni Grup' kipinde açar", () => {
+    // 🔴 F-POZGRUP T3 (a) · İKİ HALKA TEK İDDİADA: düğme açılır VE grupsuz sözleşmede
+    // seçici (hedef grup = "+ Yeni Grup" seçicinin kendi işi) ile "Elle poz ekle" formu da
+    // doğrudan "+ Yeni Grup" kipindedir. TKL-F2.4: seçici grupsuz sözleşmede 0 grup alır.
+    it("🔴 grup yokken '+ Poz Ekle' seçiciyi 0 grupla açar; 'Elle poz ekle' formu '+ Yeni Grup' kipinde açar", () => {
       mockAll();
       vi.mocked(useEmployerContractItems).mockReturnValue({
         data: { groups: [] },
@@ -691,6 +808,10 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       render(<EmployerContractDetailView projectId="p-1" />);
 
       fireEvent.click(screen.getByTestId("ecd-add-item"));
+      expect(screen.getByTestId("picker-stub-props")).toHaveTextContent(
+        "p-1|Güneşkent Konut A-Blok İnşaatı|0",
+      );
+      fireEvent.click(screen.getByText("stub-manual"));
       const dialog = screen.getByRole("dialog", { name: "İşveren Sözleşmesine Poz Ekle" });
       expect(within(dialog).getByLabelText(EMPLOYER_ITEM_TEXT.group)).toHaveValue(
         NEW_GROUP_OPTION,
@@ -805,8 +926,50 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
 
       // no 51 · hücreler artık `type="number"` DEĞİLDİR (`inputMode="decimal"`)
       // — değer metin olarak karşılaştırılır.
-      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3200");
-      expect(screen.getByLabelText("03.001 birim fiyatı")).toHaveValue("1850");
+      // 🔴 TKL-F2.6a · K7: GÖSTERİM Türkçe biçimdir (binlik nokta, ondalık virgül) —
+      // sunucudaki "3200.000" / "1850.00" → "3.200" / "1.850,00".
+      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3.200");
+      expect(screen.getByLabelText("03.001 birim fiyatı")).toHaveValue("1.850,00");
+    });
+
+    // 🔴 TKL-F2.6a · K7 (a)(c)(d)(e): tablo miktar hücresi T30 ile okunur.
+    it.each([
+      ["1.500", { quantity: "1500" }],
+      ["1,5", { quantity: "1.5" }],
+    ])("miktar hücresine '%s' yazılınca gövde %j (T30)", async (typed, body) => {
+      renderItemsTab();
+
+      const quantity = screen.getByLabelText("03.002 miktar");
+      fireEvent.change(quantity, { target: { value: typed } });
+      fireEvent.blur(quantity);
+
+      expect(updateItemMutate).toHaveBeenCalledTimes(1);
+      expect(updateItemMutate.mock.calls[0][0]).toEqual({ itemId: "ci-2", body });
+      await act(async () => {});
+    });
+
+    it("miktar hücresinde belirsiz '0.500' istek UÇURMAZ ve virgül uyarısı basar", () => {
+      renderItemsTab();
+
+      const quantity = screen.getByLabelText("03.002 miktar");
+      fireEvent.change(quantity, { target: { value: "0.500" } });
+      fireEvent.blur(quantity);
+
+      expect(updateItemMutate).not.toHaveBeenCalled();
+      expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      );
+    });
+
+    it("birim fiyat hücresine gösterilen '1.850,00' aynen yazılınca istek UÇMAZ", () => {
+      renderItemsTab();
+
+      const price = screen.getByLabelText("03.001 birim fiyatı");
+      fireEvent.change(price, { target: { value: "1.850,000" } });
+      fireEvent.change(price, { target: { value: "1.850,00" } });
+      fireEvent.blur(price);
+
+      expect(updateItemMutate).not.toHaveBeenCalled();
     });
 
     it("odak çıkışında (emsal tetikleyicisi) yalnız DEĞİŞEN alan PATCH'lenir", async () => {
@@ -836,8 +999,8 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
     // yani yalnız "dokunulmadı" yolu ölçülürdü. Burada değer GERÇEKTEN değişir,
     // sonra eskisine döner (taslak vardır, sunucu değeriyle eşittir).
     it.each([
-      ["03.001 birim fiyatı", "1850"],
-      ["03.001 miktar", "3200"],
+      ["03.001 birim fiyatı", "1.850,00"],
+      ["03.001 miktar", "3.200"],
       ["03.001 poz no", "03.001"],
       ["03.001 poz adı", "Kat Döşemesi Betonu C25/30"],
     ])("%s: değişip aynı değere dönen hücre istek UÇURMAZ", (label, original) => {
@@ -867,7 +1030,7 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
       expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
         "Miktar sıfırdan büyük olmalıdır.",
       );
-      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3200");
+      expect(screen.getByLabelText("03.001 miktar")).toHaveValue("3.200");
     });
 
     it("negatif birim fiyat gönderilmez (`minimum: 0`)", () => {
@@ -1235,6 +1398,67 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
         // Fikstürün en büyük `sort_order`ı 1 → sıradaki 2.
         sort_order: 2,
       });
+    });
+
+    // 🔴 TKL-F2.4 · K1 — yeni satırın birim fiyatı da hücreyle AYNI T30 kuralıyla okunur.
+    function fillNewRow(unitPrice: string) {
+      fireEvent.change(screen.getByLabelText("Yeni poz no"), { target: { value: "03.005" } });
+      fireEvent.change(screen.getByLabelText("Yeni poz adı"), { target: { value: "Fiyat poz" } });
+      fireEvent.change(screen.getByLabelText("Yeni poz birimi"), { target: { value: "m³" } });
+      fireEvent.change(screen.getByLabelText("Yeni poz birim fiyatı"), {
+        target: { value: unitPrice },
+      });
+      fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "10" } });
+    }
+
+    it("🔴 yeni satır birim fiyatı '28.500' → gövdede '28500' (28,50 DEĞİL)", async () => {
+      openNewRow();
+      fillNewRow("28.500");
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+      });
+
+      expect(createItemMutateAsync).toHaveBeenCalledTimes(1);
+      expect(createItemMutateAsync.mock.calls[0][0]).toMatchObject({ unit_price: "28500" });
+    });
+
+    it("🔴 yeni satır birim fiyatı belirsiz '28.5' → POST YOK + virgül uyarısı", () => {
+      openNewRow();
+      fillNewRow("28.5");
+      fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+
+      expect(createItemMutateAsync).not.toHaveBeenCalled();
+      expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      );
+    });
+
+    // 🔴 TKL-F2.6a · K7 — yeni satır miktarı da T30.
+    it("🔴 yeni satır miktarı '1.500' → '1500'; '1,5' → '1.5' (T30)", async () => {
+      openNewRow();
+      fillNewRow("100");
+      fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "1.500" } });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+      });
+      expect(createItemMutateAsync.mock.calls[0][0]).toMatchObject({ quantity: "1500" });
+    });
+
+    it("🔴 yeni satır miktarı '1,5' kabul edilir, belirsiz '1.5' POST EDİLMEZ", async () => {
+      openNewRow();
+      fillNewRow("100");
+      fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "1.5" } });
+      fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+      expect(createItemMutateAsync).not.toHaveBeenCalled();
+      expect(screen.getByTestId("ecd-items-error")).toHaveTextContent(
+        "Ondalık için virgül kullanın (ör. 28,50)",
+      );
+
+      fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "1,5" } });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+      });
+      expect(createItemMutateAsync.mock.calls[0][0]).toMatchObject({ quantity: "1.5" });
     });
 
     it("miktarı SIFIR olan taslak POST EDİLMEZ — tam formla AYNI korkuluk", () => {
