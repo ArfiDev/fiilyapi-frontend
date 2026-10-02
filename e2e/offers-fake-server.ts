@@ -9,6 +9,7 @@ import {
   type OffersPort,
   type OffersState,
 } from "./mock-offers";
+import type { ConvertPort } from "./mock-offer-types";
 
 // TKL-F3.8 · TEKLİF HAZIRLAMA SAHTE SUNUCUSU — MOCK'A YAZMAZ.
 //
@@ -59,6 +60,8 @@ export interface FakeOffersServer {
 export interface FakeOffersOptions {
   /** `false` → tohumsuz BOŞ liste (teklif-liste-bos karesi). Varsayılan `true` (7 tohum teklif). */
   readonly seeded?: boolean;
+  /** TKL-F5.6 · sayfaya özel dönüştürme yazma portu (`offers-convert-fake.ts`); yoksa `/convert` 404 (paylaşılan mock'a YAZILMAZ). */
+  readonly convert?: ConvertPort;
 }
 
 interface CatalogRead {
@@ -98,7 +101,7 @@ async function readEmployers(page: Page): Promise<Array<{ id: string; name: stri
 /** Playwright isteği → `OffersPort` + yakalanan yanıt. `handleOffers` eşzamanlı çalışır. */
 function toPort(
   route: Route,
-  context: { catalog: CatalogRead; employers: Array<{ id: string; name: string }> },
+  context: { catalog: CatalogRead; employers: Array<{ id: string; name: string }>; convert: ConvertPort | undefined },
   captured: { status: number; body: unknown; rawBody: Json | null },
 ): OffersPort {
   const request = route.request();
@@ -128,6 +131,7 @@ function toPort(
     employers: () => context.employers,
     lastPrices: () => context.catalog.lastPrices,
     actor: ACTOR,
+    convert: context.convert,
   };
 }
 
@@ -153,7 +157,7 @@ function record(server: FakeOffersServer, port: OffersPort, body: Json | null): 
  * navigasyondan ÖNCE çağrılır.
  */
 export async function installFakeOffersServer(page: Page, options: FakeOffersOptions = {}): Promise<FakeOffersServer> {
-  const { seeded = true } = options;
+  const { seeded = true, convert } = options;
   const catalog = await readCatalog(page);
   const employers = await readEmployers(page);
   const clock = () => new Date(FIXED_NOW);
@@ -174,7 +178,7 @@ export async function installFakeOffersServer(page: Page, options: FakeOffersOpt
   await page.route(OFFERS_ROUTE, async (route) => {
     if (EXPORT_PATH.test(new URL(route.request().url()).pathname)) return route.continue();
     const captured = { status: 0, body: undefined as unknown, rawBody: null as Json | null };
-    const port = toPort(route, { catalog, employers }, captured);
+    const port = toPort(route, { catalog, employers, convert }, captured);
     const handled = handleOffers(state, port);
     if (!handled || captured.status === 0) return route.fallback();
     record(server, port, captured.rawBody);

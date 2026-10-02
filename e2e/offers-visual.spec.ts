@@ -1,6 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { OFFERS_URL, SEED_NO, loginForOffers, openItemPicker, openOfferDetail, openOfferPrint } from "./offers-helpers";
+import {
+  editItems,
+  fillStep1,
+  goToItems,
+  openConvertScreen,
+  settleFocus,
+  setUpConvert,
+  walkToConfirm,
+  createProject,
+} from "./offers-convert-helpers";
 import { prepareFrame } from "./visual-scroll";
 
 // TKL-F3.8 · Teklif Hazırlama görsel kadrajları (plan §1: TL/TY/TD mockup'ları + PDF onay kareleri).
@@ -195,4 +205,99 @@ test("teklif detay miktarsiz gorsel", async ({ page }) => {
 
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("teklif-detay-miktarsiz.png", { fullPage: true });
+});
+
+// ------------------------------------------------------------------------------------ TKL-F5.6
+// Teklif → Proje DÖNÜŞTÜR kadrajları (plan §8 F5.6; mockup TDN). Yazan akışlar (kalem düzenleme, oluşturma) sayfaya özel
+// sahte yazımda koşar (`offers-convert-helpers.ts`): paylaşılan mock'a HİÇBİR yazma gitmez. Yetkisiz kare `projects: full`
+// ile yalnız bu sayfanın `/auth/me` yanıtını değiştirir. Saat `login` içinde çakılı (24.09.2026).
+
+test("teklif donustur proje gorsel", async ({ page }) => {
+  const harness = await setUpConvert(page);
+  await openConvertScreen(page, harness.offerId);
+  await fillStep1(page);
+  await settleFocus(page);
+  await expect(page.getByTestId("convert-step-1").getByLabel("Sözleşme no")).toHaveValue("SZL-2026-İ01");
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-donustur-proje.png", { fullPage: true });
+});
+
+test("teklif donustur kalemler gorsel", async ({ page }) => {
+  const harness = await setUpConvert(page);
+  await openConvertScreen(page, harness.offerId);
+  await fillStep1(page);
+  await goToItems(page);
+  await editItems(page);
+  await settleFocus(page);
+  await expect(page.getByTestId("convert-step-2")).toContainText("3 dahil · 1 çıkarıldı · 2 değişti · 1 yeni");
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-donustur-kalemler.png", { fullPage: true });
+});
+
+test("teklif donustur onay gorsel", async ({ page }) => {
+  const harness = await setUpConvert(page);
+  await walkToConfirm(page, harness.offerId);
+  await settleFocus(page);
+  await expect(page.getByTestId("convert-summary-step3")).toContainText("KDV dahil");
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-donustur-onay.png", { fullPage: true });
+});
+
+// Başarı sonrası kare: ekran Adım 3'te kalır (F5.6 kapı yarışı düzeltmesinin görsel bekçisi).
+test("teklif donustur tamam gorsel", async ({ page }) => {
+  const harness = await setUpConvert(page);
+  await walkToConfirm(page, harness.offerId);
+  await createProject(page);
+  await settleFocus(page);
+  await expect(page.getByTestId("convert-step-3")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Oluşturuldu" })).toBeDisabled();
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-donustur-tamam.png", { fullPage: true });
+});
+
+test("teklif detay donustur pasif gorsel", async ({ page }) => {
+  const harness = await setUpConvert(page);
+  await page.route("**/api/auth/me", async (route) => {
+    const response = await route.fetch();
+    const me = (await response.json()) as { permissions?: Record<string, string> };
+    await route.fulfill({ response, json: { ...me, permissions: { ...me.permissions, projects: "full" } } });
+  });
+  await page.goto(`${OFFERS_URL}/${harness.offerId}`);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(SEED_NO.withHistory);
+  await expect(page.getByRole("button", { name: "Projeye Dönüştür →" })).toBeDisabled();
+  await expect(page.getByText(/Projeye dönüştürme Projeler yönetici yetkisi ister/)).toBeVisible();
+  await expect(page.getByText("Revizyon yükleniyor")).toHaveCount(0);
+  await page.mouse.move(0, 0);
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-detay-donustur-pasif.png", { fullPage: true });
+});
+
+test("teklif liste donusturuldu gorsel", async ({ page }) => {
+  const harness = await setUpConvert(page);
+  // Teklif zaten projeye dönüşmüş (sahte sunucunun sayfaya özel durumu; paylaşılan mock'a yazılmaz).
+  const state = harness.server.state();
+  state.offers = state.offers.map((offer) =>
+    offer.id === harness.offerId
+      ? {
+          ...offer,
+          projectId: "p-e2e-1",
+          convertedAt: "2026-09-24T05:00:00.000Z",
+          convertedByUserId: offer.preparedByUserId,
+          project: { id: "p-e2e-1", code: "PRJ-2026-005", name: "Güneşkent A Blok Projesi", slug: "guneskent-a-blok-projesi" },
+        }
+      : offer,
+  );
+  await page.goto(OFFERS_URL);
+  await expect(page.getByTestId("offers-count")).toContainText("7");
+  await expect(page.getByTestId(`offers-row-${SEED_NO.withHistory}`).getByRole("link", { name: /^Proje: / })).toBeVisible();
+  await expect(page.getByTestId("offers-card-convert")).toHaveCount(0);
+  await page.mouse.move(0, 0);
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-liste-donusturuldu.png", { fullPage: true });
 });

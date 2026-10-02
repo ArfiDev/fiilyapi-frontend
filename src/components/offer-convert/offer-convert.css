@@ -300,7 +300,8 @@
 }
 .convert-table {
   width: 100%;
-  min-width: 860px;
+  /* 1440'ta kart içi 838px: 860 "Fark" sütununu 22px kırpıyordu (F5.6). Sabit kolonlar 698px → tarif ≥122px. */
+  min-width: 820px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -502,6 +503,9 @@
 }
 .convert-sum__label {
   font-size: var(--text-small);
+  /* TAM PİKSEL (F4 #165 dersi, yapışkan özet kartı): 11px × 1,5 = 16,5px satır → alttaki her şey ½ piksel fazına düşer,
+     Linux'ta kare koşudan koşuya oynar. */
+  line-height: 17px;
   color: var(--color-text-subtle);
 }
 .convert-sum__value {
@@ -540,6 +544,8 @@
   color: var(--color-success);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
+  /* TAM PİKSEL: miras 13px × 1,5 = 19,5px satır. */
+  line-height: 20px;
 }
 .convert-sum__diff--neg {
   border-color: var(--color-danger-tint-border);
@@ -551,6 +557,10 @@
   font-family: var(--font-sans);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
+}
+.convert-sum .convert-error-text {
+  /* TAM PİKSEL: 11px × 1,5 = 16,5px ("Fiyatı ya da miktarı eksik" notu özet kartında). */
+  line-height: 17px;
 }
 .convert-sum__lines {
   display: flex;

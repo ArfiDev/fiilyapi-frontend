@@ -43,8 +43,11 @@ function ConvertGate({ offerId }: ConvertScreenProps) {
   if (isForbidden(detailQuery.error)) return <AccessDenied />;
   if (detailQuery.data === undefined) return <DetailPending error={detailQuery.error} isError={detailQuery.isError} onRetry={() => void detailQuery.refetch()} />;
   const detail = detailQuery.data;
-  if (!convert.isSuccess && detail.conversion_state === "converted") return <ConvertedCard detail={detail} />;
-  if (!convert.isSuccess && detail.status !== "won") {
+  // Uçuşta da kapı AÇIK kalır: `useConvertOffer.onSuccess` önbellek tazelemesini BEKLER, mutasyon o arada `isPending`dir;
+  // detay "converted" okununca board sökülürse yerel 3 adımlık durum gider ve başarı sonrası ekran Adım 1'e sıfırlanır (F5.6 e2e).
+  const isOwnConversion = convert.isSuccess || convert.isPending;
+  if (!isOwnConversion && detail.conversion_state === "converted") return <ConvertedCard detail={detail} />;
+  if (!isOwnConversion && detail.status !== "won") {
     return <ConvertStateCard links={[{ href: routes.offers.detail({ offerId }), label: "Teklife dön" }]}>{NOT_WON_TEXT}</ConvertStateCard>;
   }
   return <ConvertLoader detail={detail} convert={convert} />;
