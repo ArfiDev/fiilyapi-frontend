@@ -157,6 +157,7 @@ export function readRevision(state: OffersState, offer: OfferRec, revision: Revi
       customer: ordered.customer,
       internal: ordered.internal,
       unpriced_count: ordered.unpriced_count,
+      unquantified_count: 0, // mock kaleminin miktari hep dolu (backend ikizi: miktari null kalem sayisi)
     },
   };
 }
@@ -205,6 +206,9 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
     prepared_by_name: userName(state, offer.preparedByUserId),
     status: last.status,
     latest_rev_no: last.revNo,
+    template_id: null,
+    conversion_state: null,
+    project_id: null,
     created_at: offer.createdAt,
     updated_at: offer.updatedAt,
     revisions: revisions.map((rev) => {
@@ -225,6 +229,7 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
         net: result.customer.net,
         gross: result.customer.gross,
         unpriced_count: result.unpriced_count,
+        unquantified_count: 0,
       };
     }),
     history: historyOf(state, revisions),
@@ -295,6 +300,9 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
       net: result.customer.net,
       gross: result.customer.gross,
       unpriced_count: result.unpriced_count,
+      unquantified_count: 0,
+      conversion_state: null,
+      project_id: null,
       created_at: offer.createdAt,
     })),
     total: shown.length,
@@ -307,6 +315,7 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
         net: nets.get(status) ?? "0",
       })),
       expired_count: expired,
+      won_not_converted_count: 0,
       win_rate: decided === 0 ? null : percentOfIntegers(won, decided),
     },
   };

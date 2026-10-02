@@ -40,6 +40,7 @@ describe("OfferTotalsCard", () => {
   it("limited rol: para maskeli (null) → '—'; adam-saat görünür kalır", () => {
     const masked = {
       unpriced_count: 0,
+      unquantified_count: 0,
       customer: { net: null, vat: null, gross: null },
       internal: { cost: null, overhead: null, profit: null, profit_pct: "15.00", man_hours: "12840" },
     };

@@ -93,6 +93,7 @@ export function makePrintRevision(overrides: Partial<OfferRevisionRead> = {}): O
     ],
     totals: {
       unpriced_count: 1,
+      unquantified_count: 0,
       customer: { net: "73982140.00", vat: "14796428.00", gross: "88778568.00" },
       internal: {
         cost: LEAK_SENTINELS.totalCost.raw,

@@ -39,7 +39,7 @@ export interface InternalSourceItem {
   profit_pct: string | null;
   priced: boolean;
   customer: { unit_price: string | null; amount: string | null } | null;
-  internal: { cost: string | null; profit_pct: string | null; man_hours: string };
+  internal: { cost: string | null; profit_pct: string | null; man_hours: string | null };
 }
 export interface InternalSourceGroup {
   id: string;
@@ -152,7 +152,7 @@ function groupRows(group: InternalSourceGroup, revision: InternalSourceRevision)
       key: `${group.id}:sum`,
       name: `${group.name} ara toplamı`,
       cost: formatMoney(sumOrNull(group.items.map((item) => item.internal.cost))),
-      manHours: formatQuantity(sumDecimalStrings(group.items.map((item) => item.internal.man_hours))),
+      manHours: formatQuantity(sumOrNull(group.items.map((item) => item.internal.man_hours))),
       amount: formatMoney(sumOrNull(pricedAmounts)),
     },
   ];

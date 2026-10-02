@@ -19,6 +19,9 @@ export function makeOffer(overrides: Partial<OfferListItem> & Pick<OfferListItem
     net: "48750000.00",
     gross: "58500000.00",
     unpriced_count: 0,
+    unquantified_count: 0,
+    conversion_state: null,
+    project_id: null,
     ...overrides,
   };
 }
@@ -75,6 +78,7 @@ export function makeSummary(overrides: Partial<OfferListSummary> = {}): OfferLis
     ],
     expired_count: 2,
     win_rate: "60.00",
+    won_not_converted_count: 0,
     ...overrides,
   };
 }

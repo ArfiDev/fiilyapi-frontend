@@ -762,6 +762,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog/items/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Catalog Endpoint
+         * @description Fiyatli katalog xlsx — liste ucuyla AYNI suzgecler (`q`, `discipline_id`) ve kapsam.
+         */
+        get: operations["export_catalog_endpoint_catalog_items_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog/items/{item_id}": {
         parameters: {
             query?: never;
@@ -3201,7 +3221,9 @@ export interface paths {
         put?: never;
         /**
          * Create Offer Endpoint
-         * @description Teklif + Rev.0 taslak. Kosullar gonderilmezse `offer_settings`ten kopyalanir.
+         * @description Teklif + Rev.0 taslak. Kosullar gonderilmezse `offer_settings`ten kopyalanir. Kaynak
+         *     (en fazla biri): `template_id` (sablondan, miktar bos) | `copy_from` (SO-8, mevcut tekliften).
+         *     Gonderilmezse bos teklif — varsayilan sablon KENDILIGINDEN kullanilmaz.
          */
         post: operations["create_offer_endpoint_offers_post"];
         delete?: never;
@@ -3235,6 +3257,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/offers/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Templates Endpoint
+         * @description Sablonlar: varsayilan once, sonra ada gore; kullanim sayisi + son guncelleme.
+         */
+        get: operations["list_templates_endpoint_offers_templates_get"];
+        put?: never;
+        /**
+         * Create Template Endpoint
+         * @description BOS sablon (icerik `PUT {id}/content`).
+         */
+        post: operations["create_template_endpoint_offers_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/templates/from-offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Template From Offer Endpoint
+         * @description Tekliften sablon: gruplar + kalemlerin katalog baglari + revizyon GG/kar %'si.
+         *     Fiyat ve miktar KOPYALANMAZ.
+         */
+        post: operations["create_template_from_offer_endpoint_offers_templates_from_offer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Template Endpoint */
+        get: operations["get_template_endpoint_offers_templates__template_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Template Endpoint
+         * @description Sil; bagli teklifler korunur (`template_id` NULL olur).
+         */
+        delete: operations["delete_template_endpoint_offers_templates__template_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Template Endpoint
+         * @description Ad / aciklama / GG-kar % (`null` = temizle) / `is_default` (true = varsayilan yap).
+         */
+        patch: operations["update_template_endpoint_offers_templates__template_id__patch"];
+        trace?: never;
+    };
+    "/offers/templates/{template_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace Template Content Endpoint
+         * @description TUM gruplar + kalemler TAM degistirilir (govdedeki sira = sablon sirasi). Tek uc:
+         *     ekran gruplari/kalemleri surukleyip tek kaydeder; ince taneli ekle/cikar/sirala uclari
+         *     gerekmez (KISS).
+         */
+        put: operations["replace_template_content_endpoint_offers_templates__template_id__content_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/templates/{template_id}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy Template Endpoint
+         * @description Sablondan sablon kopyasi (varsayilan DEGIL).
+         */
+        post: operations["copy_template_endpoint_offers_templates__template_id__copy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offers/templates/{template_id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Default Template Endpoint
+         * @description Varsayilan yap; eski varsayilan AYNI islemde duser (tek varsayilan).
+         */
+        post: operations["set_default_template_endpoint_offers_templates__template_id__default_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/offers/{offer_id}": {
         parameters: {
             query?: never;
@@ -3261,6 +3415,26 @@ export interface paths {
          * @description Kunye (isveren, is adi, kapsam ozeti) — yalniz son revizyon taslak iken.
          */
         patch: operations["update_offer_endpoint_offers__offer_id__patch"];
+        trace?: never;
+    };
+    "/offers/{offer_id}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Convert Offer Endpoint
+         * @description Kazanilan (son revizyonu `won`) teklifi projeye donusturur; ikinci cagri 409.
+         */
+        post: operations["convert_offer_endpoint_offers__offer_id__convert_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/offers/{offer_id}/revisions": {
@@ -3307,6 +3481,26 @@ export interface paths {
         patch: operations["update_revision_endpoint_offers__offer_id__revisions__rev_no__patch"];
         trace?: never;
     };
+    "/offers/{offer_id}/revisions/{rev_no}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Revision Endpoint
+         * @description Revizyonu xlsx olarak indirir. Veri teklif okuma yolundandir (ikinci hesap yok).
+         */
+        get: operations["export_revision_endpoint_offers__offer_id__revisions__rev_no__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/offers/{offer_id}/revisions/{rev_no}/groups": {
         parameters: {
             query?: never;
@@ -3336,7 +3530,7 @@ export interface paths {
         post?: never;
         /**
          * Delete Group Endpoint
-         * @description Grubu icindeki kalemlerle birlikte siler (yalniz taslak).
+         * @description Bos grubu siler (yalniz taslak); icinde kalem varsa 409 (TKL-B4.5). Denetim satiri YOK.
          */
         delete: operations["delete_group_endpoint_offers__offer_id__revisions__rev_no__groups__group_id__delete"];
         options?: never;
@@ -6335,6 +6529,26 @@ export interface paths {
          * @description "Katalogdan oner (bosları doldur)" (B1-4; frontend istegi 3).
          */
         post: operations["fill_budget_from_catalog_sites__site_id__earned_value_budget_fill_from_catalog_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sites/{site_id}/earned-value/budget/fill-from-contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fill Budget From Contract
+         * @description "Sözleşmeden doldur" (TKL-B6.4): oran yuvası → katalog standardı; boşları doldurur.
+         */
+        post: operations["fill_budget_from_contract_sites__site_id__earned_value_budget_fill_from_contract_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10491,6 +10705,18 @@ export interface components {
             total_amount: string | null;
         };
         /**
+         * ContractWarningOut
+         * @description Yapisal uyari: istemci `code`a bakar (`mixed_discipline_group` → `boq_group_id`).
+         */
+        ContractWarningOut: {
+            /** Boq Group Id */
+            boq_group_id?: string | null;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /**
          * ContractingCard
          * @description Taahhut karti — sozlesme bedeli/isveren ustte gercek, gerisi bos durum.
          */
@@ -10507,6 +10733,138 @@ export interface components {
          * @enum {string}
          */
         ContractorType: "own" | "subcon";
+        /**
+         * ConvertContract
+         * @description Isveren sozlesmesi. `amount` verilmezse sunucu Σ kalem tutarini yazar (KDV HARIC, kurus).
+         */
+        ConvertContract: {
+            /** Advance Pct */
+            advance_pct?: number | string | null;
+            /** Amount */
+            amount?: number | string | null;
+            /** Base Index Value */
+            base_index_value?: number | string | null;
+            /** Contract No */
+            contract_no: string;
+            /** Has Price Escalation */
+            has_price_escalation: boolean;
+            index_type?: components["schemas"]["PriceIndexType"] | null;
+            /** Late Penalty Daily */
+            late_penalty_daily?: number | string | null;
+            /** Retainage Pct */
+            retainage_pct?: number | string | null;
+            /**
+             * Signature Date
+             * Format: date
+             */
+            signature_date: string;
+            /** Vat Pct */
+            vat_pct?: number | string | null;
+        };
+        /** ConvertGroup */
+        ConvertGroup: {
+            /** Items */
+            items: components["schemas"]["ConvertItem"][];
+            /** Name */
+            name: string;
+        };
+        /** ConvertItem */
+        ConvertItem: {
+            /**
+             * Catalog Item Id
+             * Format: uuid
+             */
+            catalog_item_id: string;
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /** Offer Item Id */
+            offer_item_id?: string | null;
+            /** Quantity */
+            quantity: number | string;
+            /** Unit */
+            unit: string;
+            /** Unit Price */
+            unit_price: number | string;
+        };
+        /**
+         * ConvertProject
+         * @description Yeni projenin cekirdegi. Tip her zaman `taahhut`, taslak DEGIL (SO-37).
+         */
+        ConvertProject: {
+            /** Address */
+            address?: string | null;
+            /** Category */
+            category?: string | null;
+            /** City */
+            city: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Name */
+            name: string;
+            /** Parcel */
+            parcel?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
+        /** ConvertRequest */
+        ConvertRequest: {
+            contract: components["schemas"]["ConvertContract"];
+            /** Group Disciplines */
+            group_disciplines?: {
+                [key: string]: string;
+            };
+            /** Groups */
+            groups: components["schemas"]["ConvertGroup"][];
+            /**
+             * Open Site
+             * @default false
+             */
+            open_site: boolean;
+            project: components["schemas"]["ConvertProject"];
+            /** Site Name */
+            site_name?: string | null;
+        };
+        /**
+         * ConvertResponse
+         * @description PARASIZ yanit: yeni proje + (varsa) santiye kimlikleri, sayac ve uyarilar.
+         */
+        ConvertResponse: {
+            /** Contract Item Count */
+            contract_item_count: number;
+            /** Project Code */
+            project_code: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Project Slug */
+            project_slug: string | null;
+            /** Site Id */
+            site_id: string | null;
+            /** Warnings */
+            warnings: components["schemas"]["ConvertWarning"][];
+        };
+        /**
+         * ConvertWarning
+         * @description Yapisal `code` (istemci metne bakmaz) + Turkce metin; gruba ozgu ise grubun ADI.
+         */
+        ConvertWarning: {
+            /** Code */
+            code: string;
+            /** Group Name */
+            group_name?: string | null;
+            /** Message */
+            message: string;
+        };
         /**
          * CountPlaceholder
          * @description Sayac alaninin zarfi ("48 isci", "3 hissedar" gibi).
@@ -12121,6 +12479,29 @@ export interface components {
             sale_id: string;
             /** Unit Label */
             unit_label: string;
+        };
+        /**
+         * ExportView
+         * @enum {string}
+         */
+        ExportView: "employer" | "internal";
+        /**
+         * FillFromContractOut
+         * @description "Sozlesmeden doldur" sonucu (TKL-B6.4). Sayilar yalniz BU cagrinin yazdiklaridir.
+         */
+        FillFromContractOut: {
+            /** Filled Item Count */
+            filled_item_count: number;
+            /** Filled Leaf Count */
+            filled_leaf_count: number;
+            /** Linked Item Count */
+            linked_item_count: number;
+            /** Mapped Group Count */
+            mapped_group_count: number;
+            /** Unrated Item Count */
+            unrated_item_count: number;
+            /** Warnings */
+            warnings: components["schemas"]["ContractWarningOut"][];
         };
         /** FillOut */
         FillOut: {
@@ -14799,18 +15180,34 @@ export interface components {
             items: components["schemas"]["NotificationPrefUpdateItem"][];
         };
         /**
+         * OfferCopySource
+         * @description `copy_from` (SO-8): kopyalanacak teklif + revizyon.
+         */
+        OfferCopySource: {
+            /**
+             * Offer Id
+             * Format: uuid
+             */
+            offer_id: string;
+            /** Rev No */
+            rev_no: number;
+        };
+        /**
          * OfferCreate
          * @description `POST /offers`. Kosul alanlari verilmezse `offer_settings`ten KOPYALANIR; `price_escalation`
          *     varsayilani `fixed` (SO-5); `offer_date` varsayilani bugun (Istanbul).
+         *
+         *     Uc kaynak (en fazla BIRI): bos (varsayilan) | `template_id` (sablondan: gruplar + katalog
+         *     kalemleri, MIKTAR BOS) | `copy_from` (SO-8: mevcut tekliften yeni teklif; kaynagin
+         *     kosullari + kalemleri kopyalanir, govdede verilen kosul/kunye ALANLARI kaynagi ezer).
+         *     `employer_id`/`title` yalniz `copy_from` ile birlikte opsiyoneldir (kaynaktan alinir).
          */
         OfferCreate: {
+            copy_from?: components["schemas"]["OfferCopySource"] | null;
             /** Delivery Days */
             delivery_days?: number | null;
-            /**
-             * Employer Id
-             * Format: uuid
-             */
-            employer_id: string;
+            /** Employer Id */
+            employer_id?: string | null;
             /** Notes */
             notes?: string | null;
             /** Offer Date */
@@ -14826,8 +15223,10 @@ export interface components {
             profit_pct?: number | string | null;
             /** Scope Summary */
             scope_summary?: string | null;
+            /** Template Id */
+            template_id?: string | null;
             /** Title */
-            title: string;
+            title?: string | null;
             /** Validity Days */
             validity_days?: number | null;
             /** Vat Pct */
@@ -14844,6 +15243,8 @@ export interface components {
         };
         /** OfferDetailRead */
         OfferDetailRead: {
+            /** Conversion State */
+            conversion_state: ("converted" | "won_not_converted") | null;
             /**
              * Created At
              * Format: date-time
@@ -14871,11 +15272,15 @@ export interface components {
             prepared_by_name: string | null;
             /** Prepared By User Id */
             prepared_by_user_id: string | null;
+            /** Project Id */
+            project_id: string | null;
             /** Revisions */
             revisions: components["schemas"]["OfferRevisionSummaryRead"][];
             /** Scope Summary */
             scope_summary: string | null;
             status: components["schemas"]["OfferRevisionStatus"];
+            /** Template Id */
+            template_id: string | null;
             /** Title */
             title: string;
             /**
@@ -14989,7 +15394,7 @@ export interface components {
             /** Profit Pct */
             profit_pct?: number | string | null;
             /** Quantity */
-            quantity: number | string;
+            quantity?: number | string | null;
             /** Sort Order */
             sort_order?: number | null;
             /** Unit Mhr */
@@ -15013,7 +15418,7 @@ export interface components {
             /** Cost */
             cost: string | null;
             /** Man Hours */
-            man_hours: string;
+            man_hours: string | null;
             /** Overhead */
             overhead: string | null;
             /** Profit */
@@ -15103,6 +15508,8 @@ export interface components {
         };
         /** OfferListItem */
         OfferListItem: {
+            /** Conversion State */
+            conversion_state: ("converted" | "won_not_converted") | null;
             /**
              * Created At
              * Format: date-time
@@ -15131,6 +15538,8 @@ export interface components {
             offer_date: string;
             /** Offer No */
             offer_no: string;
+            /** Project Id */
+            project_id: string | null;
             /** Rev No */
             rev_no: number;
             /** Scope Summary */
@@ -15140,6 +15549,8 @@ export interface components {
             title: string;
             /** Unpriced Count */
             unpriced_count: number;
+            /** Unquantified Count */
+            unquantified_count: number;
             /**
              * Valid Until
              * Format: date
@@ -15170,6 +15581,8 @@ export interface components {
             expired_count: number;
             /** Win Rate */
             win_rate: string | null;
+            /** Won Not Converted Count */
+            won_not_converted_count: number;
         };
         /**
          * OfferLoseRequest
@@ -15294,6 +15707,8 @@ export interface components {
             status: components["schemas"]["OfferRevisionStatus"];
             /** Unpriced Count */
             unpriced_count: number;
+            /** Unquantified Count */
+            unquantified_count: number;
             /**
              * Updated At
              * Format: date-time
@@ -15383,6 +15798,8 @@ export interface components {
             internal: components["schemas"]["OfferInternalTotalsRead"];
             /** Unpriced Count */
             unpriced_count: number;
+            /** Unquantified Count */
+            unquantified_count: number;
         };
         /**
          * OfferUpdate
@@ -18539,7 +18956,7 @@ export interface components {
          * @description Oranin nereden geldigi (K4) — atama aninda kopyalanir, kaynak saklanir.
          * @enum {string}
          */
-        RateSource: "catalog" | "history" | "manual";
+        RateSource: "catalog" | "history" | "manual" | "offer";
         /**
          * RecentActualOut
          * @description K4 "son 3 santiye gerceklesen": aday katalog kaleminin en yeni 3 TAMAMLANMIS santiyedeki
@@ -23121,6 +23538,193 @@ export interface components {
             tax_no?: string | null;
         };
         /**
+         * TemplateContentReplace
+         * @description `PUT /offers/templates/{id}/content` — TUM gruplar + kalemler TAM degistirilir. Gruplar ve
+         *     kalemler govdedeki SIRAYLA siralanir (`sort_order` = dizin).
+         */
+        TemplateContentReplace: {
+            /** Groups */
+            groups: components["schemas"]["TemplateGroupInput"][];
+        };
+        /**
+         * TemplateCopy
+         * @description `POST /offers/templates/{id}/copy` — ad verilmezse `<ad> (kopya)`.
+         */
+        TemplateCopy: {
+            /** Name */
+            name?: string | null;
+        };
+        /**
+         * TemplateCreate
+         * @description `POST /offers/templates` — BOS sablon (icerik `PUT …/content` ile).
+         */
+        TemplateCreate: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Overhead Pct */
+            overhead_pct?: number | string | null;
+            /** Profit Pct */
+            profit_pct?: number | string | null;
+        };
+        /** TemplateDetailRead */
+        TemplateDetailRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /** Group Count */
+            group_count: number;
+            /** Groups */
+            groups: components["schemas"]["TemplateGroupRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Item Count */
+            item_count: number;
+            /** Name */
+            name: string;
+            /** Overhead Pct */
+            overhead_pct: string | null;
+            /** Profit Pct */
+            profit_pct: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Usage Count */
+            usage_count: number;
+        };
+        /**
+         * TemplateFromOffer
+         * @description `POST /offers/templates/from-offer` — tekliften sablon (fiyat/miktar KOPYALANMAZ).
+         */
+        TemplateFromOffer: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Offer Id
+             * Format: uuid
+             */
+            offer_id: string;
+            /** Rev No */
+            rev_no: number;
+        };
+        /** TemplateGroupInput */
+        TemplateGroupInput: {
+            /** Items */
+            items?: components["schemas"]["TemplateItemInput"][];
+            /** Name */
+            name: string;
+        };
+        /** TemplateGroupRead */
+        TemplateGroupRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["TemplateItemRead"][];
+            /** Name */
+            name: string;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** TemplateItemInput */
+        TemplateItemInput: {
+            /**
+             * Catalog Item Id
+             * Format: uuid
+             */
+            catalog_item_id: string;
+        };
+        /** TemplateItemRead */
+        TemplateItemRead: {
+            /**
+             * Catalog Item Id
+             * Format: uuid
+             */
+            catalog_item_id: string;
+            /** Description */
+            description: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Poz No */
+            poz_no: string;
+            /** Sort Order */
+            sort_order: number;
+            /** Unit */
+            unit: string;
+        };
+        /** TemplateListItem */
+        TemplateListItem: {
+            /** Description */
+            description: string | null;
+            /** Group Count */
+            group_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Item Count */
+            item_count: number;
+            /** Name */
+            name: string;
+            /** Overhead Pct */
+            overhead_pct: string | null;
+            /** Profit Pct */
+            profit_pct: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Usage Count */
+            usage_count: number;
+        };
+        /** TemplateListResponse */
+        TemplateListResponse: {
+            /** Items */
+            items: components["schemas"]["TemplateListItem"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * TemplateUpdate
+         * @description `PATCH /offers/templates/{id}`. `null` = oran/aciklama temizle (ad ve `is_default` NOT NULL:
+         *     acik `null` → 422). `is_default: true` = varsayilan yap (eskisi AYNI islemde duser).
+         */
+        TemplateUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Is Default */
+            is_default?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Overhead Pct */
+            overhead_pct?: number | string | null;
+            /** Profit Pct */
+            profit_pct?: number | string | null;
+        };
+        /**
          * TimelineMilestone
          * @description Kilometre tasi satiri (P11 spec §3): YALNIZ ad + tarih.
          *
@@ -27031,6 +27635,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkItemRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_catalog_endpoint_catalog_items_export_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                discipline_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyasi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
                 };
             };
             /** @description Yetkisiz işlem */
@@ -33362,6 +34012,414 @@ export interface operations {
             };
         };
     };
+    list_templates_endpoint_offers_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateListResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_template_endpoint_offers_templates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_template_from_offer_endpoint_offers_templates_from_offer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateFromOffer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_template_endpoint_offers_templates__template_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_endpoint_offers_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_template_endpoint_offers_templates__template_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_template_content_endpoint_offers_templates__template_id__content_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateContentReplace"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    copy_template_endpoint_offers_templates__template_id__copy_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TemplateCopy"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_default_template_endpoint_offers_templates__template_id__default_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_offer_endpoint_offers__offer_id__get: {
         parameters: {
             query?: never;
@@ -33472,6 +34530,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfferDetailRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    convert_offer_endpoint_offers__offer_id__convert_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConvertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConvertResponse"];
                 };
             };
             /** @description Yetkisiz işlem */
@@ -33613,6 +34720,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfferRevisionRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_revision_endpoint_offers__offer_id__revisions__rev_no__export_get: {
+        parameters: {
+            query?: {
+                /** @description `employer` (varsayilan): isveren ciktisi; `internal`: ic cikti. */
+                view?: components["schemas"]["ExportView"];
+            };
+            header?: never;
+            path: {
+                offer_id: string;
+                rev_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyasi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
                 };
             };
             /** @description Yetkisiz işlem */
@@ -41110,6 +42266,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FillOut"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fill_budget_from_contract_sites__site_id__earned_value_budget_fill_from_contract_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                site_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FillFromContractOut"];
                 };
             };
             /** @description Yetkisiz işlem */
