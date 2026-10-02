@@ -21,6 +21,14 @@ export interface OfferRec {
   preparedByUserId: string | null;
   /** Şablondan oluşturulduysa şablon kimliği; şablon silinince NULL, `copy_from`da MİRAS ALINMAZ (SO-23). */
   templateId: string | null;
+  /** TKL-F5.1 · dönüştürülmüşse yeni projenin kimliği (`offers.project_id`); `conversion_state` buradan TÜRER. */
+  projectId: string | null;
+  /** TKL-F5.1 · dönüştürme anı (`offers.converted_at`). */
+  convertedAt: string | null;
+  /** TKL-B6.8 · dönüştürenin kimliği (`offers.converted_by_user_id`); okumada ad `users`tan çözülür (silinmişse `null`). */
+  convertedByUserId: string | null;
+  /** TKL-B6.8 · oluşan projenin kısa künyesi (`OfferProjectRef`; `project_id` ile birlikte yazılır). */
+  project: { id: string; code: string; name: string; slug: string | null } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -214,6 +222,75 @@ export interface OfferCatalogEntry {
   refPrice: string | null;
 }
 
+// ------------------------------------------------------------------------- dönüştürme portu (TKL-F5.1)
+
+/** Dönüştürmenin ana sahte duruma yazacağı kalem (sözleşme kalemi); sıra = gövde sırası (T15). */
+export interface ConvertedItemSpec {
+  catalogItemId: string;
+  code: string;
+  description: string;
+  unit: string;
+  quantity: string;
+  unitPrice: string;
+}
+
+export interface ConvertedGroupSpec {
+  name: string;
+  items: ConvertedItemSpec[];
+}
+
+/** Doğrulanmış + normalize edilmiş dönüştürme isteği (yazma kararı port tarafında). */
+export interface ConvertedProjectSpec {
+  offerNo: string;
+  employerId: string;
+  employerName: string;
+  project: {
+    /** TKL-B6.8 · elle verilen proje kodu (strip); `null` = sunucu `PRJ-YYYY-NNN` üretir. */
+    code: string | null;
+    name: string;
+    city: string;
+    startDate: string;
+    endDate: string;
+    category: string | null;
+    parcel: string | null;
+    address: string | null;
+  };
+  contract: {
+    contractNo: string;
+    signatureDate: string;
+    /** Σ ROUND_HALF_UP(miktar × B.F., 0,01) ya da gövdedeki `amount` (kuruş ölçeğinde). */
+    amount: string;
+    vatPct: string;
+    advancePct: string;
+    retainagePct: string;
+    latePenaltyDaily: string | null;
+    hasPriceEscalation: boolean;
+    indexType: string | null;
+    baseIndexValue: string | null;
+  };
+  groups: ConvertedGroupSpec[];
+  /** `open_site` ise açılacak şantiye adı (yoksa proje adı); aksi `null`. Kalemler TAM miktarla dağıtılır (S-D2). */
+  site: { name: string } | null;
+}
+
+export interface ConvertedProjectResult {
+  projectId: string;
+  projectSlug: string | null;
+  projectCode: string;
+  siteId: string | null;
+}
+
+export interface ConvertPort {
+  /** Disiplin varlığı (`group_disciplines` değerleri; yoksa 404 "Disiplin bulunamadı"). */
+  disciplineExists: (disciplineId: string) => boolean;
+  /** Katalog kaleminin disiplini (karışık disiplinli grup uyarısı için); bilinmiyorsa `null`. */
+  disciplineOfCatalog: (catalogItemId: string) => string | null;
+  /** TKL-B6.8 · `projects.code` benzersiz: elle verilen kod başka projede var mı (409 "Bu proje kodu zaten kullanılıyor"). */
+  projectCodeExists: (code: string) => boolean;
+  /** Proje + sözleşme + kalemler (+ şantiye + tam dağıtım) yazar; kimlikleri döner. EV taslağı YAZILMAZ. */
+  createConvertedProject: (spec: ConvertedProjectSpec) => ConvertedProjectResult;
+}
+
 export interface OffersPort {
   method: string;
   path: string;
@@ -226,4 +303,6 @@ export interface OffersPort {
   /** Şirket geneli katalog son fiyatı (HK / SZL / TKL birleşik) — SO-6 önerisi buradan. */
   lastPrices: () => ReadonlyMap<string, { price: string }>;
   actor: MockUser;
+  /** TKL-F5.1 · dönüştürme yazma portu; yoksa `/offers/{id}/convert` bu harness'ta DESTEKLENMEZ (404). */
+  convert?: ConvertPort;
 }

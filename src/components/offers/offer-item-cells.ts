@@ -31,6 +31,8 @@ import {
 } from "@/lib/tr-decimal";
 import { formatMoneyTl } from "@/components/work-item-catalog/work-item-model";
 
+import { parseOverheadPct, parseProfitPct, type PctParse } from "./offer-form";
+
 export type OfferItem = OfferItemRead;
 export type ItemCellField = "quantity" | "unitMhr" | "costUnitPrice" | "overheadPct" | "profitPct" | "offerUnitPrice";
 
@@ -55,9 +57,6 @@ export type CellTone = "general" | "override" | "missing";
 const QUANTITY_LIMITS = OFFER_QUANTITY_LIMITS;
 const MHR_LIMITS = OFFER_MHR_LIMITS;
 const PRICE_LIMITS = OFFER_PRICE_LIMITS;
-const PCT_FRACTION = 2;
-const MAX_OVERHEAD_PCT = "100";
-const MAX_PROFIT_PCT = "999.99";
 
 export const MSG_CLEAR_OFFER_FIRST = "Önce teklif B.F.'yi temizleyin";
 
@@ -73,10 +72,6 @@ const LABEL: Readonly<Record<ItemCellField, string>> = {
 /** SO-24: dolu miktar boşaltılamaz (sunucu `quantity:null` 422); boş kalem boş kalırsa istek zaten uçmaz. */
 export const MSG_QUANTITY_NOT_CLEARABLE = "Miktar boşaltılamaz";
 export const MSG_COST_FIRST = "Önce maliyet girin";
-const MSG_PCT_INVALID = "Geçerli bir yüzde girin";
-const MSG_PCT_FRACTION = `En çok ${PCT_FRACTION} ondalık hane`;
-const MSG_OVERHEAD_RANGE = "0–100 arasında olmalı";
-const MSG_PROFIT_RANGE = "0–999,99 arasında olmalı";
 
 // ───────────────────────────────────────────────────────────────────────── gösterim
 
@@ -209,13 +204,9 @@ function parseBounded(
   return { ok: true, value: parsed.value };
 }
 
-function parsePct(text: string, max: string, rangeMessage: string): ParsedValue {
-  const parsed = parseQuantityInput(text);
-  if (parsed.kind === "ambiguous") return { ok: false, message: REF_PRICE_AMBIGUOUS_DOT };
-  if (parsed.kind === "invalid") return { ok: false, message: MSG_PCT_INVALID };
-  if (decimalDigitCounts(parsed.value).fraction > PCT_FRACTION) return { ok: false, message: MSG_PCT_FRACTION };
-  if (compareDecimalStrings(parsed.value, max) > 0) return { ok: false, message: rangeMessage };
-  return { ok: true, value: parsed.value };
+/** Oran ayrıştırıcıları `offer-form.ts`te TEK kaynak (T30); burada yalnız sonuç biçimi çevrilir. */
+function pctResult(parsed: PctParse): ParsedValue {
+  return "error" in parsed ? { ok: false, message: parsed.error } : { ok: true, value: parsed.value };
 }
 
 function sameNumber(a: string | null, b: string | null): boolean {
@@ -296,7 +287,7 @@ function commitCost(text: string, ctx: CellContext): CellCommit {
 
 function commitOverhead(text: string, ctx: CellContext): CellCommit {
   const { item } = ctx;
-  const parsed = text === "" ? null : parsePct(text, MAX_OVERHEAD_PCT, MSG_OVERHEAD_RANGE);
+  const parsed = text === "" ? null : pctResult(parseOverheadPct(text));
   // Genel değerin AYNISI yazılırsa kalemde null kalır (override'a çevrilmez).
   if (parsed?.ok === true && item.overhead_pct === null && sameNumber(parsed.value, ctx.revisionOverheadPct)) {
     return { kind: "noop" };
@@ -317,7 +308,7 @@ function commitProfit(text: string, ctx: CellContext): CellCommit {
       ? { kind: "noop" }
       : { kind: "patch", body: generalProfitResetBody() };
   }
-  const parsed = parsePct(text, MAX_PROFIT_PCT, MSG_PROFIT_RANGE);
+  const parsed = pctResult(parseProfitPct(text));
   if (!parsed.ok) return { kind: "error", message: parsed.message };
   if (!isLocked && sameNumber(parsed.value, item.profit_pct ?? ctx.revisionProfitPct)) return { kind: "noop" };
   return { kind: "patch", body: { profit_pct: parsed.value, offer_unit_price: null } };

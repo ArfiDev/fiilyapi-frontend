@@ -11,7 +11,7 @@ import { OffersFilterBar, type EmployerOption } from "./OffersFilterBar";
 import { OffersTable } from "./OffersTable";
 import { buildStatusCards } from "./offer-list-model";
 import { istanbulToday } from "./offer-status";
-import type { OfferListItem, OfferListResponse, OfferStatus } from "./offer-types";
+import type { OfferConversionFilter, OfferListItem, OfferListResponse, OfferStatus } from "./offer-types";
 import "./offers.css";
 
 export type OffersBodyState =
@@ -30,6 +30,11 @@ export interface OffersListViewProps {
   onDateFromChange: (isoDate: string) => void;
   onDateToChange: (isoDate: string) => void;
   onStatusChange: (status: OfferStatus | null) => void;
+  /** TKL-F5.5 · ÜS-F5-6: etkin dönüştürme süzgeci (`conversion=won_not_converted`); yok = süzgeçsiz. */
+  conversion?: OfferConversionFilter | null;
+  onConversionChange?: (conversion: OfferConversionFilter | null) => void;
+  /** SO-42: `projects ≥ admin` ∧ yazma yetkisi → satırda "Dönüştür →" bağlantısı. */
+  canConvert?: boolean;
   onEmployerChange: (employerId: string | null) => void;
   onSearchTextChange: (value: string) => void;
   onClear: () => void;
@@ -52,7 +57,7 @@ export interface OffersListViewProps {
 export function OffersListView(props: OffersListViewProps) {
   const { body, status, employerId, searchText } = props;
   const hasFilter =
-    status !== null || employerId !== null || searchText.trim() !== "" || props.dateFrom !== "" || props.dateTo !== "";
+    status !== null || props.conversion != null || employerId !== null || searchText.trim() !== "" || props.dateFrom !== "" || props.dateTo !== "";
   const data = body.kind === "ready" ? body.data : null;
   // Sekme sayacı TÜM teklifleri söyler: işveren/arama/tarih süzgeci `summary`yi daraltır.
   const isUnfilteredByParty = employerId === null && searchText.trim() === "" && props.dateFrom === "" && props.dateTo === "";
@@ -99,6 +104,13 @@ export function OffersListView(props: OffersListViewProps) {
           cards={buildStatusCards(data.summary)}
           activeStatus={status}
           onToggle={(clicked) => props.onStatusChange(status === clicked ? null : clicked)}
+          wonNotConvertedCount={data.summary.won_not_converted_count}
+          isConversionActive={props.conversion === "won_not_converted"}
+          onToggleConversion={
+            props.onConversionChange === undefined
+              ? undefined
+              : () => props.onConversionChange?.(props.conversion === "won_not_converted" ? null : "won_not_converted")
+          }
         />
       )}
 
@@ -148,6 +160,7 @@ function OffersBody(props: OffersListViewProps & { hasFilter: boolean }) {
         items={items}
         total={total}
         canWrite={props.canWrite}
+        canConvert={props.canConvert}
         today={istanbulToday(props.now)}
         busyOfferId={props.busyOfferId}
         onNewRevision={props.onNewRevision}

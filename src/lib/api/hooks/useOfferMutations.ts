@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 
 import { backendClient } from "@/lib/api/client";
-import { unwrap } from "@/lib/api/unwrap";
+import { BackendError, unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import type { DeepScale } from "@/lib/api/scale";
 
@@ -19,6 +19,9 @@ import {
   offerRevisionKey,
   offerTemplatesKey,
 } from "./offer-query-keys";
+import { CONTRACTS_QUERY_KEY } from "./useContracts";
+import { PROJECT_TIMELINE_QUERY_KEY } from "./useProjectTimeline";
+import { PROJECTS_QUERY_KEY } from "./useProjects";
 import type {
   OfferDetailRead,
   OfferGroupBasicRead,
@@ -41,11 +44,15 @@ import type {
 //                          revizyonların `is_latest`i değişir) + listeler
 //   · sil ................ listeler + silinen teklifin sorguları ÇIKARILIR
 //   · ayarlar ............ yalnız `offer-settings`
+//   · dönüştür (TKL-F5.1) . `["offer", id]` ÖN EKİ + listeler + `projects` + `project-timeline` + `contracts`
+//                          + `catalog-items`; 409'da yalnız ön ek + listeler. Yanıt parasız → `setQueryData` YOK.
 // `setQueryData` YOK: kalem/grup yanıtları yalnız kendini döndürür, toplamlar revizyon sorgusunun
 // yeniden okunmasıyla gelir. Başka tekliflerin sorguları HİÇBİR yazmada tazelenmez.
 //
 // `onSuccess` söz DÖNDÜRÜR: `mutateAsync` tazeleme settle olana kadar bekler (art arda iki hızlı
 // yazma bayat revizyondan sıra/numara hesaplamasın — `useCreateEmployerContractGroup` emsali).
+
+const HTTP_CONFLICT = 409;
 
 type Schemas = components["schemas"];
 
@@ -59,6 +66,10 @@ export type OfferItemsBulkBody = DeepScale<Schemas["OfferItemsBulkCreate"]>;
 export type OfferItemUpdateBody = DeepScale<Schemas["OfferItemUpdate"]>;
 export type OfferLoseBody = DeepScale<Schemas["OfferLoseRequest"]>;
 export type OfferSettingsUpdateBody = DeepScale<Schemas["OfferSettingsUpdate"]>;
+
+/** TKL-F5.1 · `POST /offers/{id}/convert` gövdesi/yanıtı (yanıt PARASIZ: kapsam maskesi yok, §0). */
+export type OfferConvertBody = DeepScale<Schemas["ConvertRequest"]>;
+export type OfferConvertResponse = Schemas["ConvertResponse"];
 
 export type OfferTransitionAction = "send" | "win" | "lose" | "withdraw";
 
@@ -352,5 +363,48 @@ export function useUpdateOfferSettings(): Mutation<OfferSettingsRead, OfferSetti
   return useMutation({
     mutationFn: async (body) => unwrap(await backendClient.PUT("/offers/settings", { body })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [OFFER_SETTINGS_QUERY_KEY] }),
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────── dönüştürme
+
+/** 409 (zaten dönüştürüldü / won değil): sunucudaki teklif durumu istemcinin bildiğinden FARKLI. */
+function isConflict(error: unknown): boolean {
+  return error instanceof BackendError && error.status === HTTP_CONFLICT;
+}
+
+/** Teklif durumu değişti: detay + TÜM revizyon okumaları (`["offer", id]` ön eki) + listeler (`won_not_converted_count`). */
+function invalidateOfferState(queryClient: QueryClient, offerId: string): Promise<unknown> {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: offerDetailKey(offerId) }),
+    invalidateLists(queryClient),
+  ]);
+}
+
+/**
+ * `POST /offers/{id}/convert` — teklif → proje + sözleşme (+ şantiye). TEK işlem; yanıt PARASIZ
+ * (`setQueryData` YOK, hata unwrap ile olduğu gibi). Başarı: teklif durumu + proje/zaman çizelgesi/
+ * sözleşme listeleri + katalog (SO-40: son fiyat SZL'ye kayar). 409'da yalnız teklif durumu tazelenir
+ * (başkası dönüştürmüş olabilir). Eşzamanlı tek uçuş ekranın işidir (`isPending` kilidi).
+ */
+export function useConvertOffer(offerId: string): Mutation<OfferConvertResponse, OfferConvertBody> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body) =>
+      unwrap(
+        await backendClient.POST("/offers/{offer_id}/convert", {
+          params: { path: { offer_id: offerId } },
+          body,
+        }),
+      ),
+    onSuccess: () =>
+      Promise.all([
+        invalidateOfferState(queryClient, offerId),
+        queryClient.invalidateQueries({ queryKey: [PROJECTS_QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [PROJECT_TIMELINE_QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [CONTRACTS_QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] }),
+      ]),
+    onError: (error) => (isConflict(error) ? invalidateOfferState(queryClient, offerId) : undefined),
   });
 }

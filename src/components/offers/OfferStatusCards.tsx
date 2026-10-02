@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import { formatCompactCurrency } from "@/lib/format";
 import { cx } from "@/lib/cx";
 
@@ -10,17 +12,29 @@ interface OfferStatusCardsProps {
   /** Etkin durum süzgeci; karta TEKRAR tıklamak süzgeci kapatır (TL:233-234). */
   activeStatus: OfferStatus | null;
   onToggle: (status: OfferStatus) => void;
+  /** TKL-F5.5 · ÜS-F5-6: kazanılmış ama projeye dönüştürülmemiş teklif sayısı (`summary.won_not_converted_count`). */
+  wonNotConvertedCount?: number;
+  /** `conversion=won_not_converted` süzgeci açık mı? */
+  isConversionActive?: boolean;
+  onToggleConversion?: () => void;
 }
 
 /** TL:92-100 — durum kartları; tıklama = durum süzgeci aç/kapa. */
-export function OfferStatusCards({ cards, activeStatus, onToggle }: OfferStatusCardsProps) {
+export function OfferStatusCards({
+  cards,
+  activeStatus,
+  onToggle,
+  wonNotConvertedCount = 0,
+  isConversionActive = false,
+  onToggleConversion,
+}: OfferStatusCardsProps) {
   return (
     <div className="offers-cards" role="group" aria-label="Durum özeti">
       {cards.map((card) => {
         const isActive = activeStatus === card.status;
-        return (
+        const hasConversionEntry = card.status === "won" && wonNotConvertedCount > 0 && onToggleConversion !== undefined;
+        const button = (
           <button
-            key={card.status}
             type="button"
             className={cx("offers-card", isActive && "offers-card--active")}
             aria-pressed={isActive}
@@ -43,6 +57,21 @@ export function OfferStatusCards({ cards, activeStatus, onToggle }: OfferStatusC
             </span>
             <span className="offers-card__foot">{card.foot}</span>
           </button>
+        );
+        if (!hasConversionEntry) return <Fragment key={card.status}>{button}</Fragment>;
+        return (
+          <div key={card.status} className="offers-card-slot">
+            {button}
+            <button
+              type="button"
+              className={cx("offers-card__convert", isConversionActive && "offers-card__convert--active")}
+              aria-pressed={isConversionActive}
+              onClick={onToggleConversion}
+              data-testid="offers-card-convert"
+            >
+              {wonNotConvertedCount} dönüştürülmedi
+            </button>
+          </div>
         );
       })}
     </div>

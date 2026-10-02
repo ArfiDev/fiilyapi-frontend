@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -28,7 +29,8 @@ import { OfferTotalsCard } from "./OfferTotalsCard";
 import { ReadOnlyRevisionBanner } from "./ReadOnlyRevisionBanner";
 import { RevisionHistory } from "./RevisionHistory";
 import { RevisionPicker } from "./RevisionPicker";
-import { OFFER_ACTION_REASONS, offerActionGate } from "./offer-actions";
+import { OFFER_ACTION_REASONS, offerActionGate, offerConvertGate } from "./offer-actions";
+import { offerProjectLink } from "./offer-project-link";
 import {
   OFFER_FORM_FIELDS,
   OFFER_INFO_FIELD_SET,
@@ -41,7 +43,7 @@ import {
   type OfferDetailFormValues,
 } from "./offer-detail-form";
 import { validUntilIso } from "./offer-form";
-import { useOfferDetailActions } from "./useOfferDetailActions";
+import { OFFER_WON_TOAST, useOfferDetailActions } from "./useOfferDetailActions";
 import "./offers.css";
 import "./offer-create.css";
 import "./offer-detail.css";
@@ -72,6 +74,8 @@ interface OfferDetailViewProps {
   revision: OfferRevisionRead;
   canWrite: boolean;
   canAddEmployer: boolean;
+  /** TKL-F5.5 · SO-42: `projects ≥ admin` (dönüştürme ekseni). */
+  canAdminProjects: boolean;
   /** Salt okunur şerit metni (yazamayan kullanıcı); boş = şerit yok. */
   readOnlyText: string;
   renderItems?: (context: OfferItemsSlotContext) => ReactNode;
@@ -161,6 +165,14 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     unquantifiedCount: revision.totals.unquantified_count,
   });
 
+  const convert = offerConvertGate({
+    status: detail.status,
+    conversionState: detail.conversion_state,
+    canWrite,
+    canAdminProjects: props.canAdminProjects,
+  });
+  const isConverted = detail.conversion_state === "converted";
+
   const employers = useMemo(() => {
     const listed = (employersQuery.data?.items ?? []).map((employer) => ({ id: employer.id, name: employer.name }));
     const extras = [
@@ -240,7 +252,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
 
   return (
     <div className="offer-detail">
-      <OfferDetailHeader offerNo={detail.offer_no} title={detail.title} status={revision.status}>
+      <OfferDetailHeader offerNo={detail.offer_no} title={detail.title} status={revision.status} projectLink={isConverted ? offerProjectLink(detail) : null}>
         <RevisionPicker
           revisions={detail.revisions}
           currentRevNo={revNo}
@@ -259,6 +271,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
         offerId={offerId}
         revNo={revNo}
         gate={gate}
+        convert={convert}
         isBusy={actions.isBusy || isSaving || isPreparingSend}
         isSaving={isSaving}
         onSave={() => void save()}
@@ -275,9 +288,20 @@ export function OfferDetailView(props: OfferDetailViewProps) {
           <span>{props.readOnlyText}</span>
         </div>
       )}
+      {isConverted && (
+        <div role="note" className="offers-readonly">
+          <LockIcon className="offers-readonly__icon" />
+          <span>Teklif projeye dönüştürüldü · salt okunur arşiv</span>
+        </div>
+      )}
       {props.toast && (
         <div className="offers-toast" role="status">
           {props.toast}
+          {props.toast === OFFER_WON_TOAST && convert.visible && convert.enabled && (
+            <Link href={routes.offers.convert({ offerId })} className="offers-toast__link">
+              Dönüştür →
+            </Link>
+          )}
         </div>
       )}
       {modal === null && (saveError ?? actions.error) && (

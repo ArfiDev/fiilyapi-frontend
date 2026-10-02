@@ -19,10 +19,12 @@ import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { routes } from "@/lib/routes";
 
 import { OffersListView, type OffersBodyState } from "./OffersListView";
-import type { OfferListItem, OfferStatus } from "./offer-types";
+import type { OfferConversionFilter, OfferListItem, OfferStatus } from "./offer-types";
 
 /** T25: teklif YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
 const WRITE_LEVEL = "full";
+/** TKL-F5.5 · SO-42: dönüştürme `projects:admin` ister. */
+const PROJECTS_ADMIN_LEVEL = "admin";
 const SEARCH_DEBOUNCE_MS = 300;
 /** Backend `limit` tavanı (1..200) — liste kırpılırsa Σ basılmaz. */
 const OFFERS_LIST_LIMIT = 200;
@@ -52,8 +54,11 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
   const router = useRouter();
   const scope = useDisciplineScope();
   const canWrite = hasAtLeast(level, WRITE_LEVEL) && !scope.isRestricted;
+  const projects = useModulePermission("projects");
+  const canConvert = canWrite && hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL);
 
   const [status, setStatus] = useState<OfferStatus | null>(null);
+  const [conversion, setConversion] = useState<OfferConversionFilter | null>(null);
   const [employerId, setEmployerId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -62,6 +67,7 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
 
   const list = useOffers({
     ...(status ? { status } : {}),
+    ...(conversion ? { conversion } : {}),
     ...(employerId ? { employerId } : {}),
     ...(q ? { q } : {}),
     ...(dateFrom ? { dateFrom } : {}),
@@ -129,6 +135,7 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
 
   function clearFilters() {
     setStatus(null);
+    setConversion(null);
     setEmployerId(null);
     setSearchText("");
     setDateFrom("");
@@ -149,6 +156,9 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onStatusChange={setStatus}
+        conversion={conversion}
+        onConversionChange={setConversion}
+        canConvert={canConvert}
         onEmployerChange={setEmployerId}
         onSearchTextChange={setSearchText}
         onClear={clearFilters}

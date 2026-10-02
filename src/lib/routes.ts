@@ -537,6 +537,8 @@ export const routes = {
     // `rev`/`kind` opsiyonel: kırıntı düğümü (`route-tree.ts`) çıplak yazdırma adresini üretir; ekranlar ikisini de verir.
     print: (p: { offerId: RouteId; rev?: number; kind?: OfferPrintKind }) =>
       `/teklif-hazirlama/${seg(p.offerId)}/yazdir${qs({ [OFFER_REV_PARAM]: p.rev, [OFFER_PRINT_KIND_PARAM]: p.kind })}`,
+    /** TKL-F5 · "Proje ve Sözleşmeye Dönüştür". `?rev=` YOK: uç her zaman SON revizyonu esas alır (SO-36). */
+    convert: (p: { offerId: RouteId }) => `/teklif-hazirlama/${seg(p.offerId)}/donustur`,
   },
 
   stock: () => "/stok",

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { nextSortOrder } from "@/components/contract-item-form/build-body";
 import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
+import { maxCharsMessage } from "@/components/offer-convert/convert-limits";
 import { MSG_GROUP_NAME_TAKEN, isGroupNameTaken, nextGroupName } from "@/components/offers/offer-group-names";
 import { confirmDiscardIfDirty, Modal } from "@/components/settings/Modal";
 import { ListIcon } from "@/components/ui/icons";
@@ -34,6 +35,7 @@ import {
   type PickerRow,
   type ResolvedEntry,
 } from "./picker-model";
+import type { PickerRules } from "./picker-rules";
 import type { PickerTarget } from "./picker-target";
 import { WorkItemPickerFooter } from "./WorkItemPickerFooter";
 import { WorkItemPickerTable, type PickerEmptyReason } from "./WorkItemPickerTable";
@@ -42,7 +44,7 @@ import "./work-item-picker.css";
 
 const GROUP_NAME_MESSAGE = "Yeni grup için ad girin";
 /** GECE KURALI: `selectOnly` hedef grubu (yeniden adlandırma/silme) ortadan kalktı — en kısa metin. */
-const TARGET_GROUP_GONE_MESSAGE = "Seçili grup artık yok";
+export const TARGET_GROUP_GONE_MESSAGE = "Seçili grup artık yok";
 const NO_FILTER = "";
 /** `selectOnly`: hedef grup kayıp → seçim boş (gönderim kilitli). */
 const NO_GROUP_SELECTED = "";
@@ -117,9 +119,9 @@ export function CatalogPickerModal<TBody>({
   const [hideInContract, setHideInContract] = useState(true);
   const [inputs, setInputs] = useState<PickerInputs>(() => new Map());
   const [groupChoice, setGroupChoice] = useState(() => defaultGroupId(groups));
-  // `selectOnly` (şablon): yeni grup adı "Yeni grup"/"Yeni grup 2"… ile DOLU başlar (offer-group-names); priced: boş.
-  const isSelectOnly = target.entryMode === "selectOnly";
-  const [defaultNewGroupName] = useState(() => (isSelectOnly ? nextGroupName(groups) : ""));
+  // YEREL gruplu hedefler (şablon, dönüştürme): yeni grup adı "Yeni grup"/"Yeni grup 2"… ile DOLU başlar (offer-group-names);
+  // sözleşme/teklif: boş (grup sunucuda açılır).
+  const [defaultNewGroupName] = useState(() => (target.usesLocalGroups ? nextGroupName(groups) : ""));
   const [newGroupName, setNewGroupName] = useState(defaultNewGroupName);
 
   const disciplines = useMemo(() => disciplinesQuery.data ?? [], [disciplinesQuery.data]);
@@ -137,9 +139,10 @@ export function CatalogPickerModal<TBody>({
   // Hedef grup TÜRETİLMİŞ (ORTA-2): seçili grup `groups`tan düşmüşse varsayılana döner; gösterim ve gövde aynı değer.
   // Açılmış grup varken "+ Yeni Grup" o gruba çözülür (ikinci grup açılmaz).
   // `selectOnly` (şablon): seçilen grup artık yoksa SESSİZ geri düşme YOK (kalemler yanlış gruba yazılırdı) — seçim
-  // temizlenir, gönderim kilitlenir. `priced` hedeflerde F2.4.1 geri düşmesi birebir kalır.
+  // temizlenir, gönderim kilitlenir. YEREL gruplu hedefler (şablon + dönüştürme, F5.4b) aynı kuralı izler; sözleşme/teklifte
+  // (sunucu grubu) F2.4.1 geri düşmesi birebir kalır.
   const isTargetGone =
-    isSelectOnly && groupChoice !== NEW_GROUP_OPTION && !groups.some((group) => group.id === groupChoice);
+    target.usesLocalGroups && groupChoice !== NEW_GROUP_OPTION && !groups.some((group) => group.id === groupChoice);
   const targetGroup = isTargetGone ? NO_GROUP_SELECTED : resolveTargetGroup(groupChoice, groups, createdGroup);
   const isNewGroup = targetGroup === NEW_GROUP_OPTION;
   const groupOptions = [
@@ -158,8 +161,9 @@ export function CatalogPickerModal<TBody>({
 
   const { entries, problems, selectedCount } = resolution;
   const isGroupNameMissing = isNewGroup && newGroupName.trim() === "";
-  // Grup adı şablonda tekildir (SO-30 kusuru çoğalmasın): yalnız `selectOnly`; teklif/sözleşme davranışı değişmez.
-  const isGroupNameDuplicate = isSelectOnly && isNewGroup && isGroupNameTaken(groups, newGroupName);
+  // Grup adı yerel gruplu hedefte tekildir (SO-30 kusuru çoğalmasın): şablon + dönüştürme; teklif/sözleşme davranışı değişmez.
+  const isGroupNameTooLong = isNewGroup && newGroupName.trim().length > target.groupNameMax;
+  const isGroupNameDuplicate = target.usesLocalGroups && isNewGroup && isGroupNameTaken(groups, newGroupName);
   const limit = selectionLimit(target, groups);
   const bandLines = [
     ...(submitError === null ? [] : [submitError]),
@@ -172,6 +176,7 @@ export function CatalogPickerModal<TBody>({
           `${problems[0].row.item.poz_no} ${problems[0].row.item.name} — ${problems[0].message}`,
         ]),
     ...(isGroupNameMissing && selectedCount > 0 ? [GROUP_NAME_MESSAGE] : []),
+    ...(isGroupNameTooLong && selectedCount > 0 ? [maxCharsMessage(target.groupNameMax)] : []),
     ...(isGroupNameDuplicate && selectedCount > 0 ? [MSG_GROUP_NAME_TAKEN] : []),
   ];
   const canSubmit =
@@ -182,6 +187,7 @@ export function CatalogPickerModal<TBody>({
     problems.length === 0 &&
     !isTargetGone &&
     !isGroupNameMissing &&
+    !isGroupNameTooLong &&
     !isGroupNameDuplicate;
 
   function updateInputs(change: (current: PickerInputs) => PickerInputs) {
@@ -216,7 +222,7 @@ export function CatalogPickerModal<TBody>({
   }
 
   const subtitle = projectName === undefined ? target.subtitle : `${projectName} · ${target.subtitle}`;
-  const totalText = totalTextOf(entries);
+  const totalText = totalTextOf(entries, target);
 
   return (
     <Modal
@@ -262,6 +268,7 @@ export function CatalogPickerModal<TBody>({
         canCreateGroup={createdGroup === null}
         onGroup={setGroupChoice}
         newGroupName={newGroupName}
+        groupNameMax={target.groupNameMax}
         onNewGroupName={setNewGroupName}
         selectedCount={selectedCount}
         visibleCount={visible.length}
@@ -303,9 +310,9 @@ export function CatalogPickerModal<TBody>({
 const UNPRICED_SUFFIX = "fiyatsız";
 
 /** "₺1.234,56" ya da "—"; fiyatsız satır varsa "· N fiyatsız" eklenir (teklif: fiyatsız kalem, T31). */
-function totalTextOf(entries: readonly ResolvedEntry[]): string {
+function totalTextOf(entries: readonly ResolvedEntry[], rules: PickerRules): string {
   const unpriced = unpricedCount(entries);
-  const base = entries.length - unpriced > 0 ? `₺${formatPrice(totalAmount(entries))}` : EMPTY_CELL;
+  const base = entries.length - unpriced > 0 ? `₺${formatPrice(totalAmount(entries, rules))}` : EMPTY_CELL;
   return unpriced > 0 ? `${base} · ${unpriced} ${UNPRICED_SUFFIX}` : base;
 }
 

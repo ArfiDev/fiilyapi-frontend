@@ -49,6 +49,8 @@ export const OFFER_ACTION_REASONS = {
   itemsSaving: "Kalem kaydediliyor",
   /** Backend `send` 422 metniyle AYNI (`offer_service.UNQUANTIFIED_ITEMS`). */
   unquantified: "Miktarı girilmemiş kalem var",
+  /** TKL-F5.5 · ÜS-F5-3: dönüştürme `projects:admin` ister (seed'de yalnız system_admin). */
+  convertNeedsProjectsAdmin: "Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)",
 } as const;
 
 const R = OFFER_ACTION_REASONS;
@@ -167,4 +169,30 @@ export function visibleActionReasons(gate: Record<OfferAction, OfferActionVerdic
     if (!reasons.includes(verdict.reason)) reasons.push(verdict.reason);
   }
   return reasons;
+}
+
+export type OfferConversionState = "converted" | "won_not_converted";
+
+export type OfferConvertVerdict = { visible: false } | { visible: true; enabled: true } | { visible: true; enabled: false; reason: string };
+
+export interface OfferConvertInput {
+  /** SON revizyonun durumu (teklifin durumu). */
+  status: OfferStatus;
+  /** Sunucunun `conversion_state`i (`null`/yok = kazanılmamış). */
+  conversionState: OfferConversionState | null | undefined;
+  /** `contracts:full` ∧ disiplin kısıtsız (mevcut yazma yetkisi). */
+  canWrite: boolean;
+  /** `projects ≥ admin` (SO-42). */
+  canAdminProjects: boolean;
+}
+
+/**
+ * TKL-F5.5 · "Projeye Dönüştür" ekseni (plan §4, §6). Eylem tablosundan AYRI: `isLatest`e bakmaz (uç her zaman
+ * son revizyonu dönüştürür; eski revizyon görüntülenirken de açık) ve kapalı eylemlerin tablosunu etkilemez.
+ */
+export function offerConvertGate(input: OfferConvertInput): OfferConvertVerdict {
+  if (input.status !== "won" || input.conversionState !== "won_not_converted") return { visible: false };
+  if (!input.canWrite) return { visible: true, enabled: false, reason: R.readOnlyUser };
+  if (!input.canAdminProjects) return { visible: true, enabled: false, reason: R.convertNeedsProjectsAdmin };
+  return { visible: true, enabled: true };
 }

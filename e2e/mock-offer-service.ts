@@ -213,6 +213,10 @@ export function createOffer(state: OffersState, port: OffersPort, body: Record<s
     scopeSummary: sourceOffer === null ? (given("scope_summary") ? text(body.scope_summary) : null) : explicit("scope_summary", sourceOffer.scopeSummary, text),
     preparedByUserId: port.actor.id,
     templateId: sources.template?.id ?? null, // yalnız şablondan; kopyada MİRAS ALINMAZ (SO-23)
+    projectId: null,
+    convertedAt: null,
+    convertedByUserId: null,
+    project: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -597,6 +601,10 @@ export function parseListFilters(query: URLSearchParams): OfferListFilters {
     const quoted = OFFER_STATUSES.map((entry) => `'${entry}'`);
     throw queryViolation("status", "enum", `Input should be ${quoted.slice(0, -1).join(", ")} or ${quoted[quoted.length - 1]}`, status);
   }
+  const conversion = query.get("conversion");
+  if (conversion !== null && conversion !== "converted" && conversion !== "won_not_converted") {
+    throw queryViolation("conversion", "literal_error", "Input should be 'converted' or 'won_not_converted'", conversion);
+  }
   const q = query.get("q");
   if (q !== null && q.length > 200) throw queryViolation("q", "string_too_long", "String should have at most 200 characters", q);
   const employerId = query.get("employer_id");
@@ -619,6 +627,7 @@ export function parseListFilters(query: URLSearchParams): OfferListFilters {
   if (dateFrom !== null && dateTo !== null && dateFrom > dateTo) throw fail(422, OFFER_MESSAGES.dateRange);
   return {
     status: status as OfferStatus | null,
+    conversion: conversion as OfferListFilters["conversion"],
     q,
     employerId: employerId === null ? null : employerId.toLowerCase(),
     dateFrom,

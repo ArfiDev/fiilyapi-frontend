@@ -303,3 +303,11 @@
   width: 13px;
   height: 13px;
 }
+
+/* TKL-F5.5 · dönüştürülmüş teklif: başlıkta proje bağlantısı */
+.offer-detail__project {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-success);
+  text-decoration: none;
+}

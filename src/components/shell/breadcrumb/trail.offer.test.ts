@@ -41,3 +41,16 @@ describe("kırıntı — Teklif Yazdır (TKL-F3.7)", () => {
     expect(crumbs[1]?.href).toBe("/teklif-hazirlama/sablonlar");
   });
 });
+
+describe("kırıntı — Teklif Dönüştür (TKL-F5.1)", () => {
+  it("/teklif-hazirlama/{id}/donustur → Teklif Hazırlama › {teklif no} › Proje ve Sözleşmeye Dönüştür (TDN:65); teklif no bağlantısı detaya gider", () => {
+    const crumbs = buildTrail("/teklif-hazirlama/offer-14/donustur", { offer: "TKL-2026-0014" });
+    expect(crumbs.map((crumb) => crumb.label)).toEqual([
+      "Teklif Hazırlama",
+      "TKL-2026-0014",
+      "Proje ve Sözleşmeye Dönüştür",
+    ]);
+    expect(crumbs[1]?.href).toBe("/teklif-hazirlama/offer-14");
+    expect(crumbs[2]?.href).toBe("/teklif-hazirlama/offer-14/donustur");
+  });
+});

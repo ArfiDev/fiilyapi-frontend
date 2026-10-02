@@ -43,6 +43,7 @@ export function useOffers(filter: OfferListFilter = {}): UseQueryResult<OfferLis
           params: {
             query: {
               ...(filter.status ? { status: filter.status } : {}),
+              ...(filter.conversion ? { conversion: filter.conversion } : {}),
               ...(filter.q ? { q: filter.q } : {}),
               ...(filter.employerId ? { employer_id: filter.employerId } : {}),
               ...(filter.dateFrom ? { offer_date_from: filter.dateFrom } : {}),

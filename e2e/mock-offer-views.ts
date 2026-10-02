@@ -43,6 +43,12 @@ export const itemInput = (item: ItemRec): ItemInput => ({
   offer_unit_price: item.offerUnitPrice,
 });
 
+/** Backend `offer_views.conversion_state` (T14): dönüştürülmüşse `converted`; değilse son revizyon `won` ise `won_not_converted`. */
+export function conversionState(offer: OfferRec, lastRevision: RevisionRec): S["OfferDetailRead"]["conversion_state"] {
+  if (offer.projectId !== null) return "converted";
+  return lastRevision.status === "won" ? "won_not_converted" : null;
+}
+
 export function validUntil(revision: RevisionRec): string {
   return addDays(revision.offerDate, revision.validityDays);
 }
@@ -167,14 +173,14 @@ export function readRevision(state: OffersState, offer: OfferRec, revision: Revi
 // ----------------------------------------------------------------------------------- detay
 
 type HistoryKind = S["OfferHistoryEventRead"]["kind"];
-const KIND_RANK: Record<HistoryKind, number> = { opened: 0, sent: 1, won: 2, lost: 2, withdrawn: 2 };
+const KIND_RANK: Record<HistoryKind, number> = { opened: 0, sent: 1, won: 2, lost: 2, withdrawn: 2, converted: 3 };
 
 function userName(state: OffersState, id: string | null): string | null {
   if (id === null) return null;
   return state.users.find((user) => user.id === id)?.fullName ?? null;
 }
 
-function historyOf(state: OffersState, revisions: readonly RevisionRec[]): S["OfferHistoryEventRead"][] {
+function historyOf(state: OffersState, offer: OfferRec, revisions: readonly RevisionRec[]): S["OfferHistoryEventRead"][] {
   const events: S["OfferHistoryEventRead"][] = [];
   for (const rev of revisions) {
     const stamps: Array<[HistoryKind, string | null, string | null]> = [
@@ -189,9 +195,24 @@ function historyOf(state: OffersState, revisions: readonly RevisionRec[]): S["Of
       events.push({ at, kind, rev_no: rev.revNo, user_id: user, user_name: userName(state, user) });
     }
   }
+  if (offer.convertedAt !== null) {
+    // Backend `_history`: dönüştürülen revizyon = kazanılmış revizyonların en büyüğü (yoksa sonuncu); alanlar `at/kind/rev_no/user_id/user_name` (tutar YOK).
+    const won = revisions.filter((rev) => rev.status === "won").map((rev) => rev.revNo);
+    const revNo = won.length > 0 ? Math.max(...won) : (revisions[revisions.length - 1] as RevisionRec).revNo;
+    events.push({ at: offer.convertedAt, kind: "converted", rev_no: revNo, user_id: offer.convertedByUserId, user_name: userName(state, offer.convertedByUserId) });
+  }
   return events.sort(
     (a, b) => cmpText(a.at, b.at) || a.rev_no - b.rev_no || KIND_RANK[a.kind] - KIND_RANK[b.kind],
   );
+}
+
+/** Backend `_conversions`: proje künyesi + dönüştürme anı + dönüştüren adı (kullanıcı silinmişse `null`); dönüşmemişse üçü de `null`. */
+function conversionRead(
+  state: OffersState,
+  offer: OfferRec,
+): Pick<S["OfferDetailRead"], "project" | "converted_at" | "converted_by_name"> {
+  if (offer.projectId === null || offer.project === null) return { project: null, converted_at: null, converted_by_name: null };
+  return { project: { ...offer.project }, converted_at: offer.convertedAt, converted_by_name: userName(state, offer.convertedByUserId) };
 }
 
 export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDetailRead"] {
@@ -209,8 +230,9 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
     status: last.status,
     latest_rev_no: last.revNo,
     template_id: offer.templateId,
-    conversion_state: null,
-    project_id: null,
+    conversion_state: conversionState(offer, last),
+    project_id: offer.projectId,
+    ...conversionRead(state, offer),
     created_at: offer.createdAt,
     updated_at: offer.updatedAt,
     revisions: revisions.map((rev) => {
@@ -234,7 +256,7 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
         unquantified_count: result.unquantified_count,
       };
     }),
-    history: historyOf(state, revisions),
+    history: historyOf(state, offer, revisions),
   };
 }
 
@@ -242,6 +264,8 @@ export function readOfferDetail(state: OffersState, offer: OfferRec): S["OfferDe
 
 export interface OfferListFilters {
   status: OfferStatus | null;
+  /** TKL-B6.8 · `converted` (proje var) | `won_not_converted` (son revizyon won + proje yok); `status` gibi yalnız LİSTEYİ daraltır. */
+  conversion: S["OfferDetailRead"]["conversion_state"];
   q: string | null;
   employerId: string | null;
   dateFrom: string | null;
@@ -286,7 +310,11 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
   ).length;
   const won = counts.get("won") ?? 0;
   const decided = won + (counts.get("lost") ?? 0);
-  const shown = entries.filter(({ revision }) => filters.status === null || revision.status === filters.status);
+  const shown = entries.filter(
+    ({ offer, revision }) =>
+      (filters.status === null || revision.status === filters.status) &&
+      (filters.conversion === null || conversionState(offer, revision) === filters.conversion),
+  );
   return {
     items: shown.slice(filters.offset, filters.offset + filters.limit).map(({ offer, revision, result }) => ({
       id: offer.id,
@@ -303,8 +331,9 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
       gross: result.customer.gross,
       unpriced_count: result.unpriced_count,
       unquantified_count: result.unquantified_count,
-      conversion_state: null,
-      project_id: null,
+      conversion_state: conversionState(offer, revision),
+      project_id: offer.projectId,
+      ...conversionRead(state, offer),
       created_at: offer.createdAt,
     })),
     total: shown.length,
@@ -317,7 +346,7 @@ export function listOffers(state: OffersState, filters: OfferListFilters): S["Of
         net: nets.get(status) ?? "0",
       })),
       expired_count: expired,
-      won_not_converted_count: 0,
+      won_not_converted_count: entries.filter(({ offer, revision }) => conversionState(offer, revision) === "won_not_converted").length,
       win_rate: decided === 0 ? null : percentOfIntegers(won, decided),
     },
   };

@@ -240,7 +240,7 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
   // yazılmış bir rota listesi DEĞİLDİR. Böylece `routes.ts`e uydurma bir yol
   // (F-TH'deki "/hakedisler/isveren" vakası) girerse burada patlar.
   const tree = buildRouteTree();
-  const SENTINEL = new Set([P, S, SEC, "c-2", "i-7", "e-3", "r-5"]);
+  const SENTINEL = new Set([P, S, SEC, "c-2", "i-7", "e-3", "r-5", "o-1"]);
 
   const hrefs: ReadonlyArray<readonly [string, string]> = [
     ["home", routes.home()],
@@ -352,6 +352,7 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     ["sales.landShareAllocation", routes.sales.landShareAllocation()],
     // TKL-F3: `yeni`/`[offerId]`/`yazdir` sayfaları kendi dilimlerinde (F3.4/F3.5/F3.7) bu listeye girer.
     ["offers.list", routes.offers.list()],
+    ["offers.convert", routes.offers.convert({ offerId: "o-1" })],
     ["contracts.list", routes.contracts.list()],
     ["contracts.subcontractorList", routes.contracts.subcontractorList()],
     ["contracts.employerDetail", routes.contracts.employerDetail({ projectId: P })],
@@ -418,6 +419,11 @@ describe("routes.offers (TKL-F3 · Teklif Hazırlama)", () => {
     expect(routes.offers.detail({ offerId: "o-1" })).toBe("/teklif-hazirlama/o-1");
     expect(routes.offers.detail({ offerId: "o-1", rev: 0 })).toBe("/teklif-hazirlama/o-1?rev=0");
     expect(routes.offers.detail({ offerId: "o-1", rev: 3 })).toBe("/teklif-hazirlama/o-1?rev=3");
+  });
+
+  it("dönüştür (TKL-F5.1): `?rev=` YOK (uç hep son revizyonu esas alır); kimlik kodlanır", () => {
+    expect(routes.offers.convert({ offerId: "o-1" })).toBe("/teklif-hazirlama/o-1/donustur");
+    expect(routes.offers.convert({ offerId: "a/b?x=1" })).toBe("/teklif-hazirlama/a%2Fb%3Fx%3D1/donustur");
   });
 
   it("yazdır: rev + tur birlikte; kimlik kodlanır", () => {

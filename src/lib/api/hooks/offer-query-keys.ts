@@ -24,6 +24,8 @@ export const OFFER_TEMPLATE_QUERY_KEY = "offer-template";
 /** Liste süzgeci — yalnız dolu alanlar anahtara girer (boş = süzgeç yok). */
 export interface OfferListFilter {
   status?: "draft" | "sent" | "won" | "lost" | "withdrawn";
+  /** TKL-B6.8 · `converted` (proje var) | `won_not_converted` (son revizyon kazanıldı, proje yok); `status` gibi yalnız listeyi daraltır. */
+  conversion?: "converted" | "won_not_converted";
   q?: string;
   employerId?: string;
   /** Son revizyonun teklif tarihi, dahil-dahil (ISO `YYYY-MM-DD`). */

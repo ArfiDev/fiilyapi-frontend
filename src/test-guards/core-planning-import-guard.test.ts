@@ -35,6 +35,8 @@ const CORE_DIRS = [
   "components/offer-print",
   // TKL-F4.5 · Teklif Şablonları (`contracts` kapısı): planlama (EV) ithali yasak (TKL-F4-PLAN §1).
   "components/offer-templates",
+  // TKL-F5.3 · Teklif → Proje "Dönüştür" (`contracts` + `projects` kapısı): planlama (EV) ithali yasak (TKL-F5-PLAN §8).
+  "components/offer-convert",
 ];
 
 /** Planlama modülünün yolları: bileşenleri, saf kütüphanesi ve `useEv*` sorguları. */

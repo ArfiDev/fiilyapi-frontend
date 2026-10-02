@@ -8,3 +8,6 @@ export type { OfferListItem, OfferListResponse };
 export type OfferStatus = OfferRevisionStatus;
 export type OfferListSummary = OfferListResponse["summary"];
 export type OfferStatusSummary = OfferListSummary["by_status"][number];
+
+/** TKL-F5.5 · `GET /offers?conversion=` süzgeci: kazanılmış ama projeye dönüştürülmemiş teklifler. */
+export type OfferConversionFilter = "won_not_converted";

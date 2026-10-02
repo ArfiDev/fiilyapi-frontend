@@ -48,6 +48,12 @@ describe("offer-query-keys — anahtarlar TEK yerde", () => {
     expect(offerListKey({ status: "sent", q: "kaba" })).toEqual(offerListKey({ q: "kaba", status: "sent", employerId: "", dateFrom: undefined }));
     expect(normalizeOfferListFilter({ q: "", status: undefined, limit: 0 })).toEqual({ limit: 0 }); // 0 bir DEĞERDİR
   });
+
+  it("TKL-B6.8: `conversion` süzgeci anahtara girer; farklı değer → farklı anahtar, boş → anahtarı DEĞİŞTİRMEZ", () => {
+    expect(offerListKey({ conversion: "converted" })).toEqual([OFFERS_QUERY_KEY, { conversion: "converted" }]);
+    expect(offerListKey({ conversion: "converted" })).not.toEqual(offerListKey({ conversion: "won_not_converted" }));
+    expect(offerListKey({ conversion: undefined, status: "won" })).toEqual(offerListKey({ status: "won" }));
+  });
 });
 
 describe("useOffers / useOffer / useOfferRevision / useOfferSettings", () => {
@@ -62,6 +68,15 @@ describe("useOffers / useOffer / useOfferRevision / useOfferSettings", () => {
       params: {
         query: { status: "sent", q: "kaba", employer_id: "emp-1", offer_date_from: "2026-01-01", offer_date_to: "2026-12-31", limit: 200, offset: 0 },
       },
+    });
+  });
+
+  it("TKL-B6.8: conversion sorguya `conversion` adıyla girer", async () => {
+    vi.mocked(backendClient.GET).mockResolvedValue(ok({ items: [], total: 0 }));
+    const { result } = renderHook(() => useOffers({ conversion: "won_not_converted", status: "won" }), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(backendClient.GET).toHaveBeenCalledWith("/offers", {
+      params: { query: { status: "won", conversion: "won_not_converted" } },
     });
   });
 

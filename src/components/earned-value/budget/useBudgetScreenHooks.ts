@@ -8,6 +8,7 @@ import {
   useCreateEvDraft,
   useDeleteEvDraft,
   useFillEvFromCatalog,
+  useFillBudgetFromContract,
   useFreezeEvBudget,
   usePatchEvItem,
   usePatchEvLeaves,
@@ -22,7 +23,7 @@ import {
 } from "@/lib/api/hooks/useEvBudgetMutations";
 import type { EvRevisionOut } from "@/lib/api/models";
 
-import { fillMessage } from "./budget-format";
+import { fillFromContractMessage, fillMessage } from "./budget-format";
 import { nextSearch, parseStep, REV_PARAM, STEP_PARAM, type BudgetUrlPatch } from "./budget-url";
 
 /** BÜT:561 `flash` — bildirim 2,6 sn sonra kalkar. */
@@ -100,6 +101,7 @@ export function useBudgetActions(siteId: string) {
   const item = usePatchEvItem(siteId);
   const groups = usePutEvGroupDisciplines(siteId);
   const fill = useFillEvFromCatalog(siteId);
+  const fillContract = useFillBudgetFromContract(siteId);
   const distributions = usePutEvDistributions(siteId);
   const windows = usePutEvWindows(siteId);
   const createDraft = useCreateEvDraft(siteId);
@@ -124,12 +126,15 @@ export function useBudgetActions(siteId: string) {
     mapGroup: (groupId: string, disciplineId: string | null) =>
       run(() => groups.mutateAsync([{ boq_group_id: groupId, discipline_id: disciplineId }])),
     fillFromCatalog: () => run(() => fill.mutateAsync(), fillMessage),
+    /** TKL-F5.5 · ÜS-F5-24: yalnız BOŞ oranları sözleşmeden doldurur (sunucu, SO-53); 409 metni aynen bildirilir. */
+    fillFromContract: () => run(() => fillContract.mutateAsync(), fillFromContractMessage),
     setDistribution: (pair: EvDistributionPair) => run(() => distributions.mutateAsync([pair])),
     saveWindows: (next: EvWindowIn[]) => run(() => windows.mutateAsync(next)),
     openDraft: () => run(() => createDraft.mutateAsync()),
     deleteDraft: (revisionId: string) => run(() => deleteDraft.mutateAsync(revisionId).then(() => true)),
     freeze: (body: EvFreezeBody): Promise<EvRevisionOut | null> => run(() => freeze.mutateAsync(body)),
     isFilling: fill.isPending,
+    isFillingFromContract: fillContract.isPending,
     isFreezing: freeze.isPending,
     isDeleting: deleteDraft.isPending,
     isOpeningDraft: createDraft.isPending,

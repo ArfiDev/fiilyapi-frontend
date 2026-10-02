@@ -9,6 +9,10 @@ interface RatesToolbarProps {
   showActions: boolean;
   editable: boolean;
   filling: boolean;
+  /** TKL-F5.5 · ÜS-F5-24: "Sözleşmeden doldur" görünür mü (kısıtlıda gizli, SO-57). */
+  showFillFromContract?: boolean;
+  fillingFromContract?: boolean;
+  onFillFromContract?: () => void;
   selectedCount: number;
   bulkOpen: boolean;
   query: string;
@@ -31,6 +35,16 @@ export function RatesToolbar(props: RatesToolbarProps) {
             <BooksIcon width={13} height={13} aria-hidden="true" />
             Katalogdan öner (tümü)
           </Button>
+          {props.showFillFromContract === true && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!editable || props.filling || props.fillingFromContract === true}
+              onClick={props.onFillFromContract}
+            >
+              Sözleşmeden doldur
+            </Button>
+          )}
           <button
             type="button"
             className={cx("ev-budget-bulk-btn", editable && selectedCount > 0 && "ev-budget-bulk-btn--active")}

@@ -51,6 +51,10 @@ const URUN_TARIH_ENVANTERI: Record<string, number> = {
   // ondan türeyen "bitiş tarihi" İSTEMCİ SAATİNE bağlıdır. Görsel spec (F3.8) `page.clock.setFixedTime`
   // ile sabitlemeli.
   "components/offers/OfferCreateScreen.tsx": 1,
+  // TKL-F5.3 — Dönüştür Adım 1 "Sözleşme tarihi" ön değeri = İstanbul bugünü (`istanbulToday(new Date())`) ve
+  // ondan türeyen "başlangıç/bitiş" İSTEMCİ SAATİNE bağlıdır. Görsel spec (F5.6) `page.clock.setFixedTime`
+  // ile sabitlemeli.
+  "components/offer-convert/useConvertBoard.ts": 1,
   // PLN-F1.6 — Bütçe Adım 2 Gantt + Adım 3 S-eğrisi "bugün" çizgisi (BÜT:292, 349)
   // `localTodayIso()`. Görsel spec `page.clock.setFixedTime` ile sabitlemeli.
   "components/earned-value/budget/budget-format.ts": 1,

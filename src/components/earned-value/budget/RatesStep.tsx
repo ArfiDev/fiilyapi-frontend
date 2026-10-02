@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { TreeTable } from "@/components/earned-value/common/tree-table/TreeTable";
 import { initialExpanded } from "@/components/earned-value/common/tree-table/tree-rows";
 import type { EvBudgetView } from "@/lib/api/models";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 
 import { formatRateInput, leafLabel, parseRateInput } from "./budget-format";
 import {
@@ -103,6 +104,8 @@ function useRatesModel({ siteId, view, state, actions, diffMarks, disciplineOpti
 export function RatesStep(props: RatesStepProps) {
   const { view, state, actions } = props;
   const { filter, setFilter, selected, setSelected, nodes, tree, entries, bulk, ctx } = useRatesModel(props);
+  // SO-57: uç kısıtlıya 403 → düğme kısıtlı kullanıcıda GİZLİ.
+  const isRestricted = useDisciplineScope().isRestricted;
   const toggleBulk = () => bulk.setBulk((b) => ({ ...b, open: !b.open }));
   return (
     <section className="ev-budget-card" aria-label="Adım 1 · Oranlar">
@@ -115,6 +118,9 @@ export function RatesStep(props: RatesStepProps) {
         query={filter.query}
         onlyEmpty={filter.onlyEmpty}
         onSuggestAll={() => void actions.fillFromCatalog()}
+        showFillFromContract={!isRestricted}
+        fillingFromContract={actions.isFillingFromContract}
+        onFillFromContract={() => void actions.fillFromContract()}
         onToggleBulk={toggleBulk}
         onQuery={(query) => setFilter((f) => ({ ...f, query }))}
         onToggleEmpty={() => setFilter((f) => ({ ...f, onlyEmpty: !f.onlyEmpty }))}

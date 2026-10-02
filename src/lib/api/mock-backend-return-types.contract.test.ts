@@ -44,6 +44,8 @@ const TWIN_FILES: readonly string[] = [
   path.join(process.cwd(), "e2e", "mock-offer-templates.ts"),
   path.join(process.cwd(), "e2e", "mock-offer-create-sources.ts"),
   path.join(process.cwd(), "e2e", "mock-offer-guards.ts"),
+  // TKL-F5.1: teklif → proje dönüştürme ikizi (`POST /offers/{id}/convert`).
+  path.join(process.cwd(), "e2e", "mock-offer-convert.ts"),
 ];
 
 interface TwinFunction {
