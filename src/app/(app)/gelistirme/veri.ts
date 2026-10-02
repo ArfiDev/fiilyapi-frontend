@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-02 10:55",
+  guncellendi: "2026-10-02 12:55",
   gorevler: [
     {
       kod: "BLF",
@@ -86,9 +86,9 @@ export const VERI: GelistirmeVerisi = {
         { kod: "F1", aciklama: "İş Kalemi Kataloğu ekranı + Birim Oran Kataloğu'nda poz no ve kg", durum: "bitti", hat: "frontend", pr: "frontend #161" },
         { kod: "B3", aciklama: "Sözleşme kalemine katalog bağı + toplu ekleme + son fiyat (sözleşme, onaylı hakediş)", durum: "bitti", hat: "backend", pr: "backend #157" },
         { kod: "F2", aciklama: "Sözleşmede katalogdan çoklu seçici + katalogda son fiyat kolonu + sözleşme sayfasında Türkçe sayı kuralı", durum: "bitti", hat: "frontend", pr: "frontend #163" },
-        { kod: "B4 / F3", aciklama: "Teklif çekirdeği (PR #158, onay bekliyor) + Liste / Yeni / Detay / kalem tablosu / PDF ekranları (son testler)", durum: "devam", hat: "backend" },
-        { kod: "B5 / F4", aciklama: "Şablonlar, tekliften kopya, Excel işveren/iç (backend PR #159 hazır) + ekranlar", durum: "devam", hat: "backend", bagimlilik: "B4" },
-        { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0 taslak (backend PR #160 hazır) + dönüştürme ekranı", durum: "devam", hat: "backend", bagimlilik: "B5" },
+        { kod: "B4 / F3", aciklama: "Teklif çekirdeği + Liste / Yeni / Detay / kalem tablosu / PDF (işveren + iç döküm)", durum: "bitti", hat: "frontend", pr: "backend #158 · frontend #164" },
+        { kod: "B5 / F4", aciklama: "Şablonlar, tekliften kopya, Excel işveren/iç (backend canlıda) + ekranlar (yapılıyor)", durum: "devam", hat: "frontend", pr: "backend #159" },
+        { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0 taslak (backend canlıda) + dönüştürme ekranı", durum: "sirada", hat: "frontend", pr: "backend #160", bagimlilik: "F4" },
       ],
       kararlar: [
         "Veri düzeyinde tek katalog; Planlama'da fiyatsız Birim Oran Kataloğu, teklif/sözleşmede fiyatlı İş Kalemi Kataloğu.",
