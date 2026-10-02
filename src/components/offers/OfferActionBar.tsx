@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui";
@@ -7,7 +8,7 @@ import { downloadOfferExport, type OfferExportView } from "@/lib/api/offer-expor
 import { routes } from "@/lib/routes";
 import { useFileDownload, type FileDownloadState } from "@/lib/use-file-download";
 
-import { visibleActionReasons, type OfferAction, type OfferActionVerdict } from "./offer-actions";
+import { visibleActionReasons, type OfferAction, type OfferActionVerdict, type OfferConvertVerdict } from "./offer-actions";
 import "./offers.css";
 import "./offer-detail.css";
 
@@ -16,6 +17,8 @@ interface OfferActionBarProps {
   /** Görüntülenen revizyon — yazdırma salt okuma olduğundan eski revizyonda da açık. */
   revNo: number;
   gate: Record<OfferAction, OfferActionVerdict>;
+  /** TKL-F5.5 · "Projeye Dönüştür" ekseni (`offerConvertGate`); verilmezse gizli. */
+  convert?: OfferConvertVerdict;
   /** Herhangi bir geçiş/kayıt uçuyor → TÜM eylemler kilitli (tek uçuş). */
   isBusy: boolean;
   isSaving: boolean;
@@ -103,6 +106,25 @@ function ExcelMenu({ offerId, revNo, download }: { offerId: string; revNo: numbe
   );
 }
 
+const CONVERT_LABEL = "Projeye Dönüştür →";
+
+/** ÜS-F5-2: şeridin sonunda; etkin = düğme görünümlü bağlantı, yetkisiz = GEREKÇELİ pasif düğme (gerekçe aşağıda görünür). */
+function ConvertEntry({ offerId, verdict }: { offerId: string; verdict: OfferConvertVerdict | undefined }) {
+  if (verdict === undefined || !verdict.visible) return null;
+  if (verdict.enabled) {
+    return (
+      <Link href={routes.offers.convert({ offerId })} className="btn btn--primary btn--md">
+        {CONVERT_LABEL}
+      </Link>
+    );
+  }
+  return (
+    <Button variant="primary" disabled title={verdict.reason}>
+      {CONVERT_LABEL}
+    </Button>
+  );
+}
+
 /** TD:107-116, 404-411 — eylem şeridi. Düğme durumu YALNIZ `offerActionGate`ten gelir. */
 export function OfferActionBar(props: OfferActionBarProps) {
   const { gate, isBusy } = props;
@@ -111,6 +133,8 @@ export function OfferActionBar(props: OfferActionBarProps) {
     return { disabled: isBusy || !verdict.enabled, title: verdict.enabled ? undefined : verdict.reason };
   }
   const reasons = visibleActionReasons(gate);
+  const convert = props.convert;
+  if (convert !== undefined && convert.visible && !convert.enabled && !reasons.includes(convert.reason)) reasons.push(convert.reason);
   const download = useFileDownload();
   return (
     <div className="offer-actions">
@@ -136,6 +160,7 @@ export function OfferActionBar(props: OfferActionBarProps) {
         <Button variant="ghost" onClick={props.onWithdraw} {...attrs("withdraw")}>
           Vazgeçildi…
         </Button>
+        <ConvertEntry offerId={props.offerId} verdict={convert} />
       </div>
       {(download.notice ?? download.error) !== null && (
         <p className="offer-actions__why" role="status">

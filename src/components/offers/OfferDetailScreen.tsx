@@ -24,6 +24,8 @@ import "./offers.css";
 const WRITE_LEVEL = "full";
 /** ÜS-F3-8: işveren eklemek `projects:admin`. */
 const EMPLOYER_ADD_LEVEL = "admin";
+/** TKL-F5.5 · SO-42: `POST /offers/{id}/convert` `projects:admin` ister. */
+const PROJECTS_ADMIN_LEVEL = "admin";
 const NOT_FOUND_STATUS = 404;
 const REV_DIGITS = /^\d+$/;
 /** Başarı bildiriminin ekranda kalma süresi (KIK/KAT emsali). */
@@ -92,6 +94,7 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
       revNo={revNo}
       canWrite={canWrite}
       canAddEmployer={hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL)}
+      canAdminProjects={hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL)}
       readOnlyText={readOnlyMessage(level, scope.isRestricted)}
       renderItems={renderItems}
       toast={toast?.text ?? null}
@@ -108,6 +111,8 @@ interface OfferRevisionLoaderProps {
   revNo: number;
   canWrite: boolean;
   canAddEmployer: boolean;
+  /** TKL-F5.5 · SO-42: dönüştürme `projects ≥ admin` ister. */
+  canAdminProjects: boolean;
   readOnlyText: string;
   renderItems?: (context: OfferItemsSlotContext) => ReactNode;
   onSelectRevision: (revNo: number | null) => void;

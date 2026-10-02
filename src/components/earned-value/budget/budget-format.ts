@@ -1,6 +1,7 @@
 import { normalizeDecimalInput } from "@/lib/decimal";
 import { EMPTY_CELL } from "@/lib/format";
 import { roundHalfUp } from "@/lib/earned-value/decimal-input";
+import type { EvFillFromContractOut } from "@/lib/api/hooks/useEvBudgetMutations";
 import type { EvBudgetView, EvFillOut } from "@/lib/api/models";
 
 /**
@@ -111,4 +112,12 @@ export function fillMessage(out: EvFillOut): string {
   // Yönlendirme EN SONDA: belirsiz sayısını açıklar, eşleşmesiz sayısının arasına girmez.
   if (out.ambiguous_count > 0) parts.push("ayrıntı için oran hücresindeki önerilere bakın");
   return parts.join(" · ");
+}
+
+/**
+ * TKL-F5.5 · "Sözleşmeden doldur" sonuç bandı (ÜS-F5-24): "{n} satır sözleşmeden dolduruldu" + sunucu uyarı
+ * metinleri AYNEN (" · " ile). `n` = bu çağrının yazdığı oran satırı (`filled_leaf_count`).
+ */
+export function fillFromContractMessage(out: Pick<EvFillFromContractOut, "filled_leaf_count" | "warnings">): string {
+  return [`${out.filled_leaf_count} satır sözleşmeden dolduruldu`, ...out.warnings.map((warning) => warning.message)].join(" · ");
 }

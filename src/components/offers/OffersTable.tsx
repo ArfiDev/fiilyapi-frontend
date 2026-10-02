@@ -8,6 +8,7 @@ import { routes } from "@/lib/routes";
 import { cx } from "@/lib/cx";
 
 import { OfferRowMenu } from "./OfferRowMenu";
+import { offerProjectLink } from "./offer-project-link";
 import { OFFER_STATUS_LABEL, OFFER_STATUS_TONE, isOfferExpired } from "./offer-status";
 import { formatLiraFixed, listedTotals, unquantifiedHint } from "./offer-list-model";
 import type { OfferListItem } from "./offer-types";
@@ -17,6 +18,8 @@ interface OffersTableProps {
   /** Sunucunun bildirdiği süzülmüş toplam (`items`'tan büyükse liste kırpılmıştır). */
   total: number;
   canWrite: boolean;
+  /** TKL-F5.5 · SO-42: `projects ≥ admin` ∧ yazma yetkisi → "Dönüştür →" bağlantısı basılır. */
+  canConvert?: boolean;
   /** İstanbul takvim günü (`YYYY-MM-DD`). */
   today: string;
   /** İşlemi uçan satırın kimliği. */
@@ -26,7 +29,7 @@ interface OffersTableProps {
 }
 
 /** TL:137-168, 175-187 — liste tablosu. */
-export function OffersTable({ items, total, canWrite, today, busyOfferId, onNewRevision, onDelete }: OffersTableProps) {
+export function OffersTable({ items, total, canWrite, canConvert = false, today, busyOfferId, onNewRevision, onDelete }: OffersTableProps) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const totals = listedTotals(items, total);
   return (
@@ -47,6 +50,7 @@ export function OffersTable({ items, total, canWrite, today, busyOfferId, onNewR
         {items.map((item) => {
           const expired = isOfferExpired(item.status, item.valid_until, today);
           const partialHint = unquantifiedHint(item);
+          const projectLink = item.conversion_state === "converted" ? offerProjectLink(item) : null;
           return (
             <div
               key={item.id}
@@ -64,7 +68,23 @@ export function OffersTable({ items, total, canWrite, today, busyOfferId, onNewR
               </div>
               <div className="offers-cell offers-cell--job" role="cell">
                 <span className="offers-job">{item.title}</span>
-                {item.scope_summary && <span className="offers-scope">{item.scope_summary}</span>}
+                {projectLink !== null ? (
+                  <Link href={projectLink.href} className="offers-proj">
+                    {projectLink.label}
+                  </Link>
+                ) : (
+                  item.scope_summary && <span className="offers-scope">{item.scope_summary}</span>
+                )}
+                {item.conversion_state === "won_not_converted" && (
+                  <span className="offers-unconverted">
+                    <span>Kazanıldı · dönüştürülmedi</span>
+                    {canConvert && (
+                      <Link href={routes.offers.convert({ offerId: item.id })} className="offers-unconverted__link">
+                        Dönüştür →
+                      </Link>
+                    )}
+                  </span>
+                )}
               </div>
               <div className="offers-cell" role="cell">{item.employer_name}</div>
               <div className="offers-cell offers-cell--num offers-muted" role="cell">{formatDateDots(item.offer_date)}</div>

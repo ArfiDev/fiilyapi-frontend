@@ -13,6 +13,9 @@ import { BackendError, isForbidden } from "@/lib/api/unwrap";
 
 import { OFFER_ACTION_REASONS } from "./offer-actions";
 
+/** K-F3-2: mockup toast'u. TKL-F5.5: yetkiliye bu metnin yanına "Dönüştür →" bağlantısı eklenir (ÜS-F5-25). */
+export const OFFER_WON_TOAST = "Kazanıldı · projeye dönüştürme adımı açılacak";
+
 /** 409 = durum makinesi çatışması (başkası aynı anda geçirmiş / revizyon artık taslak değil). */
 const CONFLICT_STATUS = 409;
 /** Geçiş hatasında ekranın gerçek duruma oturması gereken durumlar (409 çatışma, 422 ön koşul). */
@@ -98,9 +101,7 @@ export function useOfferDetailActions(args: UseOfferDetailActionsArgs) {
     reportMessage: (message: string) => setError(message),
     send: (onDone: () => void) =>
       run("send", undefined, `Gönderildi olarak işaretlendi · geçerlilik ${validityDays} gün`, "Gönderildi işaretlenemedi.", onDone),
-    // K-F3-2: mockup toast'u KALIR (dönüştürme F5'te gelir).
-    win: (onDone: () => void) =>
-      run("win", undefined, "Kazanıldı · projeye dönüştürme adımı açılacak", "Kazanıldı işaretlenemedi.", onDone),
+    win: (onDone: () => void) => run("win", undefined, OFFER_WON_TOAST, "Kazanıldı işaretlenemedi.", onDone),
     lose: (body: OfferLoseBody | undefined, onDone: () => void) =>
       run("lose", body, "Kaybedildi olarak işaretlendi", "Kaybedildi işaretlenemedi.", onDone),
     withdraw: (onDone: () => void) =>
