@@ -8,6 +8,13 @@
  * `payment_term_days` ≥ 0 tamsayı, `late_penalty_daily` ≥ 0.
  */
 
+import {
+  decimalDigitCounts,
+  parseQuantityInput,
+  parseRefPriceInput,
+  REF_PRICE_AMBIGUOUS_DOT,
+} from "@/lib/tr-decimal";
+
 import { PCT_MAX, PCT_MIN } from "./constants";
 import type { ContractTermsValues, SubcontractorContractFormValues } from "./form-state";
 
@@ -24,7 +31,60 @@ export const MESSAGES = {
   pctRange: "Oran 0 ile 100 arasında olmalıdır.",
   termDaysInvalid: "Ödeme vadesi 0 veya daha büyük bir tam sayı olmalıdır.",
   latePenaltyInvalid: "Gecikme cezası 0 veya daha büyük olmalıdır.",
+  latePenaltyFraction: "Gecikme cezası en fazla 2 ondalık içerebilir.",
+  latePenaltyDigits: "Gecikme cezası en fazla 16 basamaklı olabilir.",
+  pctFraction: "Oran en fazla 2 ondalık içerebilir.",
 } as const;
+
+/** `late_penalty_daily` `Numeric(18,2)`; `advance_pct`/`retainage_pct` `Numeric(5,2)` — backend fazlayı sessizce yuvarlar. */
+const MONEY_MAX_FRACTION = 2;
+const MONEY_MAX_INTEGER = 16;
+const PCT_MAX_FRACTION = 2;
+
+/** `value: null` = alan boş. `value` nokta-ondalık METİNdir (gövdeye aynen girer; `Number()` YOK). */
+export type TermsNumberParse =
+  | { kind: "ok"; value: string | null }
+  | { kind: "error"; message: string };
+
+function termsError(message: string): TermsNumberParse {
+  return { kind: "error", message };
+}
+
+/**
+ * 🔴 TKL-F7a · T42 — Gecikme Cezası (₺/gün) T30 ile okunur: nokta binlik, virgül ondalık, belirsiz
+ * "28.5" reddedilir (`lib/tr-decimal.ts` TEK kaynak). Boş → `null`; negatif/okunamayan → mevcut mesaj.
+ */
+export function parseLatePenalty(raw: string): TermsNumberParse {
+  const text = raw.trim();
+  if (!text) return { kind: "ok", value: null };
+  if (text.startsWith("-")) return termsError(MESSAGES.latePenaltyInvalid);
+  const parsed = parseRefPriceInput(text);
+  if (parsed.kind === "ambiguous") return termsError(REF_PRICE_AMBIGUOUS_DOT);
+  if (parsed.kind === "invalid") return termsError(MESSAGES.latePenaltyInvalid);
+  const digits = decimalDigitCounts(parsed.value);
+  if (digits.fraction > MONEY_MAX_FRACTION) return termsError(MESSAGES.latePenaltyFraction);
+  if (digits.integer > MONEY_MAX_INTEGER) return termsError(MESSAGES.latePenaltyDigits);
+  return { kind: "ok", value: parsed.value };
+}
+
+/**
+ * 🔴 TKL-F7a · T42 — Avans/Teminat oranı (%) T30 ile okunur; 0–100 aralığı ve negatif/okunamayan
+ * mesajı (`pctRange`) AYNEN korunur. Boş → `null` (çağıran şema varsayılanına düşer).
+ */
+export function parsePct(raw: string): TermsNumberParse {
+  const text = raw.trim();
+  if (!text) return { kind: "ok", value: null };
+  if (text.startsWith("-")) return termsError(MESSAGES.pctRange);
+  const parsed = parseQuantityInput(text);
+  if (parsed.kind === "ambiguous") return termsError(REF_PRICE_AMBIGUOUS_DOT);
+  if (parsed.kind === "invalid") return termsError(MESSAGES.pctRange);
+  const digits = decimalDigitCounts(parsed.value);
+  if (digits.fraction > PCT_MAX_FRACTION) return termsError(MESSAGES.pctFraction);
+  // Aralık denetimi yalnız karşılaştırma içindir; gövdeye giden metin `parsed.value`dur.
+  const numeric = Number(parsed.value);
+  if (numeric < PCT_MIN || numeric > PCT_MAX) return termsError(MESSAGES.pctRange);
+  return { kind: "ok", value: parsed.value };
+}
 
 export type SubcontractorContractFormErrors = Partial<
   Record<keyof SubcontractorContractFormValues, string>
@@ -42,10 +102,13 @@ function numberOrNull(raw: string): number | null {
 }
 
 function pctError(raw: string): string | undefined {
-  const value = numberOrNull(raw);
-  if (value === null) return undefined;
-  if (!Number.isFinite(value)) return MESSAGES.pctRange;
-  return value < PCT_MIN || value > PCT_MAX ? MESSAGES.pctRange : undefined;
+  const parsed = parsePct(raw);
+  return parsed.kind === "error" ? parsed.message : undefined;
+}
+
+function latePenaltyError(raw: string): string | undefined {
+  const parsed = parseLatePenalty(raw);
+  return parsed.kind === "error" ? parsed.message : undefined;
 }
 
 export interface ValidateContractFormOptions {
@@ -76,10 +139,8 @@ export function validateContractForm(
     errors.paymentTermDays = MESSAGES.termDaysInvalid;
   }
 
-  const latePenalty = numberOrNull(values.latePenaltyDaily);
-  if (latePenalty !== null && (!Number.isFinite(latePenalty) || latePenalty < 0)) {
-    errors.latePenaltyDaily = MESSAGES.latePenaltyInvalid;
-  }
+  const latePenaltyProblem = latePenaltyError(values.latePenaltyDaily);
+  if (latePenaltyProblem) errors.latePenaltyDaily = latePenaltyProblem;
 
   // Tarih tutarlılığı — taslakta da (section-form emsali). Mockup tarih
   // kuralı YAZMAZ; bu bir DEĞER tutarlılığıdır, tasarım kararı değildir.
@@ -123,10 +184,8 @@ export function validateContractTerms(
     errors.paymentTermDays = MESSAGES.termDaysInvalid;
   }
 
-  const latePenalty = numberOrNull(values.latePenaltyDaily);
-  if (latePenalty !== null && (!Number.isFinite(latePenalty) || latePenalty < 0)) {
-    errors.latePenaltyDaily = MESSAGES.latePenaltyInvalid;
-  }
+  const latePenaltyProblem = latePenaltyError(values.latePenaltyDaily);
+  if (latePenaltyProblem) errors.latePenaltyDaily = latePenaltyProblem;
 
   return errors;
 }

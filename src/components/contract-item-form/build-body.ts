@@ -15,6 +15,7 @@ import type { components } from "@/lib/api/schema";
 import {
   parseEmployerQuantity,
   parseEmployerUnitPrice,
+  parseSubcontractorUnitPrice,
   type ContractItemFormValues,
   type EmployerItemFormValues,
 } from "./validate";
@@ -48,13 +49,18 @@ export function buildSubcontractorItemBody(
   values: ContractItemFormValues,
   fallbackSortOrder: number,
 ): SubcontractorItemCreateBody {
-  const price = values.unitPrice.trim();
+  // 🔴 TKL-F7a · T42: `values.quantity`/`unitPrice` HAM Türkçe girdidir; gövdeye T30 ile okunmuş
+  // nokta-ondalık METİN girer (İŞV ikizi gibi: okunamazsa fırlatır, para değeri tahmin edilmez).
+  const quantity = parseEmployerQuantity(values.quantity);
+  if (quantity.kind === "error") throw new Error(quantity.problem.message);
+  const price = parseSubcontractorUnitPrice(values.unitPrice);
+  if (price.kind === "error") throw new Error(price.problem.message);
   return {
     code: values.code.trim(),
     description: values.description.trim(),
     unit: values.unit.trim(),
-    quantity: values.quantity.trim(),
-    unit_price: price ? price : null,
+    quantity: quantity.value,
+    unit_price: price.value,
     sort_order: resolveSortOrder(values.sortOrder, fallbackSortOrder),
   };
 }

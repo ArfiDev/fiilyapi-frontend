@@ -13,6 +13,16 @@ import type {
 } from "@/lib/api/hooks/useSubcontractorContractMutations";
 
 import type { ContractTermsValues, SubcontractorContractFormValues } from "./form-state";
+import { parseLatePenalty, parsePct, type TermsNumberParse } from "./validate";
+
+/**
+ * 🔴 TKL-F7a · T42: gecikme cezası ve oranlar HAM Türkçe girdidir ("1.234,5"); gövdeye T30 ile okunmuş
+ * nokta-ondalık METİN girer. Okunamazsa fırlatılır (doğrulama atlanmıştır) — para/oran tahmin edilmez.
+ */
+function termsNumberOrThrow(parsed: TermsNumberParse): string | null {
+  if (parsed.kind === "error") throw new Error(parsed.message);
+  return parsed.value;
+}
 
 /** Boş/whitespace → `null`, aksi hâlde kırpılmış metin. */
 function textOrNull(raw: string): string | null {
@@ -40,7 +50,7 @@ function termsPayload(values: ContractTermsValues) {
     is_notarized: values.isNotarized,
     start_date: textOrNull(values.startDate),
     end_date: textOrNull(values.endDate),
-    late_penalty_daily: textOrNull(values.latePenaltyDaily),
+    late_penalty_daily: termsNumberOrThrow(parseLatePenalty(values.latePenaltyDaily)),
     materials_by_contractor: values.materialsByContractor,
     subcontractor_files_own_sgk: values.subcontractorFilesOwnSgk,
     vat_withholding: values.vatWithholding,
@@ -63,8 +73,8 @@ const NUMERIC_FALLBACK = {
 
 function numericPayload(values: ContractTermsValues) {
   return {
-    advance_pct: textOrNull(values.advancePct) ?? NUMERIC_FALLBACK.advancePct,
-    retainage_pct: textOrNull(values.retainagePct) ?? NUMERIC_FALLBACK.retainagePct,
+    advance_pct: termsNumberOrThrow(parsePct(values.advancePct)) ?? NUMERIC_FALLBACK.advancePct,
+    retainage_pct: termsNumberOrThrow(parsePct(values.retainagePct)) ?? NUMERIC_FALLBACK.retainagePct,
     payment_term_days: intOrUndefined(values.paymentTermDays) ?? NUMERIC_FALLBACK.paymentTermDays,
   };
 }

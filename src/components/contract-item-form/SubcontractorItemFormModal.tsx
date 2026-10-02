@@ -22,7 +22,12 @@ import {
   UNPRICED_ITEM_WARNING_LEAD,
 } from "./constants";
 import { SummaryRow } from "./SummaryRow";
-import { validateSubcontractorItem, type ContractItemFormValues } from "./validate";
+import {
+  parseEmployerQuantity,
+  parseSubcontractorUnitPrice,
+  validateSubcontractorItem,
+  type ContractItemFormValues,
+} from "./validate";
 import "./contract-item-form.css";
 
 /**
@@ -46,6 +51,9 @@ export interface SubcontractorItemFormModalProps {
   itemsMissingPrice: number;
   onClose: () => void;
 }
+
+/** Fiyat alanı DOLU ama miktar/fiyat okunamıyorsa önizleme toplam yerine nötr çizgi basar ("Fiyatsız" yalnız boş fiyatta). */
+const UNREADABLE_TOTAL = "—";
 
 const EMPTY_VALUES: ContractItemFormValues = {
   code: "",
@@ -86,7 +94,13 @@ export function SubcontractorItemFormModal({
   // 101 · mockup'ın "6"sı GÖSTERMELİKtir; gerçek varsayılan listeden gelir.
   const defaultSortOrder = nextSortOrder(items.map((item) => item.sort_order));
   const hasPrice = values.unitPrice.trim().length > 0;
-  const preview = lineTotalPreview(values.quantity, values.unitPrice);
+  // 🔴 TKL-F7a · T42: önizleme T30 ile OKUNMUŞ değerlerden hesaplanır; okunamayan girdi → önizleme yok.
+  const parsedQuantity = parseEmployerQuantity(values.quantity);
+  const parsedUnitPrice = parseSubcontractorUnitPrice(values.unitPrice);
+  const preview =
+    parsedQuantity.kind === "ok" && parsedUnitPrice.kind === "ok" && parsedUnitPrice.value !== null
+      ? lineTotalPreview(parsedQuantity.value, parsedUnitPrice.value)
+      : null;
 
   function set<K extends keyof ContractItemFormValues>(key: K, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -240,9 +254,10 @@ export function SubcontractorItemFormModal({
                   <Input
                     {...control}
                     ref={quantityRef}
-                    type="number"
+                    // 🔴 TKL-F7a · T42: `type="number"` DEĞİL — tarayıcı Türkçe virgülü ""a indirger
+                    // ve T30 kuralını (nokta=binlik) uygulatamaz; metin + `lib/tr-decimal`.
+                    inputMode="decimal"
                     numeric
-                    min={0}
                     placeholder={TEXT.quantityPlaceholder}
                     value={values.quantity}
                     onChange={(event) => set("quantity", event.target.value)}
@@ -258,9 +273,9 @@ export function SubcontractorItemFormModal({
                   <Input
                     {...control}
                     ref={unitPriceRef}
-                    type="number"
+                    // 🔴 TKL-F7a · T42: `type="number"` DEĞİL (bkz. miktar); metin + `lib/tr-decimal`.
+                    inputMode="decimal"
                     numeric
-                    min={0}
                     className="pif-price__input"
                     placeholder={TEXT.unitPricePlaceholder}
                     value={values.unitPrice}
@@ -288,7 +303,11 @@ export function SubcontractorItemFormModal({
               <div className="pif-total__row">
                 <span className="pif-total__label">{TEXT.lineTotal}</span>
                 <span className="pif-total__value" data-testid="tsi-line-total">
-                  {preview === null ? TEXT.lineTotalUnpriced : `₺ ${formatAmount(preview)}`}
+                  {preview !== null
+                    ? `₺ ${formatAmount(preview)}`
+                    : hasPrice
+                      ? UNREADABLE_TOTAL
+                      : TEXT.lineTotalUnpriced}
                 </span>
               </div>
               <p className="pif-total__hint">{TEXT.lineTotalHint}</p>

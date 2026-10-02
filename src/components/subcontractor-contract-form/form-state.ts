@@ -1,3 +1,4 @@
+import { trPriceInputValue, trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import type { PaymentPeriod } from "@/lib/contract-labels";
 import type { SubcontractorContractDetail } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 
@@ -87,9 +88,10 @@ export function contractTermsFromDetail(
     isNotarized: detail.is_notarized,
     startDate: detail.start_date ?? "",
     endDate: detail.end_date ?? "",
-    latePenaltyDaily: detail.late_penalty_daily ?? "",
-    advancePct: detail.advance_pct,
-    retainagePct: detail.retainage_pct,
+    // TKL-F7a · T42: sunucu "5000.00" Türkçe gösterilir ("5.000,00"); aksi hâlde T30 okuması "5000.00"ı belirsiz sayar.
+    latePenaltyDaily: trPriceInputValue(detail.late_penalty_daily),
+    advancePct: trQuantityInputValue(detail.advance_pct),
+    retainagePct: trQuantityInputValue(detail.retainage_pct),
     paymentPeriod: detail.payment_period,
     paymentTermDays: String(detail.payment_term_days),
     materialsByContractor: detail.materials_by_contractor,

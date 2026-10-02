@@ -9,7 +9,13 @@ import { formatAmount } from "@/lib/format";
 import type { SubcontractorContractItemResponse } from "@/lib/api/hooks/useSubcontractorContractMutations";
 
 import { ADD_ITEM_PENDING_REASON, FSO_TEXT } from "./constants";
-import { decimalInputValue, groupContractItems } from "./item-rows";
+import {
+  parseEmployerQuantity,
+  parseSubcontractorUnitPrice,
+} from "@/components/contract-item-form/validate";
+import { trPriceInputValue, trQuantityInputValue } from "@/components/contracts/employer-item-inline";
+
+import { groupContractItems } from "./item-rows";
 
 /**
  * FSO 112-187 · "⭐ Poz Listesi & Taşeron Fiyatları" kartı.
@@ -87,6 +93,8 @@ export function ContractItemsCard({
   }, [isBusy]);
   // no 331 · silme geri dönüşsüzdür (kalıcı DELETE); tek yanlış tıklama
   // artık DOĞRUDAN silmiyor, bir onay diyaloğu araya giriyor.
+  // TKL-F7a · T42: hücre okunamadığında (belirsiz nokta vb.) istek uçmaz, mesaj kartta görünür.
+  const [cellError, setCellError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; code: string } | null>(null);
   const groups = groupContractItems(items);
 
@@ -97,6 +105,7 @@ export function ContractItemsCard({
   }
 
   function setDraft(itemId: string, patch: RowDraft) {
+    setCellError(null);
     setDrafts((prev) => ({ ...prev, [itemId]: { ...prev[itemId], ...patch } }));
   }
 
@@ -126,23 +135,43 @@ export function ContractItemsCard({
       clearDraft(item.id, "quantity");
       return;
     }
-    if (draft.trim() === decimalInputValue(item.quantity)) {
+    // 🔴 TKL-F7a · T42: hücre T30 ile okunur (nokta binlik, virgül ondalık, belirsiz nokta RED).
+    const parsed = parseEmployerQuantity(draft);
+    if (parsed.kind === "error") {
+      setCellError(parsed.problem.message);
       clearDraft(item.id, "quantity");
       return;
     }
-    onCommitItem(item.id, { quantity: draft.trim() });
+    setCellError(null);
+    // Değişmedi: gösterim biçimi üzerinden karşılaştırılır ("3200" ≡ "3.200" ≡ sunucu "3200.000").
+    if (trQuantityInputValue(parsed.value) === trQuantityInputValue(item.quantity)) {
+      clearDraft(item.id, "quantity");
+      return;
+    }
+    onCommitItem(item.id, { quantity: parsed.value });
   }
 
   function commitUnitPrice(item: SubcontractorContractItemResponse) {
     const draft = drafts[item.id]?.unitPrice;
     if (draft === undefined) return;
-    const next = draft.trim();
-    if (next === decimalInputValue(item.unit_price)) {
+    const parsed = parseSubcontractorUnitPrice(draft);
+    if (parsed.kind === "error") {
+      setCellError(parsed.problem.message);
       clearDraft(item.id, "unitPrice");
       return;
     }
-    // Boş → "girilmedi" (`null`); `0` ASLA türetilmez.
-    onCommitItem(item.id, { unitPrice: next });
+    setCellError(null);
+    const unchanged =
+      parsed.value === null
+        ? item.unit_price === null
+        : item.unit_price !== null &&
+          trPriceInputValue(parsed.value) === trPriceInputValue(item.unit_price);
+    if (unchanged) {
+      clearDraft(item.id, "unitPrice");
+      return;
+    }
+    // Boş → "girilmedi" (`null`); `0` ASLA türetilmez. Çağıran boş dizeyi `null`a çevirir.
+    onCommitItem(item.id, { unitPrice: parsed.value ?? "" });
   }
 
   return (
@@ -191,6 +220,11 @@ export function ContractItemsCard({
       {loadError && (
         <p className="fso-items__notice fso-items__notice--error" data-testid="fso-load-error">
           {loadError}
+        </p>
+      )}
+      {cellError && (
+        <p className="fso-items__notice fso-items__notice--error" data-testid="fso-cell-error">
+          {cellError}
         </p>
       )}
       {itemsMissingPrice > 0 && (
@@ -335,12 +369,11 @@ function ItemGroup({
             <td className="fso-items__td fso-items__td--input">
               <Input
                 size="row"
-                type="number"
+                inputMode="decimal"
                 numeric
-                min={0}
                 aria-label={`${item.code} miktar`}
                 disabled={isBusy}
-                value={draft.quantity ?? decimalInputValue(item.quantity)}
+                value={draft.quantity ?? trQuantityInputValue(item.quantity)}
                 onChange={(event) => onDraft(item.id, { quantity: event.target.value })}
                 onBlur={() => onCommitQuantity(item)}
               />
@@ -348,14 +381,13 @@ function ItemGroup({
             <td className="fso-items__td fso-items__td--input">
               <Input
                 size="row"
-                type="number"
+                inputMode="decimal"
                 numeric
-                min={0}
                 className="fso-items__price-input"
                 aria-label={`${item.code} taşeron birim fiyatı`}
                 placeholder={FSO_TEXT.missingPriceLabel}
                 disabled={isBusy}
-                value={draft.unitPrice ?? decimalInputValue(item.unit_price)}
+                value={draft.unitPrice ?? trPriceInputValue(item.unit_price)}
                 onChange={(event) => onDraft(item.id, { unitPrice: event.target.value })}
                 onBlur={() => onCommitUnitPrice(item)}
               />

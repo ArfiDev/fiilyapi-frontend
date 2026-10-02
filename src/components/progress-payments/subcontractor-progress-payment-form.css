@@ -183,6 +183,14 @@
   position: relative;
   display: inline-block;
 }
+.thf-table__qty-error {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--color-danger-strong, var(--color-danger));
+  text-align: right;
+  white-space: nowrap;
+}
 .thf-table__qty-tag {
   position: absolute;
   top: -16px;

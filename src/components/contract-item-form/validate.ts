@@ -173,6 +173,34 @@ export function parseEmployerQuantity(raw: string): EmployerQuantityParse {
   return { kind: "ok", value: parsed.value };
 }
 
+export type SubcontractorUnitPriceParse =
+  /** `value: null` = fiyat girilmedi (isteğe bağlı alan; `0` ASLA türetilmez). */
+  | { kind: "ok"; value: string | null }
+  | { kind: "error"; problem: ContractItemFormProblem };
+
+/**
+ * 🔴 TKL-F7a · T42 — TAŞ birim fiyatı (kalem modalı + satır-içi hücre) T30 ile okunur; `parseEmployerUnitPrice`in
+ * ikizi, FARKLARI: alan İSTEĞE BAĞLIDIR (boş → `value: null`) ve mesajlar "Taşeron Birim Fiyatı" der.
+ * Dönen `value` nokta-ondalık METİNdir (`Number()` YOK).
+ */
+export function parseSubcontractorUnitPrice(raw: string): SubcontractorUnitPriceParse {
+  const text = raw.trim();
+  if (!text) return { kind: "ok", value: null };
+  const fail = (message: string): SubcontractorUnitPriceParse => ({
+    kind: "error",
+    problem: { field: "unitPrice", message },
+  });
+  const isNegative = text.startsWith("-");
+  const parsed = parseRefPriceInput(isNegative ? text.slice(1) : text);
+  if (parsed.kind === "ambiguous") return fail(REF_PRICE_AMBIGUOUS_DOT);
+  if (parsed.kind === "invalid") return fail("Taşeron Birim Fiyatı sayı olmalıdır.");
+  if (isNegative) return fail("Taşeron Birim Fiyatı negatif olamaz.");
+  const digits = decimalDigitCounts(parsed.value);
+  if (digits.fraction > PRICE_MAX_FRACTION) return fail(PRICE_FRACTION_LIMIT);
+  if (digits.integer > PRICE_MAX_INTEGER) return fail(PRICE_DIGIT_LIMIT);
+  return { kind: "ok", value: parsed.value };
+}
+
 /** Poz No: zorunlu + `maxLength` — form ve satır-içi hücre AYNI kuralı kullanır. */
 export function validateCodeField(raw: string): ContractItemFormProblem | null {
   if (!raw.trim()) return { field: "code", message: "Poz No zorunludur." };
@@ -200,16 +228,6 @@ export function validateUnitField(raw: string): ContractItemFormProblem | null {
   return null;
 }
 
-/** Ortak alanların doğrulaması — iki formda da AYNI sırayla koşar. */
-function validateCommon(values: ContractItemFormValues): ContractItemFormProblem | null {
-  return (
-    validateCodeField(values.code) ??
-    validateDescriptionField(values.description) ??
-    validateUnitField(values.unit) ??
-    validateQuantityField(values.quantity)
-  );
-}
-
 /** `Sıra` boş bırakılabilir; doluysa negatif olmayan tam sayıdır. */
 function validateSortOrder(raw: string): ContractItemFormProblem | null {
   const trimmed = raw.trim();
@@ -226,16 +244,18 @@ function validateSortOrder(raw: string): ContractItemFormProblem | null {
 export function validateSubcontractorItem(
   values: ContractItemFormValues,
 ): ContractItemFormProblem | null {
-  const common = validateCommon(values);
-  if (common) return common;
+  // 🔴 TKL-F7a · T42: miktar ve fiyat METİN girişidir → T30 ayrıştırıcıları (belirsiz nokta dahil).
+  const text =
+    validateCodeField(values.code) ??
+    validateDescriptionField(values.description) ??
+    validateUnitField(values.unit);
+  if (text) return text;
 
-  const price = values.unitPrice.trim();
-  if (price) {
-    if (!isDecimalString(price))
-      return { field: "unitPrice", message: "Taşeron Birim Fiyatı sayı olmalıdır." };
-    if (!(decimalValue(price) >= 0))
-      return { field: "unitPrice", message: "Taşeron Birim Fiyatı negatif olamaz." };
-  }
+  const quantity = parseEmployerQuantity(values.quantity);
+  if (quantity.kind === "error") return quantity.problem;
+
+  const price = parseSubcontractorUnitPrice(values.unitPrice);
+  if (price.kind === "error") return price.problem;
 
   return validateSortOrder(values.sortOrder);
 }

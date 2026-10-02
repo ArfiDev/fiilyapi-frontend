@@ -1,5 +1,7 @@
 import type { EmployerDiarySuggestion, SubcontractorDiarySuggestion } from "@/lib/api/hooks/useDiarySuggestion";
 
+import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
+
 import type { PivotRow } from "./pivot";
 import type { SubcontractorLineRow } from "./th-lines";
 
@@ -107,7 +109,8 @@ export function applySubcontractorDiarySuggestion(
 ): DiaryFillApplication<SubcontractorLineRow> {
   const suggestionByItemId = new Map<string, string>();
   for (const line of lines) {
-    suggestionByItemId.set(line.contract_item_id, line.quantity);
+    // 🔴 TKL-F7b: satır miktarı EKRAN METNİDİR (Türkçe) — öneri de aynı biçime çevrilir.
+    suggestionByItemId.set(line.contract_item_id, trQuantityInputValue(line.quantity));
   }
 
   const matchedIds = new Set<string>();
