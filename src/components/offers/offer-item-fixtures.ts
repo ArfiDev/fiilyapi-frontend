@@ -22,6 +22,7 @@ export function makeItem(over: Partial<OfferItemRead> & Pick<OfferItemRead, "id"
     poz_no: BETON.poz_no,
     priced: true,
     profit_pct: null,
+    quantified: over.quantity === undefined ? true : over.quantity !== null,
     quantity: "10.000",
     sort_order: 0,
     unit: BETON.uom,
@@ -43,6 +44,16 @@ export function makeUnpricedItem(over: Partial<OfferItemRead> & Pick<OfferItemRe
     customer: null,
     priced: false,
     internal: { cost: null, man_hours: "23.0000", overhead: null, profit: null, profit_pct: null },
+    ...over,
+  });
+}
+
+/** Miktarı girilmemiş FİYATLI kalem (SO-21): B.F. dolu; tutar/maliyet/GG/kâr/adam-saat null (`calc.py`). */
+export function makeUnquantifiedItem(over: Partial<OfferItemRead> & Pick<OfferItemRead, "id">): OfferItemRead {
+  return makeItem({
+    quantity: null,
+    customer: { unit_price: "128.80", amount: null },
+    internal: { cost: null, man_hours: null, overhead: null, profit: null, profit_pct: "15.00" },
     ...over,
   });
 }

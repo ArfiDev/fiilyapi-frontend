@@ -71,4 +71,17 @@ describe("Input", () => {
     expect(input.parentElement?.className).toContain("genislik-oto");
     expect(input.className).not.toContain("genislik-oto");
   });
+
+  // TKL-F4.8 — metin son eki payı (K-F4-5: "30gün")
+  it("suffixChars + rightIcon: --suffix sinifi ve karakter sayisi degiskeni basilir", () => {
+    render(<Input aria-label="Gün" rightIcon={<span>gün</span>} suffixChars={3} />);
+    const wrap = screen.getByRole("textbox").parentElement as HTMLElement;
+    expect(wrap.className).toContain("input-wrap--suffix");
+    expect(wrap.style.getPropertyValue("--input-suffix-chars")).toBe("3");
+  });
+
+  it("suffixChars verilmezse (ör. % simgesi) --suffix sinifi YOK", () => {
+    render(<Input aria-label="Yüzde" rightIcon={<span>%</span>} />);
+    expect((screen.getByRole("textbox").parentElement as HTMLElement).className).not.toContain("input-wrap--suffix");
+  });
 });

@@ -94,6 +94,12 @@ export function WorkItemPickerToolbar({
       <div className="wip-toolbar__row">
         <span className="wip-toolbar__label">Eklenecek grup</span>
         <Select aria-label="Grup" value={groupValue} onChange={(event) => onGroup(event.target.value)} disabled={isDisabled}>
+          {/* GECE KURALI: `selectOnly` hedef grubu kayıpken seçim boş görünür (sessiz geri düşme yok). */}
+          {groupValue === "" && (
+            <option value="" disabled>
+              Grup seçin
+            </option>
+          )}
           {groupOptions.map((group) => (
             <option key={group.id} value={group.id}>
               {group.name}

@@ -12,6 +12,7 @@ import {
   buildRouteTree,
   resolveHrefIn,
 } from "@/components/shell/route-tree.testkit";
+import { OFFER_TEMPLATE_PARAM } from "@/lib/navigation-params";
 import { PERSONNEL_RETURN_PARAM, SECTION_TAB_PARAM, routes } from "@/lib/routes";
 
 const P = "p-1";
@@ -395,6 +396,22 @@ describe("routes.offers (TKL-F3 · Teklif Hazırlama)", () => {
   it("liste ve yeni sabit yollardır", () => {
     expect(routes.offers.list()).toBe("/teklif-hazirlama");
     expect(routes.offers.new()).toBe("/teklif-hazirlama/yeni");
+  });
+
+  it("şablonlar: çıplak yol statik segmenttir; ?sablon= yalnız verilince eklenir ve kodlanır (TKL-F4)", () => {
+    expect(routes.offers.templates()).toBe("/teklif-hazirlama/sablonlar");
+    expect(routes.offers.templates({})).toBe("/teklif-hazirlama/sablonlar");
+    expect(routes.offers.templates({ templateId: "t-1" })).toBe("/teklif-hazirlama/sablonlar?sablon=t-1");
+    expect(routes.offers.templates({ templateId: "a/b" })).toBe("/teklif-hazirlama/sablonlar?sablon=a%2Fb");
+  });
+
+  it("yeni: çıplak çağrı kırılmaz; templateId ?sablon= önseçimi taşır (TKL-F4)", () => {
+    expect(routes.offers.new({})).toBe("/teklif-hazirlama/yeni");
+    expect(routes.offers.new({ templateId: "t-1" })).toBe("/teklif-hazirlama/yeni?sablon=t-1");
+  });
+
+  it("OFFER_TEMPLATE_PARAM = sablon (URL anahtarı TEK yerde)", () => {
+    expect(OFFER_TEMPLATE_PARAM).toBe("sablon");
   });
 
   it("detay: revizyon verilmezse sorgu dizesi HİÇ eklenmez; rev 0 da yazılır", () => {

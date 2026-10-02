@@ -3,6 +3,8 @@ import { formatDateDots } from "@/lib/format";
 import "./offer-create.css";
 
 interface OfferCreateSummaryProps {
+  /** "Boş teklif" / "Şablon · {ad}" / "Kopya · TKL-… Rev.n" (TY startLbl). */
+  startLabel: string;
   employerName: string;
   title: string;
   validityDays: string;
@@ -21,7 +23,7 @@ export function OfferCreateSummary(props: OfferCreateSummaryProps) {
   const until = props.validUntil === null ? "–" : formatDateDots(props.validUntil);
   const rows: readonly { label: string; value: string }[] = [
     { label: "Teklif no", value: "Oluşturunca verilir" },
-    { label: "Başlangıç", value: "Boş teklif" },
+    { label: "Başlangıç", value: props.startLabel },
     { label: "İşveren", value: props.employerName },
     { label: "İş adı", value: props.title.trim() },
     { label: "Geçerlilik", value: `${props.validityDays} gün → ${until}` },

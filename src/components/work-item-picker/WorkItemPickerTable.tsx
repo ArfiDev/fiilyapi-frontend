@@ -9,6 +9,7 @@ import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { multiplyDecimalStrings } from "@/lib/decimal";
 import { routes } from "@/lib/routes";
 
+import { pickerColumns } from "./picker-columns";
 import {
   validateRow,
   type DisciplineSection,
@@ -22,12 +23,8 @@ import type { PickerTarget } from "./picker-target";
 import { WorkItemPickerRow } from "./WorkItemPickerRow";
 import "./work-item-picker.css";
 
-const COLUMN_COUNT = 9;
-
-/** PS:86-97 sırası; Şantiye Kotası/Dağıtılmış/Kalan/Bu Bölüme/Dağıtım → plan §1.3 eşlemesi. Fiyat kolonu başlığı hedefe göre. */
-function columnsOf(priceHeader: string): readonly string[] {
-  return ["Poz No", "Tanım", "Birim", "Ref. fiyat", "Son fiyat", "Miktar", priceHeader, "Tutar"];
-}
+/** Onay kutusu kolonu + `pickerColumns` (moddan türer; `selectOnly`te Miktar/fiyat/Tutar yok). */
+const CHECK_COLUMN_COUNT = 1;
 
 export type PickerEmptyReason = "loading" | "error" | "forbidden" | "catalog-empty" | "restricted-empty" | "no-match" | null;
 
@@ -99,6 +96,8 @@ export function WorkItemPickerTable({
   onUnitPrice,
 }: WorkItemPickerTableProps) {
   const entryById = new Map(entries.map((entry) => [entry.item.id, entry]));
+  const columns = pickerColumns(target.entryMode, target.priceHeader);
+  const columnCount = columns.length + CHECK_COLUMN_COUNT;
   return (
     <div className="wip-table-scroll">
       <table className="wip-table">
@@ -114,7 +113,7 @@ export function WorkItemPickerTable({
                 onChange={onToggleAll}
               />
             </th>
-            {columnsOf(target.priceHeader).map((column) => (
+            {columns.map((column) => (
               <th key={column} scope="col" className="wip-th">
                 {column}
               </th>
@@ -124,7 +123,7 @@ export function WorkItemPickerTable({
         <tbody>
           {emptyReason !== null ? (
             <tr>
-              <td colSpan={COLUMN_COUNT} className="wip-empty">
+              <td colSpan={columnCount} className="wip-empty">
                 <EmptyBody reason={emptyReason} restrictedNames={restrictedNames} words={target.words} />
               </td>
             </tr>
@@ -135,6 +134,7 @@ export function WorkItemPickerTable({
                 section={section}
                 inputs={inputs}
                 entryById={entryById}
+                columnCount={columnCount}
                 target={target}
                 isDisabled={isDisabled}
                 onToggle={onToggle}
@@ -153,6 +153,7 @@ interface SectionRowsProps {
   section: DisciplineSection;
   inputs: PickerInputs;
   entryById: ReadonlyMap<string, ResolvedEntry>;
+  columnCount: number;
   target: WorkItemPickerTableProps["target"];
   isDisabled: boolean;
   onToggle: WorkItemPickerTableProps["onToggle"];
@@ -160,12 +161,12 @@ interface SectionRowsProps {
   onUnitPrice: WorkItemPickerTableProps["onUnitPrice"];
 }
 
-function SectionRows({ section, inputs, entryById, target, isDisabled, onToggle, onQuantity, onUnitPrice }: SectionRowsProps) {
+function SectionRows({ section, inputs, entryById, columnCount, target, isDisabled, onToggle, onQuantity, onUnitPrice }: SectionRowsProps) {
   const { discipline, rows } = section;
   return (
     <>
       <tr className="wip-group">
-        <td colSpan={COLUMN_COUNT}>
+        <td colSpan={columnCount}>
           <DisciplineSwatch color={discipline.color} />
           <span className="wip-group__title">{`${discipline.code} — ${discipline.name}`}</span>
           <span className="wip-group__count">{`${rows.length} ${target.words.noun}`}</span>

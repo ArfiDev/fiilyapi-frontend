@@ -200,3 +200,85 @@ test("liste: tarih süzgeci satırları daraltır, PDF menüsü doğru yazdırma
   await expect(menu.getByRole("link", { name: "İşveren teklifi" })).toHaveAttribute("href", /\/yazdir\?.*tur=isveren/);
   await expect(menu.getByRole("link", { name: "İç döküm (maliyet + kâr)" })).toHaveAttribute("href", /\/yazdir\?.*tur=ic/);
 });
+
+// ------------------------------------------------------------------------------------ TKL-F4.8
+
+const COPY_SOURCE_NO = "TKL-2026-0002";
+const COPY_SOURCE_SEARCH = "Duvar ve Sıva";
+const COPY_TITLE = "E2E Kopya Teklif";
+
+async function sourceItemPozNos(page: Page, offerNo: string): Promise<string[]> {
+  const list = await page.request.get(`/api/backend/offers?q=${offerNo}`);
+  const offerId = ((await list.json()) as { items: Array<{ id: string; offer_no: string }> }).items.find((item) => item.offer_no === offerNo)?.id;
+  if (offerId === undefined) throw new Error(`tohum teklif yok: ${offerNo}`);
+  const revision = await page.request.get(`/api/backend/offers/${offerId}/revisions/0`);
+  const body = (await revision.json()) as { groups: Array<{ items: Array<{ poz_no: string }> }> };
+  return body.groups.flatMap((group) => group.items.map((item) => item.poz_no));
+}
+
+test("kopyadan teklif: Mevcut tekliften kopyala → ara → seç → oluştur → detayda kaynağın kalemleri", async ({ page }) => {
+  const server = await setUp(page);
+  const pozNos = await sourceItemPozNos(page, COPY_SOURCE_NO);
+  expect(pozNos.length).toBeGreaterThan(0);
+
+  await page.goto(NEW_URL);
+  await expect(page.getByRole("heading", { level: 1, name: "Yeni Teklif" })).toBeVisible();
+  await page.getByRole("radio", { name: /^Mevcut tekliften kopyala/ }).click();
+  await page.getByRole("searchbox", { name: "Teklif no, iş adı ya da işveren ara" }).fill(COPY_SOURCE_SEARCH);
+  const source = page.getByRole("radio", { name: new RegExp(COPY_SOURCE_NO) });
+  await expect(source).toHaveCount(1);
+  await source.click();
+  await expect(source).toBeChecked();
+  await page.getByLabel("İşveren", { exact: true }).selectOption({ index: 1 });
+  await page.getByLabel("İş adı").fill(COPY_TITLE);
+  await page.getByRole("button", { name: "Teklifi oluştur ve kalemlere geç →" }).click();
+  await expect(page).toHaveURL(/\/teklif-hazirlama\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(COPY_TITLE);
+
+  expect(server.createBodies).toHaveLength(1);
+  expect(typeof (server.createBodies[0] as Json).copy_from).toBe("object");
+  for (const poz of pozNos) await expect(page.getByLabel(`${poz} kalemi sil`)).toBeVisible();
+  await expect(page.getByLabel(/ kalemi sil$/)).toHaveCount(pozNos.length);
+});
+
+/** İndirmeyi + `view` parametreli isteği birlikte yakalar (istek `page.on("request")` ile; sahte sunucu durumuna bakılmaz). */
+async function downloadWith(page: Page, trigger: () => Promise<void>): Promise<{ filename: string; url: URL }> {
+  const requestPromise = page.waitForRequest((request) => /\/export(\?|$)/.test(request.url()));
+  const downloadPromise = page.waitForEvent("download");
+  await trigger();
+  const [request, download] = await Promise.all([requestPromise, downloadPromise]);
+  return { filename: download.suggestedFilename(), url: new URL(request.url()) };
+}
+
+test("Excel: detay Excel ▾ işveren/iç · liste satır menüsü · katalog 'Excel İndir' → dosya adı + view parametresi", async ({ page }) => {
+  await setUp(page);
+  await openSeedOffer(page, COPY_SOURCE_NO);
+
+  // Detay: işveren teklifi / iç döküm.
+  await page.getByRole("button", { name: "Excel", exact: true }).click();
+  const employer = await downloadWith(page, () => page.getByRole("button", { name: "İşveren teklifi (.xlsx)" }).click());
+  expect(employer.filename).toBe(`${COPY_SOURCE_NO}-Rev0-isveren.xlsx`);
+  expect(employer.url.searchParams.get("view")).toBe("employer");
+
+  await expect(page.getByRole("button", { name: "Excel", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Excel", exact: true }).click();
+  const internal = await downloadWith(page, () => page.getByRole("button", { name: "İç döküm (maliyet + kâr)" }).click());
+  expect(internal.filename).toBe(`${COPY_SOURCE_NO}-Rev0-ic.xlsx`);
+  expect(internal.url.searchParams.get("view")).toBe("internal");
+
+  // Liste satır menüsü: işveren görünümü.
+  await page.goto(LIST_URL);
+  await expect(page.getByTestId(`offers-row-${COPY_SOURCE_NO}`)).toBeVisible();
+  await page.getByRole("button", { name: `${COPY_SOURCE_NO} işlemleri` }).click();
+  const row = await downloadWith(page, () => page.getByRole("button", { name: "Excel indir" }).click());
+  expect(row.filename).toBe(`${COPY_SOURCE_NO}-Rev0-isveren.xlsx`);
+  expect(row.url.searchParams.get("view")).toBe("employer");
+
+  // Katalog: "Excel İndir" (view parametresi YOK, katalog uç adı).
+  await page.goto(CATALOG_URL);
+  await expect(page.getByRole("heading", { level: 1, name: "İş Kalemi Kataloğu" })).toBeVisible();
+  const catalog = await downloadWith(page, () => page.getByRole("button", { name: "Excel İndir" }).click());
+  expect(catalog.url.pathname).toMatch(/\/catalog\/items\/export$/);
+  expect(catalog.url.searchParams.has("view")).toBe(false);
+  expect(catalog.filename).toMatch(/\.xlsx$/);
+});

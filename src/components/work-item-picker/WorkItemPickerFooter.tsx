@@ -2,12 +2,14 @@
 
 import { Button } from "@/components/ui";
 
-import type { PickerWords } from "./picker-rules";
+import type { PickerEntryMode, PickerWords } from "./picker-rules";
 
 export interface WorkItemPickerFooterProps {
   /** Altbilgi kırmızı bandı (PS:203-209): yalnız hata varken; satırlar ayrı satır basılır. */
   bandLines: readonly string[];
   selectedCount: number;
+  /** `selectOnly` (şablon): Σ yerine "N kalem seçildi". */
+  entryMode: PickerEntryMode;
   /** "₺1.234,56" ya da "—". */
   totalText: string;
   /** "Eklenecek Tutar" (sözleşme) · "Eklenecek maliyet" (teklif). */
@@ -28,6 +30,7 @@ export interface WorkItemPickerFooterProps {
 export function WorkItemPickerFooter({
   bandLines,
   selectedCount,
+  entryMode,
   totalText,
   totalLabel,
   words,
@@ -58,13 +61,22 @@ export function WorkItemPickerFooter({
             {manualAddLabel}
           </Button>
         )}
-        <span className="wip-footer__stat wip-footer__stat--first">
-          {`Seçili ${words.nounCap} `}
-          <strong data-testid="wip-selected">{selectedCount}</strong>
-        </span>
-        <span className="wip-footer__stat">
-          {totalLabel} <strong data-testid="wip-total">{totalText}</strong>
-        </span>
+        {entryMode === "selectOnly" ? (
+          <span className="wip-footer__stat wip-footer__stat--first">
+            <strong data-testid="wip-selected">{selectedCount}</strong>
+            {` ${words.noun} seçildi`}
+          </span>
+        ) : (
+          <>
+            <span className="wip-footer__stat wip-footer__stat--first">
+              {`Seçili ${words.nounCap} `}
+              <strong data-testid="wip-selected">{selectedCount}</strong>
+            </span>
+            <span className="wip-footer__stat">
+              {totalLabel} <strong data-testid="wip-total">{totalText}</strong>
+            </span>
+          </>
+        )}
         <Button variant="secondary" disabled={isSubmitting} onClick={onCancel}>
           Vazgeç
         </Button>

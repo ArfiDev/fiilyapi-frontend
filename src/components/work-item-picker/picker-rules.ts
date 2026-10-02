@@ -6,6 +6,7 @@
  * bunu parametre olarak alır, varsayılanı SÖZLEŞMEDİR (F2 davranışı birebir). Metin/gövde farkları
  * `picker-target.ts`te toplanır.
  */
+import { MAX_TEMPLATE_ITEMS, MSG_ITEMS_TOO_MANY } from "@/components/offer-templates/template-content";
 import {
   OFFER_PRICE_LIMITS,
   OFFER_QUANTITY_LIMITS,
@@ -61,7 +62,15 @@ export type DecimalBound =
   | { kind: "digits"; fraction: number; integer: number; fractionMessage: string; integerMessage: string }
   | { kind: "max"; fraction: number; max: string; fractionMessage: string; maxMessage: string };
 
+/** `priced`: miktar + fiyat girilir (sözleşme, teklif). `selectOnly`: yalnız kalem seçilir (şablon — miktar/fiyat tutulmaz). */
+export type PickerEntryMode = "priced" | "selectOnly";
+
 export interface PickerRules {
+  entryMode: PickerEntryMode;
+  /** `selectOnly`: hedefteki TOPLAM kalem tavanı (şablon 1000); `null` = yalnız tek-istek tavanı. */
+  maxTotalItems: number | null;
+  /** Toplam tavan aşılınca bant metni (`maxTotalItems` doluyken). */
+  totalCapMessage: string;
   /** Sözleşme: birim fiyat ZORUNLU. Teklif: maliyet B.F. isteğe bağlı (fiyatsız kalem, T31). */
   isPriceRequired: boolean;
   priceMessages: PickerPriceMessages;
@@ -91,6 +100,9 @@ function maxBound(limits: DecimalLimits): DecimalBound {
 
 /** `contract-item-form/validate.ts` ONAYLI metinleri (birebir; `picker-model.test.ts` drift bekçisi). */
 export const CONTRACT_RULES: PickerRules = {
+  entryMode: "priced",
+  maxTotalItems: null,
+  totalCapMessage: "",
   isPriceRequired: true,
   priceMessages: {
     required: "Birim fiyat girin",
@@ -108,6 +120,9 @@ export const CONTRACT_RULES: PickerRules = {
 
 /** Teklif: maliyet B.F. isteğe bağlı; "Teklifte var · {grup}"; poz no kopya olduğundan kod çakışması engel DEĞİL. */
 export const OFFER_RULES: PickerRules = {
+  entryMode: "priced",
+  maxTotalItems: null,
+  totalCapMessage: "",
   isPriceRequired: false,
   priceMessages: {
     // Boş kutu "girin" hatası DEĞİL (fiyatsız kalem); alan yalnız tutarlılık için dolu.
@@ -119,6 +134,21 @@ export const OFFER_RULES: PickerRules = {
   linkedLabel: "Teklifte var",
   codeBlockText: "",
   // Kalem tablosuyla TEK KAYNAK (`lib/offer-limits`): backend `le=` sınırı; metinler de aynı.
+  quantityBound: maxBound(OFFER_QUANTITY_LIMITS),
+  priceBound: maxBound(OFFER_PRICE_LIMITS),
+  words: OFFER_WORDS,
+};
+
+/** Şablon: miktar/fiyat YOK (`selectOnly`); kalem bağı katalog kimliğidir → poz no çakışması engel DEĞİL; tavan 1000. */
+export const TEMPLATE_RULES: PickerRules = {
+  entryMode: "selectOnly",
+  maxTotalItems: MAX_TEMPLATE_ITEMS,
+  totalCapMessage: MSG_ITEMS_TOO_MANY,
+  isPriceRequired: false,
+  priceMessages: { required: "", notANumber: "", negative: "" },
+  blocksOnCodeCollision: false,
+  linkedLabel: "Şablonda var",
+  codeBlockText: "",
   quantityBound: maxBound(OFFER_QUANTITY_LIMITS),
   priceBound: maxBound(OFFER_PRICE_LIMITS),
   words: OFFER_WORDS,

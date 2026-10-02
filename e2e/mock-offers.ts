@@ -45,6 +45,7 @@ import {
   type OfferAction,
 } from "./mock-offer-service";
 import type { GroupRec, ItemRec, OffersPort, OffersState } from "./mock-offer-types";
+import { handleOfferTemplates } from "./mock-offer-templates";
 import { listOffers, readItem, readOfferDetail, readRevision } from "./mock-offer-views";
 
 export { OFFER_MESSAGES } from "./mock-offer-service";
@@ -83,6 +84,7 @@ function dispatch(state: OffersState, port: OffersPort, withBody: (run: (body: R
     if (method !== "POST") return notAllowed();
     return withBody((body) => send(201, readOfferDetail(state, createOffer(state, port, body))));
   }
+  if (path === "/offers/templates" || path.startsWith("/offers/templates/")) return handleOfferTemplates(state, port, withBody);
   if (path === "/offers/settings") {
     if (method === "GET") return send(200, settingsRead(state));
     if (method !== "PUT") return notAllowed();

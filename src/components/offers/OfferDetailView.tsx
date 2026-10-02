@@ -28,7 +28,7 @@ import { OfferTotalsCard } from "./OfferTotalsCard";
 import { ReadOnlyRevisionBanner } from "./ReadOnlyRevisionBanner";
 import { RevisionHistory } from "./RevisionHistory";
 import { RevisionPicker } from "./RevisionPicker";
-import { offerActionGate } from "./offer-actions";
+import { OFFER_ACTION_REASONS, offerActionGate } from "./offer-actions";
 import {
   OFFER_FORM_FIELDS,
   OFFER_INFO_FIELD_SET,
@@ -147,11 +147,19 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     offerId,
     revNo,
     validityDays: revision.validity_days,
+    unquantifiedCount: revision.totals.unquantified_count,
     onToast: showToast,
     onRevisionOpened: (opened) => props.onSelectRevision(opened),
   });
 
-  const gate = offerActionGate({ status: detail.status, isLatest, isDirty, canWrite, isItemsBusy: isItemsWriting });
+  const gate = offerActionGate({
+    status: detail.status,
+    isLatest,
+    isDirty,
+    canWrite,
+    isItemsBusy: isItemsWriting,
+    unquantifiedCount: revision.totals.unquantified_count,
+  });
 
   const employers = useMemo(() => {
     const listed = (employersQuery.data?.items ?? []).map((employer) => ({ id: employer.id, name: employer.name }));
@@ -209,7 +217,8 @@ export function OfferDetailView(props: OfferDetailViewProps) {
       const key = offerRevisionKey(offerId, revNo);
       await queryClient.refetchQueries({ queryKey: key, exact: true }, { throwOnError: true });
       const fresh = queryClient.getQueryData<OfferRevisionRead>(key) ?? revision;
-      if (fresh.totals.unpriced_count > 0) setModal("send");
+      if (fresh.totals.unquantified_count > 0) actions.reportMessage(OFFER_ACTION_REASONS.unquantified); // SO-21: modal/istek YOK
+      else if (fresh.totals.unpriced_count > 0) setModal("send");
       else actions.send(() => undefined);
     } catch (error) {
       actions.reportError(error, "Revizyon tazelenemedi.");

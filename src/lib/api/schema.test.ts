@@ -614,7 +614,7 @@ describe("TKL-B4 teklif çekirdeği tip üretimi (TKL-F3.1 kapısı)", () => {
     expectTypeOf<keyof InternalRead>().toEqualTypeOf<
       "cost" | "overhead" | "profit" | "profit_pct" | "man_hours"
     >();
-    expectTypeOf<InternalRead["man_hours"]>().toEqualTypeOf<string>();
+    expectTypeOf<InternalRead["man_hours"]>().toEqualTypeOf<string | null>();
     expectTypeOf<InternalRead["cost"]>().toEqualTypeOf<string | null>();
   });
 
@@ -662,6 +662,110 @@ describe("TKL-B4 teklif çekirdeği tip üretimi (TKL-F3.1 kapısı)", () => {
     >().not.toBeNever();
     expectTypeOf<
       paths["/offers/{offer_id}/revisions/{rev_no}/withdraw"]["post"]
+    >().not.toBeNever();
+  });
+});
+
+describe("TKL-B5/B6 tip üretimi (TKL-F4.1 kapısı)", () => {
+  type S = components["schemas"];
+
+  it("OfferCreate: template_id/copy_from opsiyonel, employer_id/title nullable+opsiyonel", () => {
+    expectTypeOf<S["OfferCreate"]["template_id"]>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    expectTypeOf<S["OfferCreate"]["copy_from"]>().toEqualTypeOf<
+      S["OfferCopySource"] | null | undefined
+    >();
+    expectTypeOf<S["OfferCreate"]["employer_id"]>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    expectTypeOf<S["OfferCreate"]["title"]>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    expectTypeOf<S["OfferCopySource"]>().toHaveProperty("offer_id");
+    expectTypeOf<S["OfferCopySource"]>().toHaveProperty("rev_no");
+  });
+
+  it("miktarsız kalem: quantity ve man_hours nullable", () => {
+    expectTypeOf<
+      null extends S["OfferItemCreate"]["quantity"] ? true : false
+    >().toEqualTypeOf<true>();
+    expectTypeOf<S["OfferItemInternalRead"]["man_hours"]>().toEqualTypeOf<
+      string | null
+    >();
+  });
+
+  it("unquantified_count / conversion_state / project_id / won_not_converted_count", () => {
+    expectTypeOf<S["OfferTotalsRead"]["unquantified_count"]>().toEqualTypeOf<number>();
+    expectTypeOf<S["OfferRevisionSummaryRead"]["unquantified_count"]>().toEqualTypeOf<number>();
+    expectTypeOf<S["OfferListItem"]["unquantified_count"]>().toEqualTypeOf<number>();
+    expectTypeOf<S["OfferDetailRead"]["conversion_state"]>().toEqualTypeOf<
+      "converted" | "won_not_converted" | null
+    >();
+    expectTypeOf<S["OfferListItem"]["conversion_state"]>().toEqualTypeOf<
+      "converted" | "won_not_converted" | null
+    >();
+    expectTypeOf<S["OfferDetailRead"]["project_id"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<S["OfferListItem"]["project_id"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<S["OfferListSummaryRead"]["won_not_converted_count"]>().toEqualTypeOf<number>();
+  });
+
+  it("Template* şemaları", () => {
+    expectTypeOf<S["TemplateCreate"]>().toHaveProperty("name");
+    expectTypeOf<S["TemplateDetailRead"]>().toHaveProperty("groups");
+    expectTypeOf<S["TemplateDetailRead"]>().toHaveProperty("usage_count");
+    expectTypeOf<S["TemplateListItem"]>().toHaveProperty("is_default");
+    expectTypeOf<S["TemplateListResponse"]>().toHaveProperty("items");
+    expectTypeOf<S["TemplateUpdate"]>().toHaveProperty("is_default");
+    expectTypeOf<S["TemplateFromOffer"]>().toHaveProperty("rev_no");
+    expectTypeOf<S["TemplateCopy"]>().toHaveProperty("name");
+    expectTypeOf<S["TemplateContentReplace"]>().toHaveProperty("groups");
+  });
+
+  it("OfferItemRead.quantified boolean ve ZORUNLU (TKL-B6.7 kimlik kovası; finance maskesinde quantity null olsa da doğru)", () => {
+    expectTypeOf<S["OfferItemRead"]["quantified"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<
+      Record<string, never> extends Pick<S["OfferItemRead"], "quantified"> ? true : false
+    >().toEqualTypeOf<false>();
+  });
+
+  it("Template PUT/PATCH expected_updated_at ZORUNLU (TKL-B5.4 iyimser kilit)", () => {
+    expectTypeOf<S["TemplateUpdate"]["expected_updated_at"]>().toEqualTypeOf<string>();
+    expectTypeOf<S["TemplateContentReplace"]["expected_updated_at"]>().toEqualTypeOf<string>();
+    expectTypeOf<
+      Record<string, never> extends Pick<S["TemplateUpdate"], "expected_updated_at">
+        ? true
+        : false
+    >().toEqualTypeOf<false>();
+    expectTypeOf<
+      Record<string, never> extends Pick<S["TemplateContentReplace"], "expected_updated_at">
+        ? true
+        : false
+    >().toEqualTypeOf<false>();
+  });
+
+  it("ExportView, ConvertRequest/Response, RateSource", () => {
+    expectTypeOf<S["ExportView"]>().toEqualTypeOf<"employer" | "internal">();
+    expectTypeOf<S["ConvertRequest"]>().toHaveProperty("open_site");
+    expectTypeOf<S["ConvertRequest"]>().toHaveProperty("groups");
+    expectTypeOf<S["ConvertResponse"]>().toHaveProperty("project_id");
+    expectTypeOf<S["ConvertResponse"]>().toHaveProperty("warnings");
+    expectTypeOf<"offer">().toMatchTypeOf<S["RateSource"]>();
+  });
+
+  it("yeni uçların metotları tanımlıdır", () => {
+    expectTypeOf<paths["/offers/templates"]["get"]>().not.toBeNever();
+    expectTypeOf<paths["/offers/templates"]["post"]>().not.toBeNever();
+    expectTypeOf<paths["/offers/templates/from-offer"]["post"]>().not.toBeNever();
+    expectTypeOf<paths["/offers/templates/{template_id}"]["get"]>().not.toBeNever();
+    expectTypeOf<paths["/offers/templates/{template_id}/copy"]["post"]>().not.toBeNever();
+    expectTypeOf<paths["/offers/{offer_id}/convert"]["post"]>().not.toBeNever();
+    expectTypeOf<
+      paths["/offers/{offer_id}/revisions/{rev_no}/export"]["get"]
+    >().not.toBeNever();
+    expectTypeOf<paths["/catalog/items/export"]["get"]>().not.toBeNever();
+    expectTypeOf<
+      paths["/sites/{site_id}/earned-value/budget/fill-from-contract"]["post"]
     >().not.toBeNever();
   });
 });

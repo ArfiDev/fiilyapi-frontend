@@ -5,6 +5,8 @@
 import type { OfferItemRead } from "@/lib/api/hooks/useOffers";
 import { sumDecimalStrings } from "@/lib/decimal";
 
+import { isQuantityMissing } from "./offer-item-cells";
+
 const LETTER_COUNT = 26;
 const FIRST_LETTER = "A".charCodeAt(0);
 
@@ -21,7 +23,7 @@ export function groupCode(index: number): string {
 
 export interface GroupTotals {
   count: number;
-  /** Σ adam-saat (fiyatsız kalemler DAHİL — `calc.py:207`). */
+  /** Σ adam-saat (fiyatsız kalemler DAHİL — `calc.py:207`; miktarsız kalem HARİÇ: a-s bilinmiyor, SO-28 kısmi). */
   manHours: string | null;
   /** Σ maliyet (yalnız fiyatlı kalemler); maskeli bileşen varsa BİLİNMEZ (null). */
   cost: string | null;
@@ -30,15 +32,17 @@ export interface GroupTotals {
 }
 
 /**
- * Fiyatsız kalem maliyet/tutar toplamına GİRMEZ (sunucu net = Σ tutar ile tutarlı). Fiyatlı kalemin para alanı
+ * Fiyatsız ve miktarsız kalem maliyet/tutar toplamına GİRMEZ (sunucu net = Σ tutar ile tutarlı). Fiyatlı kalemin para alanı
  * null ise (limited rol maskesi) toplam BİLİNMEZ döner — 0 DEĞİL (kapsam maskesi kanonu, `lib/decimal`).
  * Boş grupta toplamlar "0"dır (maskeli değil).
  */
 export function groupTotals(items: readonly OfferItemRead[]): GroupTotals {
-  const priced = items.filter((item) => item.priced);
+  // F4.2 · miktarsız kalem (SO-21) hiçbir Σ'ya GİRMEZ (sunucu net/a-s ile tutarlı); onu "BİLİNMEZ" saymak Σ'yı "—" yapardı.
+  const counted = items.filter((item) => !isQuantityMissing(item));
+  const priced = counted.filter((item) => item.priced);
   return {
     count: items.length,
-    manHours: sumDecimalStrings(items.map((item) => item.internal.man_hours)),
+    manHours: sumDecimalStrings(counted.map((item) => item.internal.man_hours)),
     cost: sumDecimalStrings(priced.map((item) => item.internal.cost)),
     amount: sumDecimalStrings(priced.map((item) => item.customer?.amount ?? null)),
   };

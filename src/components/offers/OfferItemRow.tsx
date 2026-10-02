@@ -26,11 +26,14 @@ export interface OfferItemRowProps {
   ctx: CellContext;
   /** Katalogdaki kalem (Ref/Son önerisi); kısıtlı listeden düşen kalemde undefined → satır basılmaz [V10]. */
   catalogItem: WorkItemRead | undefined;
+  /** Miktarı girilmemiş kalem (SO-21; `isQuantityMissing` kararı — finance maskesi DEĞİL). */
+  isQuantityMissing: boolean;
   editor: OfferItemEditor;
   canEdit: boolean;
 }
 
 const MISSING_TEXT = "Fiyat girilmedi · tutara dahil değil";
+const QUANTITY_MISSING_TEXT = "Miktar girilmedi · toplama dahil değil";
 const DELETE_TITLE = "Kalemi sil";
 const CATALOG_MHR_OVER_LIMIT = "Katalog a-s değeri teklif sınırını aşıyor";
 
@@ -48,7 +51,7 @@ function CatalogHints({ catalogItem }: { catalogItem: WorkItemRead | undefined }
 }
 
 /** TD:246-262 — tek kalem satırı; 11 kolon. */
-export function OfferItemRow({ ctx, catalogItem, editor, canEdit }: OfferItemRowProps) {
+export function OfferItemRow({ ctx, catalogItem, isQuantityMissing, editor, canEdit }: OfferItemRowProps) {
   const { item } = ctx;
   const unpriced = isUnpriced(item);
   const rowError = editor.errorOf(item.id, ROW_ERROR_FIELD);
@@ -59,13 +62,19 @@ export function OfferItemRow({ ctx, catalogItem, editor, canEdit }: OfferItemRow
   const catalogMhr = ctx.catalogUnitMhr;
   return (
     <tr
-      className={cx("oit-row", unpriced && "oit-row--missing")}
+      className={cx("oit-row", (unpriced || isQuantityMissing) && "oit-row--missing")}
       data-testid={`oit-row-${item.id}`}
       aria-busy={editor.isRowBusy(item.id) || undefined}
     >
       <td className="oit-poz">{item.poz_no}</td>
       <td className="oit-desc">
         <span className="oit-desc__text">{item.description}</span>
+        {isQuantityMissing && (
+          <span className="oit-warn">
+            <WarningTriangleIcon {...inlineSymbolProps} />
+            {QUANTITY_MISSING_TEXT}
+          </span>
+        )}
         {unpriced && (
           <span className="oit-warn">
             <WarningTriangleIcon {...inlineSymbolProps} />

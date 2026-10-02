@@ -139,28 +139,40 @@ export function remeasurePages<Row extends MeasurableRow>(
   return paginateByHeights(entries, budgets);
 }
 
+/**
+ * TKL-F4.3 · `isSettled` — ölçüm turu BİTTİ mi (yazdırma kökünün `data-measured` niteliği; e2e bunu bekler).
+ * `true` olur: yazı tipleri hazır ∧ (son tur imzayı değiştirmedi ∨ ölçülemedi (jsdom/SSR) ∨ MAX_PASSES doldu).
+ * Kaynak (`source`) ya da yazı tipi turu değişince anahtar değişir → yeniden `false`.
+ */
 export function useMeasuredPages<Row extends MeasurableRow>(
   staticPages: OfferPrintPage<Row>[],
-): { pages: OfferPrintPage<Row>[]; rootRef: RefObject<HTMLDivElement | null> } {
+): { pages: OfferPrintPage<Row>[]; rootRef: RefObject<HTMLDivElement | null>; isSettled: boolean } {
   const rootRef = useRef<HTMLDivElement>(null);
   const source = pagesSignature(staticPages);
   const [measured, setMeasured] = useState<{ source: string; pages: OfferPrintPage<Row>[] } | null>(null);
   const [fontsTick, setFontsTick] = useState(0);
+  const [settledKey, setSettledKey] = useState<string | null>(null);
   const pages = measured !== null && measured.source === source ? measured.pages : staticPages;
   const passes = useRef({ key: "", count: 0 });
   const signature = pagesSignature(pages);
+  const key = `${source}#${fontsTick}`;
+  // `document.fonts` yoksa (jsdom/eski tarayıcı) beklenecek bir şey yoktur; varsa ilk `ready` çözülene dek hazır değil.
+  const hasFontsPending = fontsTick === 0 && typeof document !== "undefined" && document.fonts !== undefined;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (root === null) return;
-    const key = `${source}#${fontsTick}`;
     if (passes.current.key !== key) passes.current = { key, count: 0 };
-    if (passes.current.count >= MAX_PASSES) return;
+    if (passes.current.count >= MAX_PASSES) {
+      setSettledKey(key);
+      return;
+    }
     passes.current.count += 1;
     const rows = staticPages.flatMap((page) => page.parts.flatMap((part) => part.rows));
     const closingIds = staticPages.flatMap((page) => page.closing);
     const next = remeasurePages(root, rows, closingIds);
     if (next !== null && pagesSignature(next) !== signature) setMeasured({ source, pages: next });
+    else setSettledKey(key);
     // `staticPages` kimliği her üst render'da değişebilir; içerik kimliği `source`tur.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source, signature, fontsTick]);
@@ -176,5 +188,5 @@ export function useMeasuredPages<Row extends MeasurableRow>(
     };
   }, []);
 
-  return { pages, rootRef };
+  return { pages, rootRef, isSettled: !hasFontsPending && settledKey === key };
 }

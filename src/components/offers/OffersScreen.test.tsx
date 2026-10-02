@@ -43,6 +43,7 @@ function mockGets(offers: unknown) {
     if (path === "/offers") return typeof offers === "function" ? (offers as () => unknown)() : ok(offers);
     if (path === "/employers") return ok({ items: [{ id: "emp-1", name: "Kuzey Gayrimenkul A.Ş." }], total: 1 });
     if (path === "/catalog/items") return ok({ items: [] });
+    if (path === "/offers/templates") return ok({ items: [], total: 3 });
     throw new Error(`beklenmeyen GET ${path}`);
   }) as never);
 }
@@ -60,6 +61,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   perm.level = "full";
   scope.value = { isRestricted: false, names: [] };
+});
+
+describe("sekme sayacı (TKL-F4.5)", () => {
+  it("'Teklif Şablonları N' = şablon listesi toplamı", async () => {
+    mockGets(makeResponse([OFFER_DRAFT]));
+    renderScreen();
+    const tab = await screen.findByRole("link", { name: /Teklif Şablonları/ });
+    await waitFor(() => expect(tab).toHaveTextContent("3"));
+    expect(tab).toHaveAttribute("href", "/teklif-hazirlama/sablonlar");
+  });
 });
 
 describe("erişim (T25: contracts:view okur, full + kısıtsız yazar)", () => {

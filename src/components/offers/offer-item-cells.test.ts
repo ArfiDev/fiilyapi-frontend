@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { makeItem, makeManualItem, makeUnpricedItem } from "./offer-item-fixtures";
+import { makeItem, makeManualItem, makeUnpricedItem, makeUnquantifiedItem } from "./offer-item-fixtures";
 import {
   amountText,
   catalogResetBody,
@@ -67,7 +67,6 @@ describe("commitCell — hücre → PATCH gövdesi tablosu (plan §3.2, her sat�
     });
     it("0 / boş / belirsiz nokta / 4 kesir hane / negatif → istek UÇMAZ, sebep döner", () => {
       expect(commitCell("quantity", "0", ctx())).toEqual({ kind: "error", message: "Miktar 0'dan büyük olmalı" });
-      expect(commitCell("quantity", "", ctx())).toEqual({ kind: "error", message: "Miktar girin" });
       expect(commitCell("quantity", "1.5", ctx())).toEqual({
         kind: "error",
         message: "Ondalık için virgül kullanın (ör. 28,50)",
@@ -256,9 +255,17 @@ describe("satır durumu", () => {
     expect(amountText(makeUnpricedItem({ id: "x" }))).toBe("—");
     expect(amountText(makeItem({ id: "x", quantity: null, customer: { unit_price: "128.80", amount: null } }))).toBe("—");
   });
-  it("miktar eksik mi (B5 satır uyarısı için yer)", () => {
-    expect(isQuantityMissing(makeItem({ id: "x", quantity: null }))).toBe(true);
+  it("🔴 F4.2b miktar eksik mi: YALNIZ sunucunun `quantified` bayrağı (finance maskesi quantity'yi null yapsa da)", () => {
+    expect(isQuantityMissing(makeUnquantifiedItem({ id: "x" }))).toBe(true);
     expect(isQuantityMissing(ITEM)).toBe(false);
+    // finance maskesi: miktar null ama quantified=true → miktarsız DEĞİL
+    expect(isQuantityMissing(makeItem({ id: "m", quantity: null, quantified: true }))).toBe(false);
+    // bayrak false iken miktar dolu görünse bile bayrak karar verir (tek karar noktası)
+    expect(isQuantityMissing(makeItem({ id: "n", quantified: false }))).toBe(true);
+  });
+  it("🔴 F4.2 dolu miktarı boşaltmak istemci hatası 'Miktar boşaltılamaz' (SO-24); a-s için 'girin' kalır", () => {
+    expect(commitCell("quantity", "", ctx())).toEqual({ kind: "error", message: "Miktar boşaltılamaz" });
+    expect(commitCell("unitMhr", "", ctx())).toEqual({ kind: "error", message: "A-s girin" });
   });
 });
 

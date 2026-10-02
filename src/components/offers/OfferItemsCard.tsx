@@ -79,6 +79,7 @@ export function OfferItemsCard({ offerId, revNo, revision, canEdit, onWritesBusy
 
   const itemCount = revision.groups.reduce((sum, group) => sum + group.items.length, 0);
   const unpricedCount = revision.totals.unpriced_count;
+  const unquantifiedCount = revision.totals.unquantified_count;
 
   return (
     <section className="oit-card" aria-labelledby="oit-title">
@@ -91,6 +92,12 @@ export function OfferItemsCard({ offerId, revNo, revision, canEdit, onWritesBusy
           <span className="oit-pill oit-pill--warn">
             <WarningTriangleIcon {...inlineSymbolProps} />
             {`${unpricedCount} kalemde fiyat girilmedi`}
+          </span>
+        )}
+        {unquantifiedCount > 0 && (
+          <span className="oit-pill oit-pill--warn">
+            <WarningTriangleIcon {...inlineSymbolProps} />
+            {`${unquantifiedCount} kalemde miktar girilmedi`}
           </span>
         )}
         <div className="oit-head__actions">

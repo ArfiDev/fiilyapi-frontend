@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { WarningTriangleIcon } from "@/components/ui/icons";
 import { formatDateDots } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { routes } from "@/lib/routes";
@@ -8,7 +9,7 @@ import { cx } from "@/lib/cx";
 
 import { OfferRowMenu } from "./OfferRowMenu";
 import { OFFER_STATUS_LABEL, OFFER_STATUS_TONE, isOfferExpired } from "./offer-status";
-import { formatLiraFixed, listedTotals } from "./offer-list-model";
+import { formatLiraFixed, listedTotals, unquantifiedHint } from "./offer-list-model";
 import type { OfferListItem } from "./offer-types";
 
 interface OffersTableProps {
@@ -45,6 +46,7 @@ export function OffersTable({ items, total, canWrite, today, busyOfferId, onNewR
         </div>
         {items.map((item) => {
           const expired = isOfferExpired(item.status, item.valid_until, today);
+          const partialHint = unquantifiedHint(item);
           return (
             <div
               key={item.id}
@@ -72,7 +74,14 @@ export function OffersTable({ items, total, canWrite, today, busyOfferId, onNewR
                 </span>
                 {expired && <span className="offers-expired">süresi geçti</span>}
               </div>
-              <div className="offers-cell offers-cell--num offers-cell--strong" role="cell">{formatLiraFixed(item.net)}</div>
+              <div className="offers-cell offers-cell--num offers-cell--strong" role="cell">
+                {partialHint !== null && (
+                  <span className="offers-partial" role="img" title={partialHint} aria-label={partialHint}>
+                    <WarningTriangleIcon width={13} height={13} aria-hidden="true" />
+                  </span>
+                )}
+                {formatLiraFixed(item.net)}
+              </div>
               <div className="offers-cell offers-cell--num offers-muted" role="cell">{formatLiraFixed(item.gross)}</div>
               <div className="offers-cell" role="cell">
                 <span className={cx("offers-pill", `offers-tone--${OFFER_STATUS_TONE[item.status]}`)}>

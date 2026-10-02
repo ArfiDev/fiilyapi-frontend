@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { backendErrorMessage } from "@/lib/api/error-message";
@@ -13,8 +13,8 @@ import {
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 
-/** TD:421 — "+ Grup" yeni grubu bu adla açar. */
-const NEW_GROUP_NAME = "Yeni grup";
+import { MSG_GROUP_NAME_TAKEN, isGroupNameTaken, nextGroupName } from "./offer-group-names";
+
 const CREATE_FAILED = "Grup eklenemedi.";
 const RENAME_FAILED = "Grup adı kaydedilemedi.";
 const DELETE_FAILED = "Grup silinemedi.";
@@ -33,6 +33,10 @@ export interface OfferGroupActions {
 
 /**
  * TKL-F3.6 · grup yazmaları (ekle · yeniden adlandır · BOŞ grubu sil). Hata metni AYNEN; sıralı değil, tek istek tek sonuç.
+ * TKL-F4.2: "+ Grup" çakışmada "Yeni grup 2"… üretir; aynı adla yeniden adlandırma istemcide reddedilir (SO-30).
+ *
+ * TKL-F4.2b: "+ Grup" uçarken yeniden adlandırma ERTELENİR (ad kararı bayat önbellekle verilirse iki "Yeni grup 2" doğar);
+ * uçuş bitince revizyon taze okunur ve ertelenen adlar o veriyle denetlenip gönderilir.
  *
  * TKL-F3.6.1: silme önbelleğe GÜVENMEZ — "×" basınca revizyon önce tazelenir; grupta kalem varsa SİLİNMEZ
  * (backend `delete_group` kalemleri ZİNCİRLEME siler), mesaj basılır ve tablo zaten taze görünür. 404/409'da
@@ -44,6 +48,9 @@ export function useOfferGroupActions(offerId: string, revNo: number, onForbidden
   const update = useUpdateOfferGroup(offerId, revNo);
   const remove = useDeleteOfferGroup(offerId, revNo);
   const [error, setError] = useState<string | null>(null);
+  // Ref (state DEĞİL): uçuş bayrağı aynı tıklamada senkron okunmalı; render beklenmez.
+  const isCreatingRef = useRef(false);
+  const deferredRenamesRef = useRef<Map<string, string>>(new Map());
 
   function refresh(): void {
     void queryClient.invalidateQueries({ queryKey: offerRevisionKey(offerId, revNo), exact: true });
@@ -68,6 +75,52 @@ export function useOfferGroupActions(offerId: string, revNo: number, onForbidden
     }
   }
 
+  /** Ad kararı için en son bilinen gruplar (önbellek; bilinmiyorsa boş → backend yine serbest bırakır). */
+  function knownGroups(): OfferRevisionRead["groups"] {
+    return queryClient.getQueryData<OfferRevisionRead>(offerRevisionKey(offerId, revNo))?.groups ?? [];
+  }
+
+  function renameChecked(groupId: string, name: string): void {
+    if (isGroupNameTaken(knownGroups(), name, groupId)) {
+      setError(MSG_GROUP_NAME_TAKEN); // SO-30: istek UÇMAZ
+      return;
+    }
+    void run(() => update.mutateAsync({ groupId, body: { name } }), RENAME_FAILED);
+  }
+
+  function renameOrDefer(groupId: string, name: string): void {
+    if (isCreatingRef.current) {
+      deferredRenamesRef.current.set(groupId, name);
+      return;
+    }
+    renameChecked(groupId, name);
+  }
+
+  /** Ertelenen adlar: revizyon TAZE okunur (yeni grup önbellekte olsun), sonra her ad olağan denetimden geçer. */
+  async function flushDeferredRenames(): Promise<void> {
+    const deferred = [...deferredRenamesRef.current];
+    deferredRenamesRef.current = new Map();
+    if (deferred.length === 0) return;
+    try {
+      await freshRevision();
+    } catch (failure) {
+      fail(failure, RENAME_FAILED);
+      return;
+    }
+    for (const [groupId, name] of deferred) renameChecked(groupId, name);
+  }
+
+  async function addGroup(): Promise<void> {
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
+    try {
+      await run(() => create.mutateAsync({ name: nextGroupName(knownGroups()) }), CREATE_FAILED);
+    } finally {
+      isCreatingRef.current = false;
+    }
+    await flushDeferredRenames();
+  }
+
   /** Taze revizyon (ağdan); okunamazsa hata fırlatır (silme kararı bayat veriyle VERİLMEZ). */
   async function freshRevision(): Promise<OfferRevisionRead | undefined> {
     const queryKey = offerRevisionKey(offerId, revNo);
@@ -88,8 +141,8 @@ export function useOfferGroupActions(offerId: string, revNo: number, onForbidden
   }
 
   return {
-    add: () => void run(() => create.mutateAsync({ name: NEW_GROUP_NAME }), CREATE_FAILED),
-    rename: (groupId, name) => void run(() => update.mutateAsync({ groupId, body: { name } }), RENAME_FAILED),
+    add: () => void addGroup(),
+    rename: renameOrDefer,
     remove: (groupId) => void run(() => removeIfEmpty(groupId), DELETE_FAILED),
     isBusy: create.isPending || update.isPending || remove.isPending,
     error,

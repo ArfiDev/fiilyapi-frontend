@@ -30,8 +30,8 @@ describe("openapi-scale-fields · resolveEnumValues", () => {
 });
 
 describe("openapi-scale-fields · collectScaleSuspectFields (regresyon)", () => {
-  it("226 satırla birebir aynı kümeyi üretir", () => {
+  it("238 satırla birebir aynı kümeyi üretir", () => {
     const openApiKeys = new Set(collectScaleSuspectFields().map((r) => schemaKey(r.schema, r.field)));
-    expect(openApiKeys.size).toBe(226);
+    expect(openApiKeys.size).toBe(238);
   });
 });

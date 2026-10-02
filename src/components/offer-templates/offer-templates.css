@@ -1,0 +1,612 @@
+/*
+ * TKL-F4.5 · Teklif Şablonları (mockup: projedesign/Teklif - Sablonlar.dc.html).
+ * Renkler YALNIZ token (çıplak hex yok). Sayfa kabuğu/başlık/toast/şerit sınıfları `offers.css`ten gelir
+ * (`.offers`, `.offers__head`, `.offers-toast`, `.offers-error`, `.offers-readonly`, `.offers-state`).
+ * Mockup tonları → token: #eff6ff `--color-nav-active-bg` · #dbeafe `--color-primary-soft` ·
+ * #bfdbfe `--color-primary-ring` · #1e40af `--color-info-deep-text` · #f8fafc `--color-surface-2` ·
+ * #fecaca `--color-danger-tint-border`.
+ */
+
+/* ------------------------------------------------------------------ şablon listesi (TS:89-106) */
+.otpl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+}
+.otpl-list__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.otpl-list__search {
+  flex: 1 1 260px;
+  max-width: 360px;
+}
+.otpl-list__count {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.otpl-list__count b {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+.otpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--space-2);
+}
+.otpl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px var(--space-3);
+  text-align: left;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-8);
+  cursor: pointer;
+}
+.otpl-card:hover {
+  border-color: var(--color-border-strong);
+}
+.otpl-card--active {
+  background: var(--color-nav-active-bg);
+  border-color: var(--color-primary);
+}
+.otpl-card__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.otpl-card__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: break-word;
+}
+.otpl-card--active .otpl-card__name {
+  color: var(--color-primary);
+}
+.otpl-card__badge {
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 3px;
+}
+.otpl-card__meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.otpl-card__date {
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.otpl-mono {
+  font-family: var(--font-mono);
+}
+
+/* ------------------------------------------------------------------ detay kartı (TS:109-128) */
+.otpl-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.otpl-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--space-4) 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+}
+.otpl-detail__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+.otpl-detail__titles {
+  display: flex;
+  flex: 1 1 300px;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.otpl-detail__name {
+  margin: 0;
+  padding: var(--space-1) 6px;
+  margin-left: -7px;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  text-align: left;
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-6);
+  overflow-wrap: break-word;
+}
+button.otpl-detail__name {
+  cursor: text;
+}
+button.otpl-detail__name:hover {
+  border-color: var(--color-border);
+}
+.otpl-detail__desc {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+button.otpl-detail__desc {
+  padding: 0;
+  font-family: var(--font-sans);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: text;
+}
+.otpl-detail__desc--empty {
+  color: var(--color-text-subtle);
+}
+.otpl-detail__field-error {
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--color-danger-strong);
+}
+.otpl-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* TS:117 "Sil": beyaz zemin, kırmızı metin + açık kırmızı kenarlık (dolu `btn--danger` DEĞİL). */
+.btn.otpl-delete-btn {
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-tint-border);
+}
+.otpl-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.otpl-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px var(--space-3);
+  text-align: left;
+  font-family: var(--font-sans);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+button.otpl-stat {
+  cursor: text;
+}
+.otpl-stat__label {
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.otpl-stat__value {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.otpl-stat__edit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.otpl-stat__edit-field {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.otpl-note {
+  margin: 0;
+  padding: 9px var(--space-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-info-deep-text);
+  background: var(--color-nav-active-bg);
+  border: 1px solid var(--color-primary-ring);
+  border-radius: var(--radius-8);
+}
+
+/* ------------------------------------------------------------------ kalemler kartı (TS:130-159) */
+.otpl-items {
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+}
+.otpl-items__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+}
+.otpl-items__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+}
+.otpl-items__count {
+  padding: 2px var(--space-2);
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  background: var(--color-surface-muted);
+  border-radius: 10px;
+}
+.otpl-items__actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.otpl-table-wrap {
+  overflow-x: auto;
+}
+.otpl-table {
+  width: 100%;
+  min-width: 748px;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+}
+.otpl-table th {
+  padding: 9px var(--space-2);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.otpl-table th:first-child {
+  padding-left: var(--space-4);
+}
+.otpl-table td {
+  padding: 9px var(--space-2);
+  border-bottom: 1px solid var(--color-divider);
+  vertical-align: middle;
+}
+.otpl-table td:first-child {
+  padding-left: var(--space-4);
+}
+.otpl-table th.otpl-col--num {
+  text-align: right;
+}
+.otpl-cell--mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+.otpl-cell--price {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.otpl-cell--ref {
+  color: var(--color-text-subtle);
+}
+.otpl-cell--as {
+  font-family: var(--font-mono);
+  text-align: right;
+  color: var(--color-text-muted);
+}
+.otpl-cell--unit {
+  color: var(--color-text-muted);
+}
+.otpl-table td.otpl-cell--action {
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
+}
+.otpl-x {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+  color: var(--color-text-subtle);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+.otpl-x:hover {
+  color: var(--color-danger-strong);
+  border-color: var(--color-danger-border-soft);
+}
+.otpl-group td {
+  padding: var(--space-2) var(--space-4);
+  font-size: 12.5px;
+  font-weight: var(--weight-bold);
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+.otpl-group__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.otpl-group__code {
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+}
+.otpl-group__name {
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+}
+button.otpl-group__name {
+  cursor: text;
+}
+.otpl-group__count {
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-subtle);
+}
+.otpl-group__remove {
+  margin-left: auto;
+}
+.otpl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+}
+.otpl-empty__title {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--color-text-muted);
+}
+.otpl-empty__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ Yeni Şablon modalı (TS:163-239) */
+.modal.otpl-modal {
+  max-width: 600px;
+}
+.otpl-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.otpl-modal__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 10px var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-danger-deep);
+  background: var(--color-danger-tint);
+  border: 1px solid var(--color-danger-tint-border);
+  border-radius: var(--radius-8);
+}
+.otpl-modal__name-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-subtle);
+}
+.otpl-modal__label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-label);
+}
+.otpl-sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.otpl-source {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px var(--space-3);
+  text-align: left;
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-8);
+  cursor: pointer;
+}
+.otpl-source--active {
+  background: var(--color-nav-active-bg);
+  border-color: var(--color-primary);
+}
+.otpl-source__top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.otpl-radio {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+.otpl-radio::after {
+  width: 6px;
+  height: 6px;
+  content: "";
+  background: transparent;
+  border-radius: 50%;
+}
+.otpl-source--active .otpl-radio,
+.otpl-offer--active .otpl-radio {
+  border-color: var(--color-primary);
+}
+.otpl-source--active .otpl-radio::after,
+.otpl-offer--active .otpl-radio::after {
+  background: var(--color-primary);
+}
+.otpl-source__title {
+  font-size: 12.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.otpl-source__desc {
+  padding-left: 21px;
+  font-size: var(--text-small);
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+.otpl-offers {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+.otpl-offers__search {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-divider);
+}
+.otpl-offer {
+  display: grid;
+  grid-template-columns: 18px 116px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  text-align: left;
+  background: var(--color-surface);
+  border: none;
+  border-bottom: 1px solid var(--color-divider);
+  cursor: pointer;
+}
+.otpl-offer--active {
+  background: var(--color-nav-active-bg);
+}
+.otpl-offer__no {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+}
+.otpl-offer__job {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.otpl-offer__meta {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.otpl-offers__empty {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.otpl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.otpl-chip {
+  padding: 7px 10px;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-8);
+  cursor: pointer;
+}
+.otpl-chip--active {
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+  background: var(--color-nav-active-bg);
+  border-color: var(--color-primary);
+}
+.otpl-hint {
+  margin: 5px 0 0;
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.otpl-rates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.otpl-default {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--space-3);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+.otpl-default--on {
+  background: var(--color-nav-active-bg);
+  border-color: var(--color-primary-border-soft);
+}
+.otpl-default__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.otpl-default__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+.otpl-default__desc {
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ silme modalı (TS:241-251) */
+.otpl-delete__text {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.otpl-delete__text b {
+  color: var(--color-text);
+}
+
+@media (max-width: 640px) {
+  .otpl-sources,
+  .otpl-rates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

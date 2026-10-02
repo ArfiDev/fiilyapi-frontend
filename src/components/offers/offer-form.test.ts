@@ -154,3 +154,73 @@ describe("POST /offers gövdesi", () => {
     expect(buildOfferCreateBody(valid({ offerDate: "" }))).not.toHaveProperty("offer_date");
   });
 });
+
+/**
+ * TKL-F4.7 · gövde semantiği: başlangıç × alan TABLOSU (plan §4, §9 risk 2).
+ * Her satır: alan · boş · şablondan · kopyadan. `ABSENT` = alan gövdede YOK (sunucu kaynaktan/ayardan alır).
+ */
+describe("POST /offers gövdesi · başlangıç × alan tablosu (TKL-F4.7)", () => {
+  const ABSENT = Symbol("absent");
+  const BLANK = { kind: "blank" } as const;
+  const TEMPLATE = { kind: "template", templateId: "tpl-1" } as const;
+  const COPY = {
+    kind: "copy",
+    offerId: "off-9",
+    revNo: 2,
+    priceEscalation: "tuik",
+    priceIndexType: "tufe",
+  } as const;
+
+  const TABLE: ReadonlyArray<readonly [field: string, blank: unknown, template: unknown, copy: unknown]> = [
+    ["employer_id", "emp-1", "emp-1", "emp-1"],
+    ["title", "Ataköy Rezidans C Blok", "Ataköy Rezidans C Blok", "Ataköy Rezidans C Blok"],
+    ["offer_date", "2026-10-02", "2026-10-02", "2026-10-02"],
+    ["validity_days", 30, 30, 30],
+    ["overhead_pct", "12", "12", "12"],
+    ["profit_pct", "15", "15", "15"],
+    ["vat_pct", "20", "20", "20"],
+    // K-F3-5 sabit "fixed" yalnız kaynaksızda/şablonda; kopyada KAYNAĞIN fiyat farkı AÇIKÇA gider (TÜİK ezilmez).
+    ["price_escalation", "fixed", "fixed", "tuik"],
+    ["price_index_type", ABSENT, ABSENT, "tufe"],
+    ["template_id", ABSENT, "tpl-1", ABSENT],
+    ["copy_from", ABSENT, ABSENT, { offer_id: "off-9", rev_no: 2 }],
+    // Kaynaktan gelen koşullar ASLA gönderilmez (sunucu kaynak revizyondan alır / ayardan kopyalar).
+    ["payment_terms", ABSENT, ABSENT, ABSENT],
+    ["delivery_days", ABSENT, ABSENT, ABSENT],
+    ["notes", ABSENT, ABSENT, ABSENT],
+  ];
+
+  const starts = [
+    ["blank", BLANK, 1],
+    ["template", TEMPLATE, 2],
+    ["copy", COPY, 3],
+  ] as const;
+
+  it.each(TABLE)("%s", (field, ...expected) => {
+    for (const [name, start, column] of starts) {
+      const body = buildOfferCreateBody(valid(), start) as Record<string, unknown>;
+      const want = expected[column - 1];
+      if (want === ABSENT) expect(body, `${name} · ${field}`).not.toHaveProperty(field);
+      else expect(body[field], `${name} · ${field}`).toEqual(want);
+    }
+  });
+
+  it("template_id ile copy_from ASLA birlikte gitmez", () => {
+    for (const [, start] of starts) {
+      const body = buildOfferCreateBody(valid(), start);
+      expect("template_id" in body && "copy_from" in body).toBe(false);
+    }
+  });
+
+  it("kopyada fiyat farkı 'fixed' kaynaktan gelirse index tipi null açıkça gider (sunucu null'ı kabul eder)", () => {
+    const body = buildOfferCreateBody(valid(), { ...COPY, priceEscalation: "fixed", priceIndexType: null });
+    expect(body).toMatchObject({ price_escalation: "fixed", price_index_type: null });
+  });
+
+  it("başlangıçsız çağrı = boş teklif (F3 sözleşmesi değişmedi)", () => {
+    const body = buildOfferCreateBody(valid());
+    expect(body).not.toHaveProperty("template_id");
+    expect(body).not.toHaveProperty("copy_from");
+    expect(body.price_escalation).toBe("fixed");
+  });
+});

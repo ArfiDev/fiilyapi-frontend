@@ -17,6 +17,7 @@ import {
   OFFER_SETTINGS_QUERY_KEY,
   offerDetailKey,
   offerRevisionKey,
+  offerTemplatesKey,
 } from "./offer-query-keys";
 import type {
   OfferDetailRead,
@@ -31,7 +32,7 @@ import type {
 // (SO-19); kapı ekranda `canWrite` ile kurulur, sunucunun 403/409/422'si zarifçe basılır.
 //
 // 🔴 GEÇERSİZLEME KÜMESİ (testle kilitli — `useOfferMutations.test.tsx`):
-//   · oluştur ............ listeler
+//   · oluştur ............ listeler (+ gövdede `template_id` varsa `["offer-templates"]`: `usage_count`, TKL-F4)
 //   · künye .............. detay (exact) + listeler
 //   · koşul/grup/kalem/geçiş ... revizyon + detay (exact) + listeler
 //   · `win` .............. YUKARIDAKİLER + `catalog-items` (TKL son fiyat kaynağı kazanılan teklifin
@@ -87,12 +88,20 @@ function invalidateRevisionWrite(queryClient: QueryClient, offerId: string, revN
 
 // ─────────────────────────────────────────────────────────────────────────── teklif
 
-/** `POST /offers` — Rev.0 taslak; koşullar gönderilmezse sunucu ayardan kopyalar. */
+/**
+ * `POST /offers` — Rev.0 taslak; koşullar gönderilmezse sunucu ayardan kopyalar. `template_id`
+ * (şablondan) verilmişse şablon listesinin `usage_count`u da değişir → o da tazelenir; `copy_from`
+ * ve boş başlangıçta şablon listesine DOKUNULMAZ (`template_id` miras alınmaz, SO-23).
+ */
 export function useCreateOffer(): Mutation<OfferDetailRead, OfferCreateBody> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body) => unwrap(await backendClient.POST("/offers", { body })),
-    onSuccess: () => invalidateLists(queryClient),
+    onSuccess: (_offer, body) =>
+      Promise.all([
+        invalidateLists(queryClient),
+        body.template_id ? queryClient.invalidateQueries({ queryKey: offerTemplatesKey() }) : Promise.resolve(),
+      ]),
   });
 }
 

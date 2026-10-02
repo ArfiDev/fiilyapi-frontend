@@ -22,6 +22,7 @@ export function makeRevisionSummary(
     sent_at: null,
     status: "draft",
     unpriced_count: 0,
+    unquantified_count: 0,
     updated_at: "2026-09-28T10:30:00Z",
     valid_until: "2026-10-28",
     winning_amount: null,
@@ -45,6 +46,9 @@ export function makeDetail(overrides: Partial<OfferDetailRead> = {}): OfferDetai
     prepared_by_name: "Selin Aksoy",
     prepared_by_user_id: "user-1",
     latest_rev_no: 2,
+    conversion_state: null,
+    project_id: null,
+    template_id: null,
     status: "draft",
     revisions: [
       makeRevisionSummary({
@@ -110,6 +114,7 @@ export function makeRevision(
     groups: [],
     totals: {
       unpriced_count: 2,
+      unquantified_count: 0,
       customer: { net: "73982140.00", vat: "14796428.00", gross: "88778568.00" },
       internal: {
         cost: "50000000.00",

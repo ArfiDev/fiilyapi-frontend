@@ -20,6 +20,8 @@ export interface InputProps
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   numeric?: boolean;
+  /** Metin son eki (`rightIcon` = "gün") için ayrılacak karakter sayısı; sayı son ekin altına girmez. */
+  suffixChars?: number;
   /**
    * KAYIT 373: `className` yalnız iç `<input>`e gider (`.input-wrap` sabit
    * `width: 100%` taşır) — yerleşim sınıfı (ör. flex öğesi genişliği) vermek
@@ -37,6 +39,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       leftIcon,
       rightIcon,
       numeric,
+      suffixChars,
       className,
       wrapperClassName,
       ...rest
@@ -48,8 +51,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         "input-wrap",
         Boolean(leftIcon) && "input-wrap--left",
         Boolean(rightIcon) && "input-wrap--right",
+        Boolean(rightIcon) && suffixChars !== undefined && "input-wrap--suffix",
         wrapperClassName,
       )}
+      style={suffixChars === undefined ? undefined : ({ "--input-suffix-chars": suffixChars } as React.CSSProperties)}
     >
       {leftIcon && <span className="input-icon input-icon--left">{leftIcon}</span>}
       <input

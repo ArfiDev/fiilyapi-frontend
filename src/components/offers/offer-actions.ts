@@ -22,6 +22,8 @@ export interface OfferActionInput {
   canWrite: boolean;
   /** Kalem/grup yazım kuyruğu dolu mu (uçuştaki ya da sıradaki blur PATCH'i)? Açık GEÇİŞ eylemleri kapanır. */
   isItemsBusy?: boolean;
+  /** Revizyonun `totals.unquantified_count`u (SO-21): > 0 iken Gönder kapalı (ÜS-F4-17; sunucu 422'si aynı kural). */
+  unquantifiedCount?: number;
 }
 
 const ENABLED: OfferActionVerdict = { enabled: true };
@@ -45,6 +47,8 @@ export const OFFER_ACTION_REASONS = {
   withdrawnClosed: "Vazgeçilen teklife yeni revizyon açılamaz",
   closed: "Teklif kapandı; bu işlem yapılamaz",
   itemsSaving: "Kalem kaydediliyor",
+  /** Backend `send` 422 metniyle AYNI (`offer_service.UNQUANTIFIED_ITEMS`). */
+  unquantified: "Miktarı girilmemiş kalem var",
 } as const;
 
 const R = OFFER_ACTION_REASONS;
@@ -52,11 +56,12 @@ const R = OFFER_ACTION_REASONS;
 type StatusRow = Record<OfferAction, OfferActionVerdict>;
 
 /** `draft` — kirlilik `save`/`send`/`withdraw`ı belirler. */
-function draftRow(isDirty: boolean): StatusRow {
+function draftRow(isDirty: boolean, hasUnquantified: boolean): StatusRow {
   return {
     save: isDirty ? ENABLED : no(R.nothingToSave),
     newRevision: no(R.draftNoNewRevision),
-    send: isDirty ? no(R.saveFirst) : ENABLED,
+    // Miktarsız kalem kalıcı engeldir (kaydetmek çözmez) → gerekçe kirlilikten ÖNCE gelir.
+    send: hasUnquantified ? no(R.unquantified) : isDirty ? no(R.saveFirst) : ENABLED,
     win: no(R.sendFirst),
     lose: no(R.sendFirst),
     // Kirliyken kapanış eylemi KAPALI: kaydedilmemiş değer kapanan teklifte görünür kalmasın (TKL-F3.6.1).
@@ -138,7 +143,7 @@ function statusGate(input: OfferActionInput): Record<OfferAction, OfferActionVer
   if (!input.isLatest) return allDisabled(R.oldRevision);
   switch (input.status) {
     case "draft":
-      return draftRow(input.isDirty);
+      return draftRow(input.isDirty, (input.unquantifiedCount ?? 0) > 0);
     case "sent":
       return SENT_ROW;
     case "won":

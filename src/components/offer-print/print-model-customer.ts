@@ -35,6 +35,8 @@ export interface CustomerSourceItem {
   unit: string;
   quantity: string | null;
   priced: boolean;
+  /** Sunucunun miktar-dolu bayrağı (kimlik kovası; `quantity` maskelense de doğru). */
+  quantified: boolean;
   customer: { unit_price: string | null; amount: string | null } | null;
 }
 export interface CustomerSourceGroup {
@@ -46,6 +48,8 @@ export interface CustomerSourceRevision extends PrintRevisionSource {
   groups: readonly CustomerSourceGroup[];
   totals: {
     unpriced_count: number;
+    /** SO-21: miktarı girilmemiş kalem sayısı (sayaç; tutar değil). */
+    unquantified_count: number;
     customer: { net: string | null; vat: string | null; gross: string | null };
   };
 }
@@ -70,9 +74,11 @@ export interface CustomerPrintModel {
   frame: PrintFrame;
   pages: OfferPrintPage<CustomerPrintRow>[];
   totals: TotalRow[];
-  /** "* Fiyatı belirlenmemiş N kalem toplama dahil değildir." — fiyatsız yoksa `null`. */
+  /** "* Fiyatı belirlenmemiş N kalem …" ve/veya "* Miktarı girilmemiş N kalem …" — ikisi de yoksa `null`. */
   footnote: string | null;
 }
+
+const ZERO_AMOUNT = "0";
 
 const BLANK_ROW = {
   name: "",
@@ -107,8 +113,13 @@ function itemRow(group: CustomerSourceGroup, item: CustomerSourceItem): Customer
   };
 }
 
-/** Grup ara toplamı: yalnız FİYATLI kalemlerin tutarı (kayıpsız); hiç fiyatlı yoksa "—". */
+/**
+ * Grup ara toplamı: yalnız FİYATLI kalemlerin tutarı (kayıpsız); toplama girebilecek (miktarlı) kalem VAR ama hiçbiri
+ * tutar taşımıyorsa "—" (fiyatsız / maskeli). Miktarlı kalem HİÇ yoksa (yalnız miktarsız) küme boştur: Σ = 0 (ekran
+ * `groupTotals` ve backend toplamı ile aynı; F4.2b).
+ */
 function subtotalAmount(group: CustomerSourceGroup): string {
+  if (!group.items.some((item) => item.quantified)) return formatMoney(ZERO_AMOUNT);
   const amounts = group.items
     .filter((item) => !isUnpricedItem(item))
     .map((item) => item.customer?.amount)
@@ -127,6 +138,27 @@ function groupRows(group: CustomerSourceGroup): CustomerPrintRow[] {
 
 function unpricedNote(count: number): string | null {
   return count > 0 ? `* Fiyatı belirlenmemiş ${count} kalem toplama dahil değildir.` : null;
+}
+
+/** SO-21: miktarsız kalem de toplama girmez; satırında Miktar/Tutar "—" (B.F. basılır). */
+function unquantifiedNote(count: number): string | null {
+  return count > 0 ? `* Miktarı girilmemiş ${count} kalem toplama dahil değildir.` : null;
+}
+
+/**
+ * İki dipnot (fiyatsız · miktarsız) tek paragrafta; ikisi de yoksa `null`. Hem fiyatsız hem miktarsız kalem fiyatsız
+ * cümlesinde sayılır; miktarsız cümlesi yalnız FİYATLI+miktarsız kalemleri sayar (kesişim çift sayılmaz; F4.2b).
+ */
+function footnoteOf(revision: CustomerSourceRevision): string | null {
+  const { totals } = revision;
+  const overlap = revision.groups.reduce(
+    (sum, group) => sum + group.items.filter((item) => isUnpricedItem(item) && !item.quantified).length,
+    0,
+  );
+  const notes = [unpricedNote(totals.unpriced_count), unquantifiedNote(Math.max(0, totals.unquantified_count - overlap))].filter(
+    (note): note is string => note !== null,
+  );
+  return notes.length === 0 ? null : notes.join(" ");
 }
 
 function totalRows(revision: CustomerSourceRevision): TotalRow[] {
@@ -151,6 +183,6 @@ export function buildCustomerPrintModel({ offer, revision, company }: CustomerPr
     frame,
     pages: paginateOfferRows(rows, PORTRAIT_LAYOUT, closingPartsOf(frame)),
     totals: totalRows(revision),
-    footnote: unpricedNote(revision.totals.unpriced_count),
+    footnote: footnoteOf(revision),
   };
 }

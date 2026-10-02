@@ -6,9 +6,8 @@
  * KAYDEDİLMEZ. Sonuç kayıpsız ondalık METİNdir; `Number()` YOK. Hesap (tutar/toplam/türev kâr) SUNUCUDADIR
  * (`calc.py`, ÜS-F3-1): bu modül yalnız gösterir ve gövdeyi kurar.
  *
- * 🔶 B5 İLERİ UYUM: `quantity` null olabilir (B5: `OfferItemCreate.quantity` nullable + `unquantified_count`; bugün
- * maskeli rolde de null). Okuma/gövde yolu null'u taşır: miktar hücresi boş, tutar "—"; `isQuantityMissing` satır
- * uyarısı için TEK yer (B5 metni geldiğinde yalnız `OfferItemRow` bunu bağlar).
+ * 🔶 `quantity` null olabilir: miktarsız kalem (SO-21) YA DA `finance` maskesi. Okuma/gövde yolu null'u taşır: miktar
+ * hücresi boş, tutar "—"; ayrımın TEK karar noktası sunucunun `quantified` bayrağı (`isQuantityMissing`, F4.2b).
  */
 import { trPriceInputValue, trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import type { OfferItemUpdateBody } from "@/lib/api/hooks/useOfferMutations";
@@ -71,6 +70,8 @@ const LABEL: Readonly<Record<ItemCellField, string>> = {
   offerUnitPrice: "Teklif B.F.",
 };
 
+/** SO-24: dolu miktar boşaltılamaz (sunucu `quantity:null` 422); boş kalem boş kalırsa istek zaten uçmaz. */
+export const MSG_QUANTITY_NOT_CLEARABLE = "Miktar boşaltılamaz";
 export const MSG_COST_FIRST = "Önce maliyet girin";
 const MSG_PCT_INVALID = "Geçerli bir yüzde girin";
 const MSG_PCT_FRACTION = `En çok ${PCT_FRACTION} ondalık hane`;
@@ -126,8 +127,13 @@ export function isUnpriced(item: OfferItem): boolean {
   return !item.priced;
 }
 
+/**
+ * TKL-F4.2b · miktar eksikliğinin TEK karar noktası: sunucunun `quantified` bayrağı (`kimlik` kovası — maskelenmez).
+ * 🔴 `finance` kapsamında `quantity` MASKELİ null döner ama `quantified` doğru kalır; salt `quantity === null` her kalemi
+ * "miktarsız" sanardı, sayaç-eşitlik sezgiseli de karışık grupta yanılırdı.
+ */
 export function isQuantityMissing(item: OfferItem): boolean {
-  return item.quantity === null;
+  return !item.quantified;
 }
 
 /** "₺1.288,00" ya da "—" (fiyatsız / maskeli / B5 miktarsız kalem). */
@@ -257,7 +263,7 @@ function commitRequired(
   parsed: ParsedValue,
   ctx: CellContext,
 ): CellCommit {
-  if (text === "") return { kind: "error", message: `${LABEL[field]} girin` };
+  if (text === "") return { kind: "error", message: key === "quantity" ? MSG_QUANTITY_NOT_CLEARABLE : `${LABEL[field]} girin` };
   if (!parsed.ok) return { kind: "error", message: parsed.message };
   if (sameNumber(parsed.value, currentValue(key, ctx.item))) return { kind: "noop" };
   return { kind: "patch", body: { [key]: parsed.value } };

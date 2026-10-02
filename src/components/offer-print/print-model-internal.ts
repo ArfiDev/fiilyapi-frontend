@@ -33,13 +33,15 @@ export interface InternalSourceItem {
   description: string;
   unit: string;
   quantity: string | null;
+  /** Sunucunun miktar-dolu bayrağı (kimlik kovası; `quantity` maskelense de doğru). */
+  quantified: boolean;
   unit_mhr: string;
   cost_unit_price: string | null;
   overhead_pct: string | null;
   profit_pct: string | null;
   priced: boolean;
   customer: { unit_price: string | null; amount: string | null } | null;
-  internal: { cost: string | null; profit_pct: string | null; man_hours: string };
+  internal: { cost: string | null; profit_pct: string | null; man_hours: string | null };
 }
 export interface InternalSourceGroup {
   id: string;
@@ -52,6 +54,8 @@ export interface InternalSourceRevision extends PrintRevisionSource {
   groups: readonly InternalSourceGroup[];
   totals: {
     unpriced_count: number;
+    /** SO-21: miktarı girilmemiş kalem sayısı. */
+    unquantified_count: number;
     customer: { net: string | null; vat: string | null; gross: string | null };
     internal: {
       cost: string | null;
@@ -108,6 +112,8 @@ const BLANK_ROW = {
   isUnpriced: false,
 } as const;
 
+const ZERO_SUM = "0";
+
 /** Dolu değerlerin kayıpsız toplamı; hiç dolu değer yoksa `null` ("—"). */
 function sumOrNull(values: readonly (string | null | undefined)[]): string | null {
   const present = values.filter((value): value is string => value !== null && value !== undefined);
@@ -142,6 +148,10 @@ function groupRows(group: InternalSourceGroup, revision: InternalSourceRevision)
   const base = { groupId: group.id, groupName: group.name };
   const items = group.items.map((item) => itemRow(group, item, revision));
   const pricedAmounts = group.items.map((item) => (item.priced ? (item.customer?.amount ?? null) : null));
+  // F4.2b: miktarlı kalem HİÇ yoksa (yalnız miktarsız) toplama giren küme boştur → Σ = 0 (ekran `groupTotals` ile aynı);
+  // miktarlı kalem var ama değer taşımıyorsa (fiyatsız / maskeli) "—" korunur.
+  const hasQuantified = group.items.some((item) => item.quantified);
+  const sumOf = (values: readonly (string | null | undefined)[]) => (hasQuantified ? sumOrNull(values) : ZERO_SUM);
   return [
     { ...BLANK_ROW, ...base, kind: "group", key: `${group.id}:head`, name: group.name },
     ...items,
@@ -151,9 +161,9 @@ function groupRows(group: InternalSourceGroup, revision: InternalSourceRevision)
       kind: "subtotal",
       key: `${group.id}:sum`,
       name: `${group.name} ara toplamı`,
-      cost: formatMoney(sumOrNull(group.items.map((item) => item.internal.cost))),
-      manHours: formatQuantity(sumDecimalStrings(group.items.map((item) => item.internal.man_hours))),
-      amount: formatMoney(sumOrNull(pricedAmounts)),
+      cost: formatMoney(sumOf(group.items.map((item) => item.internal.cost))),
+      manHours: formatQuantity(sumOf(group.items.map((item) => item.internal.man_hours))),
+      amount: formatMoney(sumOf(pricedAmounts)),
     },
   ];
 }
@@ -169,6 +179,7 @@ function totalRows(revision: InternalSourceRevision): TotalRow[] {
     { label: `Kâr (${formatPct(internal.profit_pct ?? revision.profit_pct)})`, value: formatTotal(internal.profit) },
     { label: "Toplam adam-saat", value: formatQuantity(internal.man_hours) },
     { label: "Fiyatsız kalem", value: String(revision.totals.unpriced_count) },
+    { label: "Miktarsız kalem", value: String(revision.totals.unquantified_count) },
   ];
 }
 

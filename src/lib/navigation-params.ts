@@ -28,5 +28,8 @@ export const OFFER_REV_PARAM = "rev";
 /** TKL-F3 · Teklif yazdırma türü (`/teklif-hazirlama/{id}/yazdir?tur=isveren|ic`). */
 export const OFFER_PRINT_KIND_PARAM = "tur";
 
+/** TKL-F4 · Seçili teklif şablonu (`/teklif-hazirlama/sablonlar?sablon={id}` seçili kart; `/teklif-hazirlama/yeni?sablon={id}` önseçim). */
+export const OFFER_TEMPLATE_PARAM = "sablon";
+
 /** `tur` değerleri: işveren görünümü (yalnız satış fiyatı) ya da iç döküm (maliyet + kâr). */
 export type OfferPrintKind = "isveren" | "ic";

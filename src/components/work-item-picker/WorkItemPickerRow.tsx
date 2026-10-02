@@ -28,7 +28,7 @@ export interface WorkItemPickerRowProps {
   onUnitPrice: (row: PickerRow, text: string) => void;
 }
 
-/** PS:100-199 — tek poz satırı; 9 kolon. Seçilemeyen satır soluk + kutu kapalı + gerekçe alt satırı (PS:184-187). */
+/** PS:100-199 — tek poz satırı; 9 kolon (`selectOnly`te 6: Miktar/fiyat/Tutar hücreleri yok). Seçilemeyen satır soluk + kutu kapalı + gerekçe alt satırı (PS:184-187). */
 export function WorkItemPickerRow({
   row,
   input,
@@ -80,33 +80,37 @@ export function WorkItemPickerRow({
       <td className="wip-cell wip-cell--last">
         <LastPriceCell lastPrice={item.last_price} refPrice={item.ref_price} />
       </td>
-      <td className="wip-cell wip-cell--input">
-        <Input
-          numeric
-          size="row"
-          inputMode="decimal"
-          value={input?.quantity ?? ""}
-          disabled={isBlocked || isDisabled}
-          status={error !== null ? "error" : "default"}
-          aria-label={`${item.poz_no} miktar`}
-          onChange={(event) => onQuantity(row, event.target.value)}
-        />
-      </td>
-      <td className="wip-cell wip-cell--input">
-        <Input
-          numeric
-          size="row"
-          inputMode="decimal"
-          value={input?.unitPrice ?? ""}
-          disabled={isBlocked || isDisabled}
-          status={error !== null ? "error" : "default"}
-          aria-label={`${item.poz_no} ${priceAriaSuffix}`}
-          onChange={(event) => onUnitPrice(row, event.target.value)}
-        />
-      </td>
-      <td className="wip-cell wip-cell--num wip-cell--amount" data-testid="wip-amount">
-        {amountText ?? EMPTY_CELL}
-      </td>
+      {rules.entryMode === "priced" && (
+        <>
+        <td className="wip-cell wip-cell--input">
+          <Input
+            numeric
+            size="row"
+            inputMode="decimal"
+            value={input?.quantity ?? ""}
+            disabled={isBlocked || isDisabled}
+            status={error !== null ? "error" : "default"}
+            aria-label={`${item.poz_no} miktar`}
+            onChange={(event) => onQuantity(row, event.target.value)}
+          />
+        </td>
+        <td className="wip-cell wip-cell--input">
+          <Input
+            numeric
+            size="row"
+            inputMode="decimal"
+            value={input?.unitPrice ?? ""}
+            disabled={isBlocked || isDisabled}
+            status={error !== null ? "error" : "default"}
+            aria-label={`${item.poz_no} ${priceAriaSuffix}`}
+            onChange={(event) => onUnitPrice(row, event.target.value)}
+          />
+        </td>
+        <td className="wip-cell wip-cell--num wip-cell--amount" data-testid="wip-amount">
+          {amountText ?? EMPTY_CELL}
+        </td>
+        </>
+      )}
     </tr>
   );
 }

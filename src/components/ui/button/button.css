@@ -13,6 +13,13 @@
     border-color 0.15s ease,
     color 0.15s ease;
 }
+/* Düğme görünümlü bağlantı (`<Link className="btn …">`): mockup `a{text-decoration:none}` — altı çizili OLMAZ
+   (durumlarda da). TEK ortak kural; sayfa CSS'inde kopyası yazılmaz. */
+a.btn,
+a.btn:hover,
+a.btn:focus-visible {
+  text-decoration: none;
+}
 .btn:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);

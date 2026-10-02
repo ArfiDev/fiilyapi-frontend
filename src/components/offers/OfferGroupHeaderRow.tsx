@@ -7,8 +7,8 @@ import { formatMoneyTl, formatWholeNumber } from "@/components/work-item-catalog
 import { Input } from "@/components/ui";
 import { EMPTY_CELL } from "@/lib/format";
 
-import { groupTotals, type GroupTotals } from "./offer-items-model";
 import type { OfferItem } from "./offer-item-cells";
+import { groupTotals, type GroupTotals } from "./offer-items-model";
 
 export interface OfferGroupHeaderRowProps {
   code: string;

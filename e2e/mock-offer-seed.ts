@@ -7,6 +7,7 @@
 // (İş Kalemi Kataloğu) görsel/e2e kareleri oynamaz. `mock-offers.test.ts` bunu kilitler.
 import { quantizeDecimal } from "./mock-offer-calc";
 import { emptyOffersState, nextId, type GroupRec, type ItemRec, type MockUser, type OfferRec, type OffersState, type OfferStatus, type RevisionRec } from "./mock-offer-types";
+import { seedTemplates } from "./mock-offer-templates";
 import type { OfferCatalogEntry } from "./mock-offers";
 
 export interface OffersSeedInput {
@@ -19,7 +20,8 @@ export interface OffersSeedInput {
 interface SeedItem {
   catalogName: string;
   group: string;
-  quantity: string;
+  /** `null` = miktar girilmedi (SO-21). */
+  quantity: string | null;
   cost: string | null;
   overheadPct?: string;
   profitPct?: string;
@@ -41,6 +43,8 @@ interface SeedOffer {
   employer: string;
   title: string;
   scope: string | null;
+  /** Hangi tohum ŞABLONUYLA oluşturuldu (`mock-offer-templates.ts` `SEED_TEMPLATES` adı); yok = şablonsuz. */
+  template?: string;
   createdAt: string;
   revisions: SeedRevision[];
 }
@@ -52,6 +56,7 @@ const SEED: readonly SeedOffer[] = [
     employer: "emp-1",
     title: "A Blok Kaba İnşaat",
     scope: "Temel + kolon/perde + döşeme · 12 kat",
+    template: "Kaba İnşaat Standart",
     createdAt: "2026-03-02T08:30:00.000Z",
     revisions: [
       {
@@ -118,6 +123,7 @@ const SEED: readonly SeedOffer[] = [
     employer: "emp-1",
     title: "B Blok Elektrik Tesisatı",
     scope: "Kablo çekimi + buat/priz",
+    template: "Elektrik Tesisatı",
     createdAt: "2026-09-28T13:40:00.000Z",
     revisions: [
       {
@@ -242,7 +248,7 @@ function seedRevision(
       pozNo: entry.pozNo,
       description: entry.name,
       unit: entry.uom,
-      quantity: quantizeDecimal(item.quantity, 3),
+      quantity: item.quantity === null ? null : quantizeDecimal(item.quantity, 3),
       unitMhr: quantizeDecimal(entry.standardUnitMhr, 4),
       costUnitPrice: item.cost,
       overheadPct: item.overheadPct === undefined ? null : quantizeDecimal(item.overheadPct, 2),
@@ -263,6 +269,7 @@ export function createOffersState(input: OffersSeedInput): OffersState {
   const actor = input.users[0];
   if (actor === undefined) throw new Error("tohum: en az bir kullanıcı gerekir");
   const employerName = new Map(input.employers.map((employer) => [employer.id, employer.name] as const));
+  const templateIds = seedTemplates(state, catalog);
   SEED.forEach((spec, index) => {
     const offer: OfferRec = {
       id: nextId(state, "offer"),
@@ -272,6 +279,7 @@ export function createOffersState(input: OffersSeedInput): OffersState {
       title: spec.title,
       scopeSummary: spec.scope,
       preparedByUserId: actor.id,
+      templateId: spec.template === undefined ? null : (templateIds.get(spec.template) ?? null),
       createdAt: spec.createdAt,
       updatedAt: latestStamp(spec),
     };

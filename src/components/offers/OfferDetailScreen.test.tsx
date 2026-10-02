@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -497,6 +497,81 @@ describe("durum geçişleri", () => {
     await user.click(within(dialog).getByRole("button", { name: "Gönderildi İşaretle" }));
     expect(await screen.findByText("Gönderildi olarak işaretlendi · geçerlilik 30 gün")).toBeInTheDocument();
     expect(callsTo("POST", SEND)).toHaveLength(1);
+  });
+
+  it("🔴 F4.2 miktarsız kalem varken Gönderildi İşaretle PASİF + gerekçe görünür; tıklamak POST atmaz", async () => {
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("draft", 0);
+    backend.revisions[0] = { ...backend.revisions[0]!, totals: { ...backend.revisions[0]!.totals, unquantified_count: 2 } };
+    mockBackend();
+    renderScreen();
+    await loaded();
+    expect(button("Gönderildi İşaretle")).toBeDisabled();
+    expect(screen.getByText("Miktarı girilmemiş kalem var")).toBeInTheDocument();
+    await user.click(button("Gönderildi İşaretle"));
+    expect(callsTo("POST", SEND)).toHaveLength(0);
+  });
+
+  it("🔴 F4.2 taze okuma yolu: önbellek 0 ama taze revizyonda miktarsız var → onay modalı AÇILMAZ, POST atılmaz, metin görünür", async () => {
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("draft", 0);
+    mockBackend();
+    renderScreen();
+    await loaded();
+    expect(button("Gönderildi İşaretle")).toBeEnabled();
+    backend.revisions[0] = { ...backend.revisions[0]!, totals: { ...backend.revisions[0]!.totals, unquantified_count: 1 } };
+    await user.click(button("Gönderildi İşaretle"));
+    // gerekçe (düğme altı, taze veriyle) + bant: İKİ görünüm
+    await waitFor(() => expect(screen.getAllByText("Miktarı girilmemiş kalem var")).toHaveLength(2));
+    expect(callsTo("POST", SEND)).toHaveLength(0);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("🔴 F4.2 yarışta sunucu 422 'Miktarı girilmemiş kalem var' → metin AYNEN bantta + revizyon tazelenir", async () => {
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("draft", 0);
+    mockBackend();
+    vi.mocked(backendClient.POST).mockResolvedValue(fail(422, "Miktarı girilmemiş kalem var"));
+    renderScreen();
+    await loaded();
+    const readsBefore = vi.mocked(backendClient.GET).mock.calls.filter((call) => String(call[0]) === "/offers/{offer_id}/revisions/{rev_no}").length;
+    await user.click(button("Gönderildi İşaretle"));
+    expect(await screen.findByText("Miktarı girilmemiş kalem var")).toBeInTheDocument();
+    await waitFor(() => {
+      const reads = vi.mocked(backendClient.GET).mock.calls.filter((call) => String(call[0]) === "/offers/{offer_id}/revisions/{rev_no}").length;
+      expect(reads).toBeGreaterThan(readsBefore + 1); // taze okuma (gönderim öncesi) + 422 sonrası tazeleme
+    });
+  });
+
+  it("🔴 F4.2b (a) 'Miktarı girilmemiş kalem var' bandı sayaç 0'a düşünce (taze okuma) TEMİZLENİR", async () => {
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("draft", 0);
+    mockBackend();
+    renderScreen();
+    await loaded();
+    backend.revisions[0] = { ...backend.revisions[0]!, totals: { ...backend.revisions[0]!.totals, unquantified_count: 1 } };
+    await user.click(button("Gönderildi İşaretle"));
+    await waitFor(() => expect(screen.getAllByText("Miktarı girilmemiş kalem var")).toHaveLength(2)); // gerekçe + bant
+    backend.revisions[0] = { ...backend.revisions[0]!, totals: { ...backend.revisions[0]!.totals, unquantified_count: 0 } };
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    await waitFor(() => expect(screen.queryByText("Miktarı girilmemiş kalem var")).not.toBeInTheDocument());
+  });
+
+  it("🔴 F4.2b (a) başka hata metni sayaç 0'a düşünce SİLİNMEZ (yalnız miktarsız metni temizlenir)", async () => {
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("draft", 0);
+    mockBackend();
+    vi.mocked(backendClient.POST).mockResolvedValue(fail(409, "Başka bir hata oluştu"));
+    renderScreen();
+    await loaded();
+    await user.click(button("Gönderildi İşaretle"));
+    expect(await screen.findByText("Başka bir hata oluştu")).toBeInTheDocument();
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    expect(screen.getByText("Başka bir hata oluştu")).toBeInTheDocument();
   });
 
   it("fiyatsız kalem YOKSA Gönder onaysız doğrudan atılır (mockup)", async () => {

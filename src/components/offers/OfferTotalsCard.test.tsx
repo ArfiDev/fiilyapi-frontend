@@ -37,9 +37,20 @@ describe("OfferTotalsCard", () => {
     expect(screen.queryByText(/Fiyatı girilmemiş/)).not.toBeInTheDocument();
   });
 
+  it("🔴 F4.2 miktarsız kalem uyarısı AYRI satır (ÜS-F4-15) + adam-saat '(kısmi)' (SO-28); yalnız sayı > 0 iken", () => {
+    const { rerender } = render(<OfferTotalsCard totals={{ ...TOTALS, unquantified_count: 3 }} vatPct="20.00" />);
+    expect(screen.getByText("Miktarı girilmemiş 3 kalem toplamlara dahil değil")).toBeInTheDocument();
+    expect(screen.getByText("Fiyatı girilmemiş 2 kalem toplamlara dahil değil")).toBeInTheDocument();
+    expect(document.body.textContent).toContain("Toplam adam-saat (kısmi)12.840 a-s");
+    rerender(<OfferTotalsCard totals={{ ...TOTALS, unquantified_count: 0 }} vatPct="20.00" />);
+    expect(screen.queryByText(/Miktarı girilmemiş/)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("(kısmi)");
+  });
+
   it("limited rol: para maskeli (null) → '—'; adam-saat görünür kalır", () => {
     const masked = {
       unpriced_count: 0,
+      unquantified_count: 0,
       customer: { net: null, vat: null, gross: null },
       internal: { cost: null, overhead: null, profit: null, profit_pct: "15.00", man_hours: "12840" },
     };

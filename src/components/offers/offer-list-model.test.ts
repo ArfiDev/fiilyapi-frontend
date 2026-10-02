@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildStatusCards, formatLiraFixed, listedTotals, rowMenuRules } from "./offer-list-model";
+import { buildStatusCards, formatLiraFixed, listedTotals, rowMenuRules, unquantifiedHint } from "./offer-list-model";
 import { OFFER_DRAFT, OFFER_SENT, OFFER_WON, makeOffer, makeSummary } from "./offer-fixtures";
 
 describe("formatLiraFixed", () => {
@@ -92,5 +92,13 @@ describe("rowMenuRules (⋯ menüsü)", () => {
     expect(rowMenuRules({ status: "sent", rev_no: 0 }, true).canDelete).toBe(false);
     expect(rowMenuRules(OFFER_WON, true).canDelete).toBe(false);
     expect(rowMenuRules({ status: "draft", rev_no: 0 }, false).canDelete).toBe(false);
+  });
+});
+
+describe("🔴 F4.2 unquantifiedHint — liste 'tutar kısmi' ipucu (ÜS-F4-16)", () => {
+  it("sayaç > 0 → 'N kalem miktarsız · tutar kısmi'; 0 → null (işaret yok)", () => {
+    expect(unquantifiedHint(makeOffer({ offer_no: "U-1", unquantified_count: 3 }))).toBe("3 kalem miktarsız · tutar kısmi");
+    expect(unquantifiedHint(makeOffer({ offer_no: "U-2", unquantified_count: 1 }))).toBe("1 kalem miktarsız · tutar kısmi");
+    expect(unquantifiedHint(makeOffer({ offer_no: "U-3", unquantified_count: 0 }))).toBeNull();
   });
 });

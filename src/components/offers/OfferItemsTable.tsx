@@ -8,7 +8,7 @@ import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import { OfferGroupHeaderRow } from "./OfferGroupHeaderRow";
 import { OfferItemRow } from "./OfferItemRow";
 import { groupCode } from "./offer-items-model";
-import type { CellContext, OfferItem } from "./offer-item-cells";
+import { isQuantityMissing, type CellContext, type OfferItem } from "./offer-item-cells";
 import type { OfferItemEditor } from "./useOfferItemEditor";
 
 const COLUMN_COUNT = 11;
@@ -81,6 +81,7 @@ export function OfferItemsTable(props: OfferItemsTableProps) {
                 <OfferItemRow
                   key={item.id}
                   ctx={contextOf(item)}
+                  isQuantityMissing={isQuantityMissing(item)}
                   catalogItem={catalogById.get(item.catalog_item_id)}
                   editor={editor}
                   canEdit={canEdit}

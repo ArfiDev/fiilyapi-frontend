@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { nextSortOrder } from "@/components/contract-item-form/build-body";
 import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
+import { MSG_GROUP_NAME_TAKEN, isGroupNameTaken, nextGroupName } from "@/components/offers/offer-group-names";
 import { confirmDiscardIfDirty, Modal } from "@/components/settings/Modal";
 import { ListIcon } from "@/components/ui/icons";
 import { useCatalogDisciplines, useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
@@ -19,9 +20,9 @@ import {
   filterRows,
   groupByDiscipline,
   isPickerInputsDirty,
-  MAX_BULK_ITEMS,
   resolveSelection,
   resolveTargetGroup,
+  selectionLimit,
   setQuantity,
   setUnitPrice,
   toggleRow,
@@ -40,7 +41,11 @@ import { WorkItemPickerToolbar } from "./WorkItemPickerToolbar";
 import "./work-item-picker.css";
 
 const GROUP_NAME_MESSAGE = "Yeni grup için ad girin";
+/** GECE KURALI: `selectOnly` hedef grubu (yeniden adlandırma/silme) ortadan kalktı — en kısa metin. */
+const TARGET_GROUP_GONE_MESSAGE = "Seçili grup artık yok";
 const NO_FILTER = "";
+/** `selectOnly`: hedef grup kayıp → seçim boş (gönderim kilitli). */
+const NO_GROUP_SELECTED = "";
 
 /**
  * F2.4'ün işleyeceği gönderim: yeni grup gerekiyorsa önce `newGroup` açılır, sonra
@@ -112,7 +117,10 @@ export function CatalogPickerModal<TBody>({
   const [hideInContract, setHideInContract] = useState(true);
   const [inputs, setInputs] = useState<PickerInputs>(() => new Map());
   const [groupChoice, setGroupChoice] = useState(() => defaultGroupId(groups));
-  const [newGroupName, setNewGroupName] = useState("");
+  // `selectOnly` (şablon): yeni grup adı "Yeni grup"/"Yeni grup 2"… ile DOLU başlar (offer-group-names); priced: boş.
+  const isSelectOnly = target.entryMode === "selectOnly";
+  const [defaultNewGroupName] = useState(() => (isSelectOnly ? nextGroupName(groups) : ""));
+  const [newGroupName, setNewGroupName] = useState(defaultNewGroupName);
 
   const disciplines = useMemo(() => disciplinesQuery.data ?? [], [disciplinesQuery.data]);
   const rows = useMemo(
@@ -128,7 +136,11 @@ export function CatalogPickerModal<TBody>({
 
   // Hedef grup TÜRETİLMİŞ (ORTA-2): seçili grup `groups`tan düşmüşse varsayılana döner; gösterim ve gövde aynı değer.
   // Açılmış grup varken "+ Yeni Grup" o gruba çözülür (ikinci grup açılmaz).
-  const targetGroup = resolveTargetGroup(groupChoice, groups, createdGroup);
+  // `selectOnly` (şablon): seçilen grup artık yoksa SESSİZ geri düşme YOK (kalemler yanlış gruba yazılırdı) — seçim
+  // temizlenir, gönderim kilitlenir. `priced` hedeflerde F2.4.1 geri düşmesi birebir kalır.
+  const isTargetGone =
+    isSelectOnly && groupChoice !== NEW_GROUP_OPTION && !groups.some((group) => group.id === groupChoice);
+  const targetGroup = isTargetGone ? NO_GROUP_SELECTED : resolveTargetGroup(groupChoice, groups, createdGroup);
   const isNewGroup = targetGroup === NEW_GROUP_OPTION;
   const groupOptions = [
     ...[...groups].sort((a, b) => a.sort_order - b.sort_order).map((group) => ({ id: group.id, name: group.name })),
@@ -141,14 +153,18 @@ export function CatalogPickerModal<TBody>({
   const selectedVisibleCount = selectableVisible.filter((row) => inputs.get(row.item.id)?.selected === true).length;
   const isAllChecked = selectableVisible.length > 0 && selectedVisibleCount === selectableVisible.length;
 
-  const isDirty = newGroupName.trim() !== "" || isPickerInputsDirty(rows, inputs);
+  const isDirty = (newGroupName.trim() !== "" && newGroupName.trim() !== defaultNewGroupName) || isPickerInputsDirty(rows, inputs);
   useUnsavedChanges(isDirty, target.unsavedLabel);
 
   const { entries, problems, selectedCount } = resolution;
   const isGroupNameMissing = isNewGroup && newGroupName.trim() === "";
+  // Grup adı şablonda tekildir (SO-30 kusuru çoğalmasın): yalnız `selectOnly`; teklif/sözleşme davranışı değişmez.
+  const isGroupNameDuplicate = isSelectOnly && isNewGroup && isGroupNameTaken(groups, newGroupName);
+  const limit = selectionLimit(target, groups);
   const bandLines = [
     ...(submitError === null ? [] : [submitError]),
-    ...(selectedCount > MAX_BULK_ITEMS ? [`Tek seferde en fazla ${MAX_BULK_ITEMS} ${target.words.noun} eklenebilir`] : []),
+    ...(isTargetGone ? [TARGET_GROUP_GONE_MESSAGE] : []),
+    ...(selectedCount > limit.max ? [limit.message] : []),
     ...(problems[0] === undefined
       ? []
       : [
@@ -156,14 +172,17 @@ export function CatalogPickerModal<TBody>({
           `${problems[0].row.item.poz_no} ${problems[0].row.item.name} — ${problems[0].message}`,
         ]),
     ...(isGroupNameMissing && selectedCount > 0 ? [GROUP_NAME_MESSAGE] : []),
+    ...(isGroupNameDuplicate && selectedCount > 0 ? [MSG_GROUP_NAME_TAKEN] : []),
   ];
   const canSubmit =
     !isSubmitting &&
     itemsQuery.isSuccess &&
     selectedCount > 0 &&
-    selectedCount <= MAX_BULK_ITEMS &&
+    selectedCount <= limit.max &&
     problems.length === 0 &&
-    !isGroupNameMissing;
+    !isTargetGone &&
+    !isGroupNameMissing &&
+    !isGroupNameDuplicate;
 
   function updateInputs(change: (current: PickerInputs) => PickerInputs) {
     setInputs((current) => change(current));
@@ -216,6 +235,7 @@ export function CatalogPickerModal<TBody>({
         <WorkItemPickerFooter
           bandLines={bandLines}
           selectedCount={selectedCount}
+          entryMode={target.entryMode}
           totalText={totalText}
           totalLabel={target.totalLabel}
           words={target.words}

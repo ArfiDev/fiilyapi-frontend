@@ -115,6 +115,12 @@
   border-radius: var(--radius-8);
 }
 
+.wik-toast--error {
+  color: var(--color-danger-text);
+  background: var(--color-danger-tint);
+  border-color: var(--color-danger-tint-border);
+}
+
 /* ---------------------------------------------------------------- kart */
 .wik__card {
   min-width: 0;

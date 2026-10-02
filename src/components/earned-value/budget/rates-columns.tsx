@@ -59,6 +59,7 @@ const SOURCE_BADGE = {
   catalog: { label: "Katalog", tone: "catalog" },
   history: { label: "Geçmiş gerç. ort.", tone: "history" },
   manual: { label: "Elle", tone: "manual" },
+  offer: { label: "Teklif", tone: "manual" },
 } as const;
 
 const DIRECT_OPTIONS: readonly AssignmentOption<DirectValue>[] = [

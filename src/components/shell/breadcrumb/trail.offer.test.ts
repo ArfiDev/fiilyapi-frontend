@@ -33,4 +33,11 @@ describe("kırıntı — Teklif Yazdır (TKL-F3.7)", () => {
     expect(crumbs.map((crumb) => crumb.label)).toEqual(["Teklif Hazırlama", "TKL-2026-0014", "Yazdır"]);
     expect(crumbs[1]?.href).toBe("/teklif-hazirlama/offer-14");
   });
+
+  it("/teklif-hazirlama/sablonlar → Teklif Hazırlama › Teklif Şablonları (TS:65); ad teklif no OLARAK çözülmez", () => {
+    const crumbs = buildTrail("/teklif-hazirlama/sablonlar");
+    expect(crumbs.map((crumb) => crumb.label)).toEqual(["Teklif Hazırlama", "Teklif Şablonları"]);
+    expect(crumbs[0]?.href).toBe("/teklif-hazirlama");
+    expect(crumbs[1]?.href).toBe("/teklif-hazirlama/sablonlar");
+  });
 });

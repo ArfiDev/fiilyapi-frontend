@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+import { BackendError } from "@/lib/api/unwrap";
 
 import { OffersListView, type OffersListViewProps } from "./OffersListView";
 import {
@@ -12,6 +14,14 @@ import {
   makeOffer,
   makeResponse,
 } from "./offer-fixtures";
+
+const downloadOfferExport = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/api/offer-export-client", () => ({ downloadOfferExport }));
+
+beforeEach(() => {
+  downloadOfferExport.mockReset();
+  downloadOfferExport.mockResolvedValue("TKL-2026-0013-Rev2-isveren.xlsx");
+});
 
 // Bugün (İstanbul) = 2026-10-02.
 const NOW = new Date("2026-10-01T21:30:00Z");
@@ -32,6 +42,7 @@ function renderView(overrides: Partial<OffersListViewProps> = {}) {
     onClear: vi.fn(),
     employers: [{ id: "emp-1", name: "Kuzey Gayrimenkul A.Ş." }],
     catalogCount: 412,
+    templateCount: null,
     canWrite: true,
     readOnlyText: "",
     now: NOW,
@@ -59,13 +70,22 @@ describe("sekme şeridi (§1.2)", () => {
     expect(poz).toHaveTextContent("412");
   });
 
-  it("'Teklif Şablonları' ve 'İşverenler' devre-dışı 'Yakında'", () => {
-    renderView();
-    for (const name of [/Teklif Şablonları/, /İşverenler/]) {
-      const tab = screen.getByRole("button", { name });
-      expect(tab).toBeDisabled();
-      expect(tab).toHaveTextContent("Yakında");
-    }
+  it("'Teklif Şablonları N' Şablonlar ekranına BAĞLANTI (TKL-F4.5); 'İşverenler' devre-dışı 'Yakında' KALIR", () => {
+    renderView({ templateCount: 4 });
+    const tabs = screen.getByRole("group", { name: "Teklif sekmeleri" });
+    const templates = within(tabs).getByRole("link", { name: /Teklif Şablonları/ });
+    expect(templates).toHaveAttribute("href", "/teklif-hazirlama/sablonlar");
+    expect(templates).toHaveTextContent("4");
+    expect(templates).not.toHaveTextContent("Yakında");
+    const employers = screen.getByRole("button", { name: /İşverenler/ });
+    expect(employers).toBeDisabled();
+    expect(employers).toHaveTextContent("Yakında");
+  });
+
+  it("şablon sayısı bilinmiyorsa (yüklenmedi / 403) bağlantı sayaçsız basılır", () => {
+    renderView({ templateCount: null });
+    const templates = screen.getByRole("link", { name: /Teklif Şablonları/ });
+    expect(templates).toHaveTextContent(/^Teklif Şablonları$/);
   });
 
   it("süzgeç (işveren/arama) açıkken 'Teklifler' sayacı basılmaz", () => {
@@ -147,6 +167,16 @@ describe("tablo satırları (TL:137-168)", () => {
     expect(screen.getByTestId("offers-total-gross")).toHaveTextContent("—");
   });
 
+  it("🔴 F4.2 miktarsız kalemli satırda net yanında işaret + 'N kalem miktarsız · tutar kısmi' ipucu; sayaç 0 iken YOK; Σ sunucu net'inden", () => {
+    const partial = makeOffer({ offer_no: "P-1", net: "100.00", gross: "120.00", unquantified_count: 2 });
+    const full = makeOffer({ offer_no: "P-2", net: "50.00", gross: "60.00", unquantified_count: 0 });
+    renderView({ body: { kind: "ready", data: makeResponse([partial, full]) } });
+    const marker = within(row("P-1")).getByTitle("2 kalem miktarsız · tutar kısmi");
+    expect(marker).toHaveAccessibleName("2 kalem miktarsız · tutar kısmi");
+    expect(within(row("P-2")).queryByTitle(/miktarsız/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("offers-total-net")).toHaveTextContent("₺150,00");
+  });
+
   it("tam listede Σ basılır", () => {
     const a = makeOffer({ offer_no: "S-1", net: "100.00", gross: "120.00" });
     const b = makeOffer({ offer_no: "S-2", net: "50.50", gross: "60.60" });
@@ -205,7 +235,7 @@ describe("⋯ menüsü", () => {
     expect(screen.getByRole("button", { name: "Kopyala (yeni rev)" })).toBeDisabled();
   });
 
-  it("Aç + PDF indir bağlantıdır; Excel indir devre-dışı", async () => {
+  it("Aç + PDF indir bağlantıdır; Excel indir etkin (TKL-F4.3)", async () => {
     renderView();
     await openMenu("TKL-2026-0013");
     expect(screen.getByRole("link", { name: "Aç" })).toHaveAttribute("href", "/teklif-hazirlama/id-TKL-2026-0013");
@@ -213,7 +243,24 @@ describe("⋯ menüsü", () => {
       "href",
       "/teklif-hazirlama/id-TKL-2026-0013/yazdir?rev=2&tur=isveren",
     );
-    expect(screen.getByRole("button", { name: "Excel indir" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Excel indir" })).toBeEnabled();
+  });
+
+  it("Excel indir = satırın SON revizyonu, işveren görünümü; başarıda menü kapanır", async () => {
+    renderView();
+    await openMenu("TKL-2026-0013");
+    await userEvent.click(screen.getByRole("button", { name: "Excel indir" }));
+    expect(downloadOfferExport).toHaveBeenCalledWith("id-TKL-2026-0013", 2, "employer");
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Excel indir" })).toBeNull());
+  });
+
+  it("Excel indir hatası menüde BackendError metniyle görünür; menü açık kalır", async () => {
+    downloadOfferExport.mockRejectedValue(new BackendError(403, { detail: "Excel için yetkiniz yok" }));
+    renderView();
+    await openMenu("TKL-2026-0013");
+    await userEvent.click(screen.getByRole("button", { name: "Excel indir" }));
+    expect(await screen.findByText("Excel için yetkiniz yok")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Excel indir" })).toBeEnabled();
   });
 
   it("'Taslağı sil' YALNIZ tek revizyonlu taslakta görünür", async () => {
