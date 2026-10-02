@@ -254,13 +254,11 @@ describe("Adım 2 · kalemleri gözden geçir (plan §1, TDN:128-180)", () => {
     expect(fieldText(screen.getByTestId("convert-summary"), "Sözleşme tutarı")).toContain("₺1,01");
   });
 
-  it("'+ Katalogdan kalem ekle' F5.4'e kadar PASİF ve gerekçeli title taşır", async () => {
+  it("'+ Katalogdan kalem ekle' F5.4 ile ETKİN (seçici davranışı: ConvertScreen.catalog.test)", async () => {
     const user = userEvent.setup();
     renderConvert();
     await toStep2(user);
-    const add = screen.getByRole("button", { name: "+ Katalogdan kalem ekle" });
-    expect(add).toBeDisabled();
-    expect(add.getAttribute("title")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "+ Katalogdan kalem ekle" })).toBeEnabled();
   });
 
   it("alt bilgi şeridi üç parça TDN:176-178 AYNEN", async () => {

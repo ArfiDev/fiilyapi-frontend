@@ -77,11 +77,18 @@ function mapGroup(draft: ConvertDraft, key: string, change: (group: ConvertGroup
   return { ...draft, groups: draft.groups.map((group) => (group.key === key ? change(group) : group)) };
 }
 
+/** Yeni satırı siler; yerel yeni grubun son satırıysa grubu da kaldırır (boş grup başlığı kalmaz). */
+function removeNewRow(draft: ConvertDraft, target: ConvertRow): ConvertDraft {
+  const rows = draft.rows.filter((row) => row.key !== target.key);
+  const isEmptyLocalGroup = target.groupKey.startsWith(NEW_GROUP_PREFIX) && !rows.some((row) => row.groupKey === target.groupKey);
+  return { ...draft, rows, groups: isEmptyLocalGroup ? draft.groups.filter((group) => group.key !== target.groupKey) : draft.groups };
+}
+
 /** Teklif satırı: dahil ↔ çıkarıldı. Yeni (katalogdan) satırda çıkarmak = SİL (TDN:284). */
 export function toggleIncluded(draft: ConvertDraft, key: string): ConvertDraft {
   const target = draft.rows.find((row) => row.key === key);
   if (!target) return draft;
-  if (target.isNew) return { ...draft, rows: draft.rows.filter((row) => row.key !== key) };
+  if (target.isNew) return removeNewRow(draft, target);
   return mapRow(draft, key, (row) => ({ ...row, included: !row.included }));
 }
 
@@ -94,8 +101,14 @@ export function setBf(draft: ConvertDraft, key: string, raw: string): ConvertDra
   return mapRow(draft, key, (row) => ({ ...row, contract: { ...row.contract, bfRaw: raw } }));
 }
 
-/** ÜS-F5-15: B.F. varsayılanı son fiyat → referans fiyat → boş; miktar boş + zorunlu. */
-function rowFromCatalog(entry: WorkItemRead, groupKey: string, seq: number): ConvertRow {
+/** Seçicide girilen kutu metinleri (TR biçimi, `contract` kutularıyla AYNI). */
+export interface CatalogRowValues {
+  qtyRaw: string;
+  bfRaw: string;
+}
+
+/** ÜS-F5-15: B.F. varsayılanı son fiyat → referans fiyat → boş; miktar boş + zorunlu (seçici değer verdiyse onlar). */
+function rowFromCatalog(entry: WorkItemRead, groupKey: string, seq: number, values?: CatalogRowValues): ConvertRow {
   const price = entry.last_price?.price ?? entry.ref_price ?? null;
   return {
     key: newRowKeyOf(seq),
@@ -106,7 +119,7 @@ function rowFromCatalog(entry: WorkItemRead, groupKey: string, seq: number): Con
     description: entry.name,
     unit: entry.uom,
     offer: { qty: null, unitPrice: null, amount: ZERO_MONEY },
-    contract: { qtyRaw: "", bfRaw: trPriceInputValue(price) },
+    contract: values ?? { qtyRaw: "", bfRaw: trPriceInputValue(price) },
     included: true,
     isNew: true,
     note: NEW_ROW_NOTE,
@@ -115,15 +128,52 @@ function rowFromCatalog(entry: WorkItemRead, groupKey: string, seq: number): Con
   };
 }
 
-/** Seçilen kalemleri hedef grubun SONUNA ekler (grup sırası korunur). */
-export function addFromCatalog(draft: ConvertDraft, groupKey: string, entries: readonly WorkItemRead[]): ConvertDraft {
+/**
+ * Seçilen kalemleri hedef grubun SONUNA ekler (grup sırası korunur). `values` (katalog kimliği → kutu metinleri) seçicide
+ * girilen miktar + B.F.'yi taşır; verilmeyen kalem varsayılan kutularla (miktar boş) gelir.
+ */
+export function addFromCatalog(
+  draft: ConvertDraft,
+  groupKey: string,
+  entries: readonly WorkItemRead[],
+  values?: ReadonlyMap<string, CatalogRowValues>,
+): ConvertDraft {
   if (entries.length === 0 || !draft.groups.some((group) => group.key === groupKey)) return draft;
-  const added = entries.map((entry, index) => rowFromCatalog(entry, groupKey, draft.nextNewSeq + index));
+  const added = entries.map((entry, index) => rowFromCatalog(entry, groupKey, draft.nextNewSeq + index, values?.get(entry.id)));
   const rows = draft.groups.flatMap((group) => {
     const own = draft.rows.filter((row) => row.groupKey === group.key);
     return group.key === groupKey ? [...own, ...added] : own;
   });
   return { ...draft, rows, nextNewSeq: draft.nextNewSeq + entries.length };
+}
+
+const NEW_GROUP_PREFIX = "ng:";
+
+/** Yerel YENİ grup (teklifte yok): listenin SONUNA eklenir; anahtar yeni-satır sayacından türer (çakışmaz). */
+export function addGroup(draft: ConvertDraft, name: string): { draft: ConvertDraft; groupKey: string } {
+  const groupKey = `${NEW_GROUP_PREFIX}${draft.nextNewSeq}`;
+  const group: ConvertGroupDraft = { key: groupKey, name, offerName: "", disciplineId: null, nameEdited: false };
+  return { draft: { ...draft, groups: [...draft.groups, group], nextNewSeq: draft.nextNewSeq + 1 }, groupKey };
+}
+
+/** Seçicinin hedefi: mevcut grup anahtarı YA DA yerel yeni grup adı. */
+export type CatalogTarget = { groupKey: string } | { newGroupName: string };
+
+/** Seçicinin ONAYLADIĞI satır: kayıpsız ondalık (nokta) metinler; kutulara TR biçimiyle yazılır. */
+export interface CatalogEntry {
+  item: WorkItemRead;
+  quantity: string;
+  unitPrice: string;
+}
+
+/** F5.4 · seçici onayı: (gerekirse yerel yeni grup) + katalog satırları. Boş seçimde taslak AYNEN döner (boş grup açılmaz). */
+export function addCatalogEntries(draft: ConvertDraft, target: CatalogTarget, entries: readonly CatalogEntry[]): ConvertDraft {
+  if (entries.length === 0) return draft;
+  const base = "newGroupName" in target ? addGroup(draft, target.newGroupName) : { draft, groupKey: target.groupKey };
+  const values = new Map(
+    entries.map((entry) => [entry.item.id, { qtyRaw: trQuantityInputValue(entry.quantity), bfRaw: trPriceInputValue(entry.unitPrice) }]),
+  );
+  return addFromCatalog(base.draft, base.groupKey, entries.map((entry) => entry.item), values);
 }
 
 export function renameGroup(draft: ConvertDraft, groupKey: string, name: string): ConvertDraft {

@@ -102,7 +102,7 @@ export interface PickerGroup {
   id: string;
   name: string;
   sort_order: number;
-  items: readonly { code: string; catalog_item_id: string | null; sort_order: number }[];
+  items: readonly { code: string; catalog_item_id: string | null; sort_order: number; isExcluded?: boolean }[];
 }
 
 type HostGroups = readonly PickerGroup[];
@@ -417,11 +417,14 @@ export function groupByDiscipline(
 /**
  * Bir seçimde en çok kaç kalem seçilebilir + aşılınca bant metni. `priced`: tek istek tavanı (`MAX_BULK_ITEMS`).
  * `selectOnly` (şablon): hedefteki TOPLAM tavan − mevcut kalem sayısı (eksiye düşmez); metin backend'inkiyle aynı.
+ * `priced` + toplam tavan (dönüştürme 2000, çıkarılmış satırlar sayılmaz): tek istek tavanıyla KÜÇÜK olan.
  */
 export function selectionLimit(rules: PickerRules, groups: HostGroups): { max: number; message: string } {
-  if (rules.entryMode === "selectOnly" && rules.maxTotalItems !== null) {
-    const existing = groups.reduce((sum, group) => sum + group.items.length, 0);
-    return { max: Math.max(0, rules.maxTotalItems - existing), message: rules.totalCapMessage };
-  }
-  return { max: MAX_BULK_ITEMS, message: `Tek seferde en fazla ${MAX_BULK_ITEMS} ${rules.words.noun} eklenebilir` };
+  const bulk = { max: MAX_BULK_ITEMS, message: `Tek seferde en fazla ${MAX_BULK_ITEMS} ${rules.words.noun} eklenebilir` };
+  if (rules.maxTotalItems === null) return bulk;
+  // `isExcluded` satırlar (dönüştürmede çıkarılmış) gövdeye girmez → toplam tavana SAYILMAZ.
+  const existing = groups.reduce((sum, group) => sum + group.items.filter((item) => item.isExcluded !== true).length, 0);
+  const total = { max: Math.max(0, rules.maxTotalItems - existing), message: rules.totalCapMessage };
+  if (rules.entryMode === "selectOnly") return total;
+  return total.max < bulk.max ? total : bulk;
 }

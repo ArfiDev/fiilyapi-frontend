@@ -117,9 +117,10 @@ export function CatalogPickerModal<TBody>({
   const [hideInContract, setHideInContract] = useState(true);
   const [inputs, setInputs] = useState<PickerInputs>(() => new Map());
   const [groupChoice, setGroupChoice] = useState(() => defaultGroupId(groups));
-  // `selectOnly` (şablon): yeni grup adı "Yeni grup"/"Yeni grup 2"… ile DOLU başlar (offer-group-names); priced: boş.
+  // YEREL gruplu hedefler (şablon, dönüştürme): yeni grup adı "Yeni grup"/"Yeni grup 2"… ile DOLU başlar (offer-group-names);
+  // sözleşme/teklif: boş (grup sunucuda açılır).
   const isSelectOnly = target.entryMode === "selectOnly";
-  const [defaultNewGroupName] = useState(() => (isSelectOnly ? nextGroupName(groups) : ""));
+  const [defaultNewGroupName] = useState(() => (target.usesLocalGroups ? nextGroupName(groups) : ""));
   const [newGroupName, setNewGroupName] = useState(defaultNewGroupName);
 
   const disciplines = useMemo(() => disciplinesQuery.data ?? [], [disciplinesQuery.data]);
@@ -158,8 +159,8 @@ export function CatalogPickerModal<TBody>({
 
   const { entries, problems, selectedCount } = resolution;
   const isGroupNameMissing = isNewGroup && newGroupName.trim() === "";
-  // Grup adı şablonda tekildir (SO-30 kusuru çoğalmasın): yalnız `selectOnly`; teklif/sözleşme davranışı değişmez.
-  const isGroupNameDuplicate = isSelectOnly && isNewGroup && isGroupNameTaken(groups, newGroupName);
+  // Grup adı yerel gruplu hedefte tekildir (SO-30 kusuru çoğalmasın): şablon + dönüştürme; teklif/sözleşme davranışı değişmez.
+  const isGroupNameDuplicate = target.usesLocalGroups && isNewGroup && isGroupNameTaken(groups, newGroupName);
   const limit = selectionLimit(target, groups);
   const bandLines = [
     ...(submitError === null ? [] : [submitError]),

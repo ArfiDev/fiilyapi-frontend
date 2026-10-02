@@ -12,9 +12,6 @@ import type { ConvertDraft, ConvertRow } from "./convert-types";
 import type { VisibleStep2Errors } from "./convert-view-errors";
 import "./offer-convert.css";
 
-/** F5.4'e kadar pasif (plan §8 F5.3 satırı); mockup öğesi SİLİNMEZ. */
-const CATALOG_ADD_PENDING_TITLE = "Katalogdan kalem seçici henüz açık değil";
-
 export interface ConvertItemsStepProps {
   draft: ConvertDraft;
   summary: ConvertSummary;
@@ -23,6 +20,9 @@ export interface ConvertItemsStepProps {
   errors: VisibleStep2Errors;
   isSiteOpen: boolean;
   disciplines: readonly WorkDisciplineRead[];
+  /** Uçuşta / başarı sonrası: "+ Katalogdan kalem ekle" pasif. */
+  isLocked: boolean;
+  onOpenCatalog: () => void;
   actions: {
     onToggle: (key: string) => void;
     onQty: (key: string, raw: string) => void;
@@ -48,7 +48,7 @@ export function ConvertItemsStep(props: ConvertItemsStepProps) {
           <span className="convert-items__count">
             {summary.includedCount} dahil · {summary.excludedCount} çıkarıldı · {summary.changedCount} değişti · {summary.newCount} yeni
           </span>
-          <Button variant="secondary" size="sm" className="convert-items__add" disabled title={CATALOG_ADD_PENDING_TITLE}>
+          <Button variant="secondary" size="sm" className="convert-items__add" disabled={props.isLocked} onClick={props.onOpenCatalog}>
             + Katalogdan kalem ekle
           </Button>
         </div>

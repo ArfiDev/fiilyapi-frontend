@@ -34,7 +34,8 @@ const BASE_INDEX_FRACTION = 3;
 
 const MSG_GROUP_NAME_REQUIRED = "Grup adı zorunlu";
 const MSG_NO_ITEMS = "En az bir kalem sözleşmeye dahil olmalı";
-const MSG_TOO_MANY = `En fazla ${MAX_CONVERT_ITEMS} kalem dönüştürülebilir`;
+/** Seçici (F5.4) tavan bandında AYNI metni basar. */
+export const MSG_TOO_MANY = `En fazla ${MAX_CONVERT_ITEMS} kalem dönüştürülebilir`;
 const MSG_AMOUNT_LIMIT = "Kalem toplamı sözleşme bedeli sınırını aşıyor";
 /** Backend metinleri AYNEN (`convert_service._static_errors`). */
 const MSG_OFFER_ITEM_MISSING = "Kalem teklifin son revizyonunda bulunamadı";

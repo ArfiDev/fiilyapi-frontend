@@ -7,10 +7,11 @@
 import type { EmployerContractItemsBulkCreateRequest } from "@/lib/api/hooks/useContractMutations";
 import type { OfferItemsBulkBody } from "@/lib/api/hooks/useOfferMutations";
 
+import type { WorkItemRead } from "@/lib/api/models";
 import { compareDecimalStrings } from "@/lib/decimal";
 
 import { buildBulkBody, requirePricedEntries, suggestedPriceValue, type ResolvedEntry } from "./picker-model";
-import { CONTRACT_RULES, OFFER_RULES, TEMPLATE_RULES, type PickerRules } from "./picker-rules";
+import { CONTRACT_RULES, CONVERT_RULES, OFFER_RULES, TEMPLATE_RULES, type PickerRules } from "./picker-rules";
 
 export interface PickerTarget<TBody> extends PickerRules {
   title: string;
@@ -121,4 +122,32 @@ export const TEMPLATE_PICKER_TARGET: PickerTarget<TemplateAddBody> = {
   manualAddLabel: "",
   manualAddClosesPicker: false,
   buildBody: (entries, groupId) => ({ groupId, catalogIds: entries.map((entry) => entry.item.id) }),
+};
+
+/** `priced` yerel gövde: HTTP gövdesi DEĞİL — host bunu dönüştürme taslağına (`addFromCatalog`) çevirir. Sayılar nokta-ondalık METİN. */
+export interface ConvertAddBody {
+  /** Hedef grup anahtarı (taslak `groupKey`; yeni grupta host'un açtığı anahtar). */
+  groupId: string;
+  entries: readonly { item: WorkItemRead; quantity: string; unitPrice: string }[];
+}
+
+/** TKL-F5.4 · dönüştürme hedefi (TKL-F5-PLAN §8 F5.4, ÜS-F5-14/15). */
+export const CONVERT_PICKER_TARGET: PickerTarget<ConvertAddBody> = {
+  ...CONVERT_RULES,
+  title: "Katalogdan Kalem Ekle",
+  subtitle: "İş Kalemi Kataloğu'ndan sözleşmeye kalem ekle",
+  noteLead: "Poz no, tarif ve birim katalogdan kopyalanır.",
+  noteRest: " Miktar girilir; birim fiyat son fiyattan, yoksa referans fiyattan önerilir, sözleşmede değiştirilebilir, katalog değişmez.",
+  unsavedLabel: "Katalogdan kalem seçimi",
+  tableCaption: "Katalogdan sözleşmeye eklenebilecek kalemler",
+  hideLabel: "Listede olanları gizle",
+  priceHeader: "Birim fiyat",
+  priceAriaSuffix: "birim fiyat",
+  totalLabel: "Eklenecek Tutar",
+  manualAddLabel: "",
+  manualAddClosesPicker: false,
+  buildBody: (entries, groupId) => ({
+    groupId,
+    entries: requirePricedEntries(entries).map((entry) => ({ item: entry.item, quantity: entry.quantity, unitPrice: entry.unitPrice })),
+  }),
 };

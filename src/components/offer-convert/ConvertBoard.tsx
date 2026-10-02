@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import type { OfferDetailRead, OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 import { routes } from "@/lib/routes";
 
+import { ConvertCatalogPickerHost } from "./ConvertCatalogPickerHost";
 import { ConvertConfirmStep } from "./ConvertConfirmStep";
 import { ConvertDoneBand } from "./ConvertDoneBand";
 import { ConvertErrorBand } from "./ConvertErrorBand";
@@ -27,6 +29,7 @@ interface ConvertBoardProps {
 /** TDN:67-181 — başlık + adım çubuğu + güncel adım + bantlar + alt şerit. */
 export function ConvertBoard({ detail, revision, catalogItems, disciplines, convert }: ConvertBoardProps) {
   const board = useConvertBoard({ detail, revision, catalogItems, convert });
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   return (
     <div className="convert">
       <header className="convert-head">
@@ -65,7 +68,17 @@ export function ConvertBoard({ detail, revision, catalogItems, disciplines, conv
           errors={board.visible2}
           isSiteOpen={board.form.openSite}
           disciplines={disciplines}
+          isLocked={board.isBusy || board.isDone}
+          onOpenCatalog={() => setIsCatalogOpen(true)}
           actions={board.actions}
+        />
+      )}
+      {board.step === 2 && isCatalogOpen && !board.isBusy && !board.isDone && (
+        <ConvertCatalogPickerHost
+          draft={board.draft}
+          contextLabel={`${detail.offer_no} Rev.${revision.rev_no}`}
+          onAdd={board.actions.onAddCatalog}
+          onClose={() => setIsCatalogOpen(false)}
         />
       )}
       {board.step === 3 && <ConvertConfirmStep form={board.form} summary={board.summary} employerName={detail.employer_name} />}
