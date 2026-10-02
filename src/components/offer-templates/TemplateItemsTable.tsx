@@ -6,8 +6,6 @@ import { TemplateGroupRow } from "./TemplateGroupRow";
 import { catalogPriceCell, formatAsPerUnit, groupCode } from "./template-model";
 import "./offer-templates.css";
 
-/** F4.6'ya kadar pasif: mockup öğesi SİLİNMEZ, gerekçeyle devre dışı basılır (F-TH kanonu). */
-export const ADD_FROM_CATALOG_SOON_TITLE = "Yakında · katalogdan ekleme sonraki sürümde açılacak";
 const REMOVE_ITEM_TITLE = "Kalemi çıkar";
 
 interface TemplateItemsTableProps {
@@ -16,13 +14,15 @@ interface TemplateItemsTableProps {
   catalog: ReadonlyMap<string, WorkItemRead>;
   canEdit: boolean;
   onAddGroup: () => void;
+  /** "+ Katalogdan Ekle": seçiciyi açar (F4.6). */
+  onAddFromCatalog: () => void;
   onRenameGroup: (groupName: string, newName: string) => void;
   onRemoveGroup: (groupName: string) => void;
   onRemoveItem: (groupName: string, catalogItemId: string) => void;
 }
 
 /** TS:130-159 — "Kalemler" kartı: üst şerit + Poz No · Tarif · Birim · Katalog son fiyat · A-s / birim · × tablosu. */
-export function TemplateItemsTable({ detail, catalog, canEdit, onAddGroup, onRenameGroup, onRemoveGroup, onRemoveItem }: TemplateItemsTableProps) {
+export function TemplateItemsTable({ detail, catalog, canEdit, onAddGroup, onAddFromCatalog, onRenameGroup, onRemoveGroup, onRemoveItem }: TemplateItemsTableProps) {
   return (
     <section className="otpl-items" aria-label="Şablon kalemleri">
       <div className="otpl-items__head">
@@ -35,7 +35,7 @@ export function TemplateItemsTable({ detail, catalog, canEdit, onAddGroup, onRen
             <Button variant="secondary" size="sm" onClick={onAddGroup}>
               + Grup
             </Button>
-            <Button variant="secondary" size="sm" disabled title={ADD_FROM_CATALOG_SOON_TITLE}>
+            <Button variant="secondary" size="sm" onClick={onAddFromCatalog}>
               + Katalogdan Ekle
             </Button>
           </div>

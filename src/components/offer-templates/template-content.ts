@@ -149,6 +149,17 @@ export function editRemoveItem(groupName: string, catalogItemId: string): Edit {
   };
 }
 
+export type AddItemsByName = { groupName: string } | { newGroupName: string };
+
+/** F4.6: seçici hedef grubu ADLA verir (grup adı şablonda tekildir); kuyrukta dizin kayması yanlış gruba yazmasın. */
+export function editAddItems(target: AddItemsByName, catalogIds: readonly string[]): Edit {
+  return (groups) => {
+    if (!("groupName" in target)) return addItems(target, catalogIds)(groups);
+    const groupIndex = groups.findIndex((group) => group.name === target.groupName);
+    return groupIndex < 0 ? fail(MSG_GROUP_MISSING) : addItems({ groupIndex }, catalogIds)(groups);
+  };
+}
+
 export function editRenameGroup(groupName: string, newName: string): Edit {
   return (groups) => {
     const index = groups.findIndex((group) => group.name === groupName);

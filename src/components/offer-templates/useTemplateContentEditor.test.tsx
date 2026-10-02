@@ -7,7 +7,7 @@ import { backendClient } from "@/lib/api/client";
 import { offerTemplateKey } from "@/lib/api/hooks/offer-query-keys";
 import { useOfferTemplate, useOfferTemplates, type OfferTemplateDetail } from "@/lib/api/hooks/useOfferTemplates";
 
-import { addGroup, editRemoveItem, editRenameGroup } from "./template-content";
+import { addGroup, editAddItems, editRemoveItem, editRenameGroup } from "./template-content";
 import { makeTemplateDetail, makeTemplateGroup } from "./template-fixtures";
 import { useTemplateContentEditor } from "./useTemplateContentEditor";
 
@@ -245,5 +245,49 @@ describe("diğer hatalar ve istemci reddi", () => {
       await result.current.editor.edit(addGroup("Cephe"));
     });
     expect(result.current.editor.error).toBeNull();
+  });
+});
+
+describe("tryEdit — işlem sonucu (F4.6: seçici yalnız BAŞARIDA kapanır)", () => {
+  it("🔴 PUT başarılı → true", async () => {
+    vi.mocked(backendClient.PUT).mockImplementationOnce((async (_p: string, init: { body: never }) => ok(serverDetail(init.body, "T1"))) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+    let outcome: boolean | undefined;
+    await act(async () => {
+      outcome = await result.current.editor.tryEdit(editAddItems({ groupName: "Betonarme" }, ["c9"]));
+    });
+    expect(outcome).toBe(true);
+    expect(backendClient.PUT).toHaveBeenCalledTimes(1);
+    expect(putBody(0).groups[0]?.items.map((i) => i.catalog_item_id)).toEqual(["c1", "c2", "c3", "c4", "c9"]);
+  });
+
+  it("🔴 409 → false, bant metni aynen (editörün mevcut yolu)", async () => {
+    vi.mocked(backendClient.PUT).mockImplementationOnce((async () => fail(409, STALE)) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+    let outcome: boolean | undefined;
+    await act(async () => {
+      outcome = await result.current.editor.tryEdit(editAddItems({ groupName: "Betonarme" }, ["c9"]));
+    });
+    expect(outcome).toBe(false);
+    expect(result.current.editor.error).toBe(STALE);
+  });
+
+  it("🔴 diğer backend hatası → false; istemci reddi (aynı ad) → false ve istek yok", async () => {
+    vi.mocked(backendClient.PUT).mockImplementationOnce((async () => fail(404, "Katalog iş tipi bulunamadı")) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+    let failed: boolean | undefined;
+    let rejected: boolean | undefined;
+    await act(async () => {
+      failed = await result.current.editor.tryEdit(editAddItems({ groupName: "Betonarme" }, ["c9"]));
+    });
+    expect(failed).toBe(false);
+    await act(async () => {
+      rejected = await result.current.editor.tryEdit(addGroup("Betonarme"));
+    });
+    expect(rejected).toBe(false);
+    expect(backendClient.PUT).toHaveBeenCalledTimes(1);
   });
 });

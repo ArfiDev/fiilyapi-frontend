@@ -9,6 +9,7 @@ import {
   addGroup,
   addItems,
   applyEdit,
+  editAddItems,
   editRemoveGroup,
   editRemoveItem,
   editRenameGroup,
@@ -164,6 +165,27 @@ describe("kimlikle çözülen düzenlemeler (kuyrukta bayat dizin = yanlış kal
     const draft = draftOf([["A", []], ["B", []]]);
     expect(groupsOf(editRenameGroup("B", "Z")(draft))).toEqual([["A", []], ["Z", []]]);
     expect(groupsOf(editRemoveGroup("A")(draft))).toEqual([["B", []]]);
+  });
+});
+
+describe("editAddItems — katalogdan ekleme (F4.6): grup ADLA çözülür", () => {
+  it("🔴 mevcut grup adıyla: sona eklenir; dizin kaymış olsa da doğru grup", () => {
+    const draft = draftOf([["A", ["c1"]], ["B", ["c2"]]]);
+    expect(groupsOf(editAddItems({ groupName: "B" }, ["c3", "c4"])(draft))).toEqual([["A", ["c1"]], ["B", ["c2", "c3", "c4"]]]);
+  });
+
+  it("🔴 grup artık yok (başka işlem sildi) → 'Grup bulunamadı', taslak değişmez", () => {
+    expect(editAddItems({ groupName: "Z" }, ["c"])(draftOf([["A", []]]))).toEqual({ ok: false, error: "Grup bulunamadı" });
+  });
+
+  it("yeni grup adıyla: sona yeni grup açılır; aynı ad reddedilir", () => {
+    expect(groupsOf(editAddItems({ newGroupName: "Cephe" }, ["c1"])(draftOf([["A", []]])))).toEqual([["A", []], ["Cephe", ["c1"]]]);
+    expect(editAddItems({ newGroupName: "A" }, ["c1"])(draftOf([["A", []]]))).toEqual({ ok: false, error: "Bu adla grup var" });
+  });
+
+  it("1000 kalem tavanı aşılırsa backend metni, PUT yok", () => {
+    const base = Array.from({ length: MAX_TEMPLATE_ITEMS }, (_, i) => `c${i}`);
+    expect(editAddItems({ groupName: "A" }, ["x"])(draftOf([["A", base]]))).toEqual({ ok: false, error: MSG_ITEMS_TOO_MANY });
   });
 });
 

@@ -10,6 +10,7 @@ import type { WorkItemRead } from "@/lib/api/models";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui";
 
+import { TemplateCatalogPickerHost } from "./TemplateCatalogPickerHost";
 import { TemplateDetailCard } from "./TemplateDetailCard";
 import { TemplateItemsTable } from "./TemplateItemsTable";
 import { addGroup, editRemoveGroup, editRemoveItem, editRenameGroup } from "./template-content";
@@ -43,6 +44,7 @@ export function TemplateWorkspace(props: TemplateWorkspaceProps) {
   const makeDefault = useSetDefaultTemplate(templateId);
   const copy = useCopyOfferTemplate(templateId);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   if (isForbidden(query.error)) return <AccessDenied />;
   if (query.data === undefined) {
@@ -104,10 +106,14 @@ export function TemplateWorkspace(props: TemplateWorkspaceProps) {
         catalog={catalog}
         canEdit={canWrite}
         onAddGroup={() => void editor.edit(addGroup())}
+        onAddFromCatalog={() => setIsPickerOpen(true)}
         onRenameGroup={(groupName, newName) => void editor.edit(editRenameGroup(groupName, newName))}
         onRemoveGroup={(groupName) => void editor.edit(editRemoveGroup(groupName))}
         onRemoveItem={(groupName, catalogItemId) => void editor.edit(editRemoveItem(groupName, catalogItemId))}
       />
+      {isPickerOpen && canWrite && (
+        <TemplateCatalogPickerHost detail={detail} editor={editor} onClose={() => setIsPickerOpen(false)} />
+      )}
     </div>
   );
 }

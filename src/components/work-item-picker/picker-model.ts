@@ -306,6 +306,11 @@ export function resolveSelection(
     const input = inputs.get(row.item.id);
     if (row.block !== null || input === undefined || !input.selected) continue;
     selectedCount += 1;
+    if (rules.entryMode === "selectOnly") {
+      // Miktar/fiyat tutulmaz: doğrulama YOK; boş değerler yalnız tip gereği (gövde kalem kimliğinden kurulur).
+      entries.push({ item: row.item, quantity: "", unitPrice: null });
+      continue;
+    }
     const message = validateRow(input, rules);
     const quantity = parseQuantityInput(input.quantity);
     const unitPrice = parseRefPriceInput(input.unitPrice);
@@ -407,4 +412,16 @@ export function groupByDiscipline(
       (rank.get(a.discipline.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.discipline.id) ?? Number.MAX_SAFE_INTEGER) ||
       a.discipline.code.localeCompare(b.discipline.code, "tr-TR"),
   );
+}
+
+/**
+ * Bir seçimde en çok kaç kalem seçilebilir + aşılınca bant metni. `priced`: tek istek tavanı (`MAX_BULK_ITEMS`).
+ * `selectOnly` (şablon): hedefteki TOPLAM tavan − mevcut kalem sayısı (eksiye düşmez); metin backend'inkiyle aynı.
+ */
+export function selectionLimit(rules: PickerRules, groups: HostGroups): { max: number; message: string } {
+  if (rules.entryMode === "selectOnly" && rules.maxTotalItems !== null) {
+    const existing = groups.reduce((sum, group) => sum + group.items.length, 0);
+    return { max: Math.max(0, rules.maxTotalItems - existing), message: rules.totalCapMessage };
+  }
+  return { max: MAX_BULK_ITEMS, message: `Tek seferde en fazla ${MAX_BULK_ITEMS} ${rules.words.noun} eklenebilir` };
 }

@@ -26,6 +26,8 @@ export type TemplatePatch = Omit<OfferTemplateUpdateBody, "expected_updated_at">
 export interface TemplateContentEditor {
   /** İçerik düzenlemesi: SON detaydan gövde kurar, tek uçuş + sırayla gönderir. */
   edit: (edit: Edit) => Promise<void>;
+  /** `edit` ile AYNI yol; sonucu bildirir: `true` = uygulandı (ya da değişiklik yoktu), `false` = reddedildi/hata/409. */
+  tryEdit: (edit: Edit) => Promise<boolean>;
   /** Künye (ad/açıklama/oran) PATCH'i — AYNI sıradan geçer (ayrı yol bayat `expected_updated_at` gönderirdi). */
   patch: (fields: TemplatePatch) => Promise<void>;
   error: string | null;
@@ -72,45 +74,51 @@ export function useTemplateContentEditor(templateId: string): TemplateContentEdi
     [queryClient, refreshDetail],
   );
 
-  const enqueue = useCallback((task: (latest: OfferTemplateDetail) => Promise<void>): Promise<void> => {
+  /** Görev `true` dönerse uygulandı; hata/409/bayat kuyruk → `false`. */
+  const enqueue = useCallback((task: (latest: OfferTemplateDetail) => Promise<boolean>): Promise<boolean> => {
     const queuedEpoch = epoch.current;
     const run = tail.current.then(async () => {
-      if (queuedEpoch !== epoch.current) return;
+      if (queuedEpoch !== epoch.current) return false;
       const latest = queryClient.getQueryData<OfferTemplateDetail>(offerTemplateKey(templateId));
-      if (latest === undefined) return;
+      if (latest === undefined) return false;
       try {
-        await task(latest);
+        return await task(latest);
       } catch (failure) {
         await handleFailure(failure);
+        return false;
       }
     });
-    tail.current = run.catch(() => undefined);
+    tail.current = run.then(() => undefined, () => undefined);
     return run;
   }, [handleFailure, queryClient, templateId]);
 
-  const edit = useCallback(
+  const tryEdit = useCallback(
     (change: Edit) =>
       enqueue(async (latest) => {
         setError(null);
         const applied = applyEdit(latest, change);
         if (!applied.ok) {
           setError(applied.error);
-          return;
+          return false;
         }
         if (applied.changed) await writers.current.replace(applied.body);
+        return true;
       }),
     [enqueue],
   );
+
+  const edit = useCallback((change: Edit) => tryEdit(change).then(() => undefined), [tryEdit]);
 
   const patch = useCallback(
     (fields: TemplatePatch) =>
       enqueue(async (latest) => {
         setError(null);
         await writers.current.update({ ...fields, expected_updated_at: latest.updated_at });
-      }),
+        return true;
+      }).then(() => undefined),
     [enqueue],
   );
 
   const clearError = useCallback(() => setError(null), []);
-  return { edit, patch, error, clearError };
+  return { edit, tryEdit, patch, error, clearError };
 }

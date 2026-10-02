@@ -10,7 +10,7 @@ import type { OfferItemsBulkBody } from "@/lib/api/hooks/useOfferMutations";
 import { compareDecimalStrings } from "@/lib/decimal";
 
 import { buildBulkBody, requirePricedEntries, suggestedPriceValue, type ResolvedEntry } from "./picker-model";
-import { CONTRACT_RULES, OFFER_RULES, type PickerRules } from "./picker-rules";
+import { CONTRACT_RULES, OFFER_RULES, TEMPLATE_RULES, type PickerRules } from "./picker-rules";
 
 export interface PickerTarget<TBody> extends PickerRules {
   title: string;
@@ -98,4 +98,27 @@ export const OFFER_PICKER_TARGET: PickerTarget<OfferItemsBulkBody> = {
   manualAddLabel: "Katalogda yok mu? Kataloğa yeni kalem ekle",
   manualAddClosesPicker: false,
   buildBody: buildOfferBulkBody,
+};
+
+/** `selectOnly` gövdesi: HTTP gövdesi DEĞİL — host bunu şablon düzenlemesine (`addItems`) çevirir. */
+export interface TemplateAddBody {
+  groupId: string;
+  catalogIds: readonly string[];
+}
+
+export const TEMPLATE_PICKER_TARGET: PickerTarget<TemplateAddBody> = {
+  ...TEMPLATE_RULES,
+  title: "Katalogdan Kalem Ekle",
+  subtitle: "İş Kalemi Kataloğu'ndan şablona kalem ekle",
+  noteLead: "Şablonda miktar ve fiyat tutulmaz;",
+  noteRest: " kalem seti ve gruplar saklanır.",
+  unsavedLabel: "Katalogdan kalem seçimi",
+  tableCaption: "Katalogdan şablona eklenebilecek kalemler",
+  hideLabel: "Şablonda olanları gizle",
+  priceHeader: "",
+  priceAriaSuffix: "",
+  totalLabel: "",
+  manualAddLabel: "",
+  manualAddClosesPicker: false,
+  buildBody: (entries, groupId) => ({ groupId, catalogIds: entries.map((entry) => entry.item.id) }),
 };

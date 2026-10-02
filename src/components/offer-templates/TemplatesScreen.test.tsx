@@ -211,14 +211,6 @@ describe("kalemler kartı (TS:130-159)", () => {
     expect(itemsRegion()).toHaveTextContent("3 kalem · 2 grup");
     expect(fake.callsTo("GET", "/catalog/items")).toHaveLength(1);
   });
-
-  it("'+ Katalogdan Ekle' F4.6'ya kadar PASİF ve gerekçeli", async () => {
-    renderScreen();
-    await loaded();
-    const button = await within(itemsRegion()).findByRole("button", { name: "+ Katalogdan Ekle" });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("title", expect.stringContaining("Yakında"));
-  });
 });
 
 describe("içerik düzenleme (anlık kayıt, TAM değiştirme PUT)", () => {
