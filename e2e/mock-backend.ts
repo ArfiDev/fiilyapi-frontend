@@ -26,6 +26,7 @@ import {
 import { QURR_FIXTURE_EMPTY, QURR_FIXTURE_READY } from "@/components/earned-value/reports/qurr/qurr-fixtures";
 // TKL-F3.2 · Teklif Hazırlama (`/offers*`) sahte backend'i AYRI dosyalardadır; burası YALNIZ yönlendirir.
 import { createOffersState, handleOffers, tklLastPrices, type OfferCatalogEntry, type TklLastPrice } from "./mock-offers";
+import { handleOfferExport } from "./mock-offer-export";
 
 /* ══════════════ SÖZLEŞME SORGU KISITLARI (F-BORDRO T1) ══════════════════════
  * 🔴 SAHTE-YEŞİLİN YEDİNCİ HÂLİ. Sahte backend `limit`i DOĞRULAMIYOR,
@@ -8943,6 +8944,20 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         "content-disposition": `attachment; filename="QURR-H${week}.xlsx"`,
       });
       res.end(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      return;
+    }
+
+    // TKL-F4.3 · teklif + katalog Excel indirme — İKİLİ gövde, QURR ile aynı gerekçe (`e2e/mock-offer-export.ts`).
+    if (
+      handleOfferExport({
+        method,
+        path,
+        query: parsed.searchParams,
+        res,
+        send,
+        offerNo: (offerId) => offersState.offers.find((offer) => offer.id === offerId)?.offerNo ?? null,
+      })
+    ) {
       return;
     }
 
