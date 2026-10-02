@@ -1,4 +1,5 @@
 import { render, within } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeCompany, makeGroup, makePrintOffer, makePrintRevision } from "./offer-print-fixtures";
@@ -6,6 +7,8 @@ import { OfferCustomerPrint } from "./OfferCustomerPrint";
 import { OfferInternalPrint } from "./OfferInternalPrint";
 import { buildCustomerPrintModel } from "./print-model-customer";
 import { buildInternalPrintModel } from "./print-model-internal";
+import { useMeasuredPages } from "./use-measured-pages";
+import type { OfferPrintPage } from "./print-model";
 
 /**
  * TKL-F3.6.1 · madde 1 — ölçüme dayalı sayfalama. jsdom yerleşim bilmez; `getBoundingClientRect`/`clientHeight`
@@ -116,5 +119,61 @@ describe("iç döküm yazdırma — aynı ölçüm (A4 yatay)", () => {
     expect(all.length).toBeGreaterThan(1);
     const keys = all.flatMap((sheet) => itemRows(sheet));
     for (let index = 0; index < 6; index += 1) expect(keys.filter((key) => key === `g1-i${index}`)).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// TKL-F4.3 · `data-measured` — ölçüm turu BİTTİ bilgisi (plan §7; e2e artık sabit kare sayısı beklemez).
+// ---------------------------------------------------------------------------------------------
+const printRoot = (container: HTMLElement) => container.querySelector<HTMLElement>(".offer-print__pages")!;
+
+/** Her render'da `isSettled` değerini sırayla kaydeder. */
+function SettledProbe({ pages, log }: { pages: OfferPrintPage<{ key: string; groupId: string }>[]; log: boolean[] }) {
+  const { rootRef, isSettled } = useMeasuredPages(pages);
+  useEffect(() => {
+    log.push(isSettled);
+  });
+  return <div ref={rootRef} />;
+}
+
+describe("data-measured / isSettled (TKL-F4.3 · §7)", () => {
+  it("ölçülemez yerleşimde (jsdom: yükseklik 0) ölçüm turu biter bitmez true", () => {
+    const { container } = render(<OfferCustomerPrint model={customerModel()} />);
+    expect(printRoot(container)).toHaveAttribute("data-measured", "true");
+  });
+
+  it("değişiklik üreten ölçüm (uzun satırlar) tamamlanınca true; sayfa bölünmesi oturmuştur", () => {
+    for (let index = 0; index < 6; index += 1) rowHeights[`g1-i${index}`] = 250;
+    const { container } = render(<OfferCustomerPrint model={customerModel()} />);
+    expect(sheets(container).length).toBeGreaterThan(1);
+    expect(printRoot(container)).toHaveAttribute("data-measured", "true");
+  });
+
+  it("iç döküm kökü de aynı niteliği basar", () => {
+    const model = buildInternalPrintModel({ offer: makePrintOffer(), revision: makePrintRevision({ groups: [makeGroup("g1", "Kaba", 3)] }), company: makeCompany() });
+    const { container } = render(<OfferInternalPrint model={model} />);
+    expect(printRoot(container)).toHaveAttribute("data-measured", "true");
+  });
+
+  it("ilk render false (henüz ölçülmedi), tur bitince true; kaynak değişince yeniden false sonra true", () => {
+    const log: boolean[] = [];
+    const first = customerModel([makeGroup("g1", "Kaba", 2)]).pages;
+    const second = customerModel([makeGroup("g2", "İnce", 3)]).pages;
+    const { rerender } = render(<SettledProbe pages={first} log={log} />);
+    expect(log).toEqual([false, true]);
+    rerender(<SettledProbe pages={second} log={log} />);
+    expect(log).toEqual([false, true, false, true]);
+  });
+
+  it("ölçüm hiç oturmasa da (her turda farklı yükseklik) MAX_PASSES sonunda true — sonsuz bekleme yok", () => {
+    let reads = 0;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const isRow = this.getAttribute("data-print-row") !== null;
+      if (isRow) reads += 1;
+      const height = isRow ? 20 + (reads % 9) * 60 : fakeHeight(this);
+      return { height, width: 100, top: 0, left: 0, right: 100, bottom: height, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    const { container } = render(<OfferCustomerPrint model={customerModel([makeGroup("g1", "Kaba İnşaat", 8)])} />);
+    expect(printRoot(container)).toHaveAttribute("data-measured", "true");
   });
 });

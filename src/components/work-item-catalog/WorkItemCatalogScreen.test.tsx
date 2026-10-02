@@ -3,6 +3,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { backendClient } from "@/lib/api/client";
+import { BackendError } from "@/lib/api/unwrap";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import {
@@ -23,6 +24,8 @@ import { fail, getCalls, mockGets, mockItemsFailure, ok, renderScreen, type ApiS
 const perm = vi.hoisted(() => ({ level: "full" as string | undefined }));
 const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
 
+const downloadCatalogExport = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/api/catalog-export-client", () => ({ downloadCatalogExport }));
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() },
 }));
@@ -37,6 +40,7 @@ const STRIP_RESTRICTED = "Salt okunur · disiplin kısıtlı kullanıcı katalo�
 
 beforeEach(() => {
   vi.clearAllMocks();
+  downloadCatalogExport.mockResolvedValue("Is-Kalemi-Katalogu.xlsx");
   perm.level = "full";
   scope.value = { isRestricted: false, names: [] };
   mockGets({ disciplines: [D_KAB, D_DUV], items: [BETON, DEMIR, SIVA] });
@@ -188,14 +192,36 @@ describe("sekmeler, Excel, çipler, arama (KIK:72-125)", () => {
     expect(screen.getByRole("button", { name: /^İçe aktarım geçmişi/ })).not.toHaveTextContent(/\d/);
   });
 
-  it("Excel düğmeleri devre-dışı (title ile)", async () => {
+  it("'Excel İndir' etkin; 'Excel'den İçe Aktar' 'Yakında' kalır (devre-dışı + title)", async () => {
     renderScreen();
     await screen.findByText("Beton döküm");
-    for (const name of ["Excel İndir", "Excel'den İçe Aktar"]) {
-      const button = screen.getByRole("button", { name });
-      expect(button).toBeDisabled();
-      expect(button).toHaveAttribute("title");
-    }
+    expect(screen.getByRole("button", { name: "Excel İndir" })).toBeEnabled();
+    const importButton = screen.getByRole("button", { name: "Excel'den İçe Aktar" });
+    expect(importButton).toBeDisabled();
+    expect(importButton).toHaveAttribute("title");
+  });
+
+  it("Excel İndir: 'Tüm disiplinler'de süzgeçsiz; çip seçiliyse o disiplinle; arama metni ASLA gitmez (ÜS-F4-14)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: "Excel İndir" }));
+    expect(downloadCatalogExport).toHaveBeenLastCalledWith({ disciplineId: null });
+    expect(await screen.findByText("Excel indiriliyor · Is-Kalemi-Katalogu.xlsx")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Duvar & Sıva/ }));
+    await user.type(screen.getByPlaceholderText("Poz no ya da tarif ara"), "siva");
+    await user.click(screen.getByRole("button", { name: "Excel İndir" }));
+    expect(downloadCatalogExport).toHaveBeenLastCalledWith({ disciplineId: "d-duv" });
+  });
+
+  it("Excel İndir hatası BackendError metniyle görünür", async () => {
+    const user = userEvent.setup();
+    downloadCatalogExport.mockRejectedValue(new BackendError(403, { detail: "Excel için yetkiniz yok" }));
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    await user.click(screen.getByRole("button", { name: "Excel İndir" }));
+    expect(await screen.findByText("Excel için yetkiniz yok")).toBeInTheDocument();
   });
 
   it("disiplin çipleri sayaçla gelir; seçilince süzer ve '2 kalem' sayısı güncellenir", async () => {

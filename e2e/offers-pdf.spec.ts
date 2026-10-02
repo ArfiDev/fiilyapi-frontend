@@ -8,9 +8,8 @@ import { login } from "./earned-value-helpers";
 // (uzun tarifli, fiyatsız dahil) bir teklifin yazdırma görünümünde HİÇBİR kalem satırı ve kapanış bloğu kendi
 // sayfa kutusunun dışına taşmaz. Veri `page.route` ile paylaşılan mock'un GERÇEK yanıtından türetilir (mock'a yazma YOK).
 //
-// ⏱️ ÖLÇÜM TURU SİNYALİ: `offer-print` bileşenlerinde "ölçüm bitti" niteliği YOK (`rg data- src/components/offer-print`).
-// Bu yüzden bekleme DURUM tabanlıdır: yazı tipleri hazır + sayfa imzası (sayfa sayısı + her sayfadaki satır anahtarları)
-// ART ARDA STABLE_FRAMES kare değişmedi. Kalıcı çözüm: `OfferPrintScreen`e `data-measured` (rapora yazıldı).
+// ⏱️ ÖLÇÜM TURU SİNYALİ: yazdırma kökü (`OfferCustomerPrint` / `OfferInternalPrint`) ölçüm turu bitince
+// (yazı tipleri hazır ∧ imza değişmedi ∨ ölçülemez ∨ MAX_PASSES) `data-measured="true"` basar; bekleme budur.
 
 const API = "**/api/backend";
 const PRINT_BASE = "/teklif-hazirlama";
@@ -22,7 +21,6 @@ const POZ_NO_LENGTH = 32;
 const GROUP_COUNT = 3;
 const ITEMS_PER_GROUP = 20;
 const UNPRICED_EVERY = 7;
-const STABLE_FRAMES = 6;
 const INTERNAL_WORDS = ["Maliyet", "Kâr", "a-s", "Genel gider", "adam-saat"] as const;
 
 type Json = Record<string, unknown>;
@@ -100,33 +98,10 @@ interface SheetReport {
   readonly text: string;
 }
 
-/** Sayfa imzası art arda STABLE_FRAMES karede değişmediyse ölçüm turları bitmiştir. */
+/** Ölçüm turu bittiğinde yazdırma kökü `data-measured="true"` basar (TKL-F4.3 · plan §7; sabit kare beklemesi kalktı). */
 async function waitForMeasuredPages(page: Page): Promise<void> {
   await expect(page.getByTestId("offer-print-document")).toBeVisible();
-  await page.evaluate(
-    (stableFrames) =>
-      new Promise<void>((resolve) => {
-        const signature = (): string =>
-          Array.from(document.querySelectorAll(".ev-print-sheet"))
-            .map((sheet) =>
-              Array.from(sheet.querySelectorAll("[data-print-row], [data-print-closing-part]"))
-                .map((element) => element.getAttribute("data-print-row") ?? element.getAttribute("data-print-closing-part"))
-                .join(","),
-            )
-            .join("||");
-        let last = "";
-        let stable = 0;
-        const tick = (): void => {
-          const current = signature();
-          stable = current !== "" && current === last ? stable + 1 : 0;
-          last = current;
-          if (stable >= stableFrames) resolve();
-          else requestAnimationFrame(tick);
-        };
-        void document.fonts.ready.then(() => requestAnimationFrame(tick));
-      }),
-    STABLE_FRAMES,
-  );
+  await expect(page.locator('[data-measured="true"]')).toBeVisible();
 }
 
 async function reportSheets(page: Page): Promise<SheetReport> {

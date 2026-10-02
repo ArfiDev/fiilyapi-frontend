@@ -95,9 +95,9 @@ function PartRows({ part }: { part: CustomerPrintModel["pages"][number]["parts"]
 
 export function OfferCustomerPrint({ model }: { model: CustomerPrintModel }) {
   const { frame } = model;
-  const { pages, rootRef } = useMeasuredPages(model.pages);
+  const { pages, rootRef, isSettled } = useMeasuredPages(model.pages);
   return (
-    <div ref={rootRef} className="offer-print__pages">
+    <div ref={rootRef} className="offer-print__pages" data-measured={isSettled ? "true" : "false"}>
       {pages.map((page, index) => {
         const isFirst = index === 0;
         return (

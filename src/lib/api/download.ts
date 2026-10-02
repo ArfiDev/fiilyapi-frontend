@@ -70,12 +70,15 @@ async function fetchBinary(path: string): Promise<Response> {
 
 /**
  * Excel dışa aktarımını indirir. Ad `exportFilename` ile çözülür — uzantı
- * `.xlsx` olmak ZORUNDADIR, aksi hâlde `fallbackName`e düşer.
+ * `.xlsx` olmak ZORUNDADIR, aksi hâlde `fallbackName`e düşer. Çözülen ad döner
+ * (başarı bildirimi için).
  */
-export async function downloadExport(path: string, fallbackName: string): Promise<void> {
+export async function downloadExport(path: string, fallbackName: string): Promise<string> {
   const response = await fetchBinary(path);
   const blob = await response.blob();
-  saveBlob(blob, exportFilename(response.headers.get("content-disposition"), fallbackName));
+  const filename = exportFilename(response.headers.get("content-disposition"), fallbackName);
+  saveBlob(blob, filename);
+  return filename;
 }
 
 /**

@@ -272,6 +272,36 @@ describe("BFF /api/backend/[...path]", () => {
       expect(new Uint8Array(await res.arrayBuffer())).toEqual(BYTES);
     });
 
+    // 1b) TKL-F4.3: teklif revizyonu + katalog export uclari de uzantisiz; ikili gecer, `view`/`discipline_id` sorgusu iletilir.
+    it("offers/{id}/revisions/{rev}/export?view=internal ikili gecer ve sorgu backend'e iletilir", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        binaryBackendResponse({
+          "content-type": XLSX_TYPE,
+          "content-disposition": 'attachment; filename="TKL-2026-0014-Rev2-ic.xlsx"',
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      const res = await GET(
+        req("/api/backend/offers/o1/revisions/2/export?view=internal", "GET", { [ACCESS_COOKIE]: "acc" }),
+        ctx(["offers", "o1", "revisions", "2", "export"]),
+      );
+      expect(res.status).toBe(200);
+      expect(new Uint8Array(await res.arrayBuffer())).toEqual(BYTES);
+      expect(String(fetchMock.mock.calls[0][0])).toContain("/offers/o1/revisions/2/export?view=internal");
+    });
+
+    it("catalog/items/export?discipline_id=... ikili gecer", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(binaryBackendResponse({ "content-type": XLSX_TYPE }));
+      vi.stubGlobal("fetch", fetchMock);
+      const res = await GET(
+        req("/api/backend/catalog/items/export?discipline_id=d1", "GET", { [ACCESS_COOKIE]: "acc" }),
+        ctx(["catalog", "items", "export"]),
+      );
+      expect(res.status).toBe(200);
+      expect(new Uint8Array(await res.arrayBuffer())).toEqual(BYTES);
+      expect(String(fetchMock.mock.calls[0][0])).toContain("/catalog/items/export?discipline_id=d1");
+    });
+
     // 2) Indirme basliklari korunur (aksi halde tarayici dosyayi adlandiramaz).
     it("content-type ve content-disposition basliklari korunur", async () => {
       vi.stubGlobal(

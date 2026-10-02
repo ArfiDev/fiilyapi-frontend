@@ -6,12 +6,15 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui";
 import { BooksIcon, LockIcon } from "@/components/ui/icons";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { downloadCatalogExport } from "@/lib/api/catalog-export-client";
+import { cx } from "@/lib/cx";
 import { useCatalogDisciplines, useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
 import { isForbidden } from "@/lib/api/unwrap";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useFileDownload } from "@/lib/use-file-download";
 
 import { WorkItemCatalogTabs } from "./WorkItemCatalogTabs";
 import { WorkItemDisciplineChips } from "./WorkItemDisciplineChips";
@@ -27,6 +30,7 @@ import "./work-item-catalog.css";
 const WRITE_LEVEL = "full";
 /** KIK:91-93 / :237 — başarı bildiriminin ekranda kalma süresi. */
 const TOAST_MS = 2800;
+/** Yalnız "Excel'den İçe Aktar" için kalır (TKL-F4.3: "Excel İndir" açıldı). */
 const EXCEL_SOON_TITLE = "Yakında · Excel desteği sonraki sürümde açılacak";
 
 /** ÜS-10 — şerit metni; yazma yetkisi yoksa nedene göre. */
@@ -52,6 +56,7 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
   const scope = useDisciplineScope();
   const canWrite = hasAtLeast(level, WRITE_LEVEL) && !scope.isRestricted;
 
+  const exportDownload = useFileDownload();
   const catalog = useCatalogItems();
   const disciplineQuery = useCatalogDisciplines();
 
@@ -118,8 +123,13 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
           </p>
         </div>
         <div className="wik__actions">
-          <Button variant="secondary" disabled title={EXCEL_SOON_TITLE}>
-            Excel İndir
+          {/* ÜS-F4-14: yalnız etkin disiplin sekmesi gider; arama metni (`q`) gitmez. */}
+          <Button
+            variant="secondary"
+            disabled={exportDownload.isBusy}
+            onClick={() => void exportDownload.start(() => downloadCatalogExport({ disciplineId: activeId }))}
+          >
+            {exportDownload.isBusy ? "İndiriliyor…" : "Excel İndir"}
           </Button>
           <Button variant="secondary" disabled title={EXCEL_SOON_TITLE}>
             Excel&apos;den İçe Aktar
@@ -136,6 +146,12 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
         <div role="note" className="wik-readonly">
           <LockIcon className="wik-readonly__icon" />
           <span>{readOnlyText}</span>
+        </div>
+      )}
+
+      {(exportDownload.notice ?? exportDownload.error) !== null && (
+        <div className={cx("wik-toast", exportDownload.error !== null && "wik-toast--error")} role="status">
+          {exportDownload.notice ?? exportDownload.error}
         </div>
       )}
 

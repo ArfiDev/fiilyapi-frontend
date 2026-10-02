@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+import { BackendError } from "@/lib/api/unwrap";
 
 import { OffersListView, type OffersListViewProps } from "./OffersListView";
 import {
@@ -12,6 +14,14 @@ import {
   makeOffer,
   makeResponse,
 } from "./offer-fixtures";
+
+const downloadOfferExport = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/api/offer-export-client", () => ({ downloadOfferExport }));
+
+beforeEach(() => {
+  downloadOfferExport.mockReset();
+  downloadOfferExport.mockResolvedValue("TKL-2026-0013-Rev2-isveren.xlsx");
+});
 
 // Bugün (İstanbul) = 2026-10-02.
 const NOW = new Date("2026-10-01T21:30:00Z");
@@ -205,7 +215,7 @@ describe("⋯ menüsü", () => {
     expect(screen.getByRole("button", { name: "Kopyala (yeni rev)" })).toBeDisabled();
   });
 
-  it("Aç + PDF indir bağlantıdır; Excel indir devre-dışı", async () => {
+  it("Aç + PDF indir bağlantıdır; Excel indir etkin (TKL-F4.3)", async () => {
     renderView();
     await openMenu("TKL-2026-0013");
     expect(screen.getByRole("link", { name: "Aç" })).toHaveAttribute("href", "/teklif-hazirlama/id-TKL-2026-0013");
@@ -213,7 +223,24 @@ describe("⋯ menüsü", () => {
       "href",
       "/teklif-hazirlama/id-TKL-2026-0013/yazdir?rev=2&tur=isveren",
     );
-    expect(screen.getByRole("button", { name: "Excel indir" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Excel indir" })).toBeEnabled();
+  });
+
+  it("Excel indir = satırın SON revizyonu, işveren görünümü; başarıda menü kapanır", async () => {
+    renderView();
+    await openMenu("TKL-2026-0013");
+    await userEvent.click(screen.getByRole("button", { name: "Excel indir" }));
+    expect(downloadOfferExport).toHaveBeenCalledWith("id-TKL-2026-0013", 2, "employer");
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Excel indir" })).toBeNull());
+  });
+
+  it("Excel indir hatası menüde BackendError metniyle görünür; menü açık kalır", async () => {
+    downloadOfferExport.mockRejectedValue(new BackendError(403, { detail: "Excel için yetkiniz yok" }));
+    renderView();
+    await openMenu("TKL-2026-0013");
+    await userEvent.click(screen.getByRole("button", { name: "Excel indir" }));
+    expect(await screen.findByText("Excel için yetkiniz yok")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Excel indir" })).toBeEnabled();
   });
 
   it("'Taslağı sil' YALNIZ tek revizyonlu taslakta görünür", async () => {

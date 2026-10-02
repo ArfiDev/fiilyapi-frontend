@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { useEffect } from "react";
 
 import { AnchoredPopover } from "@/components/ui/popover";
 import { cx } from "@/lib/cx";
+import { downloadOfferExport } from "@/lib/api/offer-export-client";
 import { routes } from "@/lib/routes";
+import { useFileDownload } from "@/lib/use-file-download";
 
 import { rowMenuRules } from "./offer-list-model";
 import type { OfferListItem } from "./offer-types";
-
-const EXCEL_SOON_TITLE = "Yakında · Excel desteği sonraki sürümde açılacak";
 
 interface OfferRowMenuProps {
   item: OfferListItem;
@@ -24,6 +25,13 @@ interface OfferRowMenuProps {
 /** TL:158-165, 251 — ⋯ menüsü: Aç · Kopyala (yeni rev) · PDF indir · Excel indir (+ Taslağı sil, ÜS-F3-12). */
 export function OfferRowMenu({ item, canWrite, isOpen, isBusy, onToggle, onClose, onNewRevision, onDelete }: OfferRowMenuProps) {
   const rules = rowMenuRules(item, canWrite);
+  const download = useFileDownload();
+  // Başarıda menü kapanır (dosya tarayıcıya indi); hata menüde kalır (aşağıda).
+  useEffect(() => {
+    if (download.notice !== null) onClose();
+    // `onClose` her render'da yeni kimlik; yalnız başarı bildirimine tepki verilir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [download.notice]);
   return (
     <div className="offers-menu">
       <button
@@ -64,9 +72,16 @@ export function OfferRowMenu({ item, canWrite, isOpen, isBusy, onToggle, onClose
           >
             PDF indir
           </Link>
-          <button type="button" className="offers-menu__item" disabled title={EXCEL_SOON_TITLE}>
+          {/* TKL-F4.3 · ÜS-F4-18: işveren görünümü, satırın son revizyonu. */}
+          <button
+            type="button"
+            className="offers-menu__item"
+            disabled={download.isBusy}
+            onClick={() => void download.start(() => downloadOfferExport(item.id, item.rev_no, "employer"))}
+          >
             Excel indir
           </button>
+          {download.error !== null && <span className="offers-menu__reason">{download.error}</span>}
           {rules.canDelete && (
             <button
               type="button"
