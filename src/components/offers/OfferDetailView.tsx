@@ -147,6 +147,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     offerId,
     revNo,
     validityDays: revision.validity_days,
+    unquantifiedCount: revision.totals.unquantified_count,
     onToast: showToast,
     onRevisionOpened: (opened) => props.onSelectRevision(opened),
   });

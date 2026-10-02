@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { backendErrorMessage } from "@/lib/api/error-message";
@@ -11,6 +11,8 @@ import {
 } from "@/lib/api/hooks/useOfferMutations";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 
+import { OFFER_ACTION_REASONS } from "./offer-actions";
+
 /** 409 = durum makinesi çatışması (başkası aynı anda geçirmiş / revizyon artık taslak değil). */
 const CONFLICT_STATUS = 409;
 /** Geçiş hatasında ekranın gerçek duruma oturması gereken durumlar (409 çatışma, 422 ön koşul). */
@@ -22,6 +24,8 @@ interface UseOfferDetailActionsArgs {
   /** Görüntülenen (= geçişin uygulanacağı SON) revizyon. */
   revNo: number;
   validityDays: number;
+  /** Görüntülenen revizyonun `totals.unquantified_count`u: 0'a düşünce bayat "Miktarı girilmemiş kalem var" bandı kalkar. */
+  unquantifiedCount: number;
   /** Kapsayıcının toast'ı (görünüm yeniden kurulsa da kalır). */
   onToast: (text: string) => void;
   /** Yeni revizyon açılınca o revizyona geç (`?rev=`). */
@@ -30,7 +34,7 @@ interface UseOfferDetailActionsArgs {
 
 /** Durum geçişleri + yeni revizyon: tek uçuş, 409'da metin AYNEN + detay ve liste tazelenir. */
 export function useOfferDetailActions(args: UseOfferDetailActionsArgs) {
-  const { offerId, revNo, validityDays, onToast, onRevisionOpened } = args;
+  const { offerId, revNo, validityDays, unquantifiedCount, onToast, onRevisionOpened } = args;
   const queryClient = useQueryClient();
   const transitions: Record<OfferTransitionAction, ReturnType<typeof useOfferTransition>> = {
     send: useOfferTransition(offerId, revNo, "send"),
@@ -42,6 +46,15 @@ export function useOfferDetailActions(args: UseOfferDetailActionsArgs) {
 
   const [error, setError] = useState<string | null>(null);
   const [isDenied, setIsDenied] = useState(false);
+
+  // F4.2b: miktarsız bandı revizyonun sayacı 0 olunca ya da revizyon değişince kalkar; BAŞKA hata metnine dokunulmaz.
+  const previousRevNoRef = useRef(revNo);
+  useEffect(() => {
+    const isRevisionChanged = previousRevNoRef.current !== revNo;
+    previousRevNoRef.current = revNo;
+    if (unquantifiedCount > 0 && !isRevisionChanged) return;
+    setError((current) => (current === OFFER_ACTION_REASONS.unquantified ? null : current));
+  }, [unquantifiedCount, revNo]);
 
   const isBusy =
     createRevision.isPending || Object.values(transitions).some((transition) => transition.isPending);

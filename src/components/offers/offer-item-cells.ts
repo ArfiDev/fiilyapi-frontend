@@ -6,8 +6,8 @@
  * KAYDEDİLMEZ. Sonuç kayıpsız ondalık METİNdir; `Number()` YOK. Hesap (tutar/toplam/türev kâr) SUNUCUDADIR
  * (`calc.py`, ÜS-F3-1): bu modül yalnız gösterir ve gövdeyi kurar.
  *
- * 🔶 `quantity` null olabilir: miktarsız kalem (SO-21, `unquantified_count`) YA DA `finance` maskesi. Okuma/gövde yolu
- * null'u taşır: miktar hücresi boş, tutar "—"; ayrımın TEK karar noktası `isQuantityMissing` (F4.2).
+ * 🔶 `quantity` null olabilir: miktarsız kalem (SO-21) YA DA `finance` maskesi. Okuma/gövde yolu null'u taşır: miktar
+ * hücresi boş, tutar "—"; ayrımın TEK karar noktası sunucunun `quantified` bayrağı (`isQuantityMissing`, F4.2b).
  */
 import { trPriceInputValue, trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import type { OfferItemUpdateBody } from "@/lib/api/hooks/useOfferMutations";
@@ -128,28 +128,12 @@ export function isUnpriced(item: OfferItem): boolean {
 }
 
 /**
- * TKL-F4.2 · miktar eksikliğinin TEK karar noktası girdisi. 🔴 `finance` kapsamında `quantity` MASKELİ null döner
- * (`operasyonel`), sunucu sayacı `unquantified_count` ise `kimlik` (maskesiz): salt `quantity === null` her kalemi
- * "miktarsız" sanardı.
+ * TKL-F4.2b · miktar eksikliğinin TEK karar noktası: sunucunun `quantified` bayrağı (`kimlik` kovası — maskelenmez).
+ * 🔴 `finance` kapsamında `quantity` MASKELİ null döner ama `quantified` doğru kalır; salt `quantity === null` her kalemi
+ * "miktarsız" sanardı, sayaç-eşitlik sezgiseli de karışık grupta yanılırdı.
  */
-export interface QuantityBasis {
-  /** Sunucunun `totals.unquantified_count`u (gerçekten miktarsız kalem sayısı). */
-  unquantifiedCount: number;
-  /** Okunan kalemlerden `quantity === null` olanların sayısı (maske + gerçek miktarsız). */
-  nullQuantityCount: number;
-}
-
-export function quantityBasisOf(items: readonly OfferItem[], unquantifiedCount: number): QuantityBasis {
-  return { unquantifiedCount, nullQuantityCount: items.filter((item) => item.quantity === null).length };
-}
-
-/**
- * Miktarsız = `quantity === null` ∧ sunucu sayacı > 0 ∧ sayaç, okunan null-miktarlı kalem sayısına EŞİT. Sayaç 0 →
- * null maskedir (uyarı YOK). Sayaç < null sayısı → maske + gerçek miktarsız karışık, kalem ayırt EDİLEMEZ: yanlış-pozitif
- * üretmemek için hiçbiri miktarsız sayılmaz (yanlış-negatif kabul; plan §9 risk 4).
- */
-export function isQuantityMissing(item: OfferItem, basis: QuantityBasis): boolean {
-  return item.quantity === null && basis.unquantifiedCount > 0 && basis.unquantifiedCount === basis.nullQuantityCount;
+export function isQuantityMissing(item: OfferItem): boolean {
+  return !item.quantified;
 }
 
 /** "₺1.288,00" ya da "—" (fiyatsız / maskeli / B5 miktarsız kalem). */

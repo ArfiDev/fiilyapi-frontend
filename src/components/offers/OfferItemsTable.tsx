@@ -8,7 +8,7 @@ import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import { OfferGroupHeaderRow } from "./OfferGroupHeaderRow";
 import { OfferItemRow } from "./OfferItemRow";
 import { groupCode } from "./offer-items-model";
-import { isQuantityMissing, type CellContext, type OfferItem, type QuantityBasis } from "./offer-item-cells";
+import { isQuantityMissing, type CellContext, type OfferItem } from "./offer-item-cells";
 import type { OfferItemEditor } from "./useOfferItemEditor";
 
 const COLUMN_COUNT = 11;
@@ -33,8 +33,6 @@ export interface OfferItemsTableProps {
   /** Revizyon geneli oranlar (kalemde null iken gösterilen). */
   overheadPct: string;
   profitPct: string;
-  /** Revizyon düzeyi miktarsız ayrımı (sunucu sayacı + okunan null miktarlar; F4.2). */
-  quantityBasis: QuantityBasis;
   catalogById: ReadonlyMap<string, WorkItemRead>;
   editor: OfferItemEditor;
   canEdit: boolean;
@@ -44,7 +42,7 @@ export interface OfferItemsTableProps {
 
 /** TD:233-268 — gruplu kalem tablosu; dar ekranda yatay kayar (mockup min-width 1160). */
 export function OfferItemsTable(props: OfferItemsTableProps) {
-  const { groups, overheadPct, profitPct, quantityBasis, catalogById, editor, canEdit } = props;
+  const { groups, overheadPct, profitPct, catalogById, editor, canEdit } = props;
   const contextOf = (item: OfferItem): CellContext => ({
     item,
     revisionOverheadPct: overheadPct,
@@ -75,7 +73,6 @@ export function OfferItemsTable(props: OfferItemsTableProps) {
                 groupId={group.id}
                 name={group.name}
                 items={group.items}
-                quantityBasis={quantityBasis}
                 canEdit={canEdit}
                 onRename={props.onRenameGroup}
                 onDelete={props.onDeleteGroup}
@@ -84,7 +81,7 @@ export function OfferItemsTable(props: OfferItemsTableProps) {
                 <OfferItemRow
                   key={item.id}
                   ctx={contextOf(item)}
-                  isQuantityMissing={isQuantityMissing(item, quantityBasis)}
+                  isQuantityMissing={isQuantityMissing(item)}
                   catalogItem={catalogById.get(item.catalog_item_id)}
                   editor={editor}
                   canEdit={canEdit}

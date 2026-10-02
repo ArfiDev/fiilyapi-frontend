@@ -33,6 +33,8 @@ export interface InternalSourceItem {
   description: string;
   unit: string;
   quantity: string | null;
+  /** Sunucunun miktar-dolu bayrağı (kimlik kovası; `quantity` maskelense de doğru). */
+  quantified: boolean;
   unit_mhr: string;
   cost_unit_price: string | null;
   overhead_pct: string | null;
@@ -110,6 +112,8 @@ const BLANK_ROW = {
   isUnpriced: false,
 } as const;
 
+const ZERO_SUM = "0";
+
 /** Dolu değerlerin kayıpsız toplamı; hiç dolu değer yoksa `null` ("—"). */
 function sumOrNull(values: readonly (string | null | undefined)[]): string | null {
   const present = values.filter((value): value is string => value !== null && value !== undefined);
@@ -144,6 +148,10 @@ function groupRows(group: InternalSourceGroup, revision: InternalSourceRevision)
   const base = { groupId: group.id, groupName: group.name };
   const items = group.items.map((item) => itemRow(group, item, revision));
   const pricedAmounts = group.items.map((item) => (item.priced ? (item.customer?.amount ?? null) : null));
+  // F4.2b: miktarlı kalem HİÇ yoksa (yalnız miktarsız) toplama giren küme boştur → Σ = 0 (ekran `groupTotals` ile aynı);
+  // miktarlı kalem var ama değer taşımıyorsa (fiyatsız / maskeli) "—" korunur.
+  const hasQuantified = group.items.some((item) => item.quantified);
+  const sumOf = (values: readonly (string | null | undefined)[]) => (hasQuantified ? sumOrNull(values) : ZERO_SUM);
   return [
     { ...BLANK_ROW, ...base, kind: "group", key: `${group.id}:head`, name: group.name },
     ...items,
@@ -153,9 +161,9 @@ function groupRows(group: InternalSourceGroup, revision: InternalSourceRevision)
       kind: "subtotal",
       key: `${group.id}:sum`,
       name: `${group.name} ara toplamı`,
-      cost: formatMoney(sumOrNull(group.items.map((item) => item.internal.cost))),
-      manHours: formatQuantity(sumOrNull(group.items.map((item) => item.internal.man_hours))),
-      amount: formatMoney(sumOrNull(pricedAmounts)),
+      cost: formatMoney(sumOf(group.items.map((item) => item.internal.cost))),
+      manHours: formatQuantity(sumOf(group.items.map((item) => item.internal.man_hours))),
+      amount: formatMoney(sumOf(pricedAmounts)),
     },
   ];
 }

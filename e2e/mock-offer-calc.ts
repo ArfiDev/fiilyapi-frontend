@@ -279,6 +279,15 @@ function sumOf(values: readonly Dec[]): Dec {
   return values.reduce((total, value) => add(total, value), ZERO);
 }
 
+/**
+ * calc.py `i.cost or Decimal(0)`: Decimal("0.00") YANLIŞ (falsy) → `Decimal(0)` (ölçek 0). Toplamın ölçeği bu yüzden
+ * "tüm terimler sıfır" iken "0" olur ("0.00" DEĞİL); en az bir sıfırdan farklı terim varsa ölçek 2'ye çıkar.
+ */
+function orZero(text: string | null): Dec {
+  const value = parse(text ?? "0");
+  return value.units === 0n ? ZERO : value;
+}
+
 export function calcRevision(
   items: readonly ItemInput[],
   revision: RevisionPercents & { vat_pct: string },
@@ -287,9 +296,9 @@ export function calcRevision(
   // Toplama YALNIZ fiyatlı ∧ miktarlı kalem girer (calc.py: `customer.amount is not None`).
   const lines = results.filter((r) => r.customer !== null && r.customer.amount !== null);
   const net = sumOf(lines.map((r) => parse(r.customer?.amount ?? "0")));
-  const cost = sumOf(lines.map((r) => parse(r.internal.cost ?? "0")));
-  const overhead = sumOf(lines.map((r) => parse(r.internal.overhead ?? "0")));
-  const profit = sumOf(lines.map((r) => parse(r.internal.profit ?? "0")));
+  const cost = sumOf(lines.map((r) => orZero(r.internal.cost)));
+  const overhead = sumOf(lines.map((r) => orZero(r.internal.overhead)));
+  const profit = sumOf(lines.map((r) => orZero(r.internal.profit)));
   const vat = quantize(mul(mul(net, parse(revision.vat_pct)), { units: 1n, scale: 2 }));
   const base = add(cost, overhead);
   return {

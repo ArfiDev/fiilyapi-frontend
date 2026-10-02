@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -541,6 +541,37 @@ describe("durum geçişleri", () => {
       const reads = vi.mocked(backendClient.GET).mock.calls.filter((call) => String(call[0]) === "/offers/{offer_id}/revisions/{rev_no}").length;
       expect(reads).toBeGreaterThan(readsBefore + 1); // taze okuma (gönderim öncesi) + 422 sonrası tazeleme
     });
+  });
+
+  it("🔴 F4.2b (a) 'Miktarı girilmemiş kalem var' bandı sayaç 0'a düşünce (taze okuma) TEMİZLENİR", async () => {
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("draft", 0);
+    mockBackend();
+    renderScreen();
+    await loaded();
+    backend.revisions[0] = { ...backend.revisions[0]!, totals: { ...backend.revisions[0]!.totals, unquantified_count: 1 } };
+    await user.click(button("Gönderildi İşaretle"));
+    await waitFor(() => expect(screen.getAllByText("Miktarı girilmemiş kalem var")).toHaveLength(2)); // gerekçe + bant
+    backend.revisions[0] = { ...backend.revisions[0]!, totals: { ...backend.revisions[0]!.totals, unquantified_count: 0 } };
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    await waitFor(() => expect(screen.queryByText("Miktarı girilmemiş kalem var")).not.toBeInTheDocument());
+  });
+
+  it("🔴 F4.2b (a) başka hata metni sayaç 0'a düşünce SİLİNMEZ (yalnız miktarsız metni temizlenir)", async () => {
+    const user = userEvent.setup();
+    backend = singleRevisionBackend("draft", 0);
+    mockBackend();
+    vi.mocked(backendClient.POST).mockResolvedValue(fail(409, "Başka bir hata oluştu"));
+    renderScreen();
+    await loaded();
+    await user.click(button("Gönderildi İşaretle"));
+    expect(await screen.findByText("Başka bir hata oluştu")).toBeInTheDocument();
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    expect(screen.getByText("Başka bir hata oluştu")).toBeInTheDocument();
   });
 
   it("fiyatsız kalem YOKSA Gönder onaysız doğrudan atılır (mockup)", async () => {

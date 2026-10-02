@@ -361,6 +361,9 @@ interface Golden {
   /** F4.2: miktarı null kalemli vektörler (backend B6 calc.py, SO-21). */
   items_null: GoldenItem[];
   revisions_null: GoldenRevision[];
+  /** F4.2b: maliyet = 0 + elle B.F. (türev kâr % `None` dalı), miktarlı ve miktarsız (backend calc.py `loaded_unit > 0`). */
+  items_cost0: GoldenItem[];
+  revisions_cost0: GoldenRevision[];
 }
 
 const GOLDEN = JSON.parse(
@@ -435,6 +438,44 @@ describe("🔴 F4.2 altın vektörler: miktar null (SO-21) = GERÇEK calc.py", (
   it("60 revizyon: miktarsız kalem toplamlara girmez, unquantified_count gerçek calc.py ile birebir", () => {
     const mismatches: string[] = [];
     GOLDEN.revisions_null.forEach((vector, index) => {
+      const actual = calcRevision(vector.items, vector.rev);
+      if (JSON.stringify(actual) !== JSON.stringify(vector.expected)) {
+        mismatches.push(`#${index}\n  gerçek ${JSON.stringify(vector.expected)}\n  ikiz   ${JSON.stringify(actual)}`);
+      }
+    });
+    expect(mismatches.slice(0, 3)).toEqual([]);
+  });
+});
+
+describe("🔴 F4.2b altın vektörler: maliyet 0 + elle B.F. (türev kâr % None dalı) = GERÇEK calc.py", () => {
+  const costZero = GOLDEN.items_cost0.filter((v) => v.input.cost_unit_price !== null && Number(v.input.cost_unit_price) === 0);
+
+  it("vektörler gerçekten yüklendi: miktarlı ≥4, miktarsız ≥4, profit_pct=None dalı hem miktarlı hem miktarsızda (sahte-yeşil önlemi)", () => {
+    const filled = costZero.filter((v) => v.input.quantity !== null);
+    const empty = costZero.filter((v) => v.input.quantity === null);
+    expect(filled.length).toBeGreaterThanOrEqual(4);
+    expect(empty.length).toBeGreaterThanOrEqual(4);
+    const noPct = (v: GoldenItem) => v.input.offer_unit_price !== null && v.expected?.internal.profit_pct === null;
+    expect(filled.filter(noPct).length).toBeGreaterThanOrEqual(3);
+    expect(empty.filter(noPct).length).toBeGreaterThanOrEqual(3);
+    expect(GOLDEN.revisions_cost0.length).toBeGreaterThanOrEqual(4);
+    expect(GOLDEN.revisions_cost0.some((v) => v.expected.internal.profit_pct === null)).toBe(true);
+  });
+
+  it("tek kalem: her alan gerçek calc.py ile birebir (türev kâr % maliyet 0 iken null, 0 DEĞİL)", () => {
+    const mismatches: string[] = [];
+    GOLDEN.items_cost0.forEach((vector, index) => {
+      const actual = calcItem(vector.input, vector.rev);
+      if (JSON.stringify(actual) !== JSON.stringify(vector.expected)) {
+        mismatches.push(`#${index}: ${JSON.stringify(vector.input)}\n  gerçek ${JSON.stringify(vector.expected)}\n  ikiz   ${JSON.stringify(actual)}`);
+      }
+    });
+    expect(mismatches.slice(0, 5)).toEqual([]);
+  });
+
+  it("revizyon: taban (maliyet + GG) 0 iken toplam kâr % null; miktarsız toplamlara girmez; sayaçlar birebir", () => {
+    const mismatches: string[] = [];
+    GOLDEN.revisions_cost0.forEach((vector, index) => {
       const actual = calcRevision(vector.items, vector.rev);
       if (JSON.stringify(actual) !== JSON.stringify(vector.expected)) {
         mismatches.push(`#${index}\n  gerçek ${JSON.stringify(vector.expected)}\n  ikiz   ${JSON.stringify(actual)}`);

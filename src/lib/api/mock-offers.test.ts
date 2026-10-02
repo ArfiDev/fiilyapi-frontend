@@ -751,6 +751,19 @@ describe("🔴 F4.2 miktarsız kalem (SO-21/SO-24): mock = backend B6", () => {
     expect(explicit.quantity).toBeNull();
   });
 
+  it("🔴 kalem okumasında `quantified` = miktar dolu mu (kimlik kovası); sayaçla tutarlı", async () => {
+    const { offerId, groupId } = await fresh();
+    const filled = await createItem(offerId, groupId, CAT_A, { quantity: "2", cost_unit_price: "100" });
+    const empty = await createItem(offerId, groupId, CAT_C, { quantity: null, cost_unit_price: "100" });
+    expect(filled.quantified).toBe(true);
+    expect(empty.quantified).toBe(false);
+    const revision = await revisionOf(offerId);
+    const flags = allItems(revision).map((item) => item.quantified);
+    expect(flags.filter((flag) => flag === false)).toHaveLength(revision.totals.unquantified_count);
+    const patched = await api("PATCH", `${rev(offerId)}/items/${empty.id}`, { quantity: "3" });
+    expect(patched.json.quantified).toBe(true);
+  });
+
   it("toplamlara GİRMEZ; unquantified_count revizyon + özet + liste satırında; unpriced_count bağımsız", async () => {
     const { offerId, groupId } = await fresh();
     await createItem(offerId, groupId, CAT_A, { quantity: "2", cost_unit_price: "100" });

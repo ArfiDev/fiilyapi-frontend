@@ -70,3 +70,30 @@ describe("🔴 F4.2 iç döküm — miktarsız kalem (SO-21)", () => {
     expect(built().totals.find((row) => row.label === "Miktarsız kalem")).toEqual({ label: "Miktarsız kalem", value: "3" });
   });
 });
+
+describe("🔴 F4.2b iç döküm — yalnız miktarsız kalemli grup: boş küme Σ = 0 (ekranla aynı)", () => {
+  const rowsOf = (items: Parameters<typeof makeGroup>[3]) =>
+    buildInternalPrintModel({
+      offer: makePrintOffer(),
+      revision: makePrintRevision({ groups: [makeGroup("g1", "Kaba İnşaat", 0, items)] }),
+      company: makeCompany(),
+    }).pages.flatMap((page) => page.parts.flatMap((part) => part.rows));
+  const subtotal = (items: Parameters<typeof makeGroup>[3]) => rowsOf(items).find((r) => r.kind === "subtotal");
+
+  it("fiyatlı+miktarsız tek kalem: maliyet '0,00', a-s '0', tutar '0,00'", () => {
+    expect(subtotal([{ id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null }])).toMatchObject({
+      cost: "0,00",
+      manHours: "0",
+      amount: "0,00",
+    });
+  });
+
+  it("kilit: fiyatsız-miktarlı kalem içeren grupta tutar/maliyet '—' KORUNUR (miktarsız eşlik etse de)", () => {
+    expect(
+      subtotal([
+        { id: "n", groupId: "g1", poz: "N.1", unitPrice: null },
+        { id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null },
+      ]),
+    ).toMatchObject({ amount: "—" });
+  });
+});

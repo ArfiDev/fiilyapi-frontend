@@ -245,14 +245,32 @@ describe("görünüm (TD:209-274)", () => {
     expect(warns.map((node) => node.textContent)).toEqual(["Miktar girilmedi · toplama dahil değil", "Fiyat girilmedi · tutara dahil değil"]);
   });
 
-  it("🔴 F4.2 finance maskesi ≠ miktarsız: miktar null ama sayaç 0 → uyarı/çip YOK, Σ para görünür", async () => {
+  it("🔴 F4.2 finance maskesi ≠ miktarsız: miktar null ama quantified=true → uyarı/çip YOK, Σ para görünür", async () => {
     revision = makeRevisionWithItems(
-      [makeGroup("g-a", "A", 0, [makeItem({ id: "it-1", quantity: null }), makeItem({ id: "it-2", quantity: null, sort_order: 1 })])],
+      [makeGroup("g-a", "A", 0, [makeItem({ id: "it-1", quantity: null, quantified: true }), makeItem({ id: "it-2", quantity: null, quantified: true, sort_order: 1 })])],
       { totals: { ...makeRevisionWithItems().totals, unpriced_count: 0, unquantified_count: 0 } },
     );
     await renderCard();
     expect(screen.queryByText(/miktar girilmedi/i)).not.toBeInTheDocument();
     expect(within(screen.getByTestId("oit-group-g-a")).getByText("₺2.576,00")).toBeInTheDocument();
+  });
+
+  it("🔴 F4.2b finance + karışık grup: A (maskeli miktar, quantified) Σ'ya girer ve uyarısız; B (gerçekten miktarsız) uyarılı; Σ '—' DEĞİL", async () => {
+    revision = makeRevisionWithItems(
+      [
+        makeGroup("g-a", "A", 0, [
+          makeItem({ id: "it-1", quantity: null, quantified: true }),
+          makeUnquantifiedItem({ id: "it-3", quantity: null, quantified: false, sort_order: 1 }),
+        ]),
+      ],
+      { totals: { ...makeRevisionWithItems().totals, unpriced_count: 0, unquantified_count: 1 } },
+    );
+    await renderCard();
+    expect(within(rowOf("it-1")).queryByText(/Miktar girilmedi/)).not.toBeInTheDocument();
+    expect(within(rowOf("it-3")).getByText("Miktar girilmedi · toplama dahil değil")).toBeInTheDocument();
+    const group = screen.getByTestId("oit-group-g-a");
+    expect(within(group).getByText("₺1.288,00")).toBeInTheDocument();
+    expect(within(group).getByText("18 a-s")).toBeInTheDocument();
   });
 
   it("🔴 F4.2 miktarsız kalemde miktar yazmak {quantity} PATCH'ler; dolu miktarı boşaltmak istek UÇURMAZ ('Miktar boşaltılamaz')", async () => {
@@ -444,6 +462,58 @@ describe("kalem / grup yazmaları", () => {
     await userEvent.tab();
     expect(calls("PATCH", GROUP_PATH)).toHaveLength(0);
     expect(screen.getByText("Bu adla grup var")).toBeInTheDocument();
+  });
+
+  /** "+ Grup" POST'u elle çözülen söz: uçuş sırasında yeniden adlandırma denenir (F4.2b d). */
+  function holdGroupCreate(): { settle: () => void } {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const previous = vi.mocked(backendClient.POST).getMockImplementation();
+    vi.mocked(backendClient.POST).mockImplementation((async (path: string, init: unknown) => {
+      if (path !== GROUPS_PATH) return (previous as (p: string, i: unknown) => unknown)(path, init);
+      await gate;
+      revision = { ...revision, groups: [...revision.groups, makeGroup("g-yeni", "Yeni grup", 5, [])] }; // sunucu artık "Yeni grup"u taşır
+      return ok({ id: "g-yeni", name: "Yeni grup", sort_order: 5 }, 201);
+    }) as never);
+    return { settle: release };
+  }
+
+  async function renameGroupA(name: string) {
+    await userEvent.click(within(screen.getByTestId("oit-group-g-a")).getByRole("button", { name: "KABA İNŞAAT" }));
+    const input = screen.getByRole("textbox", { name: "Grup adı" });
+    await userEvent.clear(input);
+    await userEvent.type(input, name);
+    await userEvent.tab();
+  }
+
+  it("🔴 F4.2b (d) '+ Grup' uçarken 'Yeni grup'a yeniden adlandırma İSTEK ATMAZ; uçuş bitince taze veriyle reddedilir (iki 'Yeni grup' YOK)", async () => {
+    await renderCard();
+    const held = holdGroupCreate();
+    await userEvent.click(screen.getByRole("button", { name: "+ Grup" }));
+    await waitFor(() => expect(calls("POST", GROUPS_PATH)).toHaveLength(1));
+    await renameGroupA("Yeni grup");
+    expect(calls("PATCH", GROUP_PATH)).toHaveLength(0); // uçuşta: ertelendi
+    await act(async () => {
+      held.settle();
+    });
+    expect(await screen.findByText("Bu adla grup var")).toBeInTheDocument();
+    expect(calls("PATCH", GROUP_PATH)).toHaveLength(0);
+  });
+
+  it("🔴 F4.2b (d) uçuşta çakışmayan yeniden adlandırma ERTELENİR, uçuş bitince gönderilir", async () => {
+    await renderCard();
+    const held = holdGroupCreate();
+    await userEvent.click(screen.getByRole("button", { name: "+ Grup" }));
+    await waitFor(() => expect(calls("POST", GROUPS_PATH)).toHaveLength(1));
+    await renameGroupA("YAPI");
+    expect(calls("PATCH", GROUP_PATH)).toHaveLength(0);
+    await act(async () => {
+      held.settle();
+    });
+    await waitFor(() => expect(calls("PATCH", GROUP_PATH)).toHaveLength(1));
+    expect(bodyOf(calls("PATCH", GROUP_PATH)[0])).toEqual({ name: "YAPI" });
   });
 
   it("grup adı tıkla-düzenle: blur'da PATCH {name}; değişmezse istek yok; boş ad istek UÇURMAZ", async () => {

@@ -7,7 +7,7 @@ import { formatMoneyTl, formatWholeNumber } from "@/components/work-item-catalog
 import { Input } from "@/components/ui";
 import { EMPTY_CELL } from "@/lib/format";
 
-import type { OfferItem, QuantityBasis } from "./offer-item-cells";
+import type { OfferItem } from "./offer-item-cells";
 import { groupTotals, type GroupTotals } from "./offer-items-model";
 
 export interface OfferGroupHeaderRowProps {
@@ -15,8 +15,6 @@ export interface OfferGroupHeaderRowProps {
   groupId: string;
   name: string;
   items: readonly OfferItem[];
-  /** Revizyon düzeyi miktarsız ayrımı (F4.2): Σ miktarsız kalemi atlar. */
-  quantityBasis: QuantityBasis;
   canEdit: boolean;
   /** Ad değişikliği (boş/aynı ad çağrılmaz). */
   onRename: (groupId: string, name: string) => void;
@@ -32,8 +30,8 @@ function manHoursText(totals: GroupTotals): string {
 }
 
 /** TD:238-245 — grup başlığı: kod harfi · ad (tıkla-düzenle, ÜS-F3-11) · n kalem · Σ a-s · maliyet · Σ tutar. */
-export function OfferGroupHeaderRow({ code, groupId, name, items, quantityBasis, canEdit, onRename, onDelete }: OfferGroupHeaderRowProps) {
-  const totals = groupTotals(items, quantityBasis);
+export function OfferGroupHeaderRow({ code, groupId, name, items, canEdit, onRename, onDelete }: OfferGroupHeaderRowProps) {
+  const totals = groupTotals(items);
   const [draft, setDraft] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // Escape girişi kaldırır; tarayıcı kaldırılan odaklı girişte `blur` atabilir → iptal bayrağı yazımı korur.

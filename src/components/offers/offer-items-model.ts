@@ -5,7 +5,7 @@
 import type { OfferItemRead } from "@/lib/api/hooks/useOffers";
 import { sumDecimalStrings } from "@/lib/decimal";
 
-import { isQuantityMissing, type QuantityBasis } from "./offer-item-cells";
+import { isQuantityMissing } from "./offer-item-cells";
 
 const LETTER_COUNT = 26;
 const FIRST_LETTER = "A".charCodeAt(0);
@@ -36,9 +36,9 @@ export interface GroupTotals {
  * null ise (limited rol maskesi) toplam BİLİNMEZ döner — 0 DEĞİL (kapsam maskesi kanonu, `lib/decimal`).
  * Boş grupta toplamlar "0"dır (maskeli değil).
  */
-export function groupTotals(items: readonly OfferItemRead[], basis: QuantityBasis): GroupTotals {
+export function groupTotals(items: readonly OfferItemRead[]): GroupTotals {
   // F4.2 · miktarsız kalem (SO-21) hiçbir Σ'ya GİRMEZ (sunucu net/a-s ile tutarlı); onu "BİLİNMEZ" saymak Σ'yı "—" yapardı.
-  const counted = items.filter((item) => !isQuantityMissing(item, basis));
+  const counted = items.filter((item) => !isQuantityMissing(item));
   const priced = counted.filter((item) => item.priced);
   return {
     count: items.length,

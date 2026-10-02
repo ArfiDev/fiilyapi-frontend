@@ -112,3 +112,53 @@ describe("🔴 F4.2 işveren modeli — miktarsız kalem (SO-21)", () => {
     expect(withUnquantified({ unpriced: 0, unquantified: 0 }).footnote).toBeNull();
   });
 });
+
+describe("🔴 F4.2b işveren modeli — ara toplam boş küme + dipnot kesişimi", () => {
+  const only = (items: Parameters<typeof makeGroup>[3]) =>
+    build({ groups: [makeGroup("g1", "Kaba İnşaat", 0, items)] });
+  const subtotalOf = (model: ReturnType<typeof build>) => flatRows(model).find((r) => r.kind === "subtotal")?.amount;
+
+  it("(c) YALNIZ miktarsız (fiyatlı) kalemli grup: toplama giren küme boş → ara toplam '0,00' (ekran ₺0,00 ile aynı)", () => {
+    const model = only([{ id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null }]);
+    expect(subtotalOf(model)).toBe("0,00");
+  });
+
+  it("(c) kilit: fiyatsız-miktarlı kalem içeren grupta '—' KORUNUR (F3 davranışı), miktarsız kalem eklense de", () => {
+    const model = only([
+      { id: "n", groupId: "g1", poz: "N.1", unitPrice: null },
+      { id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null },
+    ]);
+    expect(subtotalOf(model)).toBe("—");
+  });
+
+  it("(c) kilit: miktarlı fiyatlı + miktarsız → yalnız dolu tutar (ekranla aynı)", () => {
+    const model = only([
+      { id: "a", groupId: "g1", poz: "A.1", unitPrice: PRICED_UNIT_PRICE },
+      { id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null },
+    ]);
+    expect(subtotalOf(model)).toBe("12.880,00");
+  });
+
+  it("(b) dipnot: 1 fiyatsız+miktarsız + 1 fiyatlı+miktarsız → 'Fiyatı belirlenmemiş 1' + 'Miktarı girilmemiş 1' (kesişim çift SAYILMAZ)", () => {
+    const model = build({
+      groups: [
+        makeGroup("g1", "Kaba İnşaat", 0, [
+          { id: "npu", groupId: "g1", poz: "NPU.1", unitPrice: null, quantity: null },
+          { id: "uq", groupId: "g1", poz: "UQ.1", unitPrice: PRICED_UNIT_PRICE, quantity: null },
+        ]),
+      ],
+      totals: { ...makePrintRevision().totals, unpriced_count: 1, unquantified_count: 2 },
+    });
+    expect(model.footnote).toBe(
+      "* Fiyatı belirlenmemiş 1 kalem toplama dahil değildir. * Miktarı girilmemiş 1 kalem toplama dahil değildir.",
+    );
+  });
+
+  it("(b) yalnız fiyatsız+miktarsız kalem: tek cümle (fiyatsız); miktarsız cümlesi YOK", () => {
+    const model = build({
+      groups: [makeGroup("g1", "Kaba İnşaat", 0, [{ id: "npu", groupId: "g1", poz: "NPU.1", unitPrice: null, quantity: null }])],
+      totals: { ...makePrintRevision().totals, unpriced_count: 1, unquantified_count: 1 },
+    });
+    expect(model.footnote).toBe("* Fiyatı belirlenmemiş 1 kalem toplama dahil değildir.");
+  });
+});
