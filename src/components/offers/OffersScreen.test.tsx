@@ -135,6 +135,25 @@ describe("süzgeç sunucuda uygulanır", () => {
     await waitFor(() => expect(listCalls().at(-1)!.query).toEqual({ limit: 200 }));
   });
 
+  it("tarih aralığı offer_date_from / offer_date_to olarak sunucuya gider; temizle sıfırlar (K-F3-1)", async () => {
+    const user = userEvent.setup();
+    mockGets(makeResponse([OFFER_DRAFT]));
+    renderScreen();
+    await screen.findByText("TKL-2026-0014");
+    await user.type(screen.getByRole("textbox", { name: "Başlangıç tarihi" }), "01.10.2026");
+    await waitFor(() => expect(listCalls().some((c) => c.query.offer_date_from === "2026-10-01")).toBe(true));
+    await user.type(screen.getByRole("textbox", { name: "Bitiş tarihi" }), "31.10.2026");
+    await waitFor(() =>
+      expect(listCalls().at(-1)!.query).toEqual({
+        limit: 200,
+        offer_date_from: "2026-10-01",
+        offer_date_to: "2026-10-31",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Filtreleri temizle" }));
+    await waitFor(() => expect(listCalls().at(-1)!.query).toEqual({ limit: 200 }));
+  });
+
   it("arama debounce sonrası q gönderir", async () => {
     const user = userEvent.setup();
     mockGets(makeResponse([OFFER_DRAFT]));
@@ -169,6 +188,30 @@ describe("satır işlemleri", () => {
       }),
     );
     await waitFor(() => expect(push).toHaveBeenCalledWith("/teklif-hazirlama/id-TKL-2026-0013?rev=3"));
+  });
+
+  it("Kopyala (yeni rev): tek POST doğru teklif kimliğiyle; uçuştayken menü öğesi pasif, ikinci tık istek atmaz", async () => {
+    const user = userEvent.setup();
+    mockGets(makeResponse([OFFER_SENT]));
+    let release: (value: never) => void = () => undefined;
+    vi.mocked(backendClient.POST).mockImplementation(
+      () => new Promise<never>((resolve) => { release = resolve; }),
+    );
+    renderScreen();
+    await screen.findByText("TKL-2026-0013");
+    await user.click(screen.getByRole("button", { name: "TKL-2026-0013 işlemleri" }));
+    await user.click(screen.getByRole("button", { name: "Kopyala (yeni rev)" }));
+    await waitFor(() => expect(vi.mocked(backendClient.POST)).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole("button", { name: "TKL-2026-0013 işlemleri" }));
+    const item = screen.getByRole("button", { name: "Kopyala (yeni rev)" });
+    expect(item).toBeDisabled();
+    await user.click(item);
+    expect(vi.mocked(backendClient.POST)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(backendClient.POST)).toHaveBeenCalledWith("/offers/{offer_id}/revisions", {
+      params: { path: { offer_id: OFFER_SENT.id } },
+    });
+    release(ok({ rev_no: 3 }, 201));
+    await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
   });
 
   it("yeni revizyon 409 → backend metni basılır, gezinme YOK", async () => {

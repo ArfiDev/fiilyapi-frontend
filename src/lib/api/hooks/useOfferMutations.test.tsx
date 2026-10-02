@@ -105,7 +105,7 @@ const hooks = {
   update: () => renderHook(() => useUpdateOffer(OFFER), { wrapper }),
   remove: () => renderHook(() => useDeleteOffer(), { wrapper }),
   revision: () => renderHook(() => useUpdateOfferRevision(OFFER, REV), { wrapper }),
-  newRevision: () => renderHook(() => useCreateOfferRevision(OFFER), { wrapper }),
+  newRevision: () => renderHook(() => useCreateOfferRevision(), { wrapper }),
   groupCreate: () => renderHook(() => useCreateOfferGroup(OFFER, REV), { wrapper }),
   groupUpdate: () => renderHook(() => useUpdateOfferGroup(OFFER, REV), { wrapper }),
   groupDelete: () => renderHook(() => useDeleteOfferGroup(OFFER, REV), { wrapper }),
@@ -231,7 +231,7 @@ const CASES: Case[] = [
     name: "yeni revizyon → detay + TÜM revizyon okumaları (is_latest değişir) + listeler",
     setup: () => vi.mocked(backendClient.POST).mockResolvedValue(ok({ rev_no: 2 }, 201)),
     render: () => hooks.newRevision(),
-    variables: undefined,
+    variables: { offerId: OFFER },
     expectedInvalidated: [...LISTS, "detailA", "revA0", "revA1"].sort(),
   },
   {
@@ -326,10 +326,27 @@ describe("uç yolları ve gövdeler", () => {
 
   it("POST …/revisions — yeni revizyon (gövdesiz)", async () => {
     vi.mocked(backendClient.POST).mockResolvedValue(ok({ rev_no: 1 }, 201));
-    await run(hooks.newRevision(), undefined);
+    await run(hooks.newRevision(), { offerId: OFFER });
     expect(backendClient.POST).toHaveBeenCalledWith("/offers/{offer_id}/revisions", {
       params: { path: { offer_id: OFFER } },
     });
+  });
+
+  it("yeni revizyon: teklif kimliği ÇAĞRI ANINDA — aynı hook iki teklife ardışık, her biri kendi anahtarını tazeler", async () => {
+    vi.mocked(backendClient.POST).mockResolvedValue(ok({ rev_no: 1 }, 201));
+    const hook = hooks.newRevision();
+    await run(hook, { offerId: OFFER });
+    expect(invalidated()).toEqual(expect.arrayContaining(["detailA", "revA0", "revA1"]));
+    expect(invalidated()).not.toContain("detailB");
+    client.clear();
+    prime();
+    await run(hook, { offerId: OTHER });
+    expect(vi.mocked(backendClient.POST).mock.calls).toEqual([
+      ["/offers/{offer_id}/revisions", { params: { path: { offer_id: OFFER } } }],
+      ["/offers/{offer_id}/revisions", { params: { path: { offer_id: OTHER } } }],
+    ]);
+    expect(invalidated()).toEqual(expect.arrayContaining(["detailB", "revB0"]));
+    expect(invalidated()).not.toContain("detailA");
   });
 
   it("POST …/{send|win|withdraw} gövdesiz; lose gövdesi aynen, gövdesiz lose gövde GÖNDERMEZ", async () => {

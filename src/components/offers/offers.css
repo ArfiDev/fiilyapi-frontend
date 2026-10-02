@@ -278,7 +278,12 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
-  cursor: not-allowed;
+}
+.offers-filter--chip .date-input-wrap {
+  width: 128px;
+}
+.offers-filter__dash {
+  color: var(--color-text-subtle);
 }
 .offers-filters__clear {
   padding: 0 10px;

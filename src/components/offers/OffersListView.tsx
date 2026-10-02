@@ -24,6 +24,11 @@ export interface OffersListViewProps {
   status: OfferStatus | null;
   employerId: string | null;
   searchText: string;
+  /** Teklif tarihi aralığı (ISO; boş = sınır yok) — K-F3-1. */
+  dateFrom: string;
+  dateTo: string;
+  onDateFromChange: (isoDate: string) => void;
+  onDateToChange: (isoDate: string) => void;
   onStatusChange: (status: OfferStatus | null) => void;
   onEmployerChange: (employerId: string | null) => void;
   onSearchTextChange: (value: string) => void;
@@ -44,9 +49,11 @@ export interface OffersListViewProps {
 /** TL:86-187 — Teklifler listesi (SUNUMSAL: veri ve işlemler props'tan; kapsayıcı `OffersScreen`). */
 export function OffersListView(props: OffersListViewProps) {
   const { body, status, employerId, searchText } = props;
-  const hasFilter = status !== null || employerId !== null || searchText.trim() !== "";
+  const hasFilter =
+    status !== null || employerId !== null || searchText.trim() !== "" || props.dateFrom !== "" || props.dateTo !== "";
   const data = body.kind === "ready" ? body.data : null;
-  const isUnfilteredByParty = employerId === null && searchText.trim() === "";
+  // Sekme sayacı TÜM teklifleri söyler: işveren/arama/tarih süzgeci `summary`yi daraltır.
+  const isUnfilteredByParty = employerId === null && searchText.trim() === "" && props.dateFrom === "" && props.dateTo === "";
   const offerCount =
     data !== null && isUnfilteredByParty ? data.summary.by_status.reduce((sum, row) => sum + row.count, 0) : null;
 
@@ -102,6 +109,10 @@ export function OffersListView(props: OffersListViewProps) {
           employerId={employerId}
           onEmployerChange={props.onEmployerChange}
           employers={props.employers}
+          dateFrom={props.dateFrom}
+          dateTo={props.dateTo}
+          onDateFromChange={props.onDateFromChange}
+          onDateToChange={props.onDateToChange}
           count={data?.total ?? null}
           hasFilter={hasFilter}
           onClear={props.onClear}

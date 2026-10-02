@@ -46,6 +46,7 @@
  */
 import { useQueryCacheSnapshot } from "@/lib/query/useQueryCacheSnapshot";
 
+import { OFFER_QUERY_KEY } from "@/lib/api/hooks/offer-query-keys";
 import { PROJECT_QUERY_KEY, type ProjectDetail } from "@/lib/api/hooks/useProjects";
 import { SECTION_QUERY_KEY, type SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import { siteDiaryEntryQueryKey, type SiteDiaryEntryDetail } from "@/lib/api/hooks/useSiteDiary";
@@ -57,10 +58,8 @@ import type { NamedEntity, RouteKeys } from "./trail-node";
 
 /**
  * TKL-F3.3 · teklif kırıntısı yalnız numarayı okur. Anahtar sayfanın `useOffer` anahtarıyla
- * (`["offer", id]`, TKL-F3 §2.1) BİREBİR aynı olmalıdır.
- * F3.2 `offer-query-keys.ts`i yazınca bu sabit oradan ithal edilir (tek üretici).
+ * (`["offer", id]`) BİREBİR aynıdır: tek üretici `offer-query-keys.ts` (K-F3-4).
  */
-const OFFER_QUERY_KEY = "offer";
 interface OfferCrumbSource {
   readonly offer_no: string;
 }

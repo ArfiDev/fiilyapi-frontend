@@ -1,20 +1,10 @@
-import type { components } from "@/lib/api/schema";
-import type { DeepScale } from "@/lib/api/scale";
+import type { OfferListItem, OfferListResponse, OfferRevisionStatus } from "@/lib/api/hooks/useOffers";
 
 /**
- * TKL-F3.3 · liste ekranının tip kaynağı — üretilen şemadan (TKL-F3.1 devri).
- * F3.2 `models.ts` takma adlarını yazınca bu dosya oradan yeniden ihraç eder (tek tanım).
+ * TKL-F3.4 · liste ekranının tip adları — TEK tanım `lib/api/hooks/useOffers.ts`tedir (F3.2);
+ * bu dosya yalnız bileşenlerin eski adlarını oradan yeniden ihraç eder (K-F3-4).
  */
-export type OfferStatus = components["schemas"]["OfferRevisionStatus"];
-export type OfferListItem = DeepScale<components["schemas"]["OfferListItem"]>;
-export type OfferListResponse = DeepScale<components["schemas"]["OfferListResponse"]>;
-export type OfferListSummary = DeepScale<components["schemas"]["OfferListSummaryRead"]>;
-export type OfferStatusSummary = DeepScale<components["schemas"]["OfferStatusSummaryRead"]>;
-
-/** Liste süzgeci (sunucuda uygulanır). `null` = süzgeç yok. */
-export interface OfferFilter {
-  status: OfferStatus | null;
-  employerId: string | null;
-  /** Debounce EDİLMİŞ arama metni (ağa giden değer). */
-  q: string;
-}
+export type { OfferListItem, OfferListResponse };
+export type OfferStatus = OfferRevisionStatus;
+export type OfferListSummary = OfferListResponse["summary"];
+export type OfferStatusSummary = OfferListSummary["by_status"][number];

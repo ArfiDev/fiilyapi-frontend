@@ -1,11 +1,9 @@
-import { Input, Select } from "@/components/ui";
+import { DateInput, Input, Select } from "@/components/ui";
 import { SearchIcon } from "@/components/ui/icons";
 
 import { OFFER_STATUSES, OFFER_STATUS_LABEL } from "./offer-status";
 import type { OfferStatus } from "./offer-types";
 
-/** ÜS-F3-6: uçta tarih süzgeci YOK varsayımı — çip gerekçesiyle devre-dışı basılır. */
-const DATE_SOON_TITLE = "Yakında · tarih aralığı süzgeci sonraki sürümde açılacak";
 const SEARCH_MAX_LENGTH = 100;
 
 export interface EmployerOption {
@@ -22,13 +20,18 @@ interface OffersFilterBarProps {
   onEmployerChange: (employerId: string | null) => void;
   /** İşveren seçenekleri (sayaçsız — ÜS-F3-5). */
   employers: readonly EmployerOption[];
+  /** Teklif tarihi aralığı, dahil-dahil (ISO `YYYY-MM-DD`; boş = sınır yok) — K-F3-1. */
+  dateFrom: string;
+  dateTo: string;
+  onDateFromChange: (isoDate: string) => void;
+  onDateToChange: (isoDate: string) => void;
   /** Sunucunun bildirdiği süzülmüş toplam ("N teklif"). */
   count: number | null;
   hasFilter: boolean;
   onClear: () => void;
 }
 
-/** TL:102-133 — arama + Durum + İşveren + Tarih çipi + "Filtreleri temizle" + "N teklif". */
+/** TL:102-133 — arama + Durum + İşveren + Tarih aralığı çipi + "Filtreleri temizle" + "N teklif". */
 export function OffersFilterBar(props: OffersFilterBarProps) {
   const { status, employerId, employers } = props;
   return (
@@ -73,10 +76,19 @@ export function OffersFilterBar(props: OffersFilterBarProps) {
           ))}
         </Select>
       </label>
-      <button type="button" className="offers-filter offers-filter--chip" disabled title={DATE_SOON_TITLE}>
+      <div className="offers-filter offers-filter--chip" role="group" aria-label="Teklif tarihi aralığı">
         <span className="offers-filter__label">Tarih</span>
-        <span className="offers-tab__soon">Yakında</span>
-      </button>
+        <DateInput
+          size="row"
+          aria-label="Başlangıç tarihi"
+          value={props.dateFrom}
+          onValueChange={props.onDateFromChange}
+        />
+        <span className="offers-filter__dash" aria-hidden="true">
+          –
+        </span>
+        <DateInput size="row" aria-label="Bitiş tarihi" value={props.dateTo} onValueChange={props.onDateToChange} />
+      </div>
       {props.hasFilter && (
         <button type="button" className="offers-filters__clear" onClick={props.onClear}>
           Filtreleri temizle

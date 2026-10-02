@@ -22,6 +22,10 @@ function renderView(overrides: Partial<OffersListViewProps> = {}) {
     status: null,
     employerId: null,
     searchText: "",
+    dateFrom: "",
+    dateTo: "",
+    onDateFromChange: vi.fn(),
+    onDateToChange: vi.fn(),
     onStatusChange: vi.fn(),
     onEmployerChange: vi.fn(),
     onSearchTextChange: vi.fn(),
@@ -286,8 +290,24 @@ describe("yazma yetkisi ve hâller", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("tarih çipi devre-dışı 'Yakında'", () => {
+  it("tarih çipi açık: iki tarih girdisi, 'Yakında' YOK (K-F3-1)", () => {
     renderView();
-    expect(screen.getByRole("button", { name: /Tarih/ })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Başlangıç tarihi" })).toBeEnabled();
+    expect(screen.getByRole("textbox", { name: "Bitiş tarihi" })).toBeEnabled();
+    expect(screen.queryByText("Yakında", { selector: ".offers-filter *" })).not.toBeInTheDocument();
+  });
+
+  it("tarih çipi: yazılan TR tarih ISO olarak bildirilir, değerler ISO'dan gösterilir", async () => {
+    const user = userEvent.setup();
+    const onDateFromChange = vi.fn();
+    renderView({ dateTo: "2026-10-31", onDateFromChange });
+    expect(screen.getByRole("textbox", { name: "Bitiş tarihi" })).toHaveValue("31.10.2026");
+    await user.type(screen.getByRole("textbox", { name: "Başlangıç tarihi" }), "01.10.2026");
+    expect(onDateFromChange).toHaveBeenLastCalledWith("2026-10-01");
+  });
+
+  it("tarih seçiliyse 'Filtreleri temizle' görünür", () => {
+    renderView({ dateFrom: "2026-10-01" });
+    expect(screen.getByRole("button", { name: "Filtreleri temizle" })).toBeInTheDocument();
   });
 });

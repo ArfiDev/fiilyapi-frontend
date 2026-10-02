@@ -150,18 +150,18 @@ export function useUpdateOfferRevision(
   });
 }
 
-/** `POST …/revisions` — önceki revizyonun KOPYASI; yalnız son revizyon `sent | lost` iken. */
-export function useCreateOfferRevision(offerId: string): Mutation<OfferRevisionRead, void> {
+/** `POST …/revisions` — önceki revizyonun KOPYASI; yalnız son revizyon `sent | lost` iken. Teklif kimliği ÇAĞRI ANINDA (liste satırı başına tek hook). */
+export function useCreateOfferRevision(): Mutation<OfferRevisionRead, { offerId: string }> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () =>
+    mutationFn: async ({ offerId }) =>
       unwrap(
         await backendClient.POST("/offers/{offer_id}/revisions", {
           params: { path: { offer_id: offerId } },
         }),
       ),
     // ÖN EK (exact YOK): eski revizyonların `is_latest`/`is_editable`i de değişir.
-    onSuccess: () =>
+    onSuccess: (_revision, { offerId }) =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: [OFFER_QUERY_KEY, offerId] }),
         invalidateLists(queryClient),

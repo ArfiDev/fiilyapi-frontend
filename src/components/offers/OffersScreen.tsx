@@ -7,6 +7,8 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
 import { useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
 import { useEmployers } from "@/lib/api/hooks/useEmployers";
+import { useCreateOfferRevision, useDeleteOffer } from "@/lib/api/hooks/useOfferMutations";
+import { useOffers, type OfferListResponse } from "@/lib/api/hooks/useOffers";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
@@ -17,12 +19,12 @@ import { routes } from "@/lib/routes";
 
 import { OffersListView, type OffersBodyState } from "./OffersListView";
 import type { OfferListItem, OfferStatus } from "./offer-types";
-// 🔴 F3.2: bu üçü `lib/api/hooks/useOffers.ts` + `useOfferMutations.ts` ithaline çevrilir.
-import { useCreateOfferRevisionFromList, useDeleteOfferFromList, useOffersList } from "./useOffersList";
 
 /** T25: teklif YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
 const WRITE_LEVEL = "full";
 const SEARCH_DEBOUNCE_MS = 300;
+/** Backend `limit` tavanı (1..200) — liste kırpılırsa Σ basılmaz. */
+const OFFERS_LIST_LIMIT = 200;
 /** Başarı bildiriminin ekranda kalma süresi (KIK/KAT emsali). */
 const TOAST_MS = 2800;
 
@@ -53,13 +55,26 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
   const [status, setStatus] = useState<OfferStatus | null>(null);
   const [employerId, setEmployerId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const q = useDebouncedValue(searchText.trim(), SEARCH_DEBOUNCE_MS);
 
-  const list = useOffersList({ status, employerId, q });
+  const list = useOffers({
+    ...(status ? { status } : {}),
+    ...(employerId ? { employerId } : {}),
+    ...(q ? { q } : {}),
+    ...(dateFrom ? { dateFrom } : {}),
+    ...(dateTo ? { dateTo } : {}),
+    limit: OFFERS_LIST_LIMIT,
+  });
+  // `useOffers` süzgeç değişiminde eski veriyi TUTMAZ: son hazır liste burada saklanır ki kartlar
+  // ve tablo süzgeç yazarken sönmesin (önceki `keepPreviousData` davranışı).
+  const [lastReady, setLastReady] = useState<OfferListResponse | null>(null);
+  if (list.data && list.data !== lastReady) setLastReady(list.data);
   const employers = useEmployers();
   const catalog = useCatalogItems();
-  const createRevision = useCreateOfferRevisionFromList();
-  const deleteOffer = useDeleteOfferFromList();
+  const createRevision = useCreateOfferRevision();
+  const deleteOffer = useDeleteOffer();
 
   const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -82,14 +97,17 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
     ? { kind: "ready", data: list.data }
     : list.isError
       ? { kind: "error", isRetrying: list.isFetching, onRetry: () => void list.refetch() }
-      : { kind: "loading" };
+      : lastReady
+        ? { kind: "ready", data: lastReady }
+        : { kind: "loading" };
 
   function handleNewRevision(item: OfferListItem) {
+    if (createRevision.isPending) return;
     setActionError(null);
     createRevision.mutate(
       { offerId: item.id },
       {
-        onSuccess: ({ latestRevNo }) => router.push(routes.offers.detail({ offerId: item.id, rev: latestRevNo })),
+        onSuccess: (revision) => router.push(routes.offers.detail({ offerId: item.id, rev: revision.rev_no })),
         onError: (error) => setActionError(backendErrorMessage(error, "Yeni revizyon açılamadı.")),
       },
     );
@@ -98,28 +116,23 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
   function confirmDelete() {
     const target = pendingDelete;
     if (target === null) return;
-    deleteOffer.mutate(
-      { offerId: target.id },
-      {
-        onSuccess: () => {
-          setPendingDelete(null);
-          setToast((current) => ({ text: `${target.offer_no} silindi`, id: (current?.id ?? 0) + 1 }));
-        },
+    deleteOffer.mutate(target.id, {
+      onSuccess: () => {
+        setPendingDelete(null);
+        setToast((current) => ({ text: `${target.offer_no} silindi`, id: (current?.id ?? 0) + 1 }));
       },
-    );
+    });
   }
 
   function clearFilters() {
     setStatus(null);
     setEmployerId(null);
     setSearchText("");
+    setDateFrom("");
+    setDateTo("");
   }
 
-  const busyOfferId = createRevision.isPending
-    ? (createRevision.variables?.offerId ?? null)
-    : deleteOffer.isPending
-      ? (deleteOffer.variables?.offerId ?? null)
-      : null;
+  const busyOfferId = (createRevision.isPending ? (createRevision.variables?.offerId ?? null) : null) ?? (deleteOffer.isPending ? (deleteOffer.variables ?? null) : null);
 
   return (
     <>
@@ -128,6 +141,10 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
         status={status}
         employerId={employerId}
         searchText={searchText}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
         onStatusChange={setStatus}
         onEmployerChange={setEmployerId}
         onSearchTextChange={setSearchText}
