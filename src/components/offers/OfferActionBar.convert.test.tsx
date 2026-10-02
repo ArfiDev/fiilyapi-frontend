@@ -26,7 +26,7 @@ function renderBar(convert: OfferConvertVerdict | undefined) {
   );
 }
 
-const ALLOWED = { status: "won", conversionState: "won_not_converted", canWrite: true, canAdminProjects: true } as const;
+const ALLOWED = { status: "won", conversionState: "won_not_converted", canWrite: true, canAdminProjects: true, isLatest: true } as const;
 
 describe("OfferActionBar · Projeye Dönüştür (TKL-F5.5, ÜS-F5-2)", () => {
   it("etkin → düğme görünümlü BAĞLANTI, Dönüştür ekranına gider", () => {

@@ -170,6 +170,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     conversionState: detail.conversion_state,
     canWrite,
     canAdminProjects: props.canAdminProjects,
+    isLatest,
   });
   const isConverted = detail.conversion_state === "converted";
 
