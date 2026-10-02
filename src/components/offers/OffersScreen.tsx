@@ -29,7 +29,7 @@ const OFFERS_LIST_LIMIT = 200;
 const TOAST_MS = 2800;
 
 /** F1 ÜS-10 şeridi, teklif için uyarlandı (TKL-F3 §2.3). */
-function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean): string {
+export function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean): string {
   if (level === "view") return "Görüntüleyici · yalnız okuma";
   if (!hasAtLeast(level, WRITE_LEVEL)) return "Salt okunur · teklifleri yalnız Sözleşmeler tam yetkisi değiştirir";
   if (isRestricted) return "Salt okunur · disiplin kısıtlı kullanıcı teklif değiştiremez";

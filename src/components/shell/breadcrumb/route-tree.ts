@@ -536,14 +536,22 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
       },
     },
 
-    // TKL-F3.3/F3.4 · Teklif Hazırlama. `yeni` sayfasıyla birlikte geldi; `[offerId]` (named: "offer") /
-    // `yazdir` düğümleri sayfalarıyla BİRLİKTE gelir (F3.5 / F3.7): "ağaçtaki her href bir page.tsx"
-    // bekçisi sayfasız düğümü reddeder. Ad çözümü (`CrumbNames.offer`) hazırdır.
+    // TKL-F3.3/F3.4/F3.5 · Teklif Hazırlama. `yeni` ve `[offerId]` (named: "offer": kırıntı adı teklif
+    // numarası, sayfanın kendi `useOffer` önbelleğinden) sayfalarıyla BİRLİKTE geldi; `yazdir` düğümü
+    // sayfasıyla birlikte (F3.7) gelir: "ağaçtaki her href bir page.tsx" bekçisi sayfasız düğümü reddeder.
     "teklif-hazirlama": {
       label: "Teklif Hazırlama",
       href: () => routes.offers.list(),
       children: {
         yeni: { label: "Yeni Teklif", href: () => routes.offers.new() },
+      },
+      dynamic: {
+        param: "entityId",
+        node: {
+          named: "offer",
+          label: "Teklif",
+          href: (k) => routes.offers.detail({ offerId: k.entityId }),
+        },
       },
     },
 

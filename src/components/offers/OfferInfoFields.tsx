@@ -34,11 +34,13 @@ interface OfferInfoFieldsProps {
   preparerName: string;
   /** Hesaplanan bitiş (ISO) ya da `null`. */
   validUntil: string | null;
+  /** Detay: eski revizyon / taslak olmayan teklif → tüm girdiler salt okunur (TKL-F3.5). */
+  disabled?: boolean;
 }
 
 /** TY:111-156 — Teklif bilgileri alanları (Detay künyesi ile ORTAK). */
 export function OfferInfoFields(props: OfferInfoFieldsProps) {
-  const { values, errors, onChange, employers, employerAction, preparerName, validUntil } = props;
+  const { values, errors, onChange, employers, employerAction, preparerName, validUntil, disabled = false } = props;
   return (
     <div className="offer-create__grid2">
       <Field label="İşveren" required labelAside={employerAction} error={errors.employerId} hint={errors.employerId ? undefined : EMPLOYER_HINT}>
@@ -46,6 +48,7 @@ export function OfferInfoFields(props: OfferInfoFieldsProps) {
           <Select
             {...control}
             value={values.employerId}
+            disabled={disabled}
             status={errors.employerId ? "error" : "default"}
             onChange={(event) => onChange("employerId", event.target.value)}
           >
@@ -63,6 +66,7 @@ export function OfferInfoFields(props: OfferInfoFieldsProps) {
           <Input
             {...control}
             value={values.title}
+            disabled={disabled}
             maxLength={OFFER_TITLE_MAX_LENGTH}
             placeholder="Örn. Ataköy Rezidans C Blok"
             status={errors.title ? "error" : "default"}
@@ -75,6 +79,7 @@ export function OfferInfoFields(props: OfferInfoFieldsProps) {
           <Input
             {...control}
             value={values.scopeSummary}
+            disabled={disabled}
             maxLength={OFFER_SCOPE_MAX_LENGTH}
             placeholder="Örn. Kaba inşaat · 4 blok, 96 daire"
             onChange={(event) => onChange("scopeSummary", event.target.value)}
@@ -83,7 +88,7 @@ export function OfferInfoFields(props: OfferInfoFieldsProps) {
       </Field>
       <Field label="Teklif tarihi">
         {(control) => (
-          <DateInput {...control} value={values.offerDate} onValueChange={(iso) => onChange("offerDate", iso)} />
+          <DateInput {...control} value={values.offerDate} disabled={disabled} onValueChange={(iso) => onChange("offerDate", iso)} />
         )}
       </Field>
       <Field label="Geçerlilik" error={errors.validityDays} hint={errors.validityDays ? undefined : UNTIL_HINT}>
@@ -94,6 +99,7 @@ export function OfferInfoFields(props: OfferInfoFieldsProps) {
               numeric
               inputMode="numeric"
               value={values.validityDays}
+              disabled={disabled}
               status={errors.validityDays ? "error" : "default"}
               rightIcon={<span aria-hidden="true">gün</span>}
               onChange={(event) =>
