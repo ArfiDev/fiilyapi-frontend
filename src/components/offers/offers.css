@@ -1,0 +1,570 @@
+/*
+ * TKL-F3.3 · Teklif Hazırlama · Liste (mockup: projedesign/Teklif - Liste.dc.html).
+ * Renkler YALNIZ token. Durum tonları TL:224: Taslak slate · Gönderildi mavi · Kazanıldı yeşil ·
+ * Kaybedildi kırmızı · Vazgeçildi koyu gri (ÜS-F3-4).
+ */
+
+.offers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ---------------------------------------------------------------- sekmeler (TL:78-81) */
+.offers-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--color-border);
+}
+.offers-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: var(--space-2) 14px;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.offers-tab:disabled {
+  cursor: not-allowed;
+}
+.offers-tab--active {
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+.offers-tab__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.offers-tab__soon {
+  padding: 1px 6px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-sm);
+}
+
+/* ---------------------------------------------------------------- başlık (TL:86-89) */
+.offers__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.offers__titles {
+  display: flex;
+  flex: 1 1 380px;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.offers__title {
+  margin: 0;
+  font-size: var(--text-page-title);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+.offers__lead {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--color-text-muted);
+}
+
+.offers-readonly {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 10px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+.offers-readonly__icon {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  color: var(--color-text-muted);
+}
+.offers-toast {
+  padding: 9px 14px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-success-deep);
+  background: var(--color-success-tint);
+  border: 1px solid var(--color-success-tint-border);
+  border-radius: var(--radius-8);
+}
+.offers-error {
+  margin: 0;
+  padding: 9px 14px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-danger-deep);
+  background: var(--color-danger-tint);
+  border: 1px solid var(--color-danger-tint-border);
+  border-radius: var(--radius-8);
+}
+
+/* ---------------------------------------------------------------- ton sınıfları (rozet · nokta · tutar) */
+.offers-pill {
+  padding: 3px 9px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  border-radius: 20px;
+}
+.offers-pill.offers-tone--neutral {
+  color: var(--color-text-muted);
+  background: var(--color-neutral-soft);
+}
+.offers-pill.offers-tone--primary {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.offers-pill.offers-tone--success {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+.offers-pill.offers-tone--danger {
+  color: var(--color-danger-strong);
+  background: var(--color-danger-soft);
+}
+.offers-pill.offers-tone--dark {
+  color: var(--color-on-brand);
+  background: var(--color-slate-700);
+}
+.offers-card__dot.offers-tone--neutral {
+  background: var(--color-text-subtle);
+}
+.offers-card__dot.offers-tone--primary {
+  background: var(--color-primary);
+}
+.offers-card__dot.offers-tone--success {
+  background: var(--color-success);
+}
+.offers-card__dot.offers-tone--danger {
+  background: var(--color-danger);
+}
+.offers-card__dot.offers-tone--dark {
+  background: var(--color-slate-700);
+}
+.offers-card__amount.offers-tone--primary {
+  color: var(--color-primary);
+}
+.offers-card__amount.offers-tone--success {
+  color: var(--color-success);
+}
+
+/* ---------------------------------------------------------------- durum kartları (TL:92-100) */
+.offers-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.offers-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px var(--space-4);
+  text-align: left;
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.offers-card--active {
+  border-color: var(--color-primary-ring);
+  box-shadow: 0 0 0 3px var(--color-nav-active-bg);
+}
+.offers-card__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.offers-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.offers-card__label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}
+.offers-card__sub {
+  margin-left: auto;
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.offers-card__figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+.offers-card__count {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+.offers-card__unit {
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.offers-card__amount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+}
+.offers-card__foot {
+  min-height: 1.2em;
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+
+/* ---------------------------------------------------------------- kart + süzgeç çubuğu (TL:102-133) */
+.offers__card {
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+  box-shadow: var(--shadow-sm);
+}
+.offers-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+}
+.offers-filters__search {
+  flex: 1 1 300px;
+  max-width: 380px;
+}
+.offers-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.offers-filter__label {
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+.offers-filter--chip {
+  height: 34px;
+  padding: 0 var(--space-3);
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+.offers-filter--chip .date-input-wrap {
+  width: 128px;
+}
+.offers-filter__dash {
+  color: var(--color-text-subtle);
+}
+.offers-filters__clear {
+  padding: 0 10px;
+  height: 34px;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.offers-filters__count {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.offers-filters__count b {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+/* ---------------------------------------------------------------- tablo (TL:137-182) */
+.offers-scroll {
+  overflow-x: auto;
+}
+.offers-table {
+  min-width: 1140px;
+}
+.offers-grid {
+  display: grid;
+  grid-template-columns: 128px 44px minmax(220px, 1fr) 180px 88px 104px 136px 136px 108px 44px;
+}
+.offers-head {
+  font-size: var(--text-table-head);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.offers-th {
+  padding: 9px var(--space-2);
+}
+.offers-th--no {
+  padding-left: var(--space-4);
+}
+.offers-th--rev {
+  padding-left: var(--space-1);
+  padding-right: var(--space-1);
+  text-align: center;
+}
+.offers-th--num {
+  text-align: right;
+}
+.offers-row {
+  align-items: center;
+  font-size: var(--text-body);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-divider);
+}
+.offers-row:hover {
+  background: var(--color-ev-row-open-bg);
+}
+.offers-row--menu {
+  position: relative;
+  z-index: 2;
+}
+.offers-cell {
+  min-width: 0;
+  padding: 10px var(--space-2);
+  color: var(--color-text-secondary);
+}
+.offers-cell--no {
+  padding-left: var(--space-4);
+}
+.offers-cell--rev {
+  padding-left: var(--space-1);
+  padding-right: var(--space-1);
+  text-align: center;
+}
+.offers-cell--job {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.offers-cell--num {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+.offers-cell--strong {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.offers-cell--valid {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.offers-cell--menu {
+  padding: 6px var(--space-2) 6px 0;
+}
+.offers-no {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.offers-rev {
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  background: var(--color-neutral-soft);
+  border-radius: var(--radius-sm);
+}
+.offers-job {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.offers-scope {
+  font-size: 11.5px;
+  color: var(--color-text-subtle);
+}
+.offers-muted {
+  color: var(--color-text-muted);
+}
+.offers-valid {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+.offers-valid--expired {
+  font-weight: var(--weight-semibold);
+  color: var(--color-danger-strong);
+}
+.offers-expired {
+  font-size: 10.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-danger-strong);
+}
+.offers-foot {
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: var(--weight-bold);
+  background: var(--color-surface-2);
+  border-top: 1.5px solid var(--color-border-strong);
+}
+.offers-foot__label {
+  grid-column: span 6;
+  padding: 10px var(--space-2) 10px var(--space-4);
+  color: var(--color-text-secondary);
+}
+.offers-foot__truncated {
+  grid-column: span 4;
+  padding: 10px var(--space-2);
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  color: var(--color-danger-deep);
+}
+
+/* ---------------------------------------------------------------- ⋯ menüsü (TL:158-165) */
+.offers-menu {
+  position: relative;
+}
+.offers-menu__trigger {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+.offers-menu__trigger--open {
+  background: var(--color-nav-active-bg);
+  border-color: var(--color-primary-ring);
+}
+.offers-menu__pop {
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: 190px;
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  box-shadow: var(--shadow-md);
+}
+.offers-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-2) 10px;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  text-align: left;
+  text-decoration: none;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+.offers-menu__item:hover:not(:disabled) {
+  background: var(--color-surface-2);
+}
+.offers-menu__item:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+.offers-menu__item--danger {
+  color: var(--color-danger-text);
+}
+.offers-menu__reason {
+  padding: 0 10px var(--space-2);
+  font-size: var(--text-small);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------- hâller + dipnot (TL:185-206) */
+.offers-state {
+  padding: var(--space-4);
+  font-size: var(--text-body);
+  color: var(--color-text-muted);
+}
+.offers-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px var(--space-5);
+  text-align: center;
+}
+.offers-empty--filtered {
+  gap: 6px;
+  padding: var(--space-8);
+}
+.offers-empty__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: var(--color-primary);
+  background: var(--color-nav-active-bg);
+  border-radius: var(--radius-12);
+}
+.offers-empty__title {
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.offers-empty--filtered .offers-empty__title {
+  font-size: var(--text-body);
+}
+.offers-empty__text {
+  max-width: 460px;
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+.offers-empty__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+.offers-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px var(--space-4);
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}

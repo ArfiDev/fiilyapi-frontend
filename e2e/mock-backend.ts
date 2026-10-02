@@ -24,6 +24,8 @@ import {
   DAILY_REPORT_FIXTURE_NOT_GENERATED,
 } from "@/components/earned-value/reports/daily/daily-fixtures";
 import { QURR_FIXTURE_EMPTY, QURR_FIXTURE_READY } from "@/components/earned-value/reports/qurr/qurr-fixtures";
+// TKL-F3.2 · Teklif Hazırlama (`/offers*`) sahte backend'i AYRI dosyalardadır; burası YALNIZ yönlendirir.
+import { createOffersState, handleOffers, tklLastPrices, type OfferCatalogEntry, type TklLastPrice } from "./mock-offers";
 
 /* ══════════════ SÖZLEŞME SORGU KISITLARI (F-BORDRO T1) ══════════════════════
  * 🔴 SAHTE-YEŞİLİN YEDİNCİ HÂLİ. Sahte backend `limit`i DOĞRULAMIYOR,
@@ -2493,17 +2495,35 @@ function lpHk(state: LpSourceState): Map<string, LpCandidate> {
   return best;
 }
 
+/**
+ * TKL (teklif): backend `offers/last_price_provider.py` — kazanılan revizyonun MALİYET B.F.'si.
+ * Aday türetmesi `e2e/mock-offers.ts` (`tklLastPrices`) içindedir; burada yalnız birleştirmeye girer.
+ */
+function lpTkl(tkl: ReadonlyMap<string, TklLastPrice>): Map<string, LpCandidate> {
+  const candidates = new Map<string, LpCandidate>();
+  for (const [catalogId, row] of tkl) {
+    const cents = lpCents(row.price);
+    if (cents === null) continue;
+    candidates.set(catalogId, { cents, atIso: row.at, atMs: lpMs(row.at), docNo: row.docNo, docId: row.docId, tieBreak: row.docId });
+  }
+  return candidates;
+}
+
 /** Backend `SOURCE_ORDER` — eşit zamanda önce gelen kazanır. */
-const LP_SOURCE_ORDER = ["HK", "SZL"] as const;
+const LP_SOURCE_ORDER = ["HK", "SZL", "TKL"] as const;
 
 /**
  * Katalog kalemi id → son fiyat (kaynaksız kalem HARİTADA YOKTUR). Backend birleştirme anahtarı:
  * en yeni zaman, sonra kaynak önceliği, sonra `doc_no` (büyük), sonra `doc_id` (büyük).
  */
-export function lastPricesByCatalogItem(state: LpSourceState): Map<string, LastPriceRead> {
+export function lastPricesByCatalogItem(
+  state: LpSourceState,
+  tkl: ReadonlyMap<string, TklLastPrice> = new Map(),
+): Map<string, LastPriceRead> {
   const sources: Array<[(typeof LP_SOURCE_ORDER)[number], Map<string, LpCandidate>]> = [
     ["HK", lpHk(state)],
     ["SZL", lpSzl(state)],
+    ["TKL", lpTkl(tkl)],
   ];
   const merged = new Map<string, { source: string; rank: number; candidate: LpCandidate }>();
   for (const [source, candidates] of sources) {
@@ -8840,6 +8860,22 @@ export function startMockBackend(port: number): { server: Server; close: () => P
   const state = seedState();
   // PLN-F1.7a · Planlama (EV) durumu — ayrı tohum, dosya sonundaki blok.
   const evState = seedEarnedValueState();
+  // TKL-F3.2 · Teklif durumu — ayrı tohum (`e2e/mock-offer-seed.ts`); katalog CANLI okunur.
+  const offersCatalog = (): OfferCatalogEntry[] =>
+    evState.catalog.map((entry) => ({
+      id: entry.id,
+      pozNo: entry.pozNo,
+      name: entry.name,
+      uom: entry.uom,
+      standardUnitMhr: entry.standardUnitMhr,
+      refPrice: entry.refPrice,
+    }));
+  const offersActor = { id: ME.id, fullName: ME.full_name };
+  const offersState = createOffersState({
+    catalog: offersCatalog(),
+    employers: state.employers,
+    users: [offersActor],
+  });
   // PLN-F2.5a · EV gün ikizi günlük/taşeron/bölüm verisini bu kapıdan OKUR
   // (yazmaz): puantaj dışı kaynak satırları (firma), Gönder ön-koşulu, önceki gün.
   const evDiaryPort: EvDiaryPort = {
@@ -8910,6 +8946,48 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       return;
     }
 
+    // Gövde okuyucu — EV ve teklif blokları AYNI kapıyı paylaşır (JSON değil / nesne değil → 422).
+    const readJsonBody = (handler: (body: Record<string, unknown>) => void): void => {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        let body: unknown;
+        try {
+          body = JSON.parse(raw || "{}");
+        } catch {
+          return send(422, {
+            detail: [{ type: "json_invalid", loc: ["body", 0], msg: "JSON decode error", input: {} }],
+          });
+        }
+        if (typeof body !== "object" || body === null || Array.isArray(body)) {
+          return send(422, {
+            detail: [{ type: "model_attributes_type", loc: ["body"], msg: "Input should be a valid dictionary or object to extract fields from", input: body }],
+          });
+        }
+        handler(body as Record<string, unknown>);
+      });
+    };
+
+    // ================================================================
+    // TKL-F3.2 · TEKLİF HAZIRLAMA (`/offers*`, 20 operasyon) — tek giriş noktası;
+    // durum, hesap ikizi ve doğrulama `e2e/mock-offers*.ts` dosyalarındadır.
+    // ================================================================
+    if (
+      handleOffers(offersState, {
+        method,
+        path,
+        query: parsed.searchParams,
+        send,
+        readBody: readJsonBody,
+        catalog: offersCatalog,
+        employers: () => state.employers,
+        lastPrices: () => lastPricesByCatalogItem(state, tklLastPrices(offersState)),
+        actor: offersActor,
+      })
+    ) {
+      return;
+    }
+
     // ================================================================
     // PLN-F1.7a · PLANLAMA (EARNED VALUE) — 25 operasyon, dosya sonundaki
     // işaretli blok (`handleEarnedValue`). EV yolu değilse `false` döner.
@@ -8919,29 +8997,10 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       path,
       query: parsed.searchParams,
       send,
-      readBody: (handler) => {
-        let raw = "";
-        req.on("data", (chunk) => (raw += chunk));
-        req.on("end", () => {
-          let body: unknown;
-          try {
-            body = JSON.parse(raw || "{}");
-          } catch {
-            return send(422, {
-              detail: [{ type: "json_invalid", loc: ["body", 0], msg: "JSON decode error", input: {} }],
-            });
-          }
-          if (typeof body !== "object" || body === null || Array.isArray(body)) {
-            return send(422, {
-              detail: [{ type: "model_attributes_type", loc: ["body"], msg: "Input should be a valid dictionary or object to extract fields from", input: body }],
-            });
-          }
-          handler(body as Record<string, unknown>);
-        });
-      },
+      readBody: readJsonBody,
       findSite: (siteId) => state.sites.find((site) => site.id === siteId),
       diary: evDiaryPort,
-      lastPrices: () => lastPricesByCatalogItem(state),
+      lastPrices: () => lastPricesByCatalogItem(state, tklLastPrices(offersState)),
     });
     if (evHandled) return;
 

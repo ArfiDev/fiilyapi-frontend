@@ -278,7 +278,7 @@ test("dipnot UC maddeyi basar: kaynaklar, +% esigi, turuncu tarih", async ({ pag
   await expect(legend).toBeVisible();
   await expect(legend.locator(":scope > span")).toHaveCount(3);
   await expect(legend.locator(":scope > span").nth(0)).toHaveText(
-    "Referans fiyat elle girilir; son fiyat işveren sözleşmeleri ve onaylı hakedişlerden gelir",
+    "Referans fiyat elle girilir; son fiyat işveren sözleşmeleri, onaylı hakedişler ve kazanılan tekliflerden gelir",
   );
   await expect(legend.locator(":scope > span").nth(1)).toHaveText("+%son fiyat referansın %5 üstünde");
   await expect(legend.locator(":scope > span").nth(2)).toHaveText("turuncu tarih 6 aydan eski fiyat");

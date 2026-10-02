@@ -28,6 +28,11 @@ const CORE_DIRS = [
   // TKL-F2.3 · katalogdan çoklu seçici (sözleşme + ileride teklif ortak): planlama (EV) ithali yasak.
   "components/work-item-picker",
   "components/catalog-shared",
+  // TKL-F3.3 · Teklif Hazırlama (`contracts` kapısı): planlama (EV) ithali yasak (TKL-F3-PLAN §2.3).
+  "components/offers",
+  // TKL-F3.7 · Teklif PDF yazdırma + onun A4 kit çekirdeği (EV `kit/` buraya yeniden ihraç eder, ters yön YASAK).
+  "components/print-sheet",
+  "components/offer-print",
 ];
 
 /** Planlama modülünün yolları: bileşenleri, saf kütüphanesi ve `useEv*` sorguları. */

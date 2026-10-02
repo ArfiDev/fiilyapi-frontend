@@ -349,6 +349,8 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     ["sales.bulkUnits", routes.sales.bulkUnits()],
     ["sales.importUnits", routes.sales.importUnits()],
     ["sales.landShareAllocation", routes.sales.landShareAllocation()],
+    // TKL-F3: `yeni`/`[offerId]`/`yazdir` sayfaları kendi dilimlerinde (F3.4/F3.5/F3.7) bu listeye girer.
+    ["offers.list", routes.offers.list()],
     ["contracts.list", routes.contracts.list()],
     ["contracts.subcontractorList", routes.contracts.subcontractorList()],
     ["contracts.employerDetail", routes.contracts.employerDetail({ projectId: P })],
@@ -386,5 +388,27 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     // `[paymentId]` onu bir kimlik sanıp yutuyordu.
     const result = resolveHrefIn(tree, "/hakedisler/isveren", true, SENTINEL);
     expect(result.kind).not.toBe("static");
+  });
+});
+
+describe("routes.offers (TKL-F3 · Teklif Hazırlama)", () => {
+  it("liste ve yeni sabit yollardır", () => {
+    expect(routes.offers.list()).toBe("/teklif-hazirlama");
+    expect(routes.offers.new()).toBe("/teklif-hazirlama/yeni");
+  });
+
+  it("detay: revizyon verilmezse sorgu dizesi HİÇ eklenmez; rev 0 da yazılır", () => {
+    expect(routes.offers.detail({ offerId: "o-1" })).toBe("/teklif-hazirlama/o-1");
+    expect(routes.offers.detail({ offerId: "o-1", rev: 0 })).toBe("/teklif-hazirlama/o-1?rev=0");
+    expect(routes.offers.detail({ offerId: "o-1", rev: 3 })).toBe("/teklif-hazirlama/o-1?rev=3");
+  });
+
+  it("yazdır: rev + tur birlikte; kimlik kodlanır", () => {
+    expect(routes.offers.print({ offerId: "o-1", rev: 2, kind: "isveren" })).toBe(
+      "/teklif-hazirlama/o-1/yazdir?rev=2&tur=isveren",
+    );
+    expect(routes.offers.print({ offerId: "a/b", rev: 0, kind: "ic" })).toBe(
+      "/teklif-hazirlama/a%2Fb/yazdir?rev=0&tur=ic",
+    );
   });
 });

@@ -46,6 +46,8 @@
  * URL-3'ün kapsamı DIŞINDA, borç olarak kayıtlıdır.
  */
 
+import { OFFER_PRINT_KIND_PARAM, OFFER_REV_PARAM, type OfferPrintKind } from "./navigation-params";
+
 /** URL'ye giren kaynak kimliği — bugün UUID, yarın slug; ikisi de `string`. */
 export type RouteId = string;
 
@@ -510,6 +512,21 @@ export const routes = {
     newSubcontractor: () => "/sozlesmeler/taseron/yeni",
     subcontractorDetail: (p: { contractId: RouteId }) =>
       `/sozlesmeler/taseron/${seg(p.contractId)}`,
+  },
+
+  /**
+   * TKL-F3 · Teklif Hazırlama (işverene verilen fiyat teklifi). Kök segment menü adından
+   * (T31); `/satinalma/talepler/{id}/teklifler` (tedarikçi teklifi) ile KARIŞMAZ.
+   * `rev` = revizyon no (0'dan), `tur` = yazdırma türü (isveren | ic).
+   */
+  offers: {
+    list: () => "/teklif-hazirlama",
+    new: () => "/teklif-hazirlama/yeni",
+    detail: (p: { offerId: RouteId; rev?: number }) =>
+      `/teklif-hazirlama/${seg(p.offerId)}${qs({ [OFFER_REV_PARAM]: p.rev })}`,
+    // `rev`/`kind` opsiyonel: kırıntı düğümü (`route-tree.ts`) çıplak yazdırma adresini üretir; ekranlar ikisini de verir.
+    print: (p: { offerId: RouteId; rev?: number; kind?: OfferPrintKind }) =>
+      `/teklif-hazirlama/${seg(p.offerId)}/yazdir${qs({ [OFFER_REV_PARAM]: p.rev, [OFFER_PRINT_KIND_PARAM]: p.kind })}`,
   },
 
   stock: () => "/stok",

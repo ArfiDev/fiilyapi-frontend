@@ -40,6 +40,12 @@
   color: var(--color-text);
 }
 
+/* TKL-F3.7 · A4 dikey ekran önizlemesi (210×297 mm @96dpi = 794×1123 px). */
+.ev-print-sheet--portrait {
+  width: 794px;
+  height: 1123px;
+}
+
 /* Gerçek yazdırma: A4 yatay, ekran ölçeğinden bağımsız sayfa boyutu. */
 @media print {
   @page {
@@ -52,6 +58,11 @@
     height: 210mm;
     box-shadow: none;
     break-after: page;
+  }
+
+  .ev-print-sheet--portrait {
+    width: 210mm;
+    height: 297mm;
   }
 
   .ev-print-sheet:last-child {

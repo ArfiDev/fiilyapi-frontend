@@ -108,6 +108,17 @@ describe("NAV_GROUPS", () => {
     expect(labels.indexOf("Çek & Ödeme")).toBe(labels.indexOf("Hazine") + 1);
   });
 
+  // 🔴 TKL-F3.3 · T31 — "Teklif Hazırlama" grubun İLK öğesidir (Sözleşmeler'in ÜSTÜNDE) ve
+  // GERÇEK rotaya düşer. Sıra kayarsa tüm ekranların sidebar'ı oynar (nav kayması turu).
+  it("Teklif Hazirlama 'Sözleşme & Mali' grubunun basindadir ve gercek rotaya duser", () => {
+    const mali = NAV_GROUPS.find((g) => g.heading === "Sözleşme & Mali");
+    const labels = mali!.items.map((i) => i.label);
+    expect(labels[0]).toBe("Teklif Hazırlama");
+    expect(labels.indexOf("Sözleşmeler")).toBe(1);
+    expect(mali!.items[0].href).toBe("/teklif-hazirlama");
+    expect(resolveHrefIn(buildRouteTree(), mali!.items[0].href, false)).toEqual({ kind: "static" });
+  });
+
   it("sirket varliklari kalemi bordro ile belge arsivi arasindadir", () => {
     const mali = NAV_GROUPS.find((g) => g.heading === "Sözleşme & Mali");
     const labels = mali!.items.map((i) => i.label);

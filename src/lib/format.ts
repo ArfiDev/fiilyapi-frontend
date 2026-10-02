@@ -203,6 +203,31 @@ export function formatCurrencyPrecise(value: Maskeli): string {
   return `₺ ${formatDecimal(value, 2)}`;
 }
 
+const THOUSANDS_GROUP = /\B(?=(\d{3})+(?!\d))/g;
+const MONEY_TL_DIGITS = 2;
+
+/**
+ * Dize tabanlı sabit haneli tr-TR biçimi: binlik nokta, virgül ondalık, HALF_UP (sıfırdan uzağa) —
+ * `Number()` YOK, kayıpsız. Girdi geçerli ondalık dizedir (`toDecimalString` çıktısı).
+ */
+export function formatFixedDecimal(value: string, digits: number): string {
+  const rounded = divideDecimalStrings(value, "1", digits) ?? value;
+  const negative = rounded.startsWith("-");
+  const [whole = "0", fraction = ""] = rounded.replace(/^-/, "").split(".");
+  const grouped = whole.replace(THOUSANDS_GROUP, ".");
+  const sign = negative ? "-" : "";
+  return fraction === "" ? `${sign}${grouped}` : `${sign}${grouped},${fraction}`;
+}
+
+/**
+ * TKL · mockup `tl(v)` = "₺" + `nf(v,2)`: boşluksuz, kuruşlu ("₺73.982.140,00"). Teklif detayı + PDF ortak.
+ * Maskeli (null/undefined) ya da geçersiz → EMPTY_CELL.
+ */
+export function formatMoneyTl(value: string | null | undefined): string {
+  const decimal = value === null || value === undefined ? null : toDecimalString(value);
+  return decimal === null ? EMPTY_CELL : `₺${formatFixedDecimal(decimal, MONEY_TL_DIGITS)}`;
+}
+
 /** Türkçe ay adları. */
 const TR_MONTHS = [
   "Ocak",

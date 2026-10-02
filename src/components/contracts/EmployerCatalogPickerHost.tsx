@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { WorkItemPickerModal, type PickerSubmission } from "@/components/work-item-picker/WorkItemPickerModal";
-import { backendErrorMessage } from "@/lib/api/error-message";
+import type { ContractBulkBody } from "@/components/work-item-picker/picker-target";
+import { useCatalogPickerSubmit } from "@/components/work-item-picker/useCatalogPickerSubmit";
+import { WorkItemPickerModal } from "@/components/work-item-picker/WorkItemPickerModal";
 import { CATALOG_ITEMS_QUERY_KEY } from "@/lib/api/hooks/catalog-query-keys";
 import { EMPLOYER_CONTRACT_ITEMS_QUERY_KEY, type EmployerContractItemsResponse } from "@/lib/api/hooks/useContract";
 import {
@@ -48,50 +48,25 @@ export function EmployerCatalogPickerHost({
   const createGroup = useCreateEmployerContractGroup(projectId);
   const bulkCreate = useBulkCreateEmployerContractItems(projectId);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [createdGroup, setCreatedGroup] = useState<{ id: string; name: string } | null>(null);
-
   function refreshStaleViews(error: unknown) {
     if (!(error instanceof BackendError) || !STALE_STATUSES.includes(error.status)) return;
     void queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_ITEMS_QUERY_KEY, projectId] });
     void queryClient.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
   }
 
-  async function handleSubmit(submission: PickerSubmission) {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    setSubmitError(null);
-    let openedGroup: { id: string; name: string } | null = null;
-    try {
-      let body = submission.body;
-      if (body === null && submission.newGroup !== null) {
-        const created = await createGroup.mutateAsync({
-          name: submission.newGroup.name,
-          sort_order: submission.newGroup.sortOrder,
-        });
-        openedGroup = { id: created.id, name: created.name };
-        body = submission.buildBody(created.id);
-      }
-      if (body === null) return;
-      await bulkCreate.mutateAsync(body);
-      onAdded(submission.count);
-      onClose();
-    } catch (error) {
-      // Grup açıldıysa SİLİNMEZ; seçici o grubu seçili tutar (ikinci grup açılmaz).
-      if (openedGroup !== null) setCreatedGroup(openedGroup);
-      setSubmitError(backendErrorMessage(error));
-      refreshStaleViews(error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const { isSubmitting, submitError, createdGroup, submit } = useCatalogPickerSubmit<ContractBulkBody>({
+    createGroup: (group) => createGroup.mutateAsync(group),
+    bulkCreate: (body) => bulkCreate.mutateAsync(body),
+    onAdded,
+    onClose,
+    onFailure: refreshStaleViews,
+  });
 
   return (
     <WorkItemPickerModal
       projectName={projectName}
       groups={groups}
-      onSubmit={(submission) => void handleSubmit(submission)}
+      onSubmit={(submission) => void submit(submission)}
       onClose={onClose}
       isSubmitting={isSubmitting}
       submitError={submitError}

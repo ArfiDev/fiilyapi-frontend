@@ -46,6 +46,7 @@
  */
 import { useQueryCacheSnapshot } from "@/lib/query/useQueryCacheSnapshot";
 
+import { OFFER_QUERY_KEY } from "@/lib/api/hooks/offer-query-keys";
 import { PROJECT_QUERY_KEY, type ProjectDetail } from "@/lib/api/hooks/useProjects";
 import { SECTION_QUERY_KEY, type SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import { siteDiaryEntryQueryKey, type SiteDiaryEntryDetail } from "@/lib/api/hooks/useSiteDiary";
@@ -54,6 +55,14 @@ import { formatDateDots } from "@/lib/format";
 
 import type { CrumbNames } from "./trail";
 import type { NamedEntity, RouteKeys } from "./trail-node";
+
+/**
+ * TKL-F3.3 · teklif kırıntısı yalnız numarayı okur. Anahtar sayfanın `useOffer` anahtarıyla
+ * (`["offer", id]`) BİREBİR aynıdır: tek üretici `offer-query-keys.ts` (K-F3-4).
+ */
+interface OfferCrumbSource {
+  readonly offer_no: string;
+}
 
 export function useCrumbNames(keys: RouteKeys): CrumbNames {
   const project = useQueryCacheSnapshot<ProjectDetail>([PROJECT_QUERY_KEY, keys.projectId]);
@@ -73,6 +82,9 @@ export function useCrumbNames(keys: RouteKeys): CrumbNames {
     siteDiaryEntryQueryKey(keys.entityId, section?.data?.id),
   );
 
+  // TKL-F3.3 — teklif detayı: kırıntı adı teklif numarası (sayfa zaten çeker, ikinci istek yok).
+  const offer = useQueryCacheSnapshot<OfferCrumbSource>([OFFER_QUERY_KEY, keys.entityId]);
+
   const projectName = project?.data?.name ?? site?.data?.project.name;
 
   /**
@@ -88,12 +100,14 @@ export function useCrumbNames(keys: RouteKeys): CrumbNames {
   if (site?.data === undefined && site?.status === "error") unresolved.add("site");
   if (section?.data === undefined && section?.status === "error") unresolved.add("section");
   if (diaryEntry?.data === undefined && diaryEntry?.status === "error") unresolved.add("diaryEntry");
+  if (offer?.data === undefined && offer?.status === "error") unresolved.add("offer");
 
   return {
     project: projectName,
     site: site?.data?.name,
     section: section?.data?.name,
     diaryEntry: diaryEntry?.data === undefined ? undefined : formatDateDots(diaryEntry.data.entry_date),
+    offer: offer?.data?.offer_no,
     unresolved,
   };
 }

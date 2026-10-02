@@ -536,6 +536,30 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
       },
     },
 
+    // TKL-F3.3/F3.4/F3.5 · Teklif Hazırlama. `yeni` ve `[offerId]` (named: "offer": kırıntı adı teklif
+    // numarası, sayfanın kendi `useOffer` önbelleğinden) sayfalarıyla BİRLİKTE geldi; `yazdir` düğümü
+    // (F3.7) kendi sayfasıyla geldi: "ağaçtaki her href bir page.tsx" bekçisi sayfasız düğümü reddeder.
+    "teklif-hazirlama": {
+      label: "Teklif Hazırlama",
+      href: () => routes.offers.list(),
+      children: {
+        yeni: { label: "Yeni Teklif", href: () => routes.offers.new() },
+      },
+      dynamic: {
+        param: "entityId",
+        node: {
+          named: "offer",
+          label: "Teklif",
+          href: (k) => routes.offers.detail({ offerId: k.entityId }),
+          children: {
+            // Ekran adı "Yazdır / PDF"; kırıntı son parçası. `rev`/`tur` URL durumudur (kırıntı bağlantısı
+            // çıplak adrestir; sayfanın kendisi `?rev=`/`?tur=` okur, eksikse güncel revizyon + işveren).
+            yazdir: { label: "Yazdır", href: (k) => routes.offers.print({ offerId: k.entityId }) },
+          },
+        },
+      },
+    },
+
     stok: { label: "Stok & Depo", href: () => routes.stock() },
   },
 };

@@ -5,6 +5,8 @@ import { Checkbox, Input, Select } from "@/components/ui";
 import { SearchIcon } from "@/components/ui/icons";
 import type { WorkDisciplineRead } from "@/lib/api/models";
 
+import type { PickerWords } from "./picker-rules";
+
 export interface GroupOption {
   id: string;
   name: string;
@@ -18,6 +20,8 @@ export interface WorkItemPickerToolbarProps {
   disciplineId: string;
   onDiscipline: (value: string) => void;
   hideInContract: boolean;
+  /** "Sözleşmede olanları gizle" · "Teklifte olanları gizle". */
+  hideLabel: string;
   onHideInContract: (value: boolean) => void;
   groupOptions: readonly GroupOption[];
   groupValue: string;
@@ -28,6 +32,8 @@ export interface WorkItemPickerToolbarProps {
   onNewGroupName: (value: string) => void;
   selectedCount: number;
   visibleCount: number;
+  /** Nesne adı (poz / kalem): sayaç metni. */
+  words: PickerWords;
   isDisabled: boolean;
 }
 
@@ -39,6 +45,7 @@ export function WorkItemPickerToolbar({
   disciplineId,
   onDiscipline,
   hideInContract,
+  hideLabel,
   onHideInContract,
   groupOptions,
   groupValue,
@@ -48,6 +55,7 @@ export function WorkItemPickerToolbar({
   onNewGroupName,
   selectedCount,
   visibleCount,
+  words,
   isDisabled,
 }: WorkItemPickerToolbarProps) {
   return (
@@ -79,7 +87,7 @@ export function WorkItemPickerToolbar({
         <Checkbox
           checked={hideInContract}
           onChange={(event) => onHideInContract(event.target.checked)}
-          label="Sözleşmede olanları gizle"
+          label={hideLabel}
           disabled={isDisabled}
         />
       </div>
@@ -105,7 +113,7 @@ export function WorkItemPickerToolbar({
         )}
         <span className="wip-toolbar__count" data-testid="wip-count">
           <strong>{selectedCount}</strong>
-          {` poz seçili · ${visibleCount} poz listede`}
+          {` ${words.noun} seçili · ${visibleCount} ${words.noun} listede`}
         </span>
       </div>
     </div>

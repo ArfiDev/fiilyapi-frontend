@@ -322,6 +322,13 @@ const ALLOWED_ROOTS = new Set([
   // kapisi). Eksikse yeni ekran YALNIZ CANLIDA 404 alir; jsdom ve e2e mock-backend
   // BFF'yi atladigi icin GORMEZ.
   "catalog",
+  // TKL-F3.2 — Teklif Hazirlama (`GET/POST /offers`, `/offers/settings`,
+  // `/offers/{id}/revisions/{rev}/{send|win|lose|withdraw|groups|items}`). Kok "offers"
+  // ne "contracts" ne "projects" altinda: sirket geneli teklif cekirdegi (`contracts`
+  // izin kapisi, T25 deseni). Satinalma'nin tedarikci teklifleri (`/purchase-requests/
+  // {id}/quotes`) AYRI bir kokten gecer ve bununla karismaz. Eksikse tum teklif ekranlari
+  // YALNIZ CANLIDA 404 alir; jsdom ve e2e mock-backend BFF'yi atladigi icin GORMEZ.
+  "offers",
 ]);
 
 // JSON/metin sayilan icerik tipleri: govde metne cozulup JSON olarak islenir.

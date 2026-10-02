@@ -8,10 +8,9 @@
  * `lib/decimal` string aritmetiğiyle hesaplanır — `Number()` YOK.
  */
 import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
-import type { EmployerContractItemsResponse } from "@/lib/api/hooks/useContract";
 import type { EmployerContractItemsBulkCreateRequest } from "@/lib/api/hooks/useContractMutations";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
-import { isZeroDecimalString, multiplyDecimalStrings, sumDecimalStrings } from "@/lib/decimal";
+import { compareDecimalStrings, isZeroDecimalString, multiplyDecimalStrings, sumDecimalStrings } from "@/lib/decimal";
 import {
   decimalDigitCounts,
   parseQuantityInput,
@@ -21,6 +20,8 @@ import {
 } from "@/lib/tr-decimal";
 import { filterWorkItems, formatPrice, sortByPozNo } from "@/components/work-item-catalog/work-item-model";
 
+import { CONTRACT_RULES, type DecimalBound, type PickerPriceMessages, type PickerRules } from "./picker-rules";
+
 /**
  * Tek istekte en çok kalem. Değer openapi `EmployerContractItemsBulkCreate.items.maxItems`tir;
  * `picker-limits.test.ts` sözleşmeden OKUYUP bu sabitle karşılaştırır. Parçalı gönderim
@@ -29,26 +30,15 @@ import { filterWorkItems, formatPrice, sortByPozNo } from "@/components/work-ite
 export const MAX_BULK_ITEMS = 200;
 
 /**
- * ⚠️ Backend `quantity`/`unit_price` için hane sınırı TAŞIMAZ (openapi'de yok; kolonlar
- * `Numeric(14,3)` / `Numeric(18,2)`, fazla kesir PG'de SESSİZCE yuvarlanır) → bu istemci
- * korkuluğu TEK savunmadır (TKL-F2-PLAN §0, risk 5).
+ * Hane sınırları HEDEFE göredir (`picker-rules.ts` `quantityBound`/`priceBound`): sözleşmede backend sınır
+ * taşımaz (istemci korkuluğu TEK savunma, TKL-F2-PLAN §0 risk 5); teklifte backend `le=` sınırı kalem
+ * tablosuyla TEK KAYNAKtan gelir (TKL-F3.6.1).
  */
-const QUANTITY_FRACTION_DIGITS = 3;
-const QUANTITY_INTEGER_DIGITS = 11;
-const PRICE_FRACTION_DIGITS = 2;
-const PRICE_INTEGER_DIGITS = 16;
 
 const QUANTITY_REQUIRED = "Miktar girin";
 const QUANTITY_NOT_POSITIVE = "Miktar 0'dan büyük olmalı";
-const PRICE_REQUIRED = "Birim fiyat girin";
-/** `contract-item-form/validate.ts` ONAYLI metinleri (birebir; `picker-model.test.ts` drift bekçisi). */
+/** `contract-item-form/validate.ts` ONAYLI metinleri (birebir; `picker-model.test.ts` drift bekçisi). Fiyat metinleri `picker-rules`te (hedefe göre). */
 const QUANTITY_NOT_A_NUMBER = "Miktar sayı olmalıdır.";
-const PRICE_NOT_A_NUMBER = "Birim Fiyat sayı olmalıdır.";
-const PRICE_NEGATIVE = "Birim Fiyat negatif olamaz.";
-const QUANTITY_FRACTION_LIMIT = "En fazla 3 ondalık";
-const PRICE_FRACTION_LIMIT = "En fazla 2 ondalık";
-const QUANTITY_DIGIT_LIMIT = "En fazla 11 basamak";
-const PRICE_DIGIT_LIMIT = "En fazla 16 basamak";
 
 export type BlockReason = { kind: "linked"; groupName: string } | { kind: "code" };
 
@@ -71,7 +61,11 @@ export interface ResolvedEntry {
   item: WorkItemRead;
   /** Kayıpsız ondalık metin (nokta ondalık). */
   quantity: string;
-  unitPrice: string;
+  /**
+   * Kayıpsız ondalık metin. `null` YALNIZ fiyatın isteğe bağlı olduğu hedefte (teklif maliyet B.F.)
+   * ve kutu BOŞ bırakıldığında; sözleşme hedefinde her zaman dolu.
+   */
+  unitPrice: string | null;
 }
 
 export interface RowProblem {
@@ -100,11 +94,22 @@ export interface DisciplineSection {
   rows: PickerRow[];
 }
 
-type ContractGroups = EmployerContractItemsResponse["groups"];
+/**
+ * Seçicinin hedef grup görünümü: sözleşme grupları (`EmployerContractItemsResponse["groups"]`) ve teklif
+ * grupları (`code` = poz no olarak eşlenir) bu YAPISAL tipe uyar — seçici hedefi tanımaz.
+ */
+export interface PickerGroup {
+  id: string;
+  name: string;
+  sort_order: number;
+  items: readonly { code: string; catalog_item_id: string | null; sort_order: number }[];
+}
+
+type HostGroups = readonly PickerGroup[];
 
 /** ÜS-F2-19: varsayılan hedef = sort_order'ı en büyük grup; grupsuz sözleşmede "+ Yeni Grup". */
-export function defaultGroupId(groups: ContractGroups): string {
-  const last = groups.reduce<ContractGroups[number] | null>(
+export function defaultGroupId(groups: HostGroups): string {
+  const last = groups.reduce<PickerGroup | null>(
     (best, group) => (best === null || group.sort_order >= best.sort_order ? group : best),
     null,
   );
@@ -119,7 +124,7 @@ export function defaultGroupId(groups: ContractGroups): string {
  */
 export function resolveTargetGroup(
   choice: string,
-  groups: ContractGroups,
+  groups: HostGroups,
   createdGroup: { id: string } | null,
 ): string {
   const isKnown = groups.some((group) => group.id === choice) || (createdGroup !== null && createdGroup.id === choice);
@@ -136,7 +141,11 @@ const EMPTY_INPUT: RowInput = { selected: false, quantity: "", unitPrice: "" };
  * `list_employer_item_codes` `code.in_` ile aynı; harf/boşluk normalizasyonu YOK — TKL-F2.4.1 DÜŞÜK-5). Backend ikisini de engellemez /
  * ikincisinde 409 verir (§0) — istemci korkuluğu + sunucu son savunma.
  */
-export function buildPickerRows(items: readonly WorkItemRead[], groups: ContractGroups): PickerRow[] {
+export function buildPickerRows(
+  items: readonly WorkItemRead[],
+  groups: HostGroups,
+  rules: PickerRules = CONTRACT_RULES,
+): PickerRow[] {
   const linkedGroup = new Map<string, string>();
   const usedCodes = new Set<string>();
   for (const group of groups) {
@@ -150,15 +159,13 @@ export function buildPickerRows(items: readonly WorkItemRead[], groups: Contract
   return items.map((item) => {
     const groupName = linkedGroup.get(item.id);
     if (groupName !== undefined) return { item, block: { kind: "linked", groupName } };
-    if (usedCodes.has(item.poz_no)) return { item, block: { kind: "code" } };
+    if (rules.blocksOnCodeCollision && usedCodes.has(item.poz_no)) return { item, block: { kind: "code" } };
     return { item, block: null };
   });
 }
 
-export function blockReasonText(block: BlockReason): string {
-  return block.kind === "linked"
-    ? `Sözleşmede var · ${block.groupName}`
-    : "Bu poz no sözleşmede başka bir kalemde kullanılıyor";
+export function blockReasonText(block: BlockReason, rules: PickerRules = CONTRACT_RULES): string {
+  return block.kind === "linked" ? `${rules.linkedLabel} · ${block.groupName}` : rules.codeBlockText;
 }
 
 /**
@@ -166,8 +173,13 @@ export function blockReasonText(block: BlockReason): string {
  * (`limited`) ikisi de null gelir → boş; hiçbir şey uydurulmaz. TR biçiminde ("1.250,50").
  */
 export function suggestUnitPrice(item: WorkItemRead): string {
-  const price = item.last_price?.price ?? item.ref_price;
-  return price === null || price === undefined ? "" : formatPrice(price);
+  const price = suggestedPriceValue(item);
+  return price === null ? "" : formatPrice(price);
+}
+
+/** Aynı öneri, kayıpsız ondalık METİN olarak (nokta ondalık); yoksa/maskeliyse null. */
+export function suggestedPriceValue(item: WorkItemRead): string | null {
+  return item.last_price?.price ?? item.ref_price ?? null;
 }
 
 function withInput(inputs: PickerInputs, id: string, input: RowInput): PickerInputs {
@@ -223,15 +235,12 @@ export function setUnitPrice(inputs: PickerInputs, row: PickerRow, text: string)
   return withInput(inputs, row.item.id, { ...current, unitPrice: text });
 }
 
-function digitLimitError(
-  value: string,
-  limits: { fraction: number; integer: number },
-  messages: { fraction: string; integer: string },
-): string | null {
+/** Önce kesir, sonra aşım (kalem tablosuyla aynı sıra). */
+function boundError(value: string, bound: DecimalBound): string | null {
   const digits = decimalDigitCounts(value);
-  if (digits.fraction > limits.fraction) return messages.fraction;
-  if (digits.integer > limits.integer) return messages.integer;
-  return null;
+  if (digits.fraction > bound.fraction) return bound.fractionMessage;
+  if (bound.kind === "digits") return digits.integer > bound.integer ? bound.integerMessage : null;
+  return compareDecimalStrings(value, bound.max) > 0 ? bound.maxMessage : null;
 }
 
 interface FieldMessages {
@@ -251,7 +260,7 @@ function syntaxError(raw: string, parse: (text: string) => TrDecimalParse, messa
   return isNegative ? messages.negative : null;
 }
 
-function quantityError(raw: string): string | null {
+function quantityError(raw: string, rules: PickerRules): string | null {
   const syntax = syntaxError(raw, parseQuantityInput, {
     required: QUANTITY_REQUIRED,
     notANumber: QUANTITY_NOT_A_NUMBER,
@@ -260,38 +269,36 @@ function quantityError(raw: string): string | null {
   if (syntax !== null) return syntax;
   const parsed = parseQuantityInput(raw);
   if (parsed.kind !== "ok") return QUANTITY_NOT_A_NUMBER;
-  const limit = digitLimitError(
-    parsed.value,
-    { fraction: QUANTITY_FRACTION_DIGITS, integer: QUANTITY_INTEGER_DIGITS },
-    { fraction: QUANTITY_FRACTION_LIMIT, integer: QUANTITY_DIGIT_LIMIT },
-  );
+  const limit = boundError(parsed.value, rules.quantityBound);
   if (limit !== null) return limit;
   return isZeroDecimalString(parsed.value) ? QUANTITY_NOT_POSITIVE : null;
 }
 
-function priceError(raw: string): string | null {
-  const syntax = syntaxError(raw, parseRefPriceInput, {
-    required: PRICE_REQUIRED,
-    notANumber: PRICE_NOT_A_NUMBER,
-    negative: PRICE_NEGATIVE,
-  });
+function priceError(raw: string, rules: PickerRules): string | null {
+  // Fiyatın isteğe bağlı olduğu hedefte (teklif maliyet B.F.) boş kutu GEÇERLİDİR: "fiyatsız kalem".
+  if (!rules.isPriceRequired && raw.trim() === "") return null;
+  const messages: PickerPriceMessages = rules.priceMessages;
+  const syntax = syntaxError(raw, parseRefPriceInput, messages);
   if (syntax !== null) return syntax;
   const parsed = parseRefPriceInput(raw);
-  if (parsed.kind !== "ok") return PRICE_NOT_A_NUMBER;
-  return digitLimitError(
-    parsed.value,
-    { fraction: PRICE_FRACTION_DIGITS, integer: PRICE_INTEGER_DIGITS },
-    { fraction: PRICE_FRACTION_LIMIT, integer: PRICE_DIGIT_LIMIT },
-  );
+  if (parsed.kind !== "ok") return messages.notANumber;
+  return boundError(parsed.value, rules.priceBound);
 }
 
 /** Satırın TEK ilk hatası (miktar → birim fiyat); geçerliyse null. B.F. 0 serbesttir (backend ≥ 0). */
-export function validateRow(input: Pick<RowInput, "quantity" | "unitPrice">): string | null {
-  return quantityError(input.quantity) ?? priceError(input.unitPrice);
+export function validateRow(
+  input: Pick<RowInput, "quantity" | "unitPrice">,
+  rules: PickerRules = CONTRACT_RULES,
+): string | null {
+  return quantityError(input.quantity, rules) ?? priceError(input.unitPrice, rules);
 }
 
 /** Seçili satırları doğrular ve gövdeye girecek kayıpsız değerleri çözer. Sıra: verilen satır sırası. */
-export function resolveSelection(rows: readonly PickerRow[], inputs: PickerInputs): Resolution {
+export function resolveSelection(
+  rows: readonly PickerRow[],
+  inputs: PickerInputs,
+  rules: PickerRules = CONTRACT_RULES,
+): Resolution {
   const entries: ResolvedEntry[] = [];
   const problems: RowProblem[] = [];
   let selectedCount = 0;
@@ -299,21 +306,48 @@ export function resolveSelection(rows: readonly PickerRow[], inputs: PickerInput
     const input = inputs.get(row.item.id);
     if (row.block !== null || input === undefined || !input.selected) continue;
     selectedCount += 1;
-    const message = validateRow(input);
+    const message = validateRow(input, rules);
     const quantity = parseQuantityInput(input.quantity);
     const unitPrice = parseRefPriceInput(input.unitPrice);
-    if (message !== null || quantity.kind !== "ok" || unitPrice.kind !== "ok") {
+    const isPriceBlank = !rules.isPriceRequired && input.unitPrice.trim() === "";
+    if (message !== null || quantity.kind !== "ok" || (!isPriceBlank && unitPrice.kind !== "ok")) {
       problems.push({ row, message: message ?? QUANTITY_REQUIRED });
       continue;
     }
-    entries.push({ item: row.item, quantity: quantity.value, unitPrice: unitPrice.value });
+    entries.push({
+      item: row.item,
+      quantity: quantity.value,
+      unitPrice: unitPrice.kind === "ok" && !isPriceBlank ? unitPrice.value : null,
+    });
   }
   return { entries, problems, selectedCount };
 }
 
-/** Σ miktar × birim fiyat — kayıpsız ondalık metin (`0.1 × 3 = 0.3`). */
+/**
+ * Σ miktar × birim fiyat — kayıpsız ondalık metin (`0.1 × 3 = 0.3`). Fiyatsız (`null`) satırlar toplama
+ * GİRMEZ (teklif "Eklenecek maliyet": yalnız maliyeti dolu satırlar); sayıları `unpricedCount`.
+ */
 export function totalAmount(entries: readonly ResolvedEntry[]): string {
-  return sumDecimalStrings(entries.map((entry) => multiplyDecimalStrings(entry.quantity, entry.unitPrice)));
+  return sumDecimalStrings(
+    entries.flatMap((entry) =>
+      entry.unitPrice === null ? [] : [multiplyDecimalStrings(entry.quantity, entry.unitPrice)],
+    ),
+  );
+}
+
+/** Fiyatsız (maliyet B.F. boş) seçili satır sayısı — sözleşme hedefinde her zaman 0. */
+export function unpricedCount(entries: readonly ResolvedEntry[]): number {
+  return entries.filter((entry) => entry.unitPrice === null).length;
+}
+
+/** Sözleşme gövdesi fiyatı ZORUNLU ister; `null` kalmışsa çağıran akış (hedef kuralları) bozulmuştur. */
+export type PricedEntry = ResolvedEntry & { unitPrice: string };
+
+export function requirePricedEntries(entries: readonly ResolvedEntry[]): PricedEntry[] {
+  return entries.map((entry) => {
+    if (entry.unitPrice === null) throw new Error("requirePricedEntries: birim fiyat zorunlu hedefte fiyatsız satır");
+    return { ...entry, unitPrice: entry.unitPrice };
+  });
 }
 
 /**
@@ -322,7 +356,7 @@ export function totalAmount(entries: readonly ResolvedEntry[]): string {
  * Sayılar dot-decimal METİN. Yalnız `resolveSelection`ın geçerli girdileriyle çağrılır.
  */
 export function buildBulkBody(
-  entries: readonly ResolvedEntry[],
+  entries: readonly PricedEntry[],
   groupId: string,
   baseSortOrder: number,
 ): EmployerContractItemsBulkCreateRequest {
