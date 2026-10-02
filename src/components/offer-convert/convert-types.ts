@@ -63,6 +63,8 @@ export interface ConvertDraft {
 /** Adım 1 formu (yerel durum; hepsi METİN). */
 export interface ConvertForm {
   projectName: string;
+  /** İsteğe bağlı (K-F5-1/BD-2): boşsa sunucu `PRJ-YYYY-NNN` üretir ve gövdeye HİÇ girmez. */
+  projectCode: string;
   city: string;
   contractNo: string;
   signatureDate: string;
@@ -75,3 +77,6 @@ export interface ConvertForm {
   openSite: boolean;
   siteName: string;
 }
+
+/** Ekran adımı (yerel durum; URL'de taşınmaz — ÜS-F5-1). */
+export type ConvertStep = 1 | 2 | 3;

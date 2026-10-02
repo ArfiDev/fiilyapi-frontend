@@ -111,3 +111,16 @@ export function summarize(draft: ConvertDraft, vatPct: string): ConvertSummary {
     hasInvalid: included.some((row) => rowContractAmount(row) === null),
   };
 }
+
+/**
+ * Kutu BAŞINA "tekliften farklı" (mockup `qChg/bChg`, TDN:219): miktar ve B.F. kutuları ayrı vurgulanır
+ * (`rowTag` ikisini tek etikete indirger). Çıkarılmış ve yeni satırda vurgu YOK (TDN:220).
+ */
+export function rowChangedFields(row: ConvertRow): { qty: boolean; bf: boolean } {
+  if (row.isNew || !row.included) return { qty: false, bf: false };
+  const { qty, bf } = parsedRow(row);
+  return {
+    qty: differsFromOffer(qty, row.contract.qtyRaw, row.offer.qty),
+    bf: differsFromOffer(bf, row.contract.bfRaw, row.offer.unitPrice),
+  };
+}

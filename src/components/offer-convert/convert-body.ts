@@ -2,7 +2,8 @@
  * TKL-F5.2 · `POST /offers/{id}/convert` GÖVDE kurucusu (SAF). Plan §3 "Gövde".
  *
  * 🔴 Gönderilmeyenler (bilinçli): `amount` (sunucu Σ ROUND_HALF_UP yazar — ÜS-F5-12) · `vat_pct/advance_pct/retainage_pct/
- * late_penalty_daily` (ÜS-F5-13) · `project.code` (şemada yok; BD-2 gelince eklenir) · adam-saat (sunucu `offer_item_id`den okur).
+ * late_penalty_daily` (ÜS-F5-13) · BOŞ `project.code` (K-F5-1/BD-2: isteğe bağlı; boşsa anahtar HİÇ yok, sunucu üretir) ·
+ * adam-saat (sunucu `offer_item_id`den okur).
  * 🔴 Doğrulanmamış durumdan gövde KURULMAZ (`ConvertBuildError`): backend'in statik 422 dalları istemcide kapanır.
  */
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
@@ -88,12 +89,23 @@ function siteFields(form: ConvertForm, draft: ConvertDraft): Pick<Body, "site_na
   };
 }
 
+function bodyProject(form: ConvertForm): Body["project"] {
+  const code = form.projectCode.trim();
+  return {
+    name: form.projectName.trim(),
+    city: form.city.trim(),
+    start_date: form.startDate,
+    end_date: form.endDate,
+    ...(code === "" ? {} : { code }),
+  };
+}
+
 export function buildConvertRequest(form: ConvertForm, draft: ConvertDraft, revision: OfferRevisionRead): ConvertRequest {
   const step1 = validateStep1(form);
   const step2 = validateStep2(draft, revision);
   if (hasStep1Errors(step1) || hasStep2Errors(step2)) throw new ConvertBuildError(step1, step2);
   return {
-    project: { name: form.projectName.trim(), city: form.city.trim(), start_date: form.startDate, end_date: form.endDate },
+    project: bodyProject(form),
     contract: bodyContract(form),
     groups: bodyGroups(draft),
     open_site: form.openSite,

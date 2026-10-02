@@ -49,6 +49,7 @@ export function makeWonRevision(over: Partial<OfferRevisionRead> = {}): OfferRev
 export function makeForm(over: Partial<ConvertForm> = {}): ConvertForm {
   return {
     projectName: "Güneşkent Konut Kompleksi",
+    projectCode: "",
     city: "İstanbul / Kadıköy",
     contractNo: "SZL-2026-011",
     signatureDate: "2026-10-02",

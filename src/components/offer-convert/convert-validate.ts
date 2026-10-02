@@ -23,6 +23,8 @@ export const MAX_CONVERT_ITEMS = 2000;
 const MAX_PROJECT_NAME = 150;
 const MAX_SITE_NAME = 150;
 const MAX_CITY = 100;
+/** `ConvertProject.code`: 1–50 (boşsa sunucu üretir → boş hata DEĞİL). */
+const MAX_PROJECT_CODE = 50;
 const MAX_CONTRACT_NO = 100;
 const MAX_GROUP_NAME = 200;
 /** `_BaseIndex`: Numeric(12,3) → ≤ 9 tam hane + 3 kesir. */
@@ -105,6 +107,7 @@ export function validateStep1(form: ConvertForm): Step1Errors {
     ...(form.hasPriceEscalation ? withKey("baseIndexValue", baseIndexError(form.baseIndexValue)) : {}),
     ...withKey("projectName", textError(form.projectName, MESSAGES.nameRequired, MAX_PROJECT_NAME)),
     ...withKey("city", textError(form.city, MESSAGES.cityRequired, MAX_CITY)),
+    ...(form.projectCode.trim().length > MAX_PROJECT_CODE ? { projectCode: maxCharsMessage(MAX_PROJECT_CODE) } : {}),
     ...withKey("contractNo", textError(form.contractNo, MESSAGES.contractNoRequired, MAX_CONTRACT_NO)),
     ...(form.openSite && form.siteName.trim().length > MAX_SITE_NAME ? { siteName: maxCharsMessage(MAX_SITE_NAME) } : {}),
   };
