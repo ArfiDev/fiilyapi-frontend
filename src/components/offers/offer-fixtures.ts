@@ -22,6 +22,9 @@ export function makeOffer(overrides: Partial<OfferListItem> & Pick<OfferListItem
     unquantified_count: 0,
     conversion_state: null,
     project_id: null,
+    project: null,
+    converted_at: null,
+    converted_by_name: null,
     ...overrides,
   };
 }

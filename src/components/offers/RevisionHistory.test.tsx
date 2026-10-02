@@ -92,4 +92,34 @@ describe("RevisionHistory", () => {
     );
     expect(items()[0]).toContain("vazgeçildi");
   });
+
+  it("TKL-B6.8 'converted': 'projeye dönüştürüldü' etiketi, kişi adı; tutar BASILMAZ (backend olayı tutar taşımaz)", () => {
+    render(
+      <RevisionHistory
+        history={[{ at: "2026-10-01T09:00:00Z", kind: "converted", rev_no: 0, user_id: "u-1", user_name: "Ahmet Yılmaz" }]}
+        revisions={[makeRevisionSummary({ rev_no: 0, status: "won" })]}
+      />,
+    );
+    expect(items()[0]).toContain("projeye dönüştürüldü");
+    expect(items()[0]).toContain("Ahmet Yılmaz");
+    expect(items()[0]).not.toContain("₺");
+  });
+
+  it("TKL-B6.8 sıra: aynı anlı won + converted → converted EN ÜSTTE (en yeni üstte; durum olaylarından SONRA gelir)", () => {
+    const at = "2026-10-01T09:00:00Z";
+    const history = ["opened", "sent", "won", "converted"].map((kind) => ({
+      at,
+      kind: kind as "opened" | "sent" | "won" | "converted",
+      rev_no: 0,
+      user_id: null,
+      user_name: null,
+    }));
+    render(<RevisionHistory history={[history[2]!, history[3]!, history[0]!, history[1]!]} revisions={[makeRevisionSummary({ rev_no: 0, status: "won" })]} />);
+    expect(items().map((text) => /(açıldı|gönderildi|kazanıldı|projeye dönüştürüldü)/.exec(text)?.[1])).toEqual([
+      "projeye dönüştürüldü",
+      "kazanıldı",
+      "gönderildi",
+      "açıldı",
+    ]);
+  });
 });

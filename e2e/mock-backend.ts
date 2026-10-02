@@ -2363,7 +2363,7 @@ function uniqueProjectSlug(state: MockState, name: string): string | null {
 
 function writeConvertedProject(state: MockState, spec: ConvertedProjectSpec, year: number, nowIso: string): ConvertedProjectResult {
   const projectId = `p-${state.projects.length + 1}`;
-  const code = nextConvertedProjectCode(state, year);
+  const code = spec.project.code ?? nextConvertedProjectCode(state, year);
   const project: MockProject = {
     id: projectId,
     slug: uniqueProjectSlug(state, spec.project.name),
@@ -9177,6 +9177,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         convert: {
           disciplineExists: (id) => evState.disciplines.some((discipline) => discipline.id === id),
           disciplineOfCatalog: (id) => evState.catalog.find((entry) => entry.id === id)?.disciplineId ?? null,
+          projectCodeExists: (code) => state.projects.some((project) => project.code === code),
           createConvertedProject: (spec) =>
             writeConvertedProject(state, spec, istanbulYear(offersState.clock()), offersState.clock().toISOString()),
         },

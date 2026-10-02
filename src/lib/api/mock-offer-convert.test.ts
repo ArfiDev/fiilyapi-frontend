@@ -53,9 +53,12 @@ let server: Server;
 let base = "";
 let state: OffersState;
 let written: ConvertedProjectSpec[] = [];
+/** Port tarafındaki "proje kodu kullanımda" kümesi (`projects.code` UQ'su; ana sahtede `state.projects`). */
+let takenCodes = new Set<string>();
 
 beforeEach(async () => {
   written = [];
+  takenCodes = new Set();
   state = emptyOffersState([ACTOR], () => new Date(NOON));
   server = createServer((req, res) => {
     const parsed = new URL(req.url ?? "", "http://mock");
@@ -80,12 +83,13 @@ beforeEach(async () => {
       convert: {
         disciplineExists: (id) => id === D1 || id === D2,
         disciplineOfCatalog: (id) => DISCIPLINE_OF.get(id) ?? null,
+        projectCodeExists: (code) => takenCodes.has(code),
         createConvertedProject: (spec) => {
           written = [...written, spec];
           return {
             projectId: `0b000000-0000-4000-8000-${String(written.length).padStart(12, "0")}`,
             projectSlug: "a-blok",
-            projectCode: `PRJ-2026-${String(written.length).padStart(3, "0")}`,
+            projectCode: spec.project.code ?? `PRJ-2026-${String(written.length).padStart(3, "0")}`,
             siteId: spec.site === null ? null : `5e000000-0000-4000-8000-${String(written.length).padStart(12, "0")}`,
           };
         },
@@ -577,5 +581,184 @@ describe("🔴 conversion_state / project_id / won_not_converted_count TÜREV (s
     expect(before).toBeTruthy();
     await convert(seeded.id, body(seeded));
     expect(state.offers.find((entry) => entry.id === seeded.id)?.convertedAt).toBe(NOON);
+  });
+});
+
+// ─────────────────────────────────────────────────────────── TKL-B6.8 · yapısal errors[] (convert_service `_Issue`)
+
+describe("🔴 servis doğrulama 422: `errors[]` yapısal loc + `detail` metni AYNEN (backend `_Issue`)", () => {
+  it("kalem kodu / grup adı / offer_item_id: loc = ['groups', i, 'items', j, 'code'] …; detail değişmez", async () => {
+    const seeded = await offer();
+    const reply = await convert(seeded.id, body(seeded, {
+      groups: [
+        { name: "G", items: [line(CAT_A, "K", "1", "1"), line(CAT_B, "K", "1", "1", { offer_item_id: MISSING_ID })] },
+        { name: "G", items: [line(CAT_A, "Z", "1", "1", { offer_item_id: seeded.items[1]?.id })] },
+      ],
+    }));
+    expect(reply.status).toBe(422);
+    expect(reply.json.errors).toEqual([
+      { loc: ["groups", 0, "items", 1, "code"], message: "Kalem kodu tekrar ediyor (K)" },
+      { loc: ["groups", 0, "items", 1, "offer_item_id"], message: "Kalem teklifin son revizyonunda bulunamadı" },
+      { loc: ["groups", 1, "name"], message: "Aynı adlı grup var (G)" },
+      { loc: ["groups", 1, "items", 0, "offer_item_id"], message: "Teklif kaleminin katalog bağı gövdedekiyle uyuşmuyor" },
+    ]);
+    expect(reply.json.detail).toBe([
+      "groups[0].items[1].code: Kalem kodu tekrar ediyor (K)",
+      "groups[0].items[1].offer_item_id: Kalem teklifin son revizyonunda bulunamadı",
+      "groups[1].name: Aynı adlı grup var (G)",
+      "groups[1].items[0].offer_item_id: Teklif kaleminin katalog bağı gövdedekiyle uyuşmuyor",
+    ].join("; "));
+  });
+
+  it("group_disciplines → loc ['group_disciplines', ad] (detail etiketi yalnız 'group_disciplines'); fiyat farkı → ['contract', alan]; bedel → ['contract', 'amount']", async () => {
+    const seeded = await offer();
+    const reply = await convert(seeded.id, body(seeded, {
+      group_disciplines: { Olmayan: D1 },
+      contract: { contract_no: "S", signature_date: "2026-10-30", has_price_escalation: true },
+    }));
+    expect(reply.status).toBe(422);
+    expect(reply.json.errors).toEqual([
+      { loc: ["group_disciplines", "Olmayan"], message: "«Olmayan» adlı grup gövdede yok" },
+      { loc: ["contract", "index_type"], message: "Fiyat farkı açıkken endeks türü zorunludur" },
+      { loc: ["contract", "base_index_value"], message: "Fiyat farkı açıkken baz endeks zorunludur" },
+    ]);
+    expect(reply.json.detail).toBe(
+      "group_disciplines: «Olmayan» adlı grup gövdede yok; contract.index_type: Fiyat farkı açıkken endeks türü zorunludur; contract.base_index_value: Fiyat farkı açıkken baz endeks zorunludur",
+    );
+    const closed = await convert(seeded.id, body(seeded, { contract: { contract_no: "S", signature_date: "2026-10-30", has_price_escalation: false, index_type: "ufe", base_index_value: "1" } }));
+    expect(closed.json.errors.map((e: any) => e.loc)).toEqual([["contract", "index_type"], ["contract", "base_index_value"]]);
+    const huge = await convert(seeded.id, body(seeded, { groups: [{ name: "G", items: [line(CAT_A, "H", "10000", "1000000000000.00")] }] }));
+    expect(huge.json.errors).toEqual([{ loc: ["contract", "amount"], message: "Kalem toplamı sözleşme bedeli sınırını aşıyor" }]);
+    expect(huge.json.detail).toBe("contract.amount: Kalem toplamı sözleşme bedeli sınırını aşıyor");
+  });
+
+  it("şema 422 (FastAPI listesi) `errors` TAŞIMAZ", async () => {
+    const seeded = await offer();
+    const reply = await convert(seeded.id, { ...body(seeded), contract: undefined });
+    expect(reply.status).toBe(422);
+    expect(Array.isArray(reply.json.detail)).toBe(true);
+    expect(reply.json).not.toHaveProperty("errors");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────── TKL-B6.8 · elle proje kodu
+
+describe("🔴 ConvertProject.code: verilirse kullanılır (strip), çakışırsa 409, yoksa sunucu üretir", () => {
+  const withCode = (seeded: Seeded, code: unknown) =>
+    body(seeded, { project: { name: "A Blok Projesi", city: "İstanbul", start_date: "2026-11-01", end_date: "2027-10-31", code } });
+
+  it("verilen kod (strip) port'a ve yanıta gider; üretilmez", async () => {
+    const seeded = await offer();
+    const reply = await convert(seeded.id, withCode(seeded, "  OZEL-7  "));
+    expect(reply.status, JSON.stringify(reply.json)).toBe(200);
+    expect(reply.json.project_code).toBe("OZEL-7");
+    expect((written[0] as ConvertedProjectSpec).project.code).toBe("OZEL-7");
+  });
+
+  it("kod yok ya da null → port'a null (sunucu PRJ-YYYY-NNN üretir)", async () => {
+    const a = await offer();
+    expect((await convert(a.id, body(a))).status).toBe(200);
+    const b = await offer();
+    expect((await convert(b.id, withCode(b, null))).status).toBe(200);
+    expect(written.map((spec) => spec.project.code)).toEqual([null, null]);
+  });
+
+  it("kullanımdaki kod → 409 'Bu proje kodu zaten kullanılıyor'; HİÇBİR yazma yok, teklif dönüşmemiş", async () => {
+    takenCodes.add("OZEL-7");
+    const seeded = await offer();
+    const reply = await convert(seeded.id, withCode(seeded, "OZEL-7"));
+    expect(reply.status).toBe(409);
+    expect(reply.json).toEqual({ detail: "Bu proje kodu zaten kullanılıyor" });
+    expect(written).toHaveLength(0);
+    expect((await api("GET", `/offers/${seeded.id}`)).json.project_id).toBeNull();
+  });
+
+  it("sıra: statik 422 ve katalog 404, kod 409'undan ÖNCE", async () => {
+    takenCodes.add("OZEL-7");
+    const seeded = await offer();
+    const dup = body(seeded, {
+      project: { name: "A", city: "İ", start_date: "2026-11-01", end_date: "2027-10-31", code: "OZEL-7" },
+      groups: [{ name: "G", items: [line(CAT_A, "K", "1", "1"), line(CAT_B, "K", "1", "1")] }],
+    });
+    expect((await convert(seeded.id, dup)).status).toBe(422);
+    const missing = { ...dup, groups: [{ name: "G", items: [line(MISSING_CAT, "K", "1", "1")] }] };
+    expect((await convert(seeded.id, missing)).status).toBe(404);
+  });
+
+  it("boşluk-yalnız kod strip sonrası boş → şema 422; 51 karakter → şema 422", async () => {
+    const seeded = await offer();
+    for (const code of ["   ", "x".repeat(51)]) {
+      const reply = await convert(seeded.id, withCode(seeded, code));
+      expect(reply.status).toBe(422);
+      expect(Array.isArray(reply.json.detail)).toBe(true);
+    }
+  });
+});
+
+// ──────────────────────────────────────── TKL-B6.8 · okuma: project / converted_at / converted_by_name / history / conversion
+
+describe("🔴 dönüştürülmüş teklifin okuması: proje künyesi, dönüştürme anı/aktörü, history 'converted', `conversion` süzgeci", () => {
+  const detail = async (id: string) => (await api("GET", `/offers/${id}`)).json;
+  const listed = async (id: string) => ((await api("GET", "/offers")).json.items as any[]).find((item) => item.id === id);
+
+  it("dönüşmemiş teklif: project/converted_at/converted_by_name null (detay + liste)", async () => {
+    const seeded = await offer();
+    for (const read of [await detail(seeded.id), await listed(seeded.id)]) {
+      expect(read).toMatchObject({ project: null, converted_at: null, converted_by_name: null });
+    }
+  });
+
+  it("dönüştürünce detay + liste: project {id, code, name, slug}, converted_at, converted_by_name = aktör", async () => {
+    const seeded = await offer();
+    const reply = await convert(seeded.id, body(seeded));
+    const expected = {
+      project: { id: reply.json.project_id, code: reply.json.project_code, name: "A Blok Projesi", slug: "a-blok" },
+      converted_at: NOON,
+      converted_by_name: "Ahmet Yılmaz",
+    };
+    expect(await detail(seeded.id)).toMatchObject(expected);
+    expect(await listed(seeded.id)).toMatchObject(expected);
+  });
+
+  it("history: son olay 'converted' (rev_no = kazanılan revizyon, aktör, dönüştürme anı) — aynı anlı 'won'dan SONRA", async () => {
+    const seeded = await offer();
+    const before = (await detail(seeded.id)).history.map((e: any) => e.kind);
+    expect(before).not.toContain("converted");
+    await convert(seeded.id, body(seeded));
+    const history = (await detail(seeded.id)).history;
+    expect(history.map((e: any) => e.kind)).toEqual([...before, "converted"]);
+    expect(history[history.length - 1]).toEqual({ at: NOON, kind: "converted", rev_no: 0, user_id: ACTOR.id, user_name: "Ahmet Yılmaz" });
+  });
+
+  describe("GET /offers?conversion=", () => {
+    async function trio() {
+      const converted = await offer("won", { title: "Dönüşen" });
+      const pending = await offer("won", { title: "Bekleyen" });
+      const lost = await offer("lost", { title: "Kaybedilen" });
+      await convert(converted.id, body(converted));
+      return { converted, pending, lost };
+    }
+    const ids = async (query: string) => ((await api("GET", `/offers${query}`)).json.items as any[]).map((item) => item.id);
+
+    it("converted → yalnız project_id dolu; won_not_converted → son revizyon won + project yok (kaybedilen/taslak YOK)", async () => {
+      const { converted, pending } = await trio();
+      expect(await ids("?conversion=converted")).toEqual([converted.id]);
+      expect(await ids("?conversion=won_not_converted")).toEqual([pending.id]);
+    });
+
+    it("süzgeç `total`u daraltır, status ile kesişir; özet/kartlar süzgeçten BAĞIMSIZ", async () => {
+      await trio();
+      const all = (await api("GET", "/offers")).json;
+      const filtered = (await api("GET", "/offers?conversion=converted")).json;
+      expect(filtered.total).toBe(1);
+      expect(filtered.summary).toEqual(all.summary);
+      expect(await ids("?conversion=converted&status=lost")).toEqual([]);
+    });
+
+    it("tanınmayan değer → 422 (liste biçimi, loc ['query','conversion'])", async () => {
+      const reply = await api("GET", "/offers?conversion=bogus");
+      expect(reply.status).toBe(422);
+      expect(reply.json.detail[0]).toMatchObject({ loc: ["query", "conversion"], input: "bogus" });
+    });
   });
 });

@@ -48,6 +48,9 @@ export function makeDetail(overrides: Partial<OfferDetailRead> = {}): OfferDetai
     latest_rev_no: 2,
     conversion_state: null,
     project_id: null,
+    project: null,
+    converted_at: null,
+    converted_by_name: null,
     template_id: null,
     status: "draft",
     revisions: [

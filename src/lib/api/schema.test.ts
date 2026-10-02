@@ -729,6 +729,29 @@ describe("TKL-B5/B6 tip üretimi (TKL-F4.1 kapısı)", () => {
     >().toEqualTypeOf<false>();
   });
 
+  it("TKL-B6.8 dönüştürme ekran desteği: project/converted_at/converted_by_name ZORUNLU-nullable, history 'converted', ConvertProject.code isteğe bağlı", () => {
+    expectTypeOf<S["OfferProjectRef"]>().toEqualTypeOf<{ id: string; code: string; name: string; slug: string | null }>();
+    for (const read of [{} as S["OfferDetailRead"], {} as S["OfferListItem"]]) {
+      expectTypeOf(read.project).toEqualTypeOf<S["OfferProjectRef"] | null>();
+      expectTypeOf(read.converted_at).toEqualTypeOf<string | null>();
+      expectTypeOf(read.converted_by_name).toEqualTypeOf<string | null>();
+    }
+    expectTypeOf<
+      Record<string, never> extends Pick<S["OfferDetailRead"], "project" | "converted_at" | "converted_by_name"> ? true : false
+    >().toEqualTypeOf<false>();
+    expectTypeOf<
+      Record<string, never> extends Pick<S["OfferListItem"], "project" | "converted_at" | "converted_by_name"> ? true : false
+    >().toEqualTypeOf<false>();
+    expectTypeOf<S["OfferHistoryEventRead"]["kind"]>().toEqualTypeOf<
+      "opened" | "sent" | "won" | "lost" | "withdrawn" | "converted"
+    >();
+    expectTypeOf<S["ConvertProject"]["code"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<Record<string, never> extends Pick<S["ConvertProject"], "code"> ? true : false>().toEqualTypeOf<true>();
+    expectTypeOf<S["ConvertFieldError"]>().toEqualTypeOf<{ loc: (string | number)[]; message: string }>();
+    expectTypeOf<S["ConvertValidationErrorOut"]["detail"]>().toEqualTypeOf<string | Record<string, unknown>[]>();
+    expectTypeOf<S["ConvertValidationErrorOut"]["errors"]>().toEqualTypeOf<S["ConvertFieldError"][] | null | undefined>();
+  });
+
   it("Template PUT/PATCH expected_updated_at ZORUNLU (TKL-B5.4 iyimser kilit)", () => {
     expectTypeOf<S["TemplateUpdate"]["expected_updated_at"]>().toEqualTypeOf<string>();
     expectTypeOf<S["TemplateContentReplace"]["expected_updated_at"]>().toEqualTypeOf<string>();

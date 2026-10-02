@@ -237,6 +237,36 @@ describe("🔴 open_site: şantiye + TAM dağıtım (S-D2)", () => {
   });
 });
 
+describe("🔴 TKL-B6.8 elle proje kodu ana sahte durumda", () => {
+  const withCode = async (offer: { items: any[] }, code: string) => {
+    const base = (await bodyFor(offer)) as { project: Record<string, unknown> };
+    return await bodyFor(offer, { project: { ...base.project, code } });
+  };
+
+  it("verilen kod projeye yazılır (GET /projects); sonraki üretilen kod PRJ-{yıl}-001'den sürer", async () => {
+    const first = await wonOffer(NAMES);
+    const reply = await call("POST", `/offers/${first.id}/convert`, await withCode(first, "OZEL-7"));
+    expect(reply.status, JSON.stringify(reply.json)).toBe(200);
+    expect(reply.json.project_code).toBe("OZEL-7");
+    expect((await call("GET", "/projects")).json.items.find((p: any) => p.id === reply.json.project_id).code).toBe("OZEL-7");
+    const second = await wonOffer(NAMES);
+    const generated = await call("POST", `/offers/${second.id}/convert`, await bodyFor(second));
+    expect(generated.json.project_code).toBe(`PRJ-${new Date().getFullYear()}-001`);
+  });
+
+  it("aynı kod ikinci kez → 409 'Bu proje kodu zaten kullanılıyor', proje sayısı artmaz; fikstür kodu da çakışır", async () => {
+    const first = await wonOffer(NAMES);
+    await call("POST", `/offers/${first.id}/convert`, await withCode(first, "OZEL-7"));
+    const count = (await call("GET", "/projects")).json.items.length;
+    const second = await wonOffer(NAMES);
+    const dup = await call("POST", `/offers/${second.id}/convert`, await withCode(second, "OZEL-7"));
+    expect(dup).toMatchObject({ status: 409, json: { detail: "Bu proje kodu zaten kullanılıyor" } });
+    const fixtureCode = (await call("GET", "/projects")).json.items[0].code as string;
+    expect((await call("POST", `/offers/${second.id}/convert`, await withCode(second, fixtureCode))).status).toBe(409);
+    expect((await call("GET", "/projects")).json.items).toHaveLength(count);
+  });
+});
+
 describe("🔴 okuma türevleri gerçek mock'ta", () => {
   it("won_not_converted_count: tohum 1 kazanılmış → yeni kazanılan +1 → dönüştürünce -1; liste satırı converted + project_id", async () => {
     const baseline = (await call("GET", "/offers")).json.summary.won_not_converted_count;

@@ -25,6 +25,10 @@ export interface OfferRec {
   projectId: string | null;
   /** TKL-F5.1 · dönüştürme anı (`offers.converted_at`). */
   convertedAt: string | null;
+  /** TKL-B6.8 · dönüştürenin kimliği (`offers.converted_by_user_id`); okumada ad `users`tan çözülür (silinmişse `null`). */
+  convertedByUserId: string | null;
+  /** TKL-B6.8 · oluşan projenin kısa künyesi (`OfferProjectRef`; `project_id` ile birlikte yazılır). */
+  project: { id: string; code: string; name: string; slug: string | null } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -241,6 +245,8 @@ export interface ConvertedProjectSpec {
   employerId: string;
   employerName: string;
   project: {
+    /** TKL-B6.8 · elle verilen proje kodu (strip); `null` = sunucu `PRJ-YYYY-NNN` üretir. */
+    code: string | null;
     name: string;
     city: string;
     startDate: string;
@@ -279,6 +285,8 @@ export interface ConvertPort {
   disciplineExists: (disciplineId: string) => boolean;
   /** Katalog kaleminin disiplini (karışık disiplinli grup uyarısı için); bilinmiyorsa `null`. */
   disciplineOfCatalog: (catalogItemId: string) => string | null;
+  /** TKL-B6.8 · `projects.code` benzersiz: elle verilen kod başka projede var mı (409 "Bu proje kodu zaten kullanılıyor"). */
+  projectCodeExists: (code: string) => boolean;
   /** Proje + sözleşme + kalemler (+ şantiye + tam dağıtım) yazar; kimlikleri döner. EV taslağı YAZILMAZ. */
   createConvertedProject: (spec: ConvertedProjectSpec) => ConvertedProjectResult;
 }

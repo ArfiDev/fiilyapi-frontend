@@ -3215,7 +3215,8 @@ export interface paths {
          * @description Teklif listesi (son revizyonun durumu/tutari). `q`: no / is adi / isveren;
          *     `offer_date_from`/`offer_date_to`: son revizyonun teklif tarihi (dahil-dahil). Zarfta durum
          *     basina adet + KDV haric toplam, suresi gecmis adedi ve kazanma orani (`status`
-         *     filtresinden bagimsiz).
+         *     filtresinden bagimsiz). `conversion`: `won_not_converted` (son revizyon kazanildi, proje
+         *     yok) | `converted` (proje var); `status` gibi yalniz listeyi daraltir, ozeti degil.
          */
         get: operations["list_offers_endpoint_offers_get"];
         put?: never;
@@ -10761,6 +10762,16 @@ export interface components {
             /** Vat Pct */
             vat_pct?: number | string | null;
         };
+        /**
+         * ConvertFieldError
+         * @description Servis dogrulama 422'sinin tek yapisal hatasi: gövde konumu + mesaj.
+         */
+        ConvertFieldError: {
+            /** Loc */
+            loc: (string | number)[];
+            /** Message */
+            message: string;
+        };
         /** ConvertGroup */
         ConvertGroup: {
             /** Items */
@@ -10799,6 +10810,8 @@ export interface components {
             category?: string | null;
             /** City */
             city: string;
+            /** Code */
+            code?: string | null;
             /**
              * End Date
              * Format: date
@@ -10852,6 +10865,19 @@ export interface components {
             site_id: string | null;
             /** Warnings */
             warnings: components["schemas"]["ConvertWarning"][];
+        };
+        /**
+         * ConvertValidationErrorOut
+         * @description Donusturme 422 gövdesi: `detail` (insan metni, `; ` ile birlesik; Pydantic sema
+         *     422'lerinde standart FastAPI listesi) + servis dogrulamasinda `errors` (yapisal).
+         */
+        ConvertValidationErrorOut: {
+            /** Detail */
+            detail: string | {
+                [key: string]: unknown;
+            }[];
+            /** Errors */
+            errors?: components["schemas"]["ConvertFieldError"][] | null;
         };
         /**
          * ConvertWarning
@@ -15245,6 +15271,10 @@ export interface components {
         OfferDetailRead: {
             /** Conversion State */
             conversion_state: ("converted" | "won_not_converted") | null;
+            /** Converted At */
+            converted_at: string | null;
+            /** Converted By Name */
+            converted_by_name: string | null;
             /**
              * Created At
              * Format: date-time
@@ -15272,6 +15302,7 @@ export interface components {
             prepared_by_name: string | null;
             /** Prepared By User Id */
             prepared_by_user_id: string | null;
+            project: components["schemas"]["OfferProjectRef"] | null;
             /** Project Id */
             project_id: string | null;
             /** Revisions */
@@ -15346,7 +15377,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "opened" | "sent" | "won" | "lost" | "withdrawn";
+            kind: "opened" | "sent" | "won" | "lost" | "withdrawn" | "converted";
             /** Rev No */
             rev_no: number;
             /** User Id */
@@ -15512,6 +15543,10 @@ export interface components {
         OfferListItem: {
             /** Conversion State */
             conversion_state: ("converted" | "won_not_converted") | null;
+            /** Converted At */
+            converted_at: string | null;
+            /** Converted By Name */
+            converted_by_name: string | null;
             /**
              * Created At
              * Format: date-time
@@ -15540,6 +15575,7 @@ export interface components {
             offer_date: string;
             /** Offer No */
             offer_no: string;
+            project: components["schemas"]["OfferProjectRef"] | null;
             /** Project Id */
             project_id: string | null;
             /** Rev No */
@@ -15602,6 +15638,23 @@ export interface components {
          * @enum {string}
          */
         OfferPriceEscalation: "tuik" | "fixed";
+        /**
+         * OfferProjectRef
+         * @description Donusturmeyle olusan projenin kisa kunyesi (kimlik; para degil). `slug` NULLABLE olabilir.
+         */
+        OfferProjectRef: {
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string | null;
+        };
         /**
          * OfferRevisionRead
          * @description `GET /offers/{id}/revisions/{rev_no}` — kosullar + gruplar + kalemler + toplamlar.
@@ -33851,6 +33904,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: components["schemas"]["OfferRevisionStatus"] | null;
+                conversion?: ("converted" | "won_not_converted") | null;
                 q?: string | null;
                 employer_id?: string | null;
                 offer_date_from?: string | null;
@@ -34609,13 +34663,20 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description Zaten dönüştürüldü / kazanılmamış / proje kodu kullanılıyor */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doğrulama hatası; servis doğrulamasında `errors[].loc` yapısaldır */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ConvertValidationErrorOut"];
                 };
             };
         };

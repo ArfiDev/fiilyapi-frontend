@@ -8,9 +8,10 @@
 //  2. 404 "Teklif bulunamadı"                                   (`lock_offer`)
 //  3. 409 "Teklif zaten dönüştürüldü"  — `project_id` doluysa; won-değil kontrolünden ÖNCE (SO-36)
 //  4. 409 "Yalnız son revizyonu kazanılmış (won) …"
-//  5. STATİK hatalar, tek 422 (`{"detail": "a; b"}`, `OfferValidationError`): grup adı / kalem kodu tekilliği,
-//     `offer_item_id` ilişkisi, `group_disciplines` anahtarı, fiyat farkı tutarlılığı, bedel tavanı
+//  5. STATİK hatalar, tek 422 (`{"detail": "a; b", "errors": [{loc, message}]}`, `OfferValidationError` + TKL-B6.8 `_Issue`):
+//     grup adı / kalem kodu tekilliği, `offer_item_id` ilişkisi, `group_disciplines` anahtarı, fiyat farkı tutarlılığı, bedel tavanı
 //  6. 404 katalog iş tipi → 404 disiplin (ikisi de yazmadan önce)
+//  6b. 409 "Bu proje kodu zaten kullanılıyor" — yalnız ELLE `project.code` verilmişse (TKL-B6.8 BD-2; yazmadan önce)
 //  7. yaz (`port.convert.createConvertedProject`) → teklif `project_id`/`converted_at` (arşiv)
 // Hata = HİÇBİR yazma (backend tek işlem, ara commit yok).
 //
@@ -22,7 +23,7 @@
 import type { components } from "@/lib/api/schema";
 
 import { addDecimal, compareDecimal, isPositiveDecimal, multiplyDecimal, quantizeDecimal } from "./mock-offer-calc";
-import { fail, invalid, uuidParam, validate } from "./mock-offer-guards";
+import { Failure, fail, invalid, uuidParam, validate } from "./mock-offer-guards";
 import { findOffer } from "./mock-offer-service";
 import type { ConvertedGroupSpec, OffersPort, OffersState, RevisionRec } from "./mock-offer-types";
 import { latestRevision } from "./mock-offer-views";
@@ -32,8 +33,9 @@ type Json = Record<string, unknown>;
 
 export const CONVERT_MESSAGES = {
   alreadyConverted: "Teklif zaten dönüştürüldü",
+  projectCodeTaken: "Bu proje kodu zaten kullanılıyor",
   notWon: "Yalnız son revizyonu kazanılmış (won) olan teklif projeye dönüştürülebilir",
-  amountTooLarge: "contract.amount: Kalem toplamı sözleşme bedeli sınırını aşıyor",
+  amountTooLargeMessage: "Kalem toplamı sözleşme bedeli sınırını aşıyor",
   datesReversed: "project.end_date: Bitiş tarihi başlangıçtan önce olamaz",
   catalogMissing: "Katalog iş tipi bulunamadı",
   disciplineMissing: "Disiplin bulunamadı",
@@ -41,8 +43,9 @@ export const CONVERT_MESSAGES = {
   mixedGroup: "Grubun kalemleri birden çok disiplinde; Planlama'da disiplin elle eşlenmeli (eşlenmeden baseline dondurulamaz)",
   offerItemMissing: "Kalem teklifin son revizyonunda bulunamadı",
   offerItemCatalogMismatch: "Teklif kaleminin katalog bağı gövdedekiyle uyuşmuyor",
-  indexRequired: "contract.index_type: Fiyat farkı açıkken endeks türü zorunludur",
-  baseIndexRequired: "contract.base_index_value: Fiyat farkı açıkken baz endeks zorunludur",
+  indexRequired: "Fiyat farkı açıkken endeks türü zorunludur",
+  baseIndexRequired: "Fiyat farkı açıkken baz endeks zorunludur",
+  escalationClosed: "Fiyat farkı kapalıyken verilemez",
 } as const;
 
 const WARN_DISCIPLINES_IGNORED = "group_disciplines_ignored_without_site";
@@ -77,7 +80,7 @@ interface GroupIn {
 }
 
 interface Request {
-  project: { name: string; city: string; startDate: string; endDate: string; category: string | null; parcel: string | null; address: string | null };
+  project: { code: string | null; name: string; city: string; startDate: string; endDate: string; category: string | null; parcel: string | null; address: string | null };
   contract: {
     contractNo: string;
     signatureDate: string;
@@ -111,7 +114,7 @@ function blankViolation(body: Json): ReturnType<typeof invalid> | null {
   const project = body.project as Json;
   const contract = body.contract as Json;
   const found: Array<ReturnType<typeof invalid> | null> = [
-    ...["name", "city", "category", "parcel", "address"].map((key) => blank(project[key], ["project", key])),
+    ...["code", "name", "city", "category", "parcel", "address"].map((key) => blank(project[key], ["project", key])),
     blank(contract.contract_no, ["contract", "contract_no"]),
     blank(body.site_name, ["site_name"]),
   ];
@@ -184,6 +187,7 @@ function parseRequest(body: Json): Request {
   }
   return {
     project: {
+      code: optionalStrip(project.code),
       name: strip(project.name),
       city: strip(project.city),
       startDate: asText(project.start_date),
@@ -225,43 +229,58 @@ function resolveIndexType(request: Request, revision: RevisionRec): string | nul
   return revision.priceEscalation === "tuik" ? revision.priceIndexType : null;
 }
 
-function escalationErrors(request: Request, revision: RevisionRec): string[] {
+/** Backend `_Issue`: yapısal `loc` + mesaj; `detail` metni `label: mesaj` (etiket yoksa `loc`un `a[0].b` yolu). */
+export interface Issue {
+  loc: ReadonlyArray<string | number>;
+  message: string;
+  label?: string;
+}
+
+/** Backend `_path`: tamsayı parça `[i]`, metin parça `.ad` (ilk parça başında noktasız). */
+export function locPath(loc: ReadonlyArray<string | number>): string {
+  return loc.reduce<string>((out, part) => (typeof part === "number" ? `${out}[${part}]` : out === "" ? part : `${out}.${part}`), "");
+}
+
+const issueDetail = (issue: Issue): string => `${issue.label ?? locPath(issue.loc)}: ${issue.message}`;
+
+function escalationErrors(request: Request, revision: RevisionRec): Issue[] {
   const { contract } = request;
   if (!contract.hasPriceEscalation) {
     return [
-      ...(contract.indexType !== null ? ["contract.index_type: Fiyat farkı kapalıyken verilemez"] : []),
-      ...(contract.baseIndexValue !== null ? ["contract.base_index_value: Fiyat farkı kapalıyken verilemez"] : []),
+      ...(contract.indexType !== null ? [{ loc: ["contract", "index_type"], message: CONVERT_MESSAGES.escalationClosed }] : []),
+      ...(contract.baseIndexValue !== null ? [{ loc: ["contract", "base_index_value"], message: CONVERT_MESSAGES.escalationClosed }] : []),
     ];
   }
   return [
-    ...(resolveIndexType(request, revision) === null ? [CONVERT_MESSAGES.indexRequired] : []),
-    ...(contract.baseIndexValue === null ? [CONVERT_MESSAGES.baseIndexRequired] : []),
+    ...(resolveIndexType(request, revision) === null ? [{ loc: ["contract", "index_type"], message: CONVERT_MESSAGES.indexRequired }] : []),
+    ...(contract.baseIndexValue === null ? [{ loc: ["contract", "base_index_value"], message: CONVERT_MESSAGES.baseIndexRequired }] : []),
   ];
 }
 
-function staticErrors(request: Request, revision: RevisionRec, offerItems: ReadonlyMap<string, string>): string[] {
-  const errors: string[] = [];
+function staticErrors(request: Request, revision: RevisionRec, offerItems: ReadonlyMap<string, string>): Issue[] {
+  const errors: Issue[] = [];
   const names = new Set<string>();
   const codes = new Set<string>();
   request.groups.forEach((group, g) => {
-    if (names.has(group.name)) errors.push(`groups[${g}].name: Aynı adlı grup var (${group.name})`);
+    if (names.has(group.name)) errors.push({ loc: ["groups", g, "name"], message: `Aynı adlı grup var (${group.name})` });
     names.add(group.name);
     group.items.forEach((item, i) => {
-      const where = `groups[${g}].items[${i}]`;
-      if (codes.has(item.code)) errors.push(`${where}.code: Kalem kodu tekrar ediyor (${item.code})`);
+      const where = ["groups", g, "items", i] as const;
+      if (codes.has(item.code)) errors.push({ loc: [...where, "code"], message: `Kalem kodu tekrar ediyor (${item.code})` });
       codes.add(item.code);
       if (item.offerItemId === null) return;
       const sourceCatalog = offerItems.get(item.offerItemId);
-      if (sourceCatalog === undefined) errors.push(`${where}.offer_item_id: ${CONVERT_MESSAGES.offerItemMissing}`);
-      else if (sourceCatalog !== item.catalogItemId) errors.push(`${where}.offer_item_id: ${CONVERT_MESSAGES.offerItemCatalogMismatch}`);
+      const loc = [...where, "offer_item_id"];
+      if (sourceCatalog === undefined) errors.push({ loc, message: CONVERT_MESSAGES.offerItemMissing });
+      else if (sourceCatalog !== item.catalogItemId) errors.push({ loc, message: CONVERT_MESSAGES.offerItemCatalogMismatch });
     });
   });
   for (const name of request.groupDisciplines.keys()) {
-    if (!names.has(name)) errors.push(`group_disciplines: «${name}» adlı grup gövdede yok`);
+    if (!names.has(name)) errors.push({ loc: ["group_disciplines", name], message: `«${name}» adlı grup gövdede yok`, label: "group_disciplines" });
   }
   errors.push(...escalationErrors(request, revision));
   if (compareDecimal(itemTotal(request.groups), AMOUNT_LIMIT) >= 0 && request.contract.amount === null) {
-    errors.push(CONVERT_MESSAGES.amountTooLarge);
+    errors.push({ loc: ["contract", "amount"], message: CONVERT_MESSAGES.amountTooLargeMessage });
   }
   return errors;
 }
@@ -315,7 +334,10 @@ export function handleConvert(
 
     const items = state.items.filter((item) => item.revisionId === revision.id);
     const errors = staticErrors(request, revision, new Map(items.map((item) => [item.id, item.catalogItemId])));
-    if (errors.length > 0) throw fail(422, errors.join("; "));
+    if (errors.length > 0) {
+      // Backend `OfferValidationError(detail, errors)`: `detail` `; ` birleşik METİN, `errors` yapısal (şema 422'leri bunu TAŞIMAZ).
+      throw new Failure(422, { detail: errors.map(issueDetail).join("; "), errors: errors.map(({ loc, message }) => ({ loc: [...loc], message })) });
+    }
     const rates = new Map(port.catalog().map((entry) => [entry.id.toLowerCase(), entry.standardUnitMhr]));
     const known = new Set(rates.keys());
     if (request.groups.some((group) => group.items.some((item) => !known.has(item.catalogItemId)))) {
@@ -323,6 +345,10 @@ export function handleConvert(
     }
     if ([...request.groupDisciplines.values()].some((id) => !convert.disciplineExists(id))) {
       throw fail(404, CONVERT_MESSAGES.disciplineMissing);
+    }
+    // BD-2: elle verilen kod yazmadan ÖNCE denetlenir (üretilen kod danışma kilidi altında çakışmaz).
+    if (request.project.code !== null && convert.projectCodeExists(request.project.code)) {
+      throw fail(409, CONVERT_MESSAGES.projectCodeTaken);
     }
 
     const warnings = warningsOf(request, port, rates, new Map(items.map((item) => [item.id, item.unitMhr])));
@@ -353,7 +379,7 @@ export function handleConvert(
     });
 
     const at = state.clock().toISOString();
-    state.offers = state.offers.map((entry) => (entry.id === offer.id ? { ...entry, projectId: created.projectId, convertedAt: at, updatedAt: at } : entry));
+    state.offers = state.offers.map((entry) => (entry.id === offer.id ? { ...entry, projectId: created.projectId, convertedAt: at, convertedByUserId: port.actor.id, project: { id: created.projectId, code: created.projectCode, name: request.project.name, slug: created.projectSlug }, updatedAt: at } : entry));
     const response: S["ConvertResponse"] = {
       project_id: created.projectId,
       project_slug: created.projectSlug,

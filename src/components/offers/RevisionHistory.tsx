@@ -14,10 +14,11 @@ export const HISTORY_KIND_LABEL: Readonly<Record<HistoryKind, string>> = {
   won: "kazanıldı",
   lost: "kaybedildi",
   withdrawn: "vazgeçildi",
+  converted: "projeye dönüştürüldü",
 };
 
 /** Aynı anda olan olaylarda doğal sıra (en yenisi üstte: tersi uygulanır). */
-const KIND_RANK: Readonly<Record<HistoryKind, number>> = { opened: 0, sent: 1, won: 2, lost: 2, withdrawn: 2 };
+const KIND_RANK: Readonly<Record<HistoryKind, number>> = { opened: 0, sent: 1, won: 2, lost: 2, withdrawn: 2, converted: 3 };
 
 /** Tutarı revizyon içeriği kesinleşmiş (gönderildi/kazanıldı/kaybedildi) olaylarda basılır (ÜS-F3-24: KDV hariç). */
 const AMOUNT_KINDS: ReadonlySet<HistoryKind> = new Set(["sent", "won", "lost"]);
