@@ -60,3 +60,6 @@ const TAG_LABELS: Readonly<Record<NonNullable<RowTag>, string>> = {
 export function rowTagLabel(tag: RowTag): string | null {
   return tag === null ? null : TAG_LABELS[tag];
 }
+
+/** Kod / sözleşme no büyük harfi: Türkçe kurallı (i→İ, ı→I). Yazarken DEĞİL, alandan çıkınca ve gövde kurulurken uygulanır. */
+export const upperTr = (value: string): string => value.toLocaleUpperCase("tr-TR");

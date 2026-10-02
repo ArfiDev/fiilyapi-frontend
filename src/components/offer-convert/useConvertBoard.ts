@@ -61,7 +61,6 @@ export function useConvertBoard({ detail, revision, catalogItems, convert }: Boa
   const [step, setStep] = useState<ConvertStep>(1);
   const [shown, setShown] = useState({ 1: false, 2: false });
   const [located, setLocated] = useState<LocatedIssues | null>(null);
-  const lastBody = useRef<OfferConvertBody | null>(null);
   const inFlight = useRef(false);
 
   const errors1 = useMemo(() => validateStep1(form), [form]);
@@ -73,13 +72,19 @@ export function useConvertBoard({ detail, revision, catalogItems, convert }: Boa
 
   useUnsavedChanges(!isDone && (isFormDirty(form, initial.form) || draft !== initial.draft), UNSAVED_LABEL);
 
-  const changeForm: <K extends keyof ConvertForm>(field: K, value: ConvertForm[K]) => void = (field, value) => {
-    setForm((previous) => ({ ...previous, [field]: value }));
+  /** Her düzenleme sunucu hata durumunu eskitir: bant + konumlar temizlenir (başarı durumuna DOKUNULMAZ). */
+  const clearFailure = (): void => {
     setLocated(null);
+    if (convert.isError) convert.reset();
+  };
+  const changeForm: <K extends keyof ConvertForm>(field: K, value: ConvertForm[K]) => void = (field, value) => {
+    if (form[field] === value) return;
+    setForm((previous) => ({ ...previous, [field]: value }));
+    clearFailure();
   };
   const changeDraft = (change: (current: ConvertDraft) => ConvertDraft): void => {
     setDraft(change);
-    setLocated(null);
+    clearFailure();
   };
 
   /** Geçersiz ilk adımı açar ve hatalarını görünür kılar ("ileri" kapısının ortak ucu). */
@@ -98,7 +103,6 @@ export function useConvertBoard({ detail, revision, catalogItems, convert }: Boa
   function submit(body: OfferConvertBody): void {
     if (inFlight.current || isBusy) return;
     inFlight.current = true;
-    lastBody.current = body;
     setLocated(null);
     convert.mutate(body, {
       onError: (error) => showFailure(classifyConvertError(error)),
@@ -146,7 +150,8 @@ export function useConvertBoard({ detail, revision, catalogItems, convert }: Boa
     next: () => goTo(Math.min(step + 1, 3) as ConvertStep),
     back: () => goTo(Math.max(step - 1, 1) as ConvertStep),
     create,
-    retry: () => lastBody.current !== null && submit(lastBody.current),
+    /** "Tekrar dene" = "Oluştur": GÜNCEL form/taslaktan gövde yeniden kurulur ve doğrulanır (bayat gövde YOK). */
+    retry: create,
     actions: {
       onToggle: (key: string) => changeDraft((current) => model.toggleIncluded(current, key)),
       onQty: (key: string, raw: string) => changeDraft((current) => model.setQty(current, key, raw)),

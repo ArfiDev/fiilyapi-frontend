@@ -5,6 +5,7 @@ import { LockIcon } from "@/components/ui/icons";
 import { PRICE_INDEX_OPTIONS, type PriceIndexType } from "@/lib/contract-labels";
 import { durationDays } from "@/lib/form/derive";
 
+import { upperTr } from "./convert-format";
 import type { ConvertForm } from "./convert-types";
 import type { Step1Errors } from "./convert-validate";
 import "./offer-convert.css";
@@ -47,7 +48,8 @@ export function ConvertProjectStep({ form, errors, employerName, isDatesFromOffe
               value={form.projectCode}
               placeholder="PRJ-2026-005"
               status={statusOf(errors.projectCode)}
-              onChange={(e) => onChange("projectCode", e.target.value.toUpperCase())}
+              onChange={(e) => onChange("projectCode", e.target.value)}
+              onBlur={(e) => onChange("projectCode", upperTr(e.target.value))}
             />
           )}
         </Field>
@@ -60,7 +62,8 @@ export function ConvertProjectStep({ form, errors, employerName, isDatesFromOffe
               value={form.contractNo}
               placeholder="SZL-2026-005"
               status={statusOf(errors.contractNo)}
-              onChange={(e) => onChange("contractNo", e.target.value.toUpperCase())}
+              onChange={(e) => onChange("contractNo", e.target.value)}
+              onBlur={(e) => onChange("contractNo", upperTr(e.target.value))}
             />
           )}
         </Field>

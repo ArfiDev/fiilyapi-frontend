@@ -59,9 +59,14 @@ export function ConvertItemRow({ row, errors, isCodeEditable, onToggle, onQty, o
             {tag !== null && <span className={cx("convert-tag", row.isNew && "convert-tag--new", !row.included && !row.isNew && "convert-tag--excluded")}>{tag}</span>}
           </span>
           {row.note !== null && <span className="convert-row__note">{row.note}</span>}
+          {errors?.description && <span className="convert-error-text">{errors.description}</span>}
+          {errors?.offerItem && <span className="convert-error-text">{errors.offerItem}</span>}
         </div>
       </td>
-      <td>{row.unit}</td>
+      <td>
+        {row.unit}
+        {errors?.unit && <span className="convert-error-text">{errors.unit}</span>}
+      </td>
       <td className="convert-num">
         <div className="convert-cell">
           <Input

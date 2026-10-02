@@ -33,7 +33,7 @@ export function ConvertConfirmStep({ form, summary, employerName }: ConvertConfi
       sub: `${summary.includedCount} kalem · ${formatMoneyTl(summary.contractTotal)} KDV hariç · katalog bağlı`,
     },
     form.openSite
-      ? { kind: "ŞANTİYE", title: `${siteName} Şantiyesi`, sub: "Bütün kalemler bu şantiyeye bağlanır" }
+      ? { kind: "ŞANTİYE", title: siteName, sub: "Bütün kalemler bu şantiyeye bağlanır" }
       : { kind: "ŞANTİYE", title: "Şantiye açılmayacak", sub: "Şantiyeyi sonra proje sayfasından açın" },
   ];
   const isNeg = isNegative(summary.difference);

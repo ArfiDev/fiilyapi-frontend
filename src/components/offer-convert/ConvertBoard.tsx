@@ -82,8 +82,8 @@ export function ConvertBoard({ detail, revision, catalogItems, disciplines, conv
         />
       )}
       {board.step === 3 && <ConvertConfirmStep form={board.form} summary={board.summary} employerName={detail.employer_name} />}
-      {convert.data !== undefined && board.isDone && (
-        <ConvertDoneBand response={convert.data} projectName={board.form.projectName.trim()} contractNo={board.form.contractNo.trim()} offerNo={detail.offer_no} />
+      {convert.data !== undefined && convert.variables !== undefined && board.isDone && (
+        <ConvertDoneBand response={convert.data} projectName={convert.variables.project.name} contractNo={convert.variables.contract.contract_no} offerNo={detail.offer_no} />
       )}
       {board.failure !== null && <ConvertErrorBand failure={board.failure} onRetry={board.retry} />}
       <ConvertFooter

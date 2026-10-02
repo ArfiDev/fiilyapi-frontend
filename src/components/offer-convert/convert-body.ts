@@ -9,6 +9,7 @@
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import { parseQuantityInput } from "@/lib/tr-decimal";
 
+import { upperTr } from "./convert-format";
 import { includedRows, mixedGroupKeys, sentGroupKeys } from "./convert-model";
 import { parsedRow } from "./convert-derive";
 import type { ConvertDraft, ConvertForm, ConvertRequest, ConvertRow } from "./convert-types";
@@ -70,7 +71,7 @@ function groupDisciplines(draft: ConvertDraft): Record<string, string> {
 
 function bodyContract(form: ConvertForm): Body["contract"] {
   const base = {
-    contract_no: form.contractNo.trim(),
+    contract_no: upperTr(form.contractNo.trim()),
     signature_date: form.signatureDate,
     has_price_escalation: form.hasPriceEscalation,
   };
@@ -90,7 +91,7 @@ function siteFields(form: ConvertForm, draft: ConvertDraft): Pick<Body, "site_na
 }
 
 function bodyProject(form: ConvertForm): Body["project"] {
-  const code = form.projectCode.trim();
+  const code = upperTr(form.projectCode.trim());
   return {
     name: form.projectName.trim(),
     city: form.city.trim(),

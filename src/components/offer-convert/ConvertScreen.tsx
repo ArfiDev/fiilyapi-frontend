@@ -100,10 +100,12 @@ function ConvertLoader({ detail, convert }: ConvertLoaderProps) {
   const catalogQuery = useCatalogItems();
   const disciplinesQuery = useCatalogDisciplines();
   if (isForbidden(revisionQuery.error) || isForbidden(catalogQuery.error)) return <AccessDenied />;
-  if (revisionQuery.isError || catalogQuery.isError) {
+  if (revisionQuery.data === undefined || catalogQuery.data === undefined) {
+    // Hata dalı YALNIZ veri yokken: veri varken başarısız yeniden okuma (TanStack v5'te isError=true) tahtayı SÖKMEZ.
+    const isFailed = (revisionQuery.data === undefined && revisionQuery.isError) || (catalogQuery.data === undefined && catalogQuery.isError);
+    if (!isFailed) return <p className="offers-state">Revizyon yükleniyor</p>;
     return <LoadError text="Teklif kalemleri yüklenemedi" onRetry={() => void Promise.all([revisionQuery.refetch(), catalogQuery.refetch()])} />;
   }
-  if (revisionQuery.data === undefined || catalogQuery.data === undefined) return <p className="offers-state">Revizyon yükleniyor</p>;
   return (
     <ConvertBoard
       key={`${detail.id}:${revisionQuery.data.rev_no}`}

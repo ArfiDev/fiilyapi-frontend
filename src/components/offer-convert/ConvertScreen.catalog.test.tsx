@@ -158,10 +158,11 @@ describe("'Listede var' ve silme", () => {
     const user = userEvent.setup();
     renderConvert();
     await toStep2(user);
+    await priceDemir(user, "0"); // F5.3b (O2): fiyatsız satır varken Σ "—" basar; kesin Σ için demir 0
     await addSzl(user);
     await user.click(within(rowOf("n:0")).getByRole("checkbox", { name: "Sözleşmeye dahil et" }));
     expect(screen.queryByTestId("convert-row-n:0")).not.toBeInTheDocument();
-    expect(screen.getByText("3 dahil · 0 çıkarıldı · 0 değişti · 0 yeni")).toBeInTheDocument();
+    expect(screen.getByText("3 dahil · 0 çıkarıldı · 1 değişti · 0 yeni")).toBeInTheDocument();
     expect(summaryTotal()).toContain("₺6.288,00");
     await openPicker(user);
     expect(pickerCheck(LAST_SZL.poz_no)).toBeEnabled();

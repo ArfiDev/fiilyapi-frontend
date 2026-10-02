@@ -51,11 +51,12 @@ describe("Adım 1 · proje + sözleşme (plan §1, ÜS-F5-7…11)", () => {
     expect(screen.getByText("Tekliften gelir · değiştirilemez")).toBeInTheDocument();
   });
 
-  it("sözleşme no ve proje kodu BÜYÜK HARFE çevrilir (TDN:309)", async () => {
+  it("sözleşme no ve proje kodu alandan ÇIKINCA BÜYÜK HARFE çevrilir (TDN:309; F5.3b: yazarken değil — imleç sona atlamasın)", async () => {
     const user = userEvent.setup();
     renderConvert();
     await user.type(await screen.findByLabelText("Sözleşme no"), "szl-2026-011");
     await user.type(screen.getByLabelText("Proje kodu"), "prj-2026-009");
+    await user.tab();
     expect(fieldValue("Sözleşme no")).toBe("SZL-2026-011");
     expect(fieldValue("Proje kodu")).toBe("PRJ-2026-009");
   });
@@ -357,7 +358,7 @@ describe("Adım 3 · onay (plan §1)", () => {
     expect(within(step).getByText("İşveren Kuzey Gayrimenkul A.Ş. · 02.10.2026 → 25.11.2027")).toBeInTheDocument();
     expect(within(step).getByText("SZL-2026-011 · 02.10.2026")).toBeInTheDocument();
     expect(within(step).getByText("3 kalem · ₺6.488,00 KDV hariç · katalog bağlı")).toBeInTheDocument();
-    expect(within(step).getByText("Güneşkent Konut Kompleksi Şantiyesi")).toBeInTheDocument();
+    expect(within(step).getByText("Güneşkent Konut Kompleksi", { selector: ".convert-make__title" })).toBeInTheDocument();
     expect(within(step).getByText("Bütün kalemler bu şantiyeye bağlanır")).toBeInTheDocument();
     expect(within(step).getByText("Tutarlar · KDV hariç")).toBeInTheDocument();
     expect(fieldText(step, "Teklif tutarı")).toContain("₺6.288,00");

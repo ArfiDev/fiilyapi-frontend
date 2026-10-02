@@ -350,7 +350,7 @@ describe("hata dalları (plan §1 'Hata bandı')", () => {
     expect(screen.getByTestId("convert-error")).toHaveTextContent("Bu proje kodu zaten kullanılıyor");
   });
 
-  it("409 veri bütünlüğü: bant + 'Tekrar dene' AYNI gövdeyle yeniden gönderir ve başarır", async () => {
+  it("409 veri bütünlüğü: bant + 'Tekrar dene' (düzenleme yok → GÜNCEL durumdan kurulan gövde ilkine eşit) yeniden gönderir ve başarır; düzenlenmiş durum ConvertScreen.repair.test'te", async () => {
     let calls = 0;
     installBackend(wonBackend({ post: () => (++calls === 1 ? fail(409, { detail: "Veri bütünlüğü hatası" }) : ok(CONVERT_RESPONSE)) }));
     const user = userEvent.setup();
