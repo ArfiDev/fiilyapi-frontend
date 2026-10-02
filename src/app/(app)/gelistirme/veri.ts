@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-02 12:55",
+  guncellendi: "2026-10-02 13:45",
   gorevler: [
     {
       kod: "BLF",
@@ -77,7 +77,7 @@ export const VERI: GelistirmeVerisi = {
       acilim: "İş Kalemi Kataloğu + Teklif Hazırlama",
       aciklama:
         "Katalogdan tıklayıp kalem ekleme; yan menüde Teklif Hazırlama (revizyon, PDF/Excel, kâr/gider, KDV, koşullar); kazanılan teklif projeye dönüşür.",
-      durum: "devam",
+      durum: "bitti",
       spec: "TEKLIF-KATALOG-HAZIRLIK.md",
       dilimler: [
         { kod: "P0", aciklama: "Mimari plan: katalog yeri, veri modeli, son fiyat, dönüştürme, dilimler", durum: "bitti", hat: "backend" },
@@ -87,8 +87,8 @@ export const VERI: GelistirmeVerisi = {
         { kod: "B3", aciklama: "Sözleşme kalemine katalog bağı + toplu ekleme + son fiyat (sözleşme, onaylı hakediş)", durum: "bitti", hat: "backend", pr: "backend #157" },
         { kod: "F2", aciklama: "Sözleşmede katalogdan çoklu seçici + katalogda son fiyat kolonu + sözleşme sayfasında Türkçe sayı kuralı", durum: "bitti", hat: "frontend", pr: "frontend #163" },
         { kod: "B4 / F3", aciklama: "Teklif çekirdeği + Liste / Yeni / Detay / kalem tablosu / PDF (işveren + iç döküm)", durum: "bitti", hat: "frontend", pr: "backend #158 · frontend #164" },
-        { kod: "B5 / F4", aciklama: "Şablonlar, tekliften kopya, Excel işveren/iç (backend canlıda) + ekranlar (yapılıyor)", durum: "devam", hat: "frontend", pr: "backend #159" },
-        { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0 taslak (backend canlıda) + dönüştürme ekranı", durum: "sirada", hat: "frontend", pr: "backend #160", bagimlilik: "F4" },
+        { kod: "B5 / F4", aciklama: "Şablonlar, tekliften kopya, Excel işveren/iç, miktarsız kalem", durum: "bitti", hat: "frontend", pr: "backend #159 · frontend #165" },
+        { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0 taslak + dönüştürme ekranı + Sözleşmeden doldur", durum: "bitti", hat: "frontend", pr: "backend #160 #162 · frontend #166" },
       ],
       kararlar: [
         "Veri düzeyinde tek katalog; Planlama'da fiyatsız Birim Oran Kataloğu, teklif/sözleşmede fiyatlı İş Kalemi Kataloğu.",
