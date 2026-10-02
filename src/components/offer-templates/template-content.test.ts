@@ -13,6 +13,8 @@ import {
   editRemoveGroup,
   editRemoveItem,
   editRenameGroup,
+  groupKeysOf,
+  parseGroupKey,
   removeGroup,
   removeItem,
   renameGroup,
@@ -205,5 +207,42 @@ describe("applyEdit", () => {
 
   it("hata sonucu aynen iletilir", () => {
     expect(applyEdit(makeTemplateDetail(), addGroup("Betonarme"))).toEqual({ ok: false, error: "Bu adla grup var" });
+  });
+});
+
+describe("aynı adlı gruplar: (ad, sıra) çifti ile çözülür (TKL-F4.6b O1/Y1)", () => {
+  const twins = () => draftOf([["Yeni grup", ["c1"]], ["Yeni grup", ["c2"]], ["Kalıp", []]]);
+
+  it("🔴 kalıcı grup anahtarı = ad#aynı adlı gruplar arasındaki sıra; ayrıştırma son '#'ten bölünür", () => {
+    expect(groupKeysOf(twins())).toEqual(["Yeni grup#0", "Yeni grup#1", "Kalıp#0"]);
+    expect(parseGroupKey("Yeni grup#1")).toEqual({ name: "Yeni grup", nth: 1 });
+    expect(parseGroupKey("C# grubu#0")).toEqual({ name: "C# grubu", nth: 0 });
+    expect(parseGroupKey("bozuk")).toBeNull();
+  });
+
+  it("🔴 editRemoveItem ikinci aynı adlı gruptaki kalemi o gruptan siler (ilk eşleşmeye gitmez)", () => {
+    expect(groupsOf(editRemoveItem("Yeni grup", "c2", 1)(twins()))).toEqual([["Yeni grup", ["c1"]], ["Yeni grup", []], ["Kalıp", []]]);
+  });
+
+  it("🔴 editAddItems ikinci aynı adlı gruba ekler", () => {
+    expect(groupsOf(editAddItems({ groupName: "Yeni grup", nth: 1 }, ["c9"])(twins()))).toEqual([
+      ["Yeni grup", ["c1"]],
+      ["Yeni grup", ["c2", "c9"]],
+      ["Kalıp", []],
+    ]);
+  });
+
+  it("🔴 editRemoveGroup / editRenameGroup sıradaki gruba işler", () => {
+    const empty = draftOf([["Yeni grup", ["c1"]], ["Yeni grup", []]]);
+    expect(groupsOf(editRemoveGroup("Yeni grup", 1)(empty))).toEqual([["Yeni grup", ["c1"]]]);
+    expect(groupsOf(editRenameGroup("Yeni grup", "Cephe", 1)(empty))).toEqual([["Yeni grup", ["c1"]], ["Cephe", []]]);
+  });
+
+  it("🔴 çözülemeyen grup SESSİZ no-op değildir: açık hata (kalem silme, grup silme, ekleme, yeniden adlandırma)", () => {
+    expect(editRemoveItem("Yeni grup", "c2", 5)(twins())).toEqual({ ok: false, error: "Grup bulunamadı" });
+    expect(editRemoveItem("Yok", "c1")(twins())).toEqual({ ok: false, error: "Grup bulunamadı" });
+    expect(editRemoveGroup("Yok")(twins())).toEqual({ ok: false, error: "Grup bulunamadı" });
+    expect(editAddItems({ groupName: "Yeni grup", nth: 2 }, ["c"])(twins())).toEqual({ ok: false, error: "Grup bulunamadı" });
+    expect(editRenameGroup("Yok", "X")(twins())).toEqual({ ok: false, error: "Grup bulunamadı" });
   });
 });

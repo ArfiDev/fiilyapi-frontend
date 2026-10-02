@@ -3,6 +3,7 @@ import type { WorkItemRead } from "@/lib/api/models";
 import { Button } from "@/components/ui";
 
 import { TemplateGroupRow } from "./TemplateGroupRow";
+import { groupKey, groupRefsOf, type GroupRef } from "./template-content";
 import { catalogPriceCell, formatAsPerUnit, groupCode } from "./template-model";
 import "./offer-templates.css";
 
@@ -16,13 +17,15 @@ interface TemplateItemsTableProps {
   onAddGroup: () => void;
   /** "+ Katalogdan Ekle": seçiciyi açar (F4.6). */
   onAddFromCatalog: () => void;
-  onRenameGroup: (groupName: string, newName: string) => void;
-  onRemoveGroup: (groupName: string) => void;
-  onRemoveItem: (groupName: string, catalogItemId: string) => void;
+  /** Grup (ad, aynı adlılar arasındaki sıra) çiftiyle anılır: ad tek başına aynı adlı grupta yanlış gruba giderdi. */
+  onRenameGroup: (group: GroupRef, newName: string) => void;
+  onRemoveGroup: (group: GroupRef) => void;
+  onRemoveItem: (group: GroupRef, catalogItemId: string) => void;
 }
 
 /** TS:130-159 — "Kalemler" kartı: üst şerit + Poz No · Tarif · Birim · Katalog son fiyat · A-s / birim · × tablosu. */
 export function TemplateItemsTable({ detail, catalog, canEdit, onAddGroup, onAddFromCatalog, onRenameGroup, onRemoveGroup, onRemoveItem }: TemplateItemsTableProps) {
+  const refs = groupRefsOf(detail.groups);
   return (
     <section className="otpl-items" aria-label="Şablon kalemleri">
       <div className="otpl-items__head">
@@ -70,7 +73,9 @@ export function TemplateItemsTable({ detail, catalog, canEdit, onAddGroup, onAdd
           <tbody>
             {detail.groups.map((group, index) => (
               <GroupBlock
-                key={group.id}
+                // Backend kimliği her PUT'ta değişir: satır yeniden kurulup yazılan grup adı kaybolmasın (TKL-F4.6b O4).
+                key={groupKey(group.name, refs[index]?.nth ?? 0)}
+                groupRef={refs[index] ?? { name: group.name, nth: 0 }}
                 code={groupCode(index)}
                 group={group}
                 catalog={catalog}
@@ -88,11 +93,12 @@ export function TemplateItemsTable({ detail, catalog, canEdit, onAddGroup, onAdd
 }
 
 type GroupBlockProps = Pick<TemplateItemsTableProps, "catalog" | "canEdit" | "onRenameGroup" | "onRemoveGroup" | "onRemoveItem"> & {
+  groupRef: GroupRef;
   code: string;
   group: OfferTemplateDetail["groups"][number];
 };
 
-function GroupBlock({ code, group, catalog, canEdit, onRenameGroup, onRemoveGroup, onRemoveItem }: GroupBlockProps) {
+function GroupBlock({ groupRef, code, group, catalog, canEdit, onRenameGroup, onRemoveGroup, onRemoveItem }: GroupBlockProps) {
   return (
     <>
       <TemplateGroupRow
@@ -100,8 +106,8 @@ function GroupBlock({ code, group, catalog, canEdit, onRenameGroup, onRemoveGrou
         name={group.name}
         itemCount={group.items.length}
         canEdit={canEdit}
-        onRename={(next) => onRenameGroup(group.name, next)}
-        onRemove={() => onRemoveGroup(group.name)}
+        onRename={(next) => onRenameGroup(groupRef, next)}
+        onRemove={() => onRemoveGroup(groupRef)}
       />
       {group.items.map((item) => {
         const catalogItem = catalog.get(item.catalog_item_id);
@@ -120,7 +126,7 @@ function GroupBlock({ code, group, catalog, canEdit, onRenameGroup, onRemoveGrou
                   className="otpl-x"
                   title={REMOVE_ITEM_TITLE}
                   aria-label={`${REMOVE_ITEM_TITLE}: ${item.poz_no}`}
-                  onClick={() => onRemoveItem(group.name, item.catalog_item_id)}
+                  onClick={() => onRemoveItem(groupRef, item.catalog_item_id)}
                 >
                   ×
                 </button>

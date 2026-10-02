@@ -41,7 +41,11 @@ import { WorkItemPickerToolbar } from "./WorkItemPickerToolbar";
 import "./work-item-picker.css";
 
 const GROUP_NAME_MESSAGE = "Yeni grup için ad girin";
+/** GECE KURALI: `selectOnly` hedef grubu (yeniden adlandırma/silme) ortadan kalktı — en kısa metin. */
+const TARGET_GROUP_GONE_MESSAGE = "Seçili grup artık yok";
 const NO_FILTER = "";
+/** `selectOnly`: hedef grup kayıp → seçim boş (gönderim kilitli). */
+const NO_GROUP_SELECTED = "";
 
 /**
  * F2.4'ün işleyeceği gönderim: yeni grup gerekiyorsa önce `newGroup` açılır, sonra
@@ -132,7 +136,11 @@ export function CatalogPickerModal<TBody>({
 
   // Hedef grup TÜRETİLMİŞ (ORTA-2): seçili grup `groups`tan düşmüşse varsayılana döner; gösterim ve gövde aynı değer.
   // Açılmış grup varken "+ Yeni Grup" o gruba çözülür (ikinci grup açılmaz).
-  const targetGroup = resolveTargetGroup(groupChoice, groups, createdGroup);
+  // `selectOnly` (şablon): seçilen grup artık yoksa SESSİZ geri düşme YOK (kalemler yanlış gruba yazılırdı) — seçim
+  // temizlenir, gönderim kilitlenir. `priced` hedeflerde F2.4.1 geri düşmesi birebir kalır.
+  const isTargetGone =
+    isSelectOnly && groupChoice !== NEW_GROUP_OPTION && !groups.some((group) => group.id === groupChoice);
+  const targetGroup = isTargetGone ? NO_GROUP_SELECTED : resolveTargetGroup(groupChoice, groups, createdGroup);
   const isNewGroup = targetGroup === NEW_GROUP_OPTION;
   const groupOptions = [
     ...[...groups].sort((a, b) => a.sort_order - b.sort_order).map((group) => ({ id: group.id, name: group.name })),
@@ -155,6 +163,7 @@ export function CatalogPickerModal<TBody>({
   const limit = selectionLimit(target, groups);
   const bandLines = [
     ...(submitError === null ? [] : [submitError]),
+    ...(isTargetGone ? [TARGET_GROUP_GONE_MESSAGE] : []),
     ...(selectedCount > limit.max ? [limit.message] : []),
     ...(problems[0] === undefined
       ? []
@@ -171,6 +180,7 @@ export function CatalogPickerModal<TBody>({
     selectedCount > 0 &&
     selectedCount <= limit.max &&
     problems.length === 0 &&
+    !isTargetGone &&
     !isGroupNameMissing &&
     !isGroupNameDuplicate;
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { backendErrorMessage } from "@/lib/api/error-message";
-import { useCopyOfferTemplate, useSetDefaultTemplate } from "@/lib/api/hooks/useOfferTemplateMutations";
+import { useCopyOfferTemplate } from "@/lib/api/hooks/useOfferTemplateMutations";
 import { useOfferTemplate, type OfferTemplateDetail, type OfferTemplateListItem } from "@/lib/api/hooks/useOfferTemplates";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import type { WorkItemRead } from "@/lib/api/models";
@@ -41,7 +41,6 @@ export function TemplateWorkspace(props: TemplateWorkspaceProps) {
   const { templateId, listItem, catalog, defaults, canWrite } = props;
   const query = useOfferTemplate(templateId);
   const editor = useTemplateContentEditor(templateId);
-  const makeDefault = useSetDefaultTemplate(templateId);
   const copy = useCopyOfferTemplate(templateId);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -65,12 +64,8 @@ export function TemplateWorkspace(props: TemplateWorkspaceProps) {
 
   async function handleMakeDefault() {
     setActionError(null);
-    try {
-      await makeDefault.mutateAsync();
-      props.onDefaultSet(detail.name);
-    } catch (failure) {
-      setActionError(backendErrorMessage(failure));
-    }
+    // İçerik/künye yazmalarıyla AYNI sıradan geçer (hata bandı da editörün bandıdır).
+    if (await editor.makeDefault()) props.onDefaultSet(detail.name);
   }
 
   async function handleCopy() {
@@ -95,7 +90,7 @@ export function TemplateWorkspace(props: TemplateWorkspaceProps) {
         usageCount={listItem.usage_count}
         defaults={defaults}
         canWrite={canWrite}
-        isBusy={makeDefault.isPending || copy.isPending}
+        isBusy={editor.isMakingDefault || copy.isPending}
         onPatch={(fields) => void editor.patch(fields)}
         onMakeDefault={() => void handleMakeDefault()}
         onCopy={() => void handleCopy()}
@@ -107,9 +102,9 @@ export function TemplateWorkspace(props: TemplateWorkspaceProps) {
         canEdit={canWrite}
         onAddGroup={() => void editor.edit(addGroup())}
         onAddFromCatalog={() => setIsPickerOpen(true)}
-        onRenameGroup={(groupName, newName) => void editor.edit(editRenameGroup(groupName, newName))}
-        onRemoveGroup={(groupName) => void editor.edit(editRemoveGroup(groupName))}
-        onRemoveItem={(groupName, catalogItemId) => void editor.edit(editRemoveItem(groupName, catalogItemId))}
+        onRenameGroup={(group, newName) => void editor.edit(editRenameGroup(group.name, newName, group.nth))}
+        onRemoveGroup={(group) => void editor.edit(editRemoveGroup(group.name, group.nth))}
+        onRemoveItem={(group, catalogItemId) => void editor.edit(editRemoveItem(group.name, catalogItemId, group.nth))}
       />
       {isPickerOpen && canWrite && (
         <TemplateCatalogPickerHost detail={detail} editor={editor} onClose={() => setIsPickerOpen(false)} />

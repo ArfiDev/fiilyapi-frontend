@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui";
+import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 const NAME_MAX_LENGTH = 200;
 /** GECE KURALI: mockup'ta grup silme yok (ÜS-F4-4); `×` ipucu. */
@@ -25,6 +26,8 @@ export function TemplateGroupRow({ code, name, itemCount, canEdit, onRename, onR
   // Escape girişi kaldırır; tarayıcı kaldırılan odaklı girişte `blur` atabilir → iptal bayrağı yazımı korur.
   const isCancelledRef = useRef(false);
   const isEditing = draft !== null;
+  // Satır-içi ad girişi de kaydedilmemiş sayılır (şablon adı/açıklaması/oranlar gibi): yazılan ad sessiz kaybolmasın.
+  useUnsavedChanges(isEditing && draft !== name, "Grup adı");
 
   useEffect(() => {
     if (isEditing) inputRef.current?.focus();

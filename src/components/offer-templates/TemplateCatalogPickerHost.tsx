@@ -7,7 +7,7 @@ import type { PickerGroup } from "@/components/work-item-picker/picker-model";
 import { TEMPLATE_PICKER_TARGET, type TemplateAddBody } from "@/components/work-item-picker/picker-target";
 import type { OfferTemplateDetail } from "@/lib/api/hooks/useOfferTemplates";
 
-import { editAddItems, type Edit } from "./template-content";
+import { MSG_GROUP_MISSING, editAddItems, groupKeysOf, parseGroupKey, type Edit } from "./template-content";
 import type { TemplateContentEditor } from "./useTemplateContentEditor";
 
 interface TemplateCatalogPickerHostProps {
@@ -16,10 +16,15 @@ interface TemplateCatalogPickerHostProps {
   onClose: () => void;
 }
 
-/** Şablon grubunu seçicinin yapısal grup görünümüne çevirir (`code` = poz no; şablonda çakışma kuralı yok). */
+/**
+ * Şablon grubunu seçicinin yapısal grup görünümüne çevirir (`code` = poz no; şablonda çakışma kuralı yok).
+ * 🔴 `id` = KALICI anahtar (`ad#sıra`), backend grup kimliği DEĞİL: her PUT kimlikleri yeniden üretir; seçici açıkken
+ * gelen bir tazeleme seçilen grubu kaybettirip son gruba düşürürdü (TKL-F4.6b Y1).
+ */
 function toPickerGroups(groups: OfferTemplateDetail["groups"]): PickerGroup[] {
-  return groups.map((group) => ({
-    id: group.id,
+  const keys = groupKeysOf(groups);
+  return groups.map((group, index) => ({
+    id: keys[index] ?? group.id,
     name: group.name,
     sort_order: group.sort_order,
     items: group.items.map((item) => ({ code: item.poz_no, catalog_item_id: item.catalog_item_id, sort_order: item.sort_order })),
@@ -45,8 +50,9 @@ export function TemplateCatalogPickerHost({ detail, editor, onClose }: TemplateC
       return editAddItems({ newGroupName: submission.newGroup.name }, submission.buildBody("").catalogIds);
     }
     const body = submission.body as TemplateAddBody;
-    const groupName = groups.find((group) => group.id === body.groupId)?.name ?? "";
-    return editAddItems({ groupName }, body.catalogIds);
+    const ref = parseGroupKey(body.groupId);
+    if (ref === null) return () => ({ ok: false, error: MSG_GROUP_MISSING });
+    return editAddItems({ groupName: ref.name, nth: ref.nth }, body.catalogIds);
   }
 
   async function handleSubmit(submission: PickerSubmission<TemplateAddBody>) {

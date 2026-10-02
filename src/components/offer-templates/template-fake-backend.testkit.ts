@@ -1,7 +1,8 @@
 /**
  * TKL-F4.5 · TEST YARDIMCISI — şablon uçlarının durumlu sahte backend'i (jsdom bileşen testleri).
  * `backendClient` mock'larına bağlanır: `vi.mocked(backendClient.GET).mockImplementation((p, i) => fake.handle("GET", p, i))`.
- * Gerçek sözleşme davranışları: varsayılan önce sıralı liste, TAM değiştirme PUT (kalem kimlikleri YENİDEN üretilir),
+ * Gerçek sözleşme davranışları: varsayılan önce sıralı liste, TAM değiştirme PUT (grup + kalem kimlikleri YENİDEN üretilir;
+ * GET/PATCH/varsayılan yap kimlikleri KORUR — backend `_replace_rows`),
  * `expected_updated_at` uyuşmazsa 409, tek varsayılan, kopya "(kopya)", silmede 204. Bu dosya `vitest` ithal ETMEZ.
  */
 import type { OfferTemplateDetail, OfferTemplateGroupRead, OfferTemplateListItem } from "@/lib/api/hooks/useOfferTemplates";
@@ -56,7 +57,18 @@ export function createFakeBackend(options: FakeOptions) {
   const catalogOf = (id: string) =>
     (options.catalog ?? []).find((c) => c.id === id) as { poz_no?: string; name?: string; uom?: string } | undefined;
 
+  // Backend kimlikleri yalnız içerik DEĞİŞTİRİLİNCE (PUT) yeniden üretir; okuma kimlikleri korur.
+  const groupIds = new Map<string, OfferTemplateGroupRead[]>();
+
   function groupsRead(t: FakeTemplate): OfferTemplateGroupRead[] {
+    const cached = groupIds.get(t.id);
+    if (cached !== undefined) return cached;
+    const built = buildGroups(t);
+    groupIds.set(t.id, built);
+    return built;
+  }
+
+  function buildGroups(t: FakeTemplate): OfferTemplateGroupRead[] {
     return t.groups.map((g, gi) => ({
       id: `g-${t.id}-${(idSeq += 1)}`,
       name: g.name,
@@ -201,6 +213,7 @@ export function createFakeBackend(options: FakeOptions) {
     }
     if (method === "PUT") {
       row.groups = b.groups.map((g: { name: string; items?: { catalog_item_id: string }[] }) => ({ name: g.name, items: (g.items ?? []).map((i) => i.catalog_item_id) }));
+      groupIds.delete(row.id); // `_replace_rows`: eski satırlar silinir, TÜM grup/kalem kimlikleri yeniden üretilir
       row.updated_at = stamp();
       return ok(detailOf(row));
     }

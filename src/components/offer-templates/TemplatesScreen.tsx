@@ -65,6 +65,8 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
   const [banner, setBanner] = useState<string | null>(null);
   const [createSource, setCreateSource] = useState<SourceKind | null>(null);
   const [pendingDelete, setPendingDelete] = useState<OfferTemplateDetail | null>(null);
+  // Silinmekte olan şablon: liste tazelenene kadar seçim adayı DEĞİL (yoksa silineni yeniden seçip 404 GET atardı).
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (toast === null) return;
@@ -77,9 +79,13 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
     [catalog.data],
   );
 
+  const items = useMemo(
+    () => (list.data?.items ?? []).filter((item) => item.id !== removingId),
+    [list.data, removingId],
+  );
+
   if (isForbidden(list.error)) return <AccessDenied />;
 
-  const items = list.data?.items ?? [];
   const selectedId = resolveSelectedId(items, templateParam);
   const selectedItem = items.find((item) => item.id === selectedId);
   const defaults = settings.data
@@ -106,7 +112,9 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
     const target = pendingDelete;
     setPendingDelete(null);
     setBanner(null);
-    // URL ÖNCE ilk kalan şablona döner: silinen kimliğin gözlemcisi DELETE sonrası 404 refetch atmasın.
+    // Silinen kimlik seçim adayı olmaktan ÇIKAR (liste tazelenene kadar bayat satır olarak durur); URL ilk kalan
+    // şablona (ya da çıplak adrese) döner: silinen kimliğin gözlemcisi 404 refetch atmasın.
+    setRemovingId(target.id);
     select(items.find((item) => item.id !== target.id)?.id);
     try {
       await deleteTemplate.mutateAsync(target.id);
@@ -114,6 +122,8 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
     } catch (failure) {
       select(target.id);
       setBanner(backendErrorMessage(failure));
+    } finally {
+      setRemovingId(null);
     }
   }
 

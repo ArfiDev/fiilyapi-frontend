@@ -7,6 +7,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { offerTemplateKey, offerTemplatesKey } from "@/lib/api/hooks/offer-query-keys";
 import {
   useReplaceTemplateContent,
+  useSetDefaultTemplate,
   useUpdateOfferTemplate,
   type OfferTemplateUpdateBody,
 } from "@/lib/api/hooks/useOfferTemplateMutations";
@@ -30,6 +31,13 @@ export interface TemplateContentEditor {
   tryEdit: (edit: Edit) => Promise<boolean>;
   /** Künye (ad/açıklama/oran) PATCH'i — AYNI sıradan geçer (ayrı yol bayat `expected_updated_at` gönderirdi). */
   patch: (fields: TemplatePatch) => Promise<void>;
+  /**
+   * "Varsayılan yap": backend `updated_at`'i ilerletir — AYNI sıradan geçmezse hemen ardından gelen işlem eski
+   * `updated_at` ile 409 alırdı (TKL-F4.6b O2). `true` = yapıldı.
+   */
+  makeDefault: () => Promise<boolean>;
+  /** Varsayılan yap çağrısı sürüyor (düğmeyi kilitlemek için). */
+  isMakingDefault: boolean;
   error: string | null;
   clearError: () => void;
 }
@@ -49,11 +57,12 @@ export function useTemplateContentEditor(templateId: string): TemplateContentEdi
   const queryClient = useQueryClient();
   const replace = useReplaceTemplateContent(templateId);
   const update = useUpdateOfferTemplate(templateId);
+  const setDefault = useSetDefaultTemplate(templateId);
   const [error, setError] = useState<string | null>(null);
   const tail = useRef<Promise<void>>(Promise.resolve());
   const epoch = useRef(0);
-  const writers = useRef({ replace: replace.mutateAsync, update: update.mutateAsync });
-  writers.current = { replace: replace.mutateAsync, update: update.mutateAsync };
+  const writers = useRef({ replace: replace.mutateAsync, update: update.mutateAsync, setDefault: setDefault.mutateAsync });
+  writers.current = { replace: replace.mutateAsync, update: update.mutateAsync, setDefault: setDefault.mutateAsync };
 
   const refreshDetail = useCallback(
     () => queryClient.invalidateQueries({ queryKey: offerTemplateKey(templateId) }),
@@ -80,7 +89,11 @@ export function useTemplateContentEditor(templateId: string): TemplateContentEdi
     const run = tail.current.then(async () => {
       if (queuedEpoch !== epoch.current) return false;
       const latest = queryClient.getQueryData<OfferTemplateDetail>(offerTemplateKey(templateId));
-      if (latest === undefined) return false;
+      if (latest === undefined) {
+        // Detay önbellekte yok (çıkarıldı/yüklenmedi): işlem BANTSIZ düşmesin.
+        setError(MSG_TEMPLATE_SAVE_FAILED);
+        return false;
+      }
       try {
         return await task(latest);
       } catch (failure) {
@@ -119,6 +132,16 @@ export function useTemplateContentEditor(templateId: string): TemplateContentEdi
     [enqueue],
   );
 
+  const makeDefault = useCallback(
+    () =>
+      enqueue(async () => {
+        setError(null);
+        await writers.current.setDefault();
+        return true;
+      }),
+    [enqueue],
+  );
+
   const clearError = useCallback(() => setError(null), []);
-  return { edit, tryEdit, patch, error, clearError };
+  return { edit, tryEdit, patch, makeDefault, isMakingDefault: setDefault.isPending, error, clearError };
 }

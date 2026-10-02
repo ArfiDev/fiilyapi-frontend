@@ -10,8 +10,13 @@ import { MSG_GROUP_NAME_TAKEN, isGroupNameTaken, nextGroupName } from "@/compone
  * yanıtı üzerinde ÇALIŞIR (bayat tabandan PUT = veri kaybı).
  *
  * Dizinle çalışan çekirdek (`removeItem(g, i)` …) + KİMLİKLE çözen sarmalayıcılar (`editRemoveItem(grupAdı,
- * katalogId)`): UI, bir önceki işlem bitmeden çizilmiş görüntüden tıklar; dizin kaymış olabilir ve yanlış
- * kalemi silerdi. Grup adı şablonda tekildir (istemci korkuluğu), kalem (grup, katalog kimliği) ile bulunur.
+ * katalogId, sıra)`): UI, bir önceki işlem bitmeden çizilmiş görüntüden tıklar; dizin kaymış olabilir ve yanlış
+ * kalemi silerdi.
+ *
+ * 🔴 KALICI KİMLİK (TKL-F4.6b): backend her `PUT …/content`te TÜM grup/kalem kimliklerini YENİDEN üretir
+ * (`_replace_rows`) — sunucu kimliği ekranda KALICI DEĞİLDİR. Grup, (ad, aynı adlı gruplar arasındaki sıra)
+ * çiftiyle (`ad#sıra`, `groupKey`) anılır. Aynı adlı grup backend'de engellenmez (tekliften şablon / F3 "Yeni
+ * grup" kopyaları): ad tek başına ilk eşleşmeye giderdi. Çift çözülemezse AÇIK hata (sessiz no-op YOK).
  */
 
 export const MAX_TEMPLATE_GROUPS = 100;
@@ -36,6 +41,51 @@ export interface DraftGroup {
 export type Draft = readonly DraftGroup[];
 export type EditResult = { ok: true; groups: Draft } | { ok: false; error: string };
 export type Edit = (groups: Draft) => EditResult;
+
+/** Grubun kalıcı anahtarı: `ad#sıra` (sıra = aynı adlı gruplar arasında, 0'dan). */
+const GROUP_KEY_SEPARATOR = "#";
+
+export interface GroupRef {
+  name: string;
+  nth: number;
+}
+
+export function groupKey(name: string, nth: number): string {
+  return `${name}${GROUP_KEY_SEPARATOR}${nth}`;
+}
+
+/** Son ayırıcıdan böler (ad `#` içerebilir); biçim bozuksa `null`. */
+export function parseGroupKey(key: string): GroupRef | null {
+  const at = key.lastIndexOf(GROUP_KEY_SEPARATOR);
+  if (at < 0) return null;
+  const nth = Number(key.slice(at + 1));
+  return Number.isInteger(nth) && nth >= 0 ? { name: key.slice(0, at), nth } : null;
+}
+
+/** Her grubun (ad, sıra) çifti (taslak/detay sırasıyla). */
+export function groupRefsOf(groups: readonly { name: string }[]): GroupRef[] {
+  const seen = new Map<string, number>();
+  return groups.map((group) => {
+    const nth = seen.get(group.name) ?? 0;
+    seen.set(group.name, nth + 1);
+    return { name: group.name, nth };
+  });
+}
+
+/** Her grubun kalıcı anahtarı (taslak/detay sırasıyla). */
+export function groupKeysOf(groups: readonly { name: string }[]): string[] {
+  return groupRefsOf(groups).map((ref) => groupKey(ref.name, ref.nth));
+}
+
+function findGroupIndex(groups: Draft, name: string, nth: number): number {
+  let seen = 0;
+  for (let index = 0; index < groups.length; index += 1) {
+    if (groups[index]?.name !== name) continue;
+    if (seen === nth) return index;
+    seen += 1;
+  }
+  return -1;
+}
 
 export type AddItemsTarget = { groupIndex: number } | { newGroupName: string };
 
@@ -140,37 +190,39 @@ export function removeItem(groupIndex: number, itemIndex: number): Edit {
 
 // ── Kimlikle çözen sarmalayıcılar (UI bunları kullanır) ────────────────────────────────────────
 
-/** Kalem zaten yoksa (başka işlem sildi) değişiklik YOK: aynı taslak döner. */
-export function editRemoveItem(groupName: string, catalogItemId: string): Edit {
+/** Kalem zaten yoksa (başka işlem sildi) değişiklik YOK: aynı taslak döner. GRUP bulunamazsa açık hata. */
+export function editRemoveItem(groupName: string, catalogItemId: string, nth = 0): Edit {
   return (groups) => {
-    const groupIndex = groups.findIndex((group) => group.name === groupName);
+    const groupIndex = findGroupIndex(groups, groupName, nth);
+    if (groupIndex < 0) return fail(MSG_GROUP_MISSING);
     const itemIndex = groups[groupIndex]?.items.findIndex((item) => item.catalog_item_id === catalogItemId) ?? -1;
     return itemIndex < 0 ? done(groups) : removeItem(groupIndex, itemIndex)(groups);
   };
 }
 
-export type AddItemsByName = { groupName: string } | { newGroupName: string };
+/** Hedef grup: ad + (varsa) aynı adlılar arasındaki sıra (varsayılan 0) — ya da yeni açılacak grup. */
+export type AddItemsByName = { groupName: string; nth?: number } | { newGroupName: string };
 
-/** F4.6: seçici hedef grubu ADLA verir (grup adı şablonda tekildir); kuyrukta dizin kayması yanlış gruba yazmasın. */
+/** F4.6: seçici hedef grubu (ad, sıra) ile verir; kuyrukta dizin kayması yanlış gruba yazmasın. */
 export function editAddItems(target: AddItemsByName, catalogIds: readonly string[]): Edit {
   return (groups) => {
     if (!("groupName" in target)) return addItems(target, catalogIds)(groups);
-    const groupIndex = groups.findIndex((group) => group.name === target.groupName);
+    const groupIndex = findGroupIndex(groups, target.groupName, target.nth ?? 0);
     return groupIndex < 0 ? fail(MSG_GROUP_MISSING) : addItems({ groupIndex }, catalogIds)(groups);
   };
 }
 
-export function editRenameGroup(groupName: string, newName: string): Edit {
+export function editRenameGroup(groupName: string, newName: string, nth = 0): Edit {
   return (groups) => {
-    const index = groups.findIndex((group) => group.name === groupName);
+    const index = findGroupIndex(groups, groupName, nth);
     return index < 0 ? fail(MSG_GROUP_MISSING) : renameGroup(index, newName)(groups);
   };
 }
 
-export function editRemoveGroup(groupName: string): Edit {
+export function editRemoveGroup(groupName: string, nth = 0): Edit {
   return (groups) => {
-    const index = groups.findIndex((group) => group.name === groupName);
-    return index < 0 ? done(groups) : removeGroup(index)(groups);
+    const index = findGroupIndex(groups, groupName, nth);
+    return index < 0 ? fail(MSG_GROUP_MISSING) : removeGroup(index)(groups);
   };
 }
 

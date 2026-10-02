@@ -16,7 +16,7 @@ import type { OfferTemplateDetail } from "./useOfferTemplates";
 //   · oluştur · tekliften · kopya · künye (PATCH) · içerik (PUT) ... yanıt (TemplateDetailRead) →
 //                              `setQueryData(["offer-template", yanıt.id])` + `["offer-templates"]`
 //                              (sayaç/updated_at). Kopya/oluştur başka şablonun detayını DEĞİŞTİRMEZ.
-//   · varsayılan yap .......... `["offer-templates"]` + ÖN EK `["offer-template"]`: sunucu eski varsayılanı
+//   · varsayılan yap .......... yanıt `setQueryData` + `["offer-templates"]` + ÖN EK `["offer-template"]`: sunucu eski varsayılanı
 //                              AYNI işlemde düşürür → o şablonun önbellekteki detayı da bayatlar
 //                              (`exact` olsa yalnız yenisi tazelenirdi). PATCH `is_default: true` aynı etkiyi
 //                              yapar → o gövdede aynı ön ek tazelenir.
@@ -136,7 +136,9 @@ export function useSetDefaultTemplate(templateId: string): Mutation<OfferTemplat
           params: { path: { template_id: templateId } },
         }),
       ),
-    onSuccess: () => Promise.all([invalidateTemplateList(queryClient), invalidateAllTemplateDetails(queryClient)]),
+    // Yanıt = bu şablonun güncel detayı (`updated_at` ilerledi): ÖNCE önbelleğe yazılır (sıradaki yazma yeni
+    // `updated_at`'le kurulur), SONRA eski varsayılan dahil tüm detaylar bayatlatılır.
+    onSuccess: (detail) => Promise.all([storeDetail(queryClient, detail), invalidateAllTemplateDetails(queryClient)]),
   });
 }
 

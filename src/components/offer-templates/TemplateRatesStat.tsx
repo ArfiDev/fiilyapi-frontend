@@ -23,6 +23,9 @@ interface TemplateRatesStatProps {
 interface Draft {
   overhead: string;
   profit: string;
+  /** Taslak AÇILIRKEN görülen sunucu değerleri: değişiklik buna göre ölçülür (arada başkası değiştirdiyse ezilmez). */
+  initialOverhead: string | null;
+  initialProfit: string | null;
 }
 
 /** TS:326 "Varsayılan oranlar" kartı; yazarken ÜS-F4-7: tıklanınca iki yüzde kutusu, odak kartı terk edince PATCH. */
@@ -48,7 +51,12 @@ export function TemplateRatesStat({ overhead, profit, defaults, canEdit, onSave 
         title="Varsayılan oranları düzenle"
         onClick={() => {
           setErrors({});
-          setDraft({ overhead: overhead === null ? "" : pctToInputText(overhead), profit: profit === null ? "" : pctToInputText(profit) });
+          setDraft({
+            overhead: overhead === null ? "" : pctToInputText(overhead),
+            profit: profit === null ? "" : pctToInputText(profit),
+            initialOverhead: overhead,
+            initialProfit: profit,
+          });
         }}
       >
         {body}
@@ -64,8 +72,9 @@ export function TemplateRatesStat({ overhead, profit, defaults, canEdit, onSave 
     }
     setDraft(null);
     const changed: TemplatePatch = {
-      ...(ratesDiffer(parsed.overhead, overhead) ? { overhead_pct: parsed.overhead } : {}),
-      ...(ratesDiffer(parsed.profit, profit) ? { profit_pct: parsed.profit } : {}),
+      // YALNIZ kullanıcının değiştirdiği alan: dokunulmayan alan sunucudaki (belki başkasının) değerinde kalır.
+      ...(ratesDiffer(parsed.overhead, current.initialOverhead) ? { overhead_pct: parsed.overhead } : {}),
+      ...(ratesDiffer(parsed.profit, current.initialProfit) ? { profit_pct: parsed.profit } : {}),
     };
     if (Object.keys(changed).length > 0) onSave(changed);
   }

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { backendClient } from "@/lib/api/client";
+import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { createFakeBackend, STALE_DETAIL, type FakeBackend, type FakeOptions } from "./template-fake-backend.testkit";
 import { TemplatesScreen } from "./TemplatesScreen";
@@ -63,6 +64,7 @@ function options(overrides: Partial<FakeOptions> = {}): FakeOptions {
 
 let fake: FakeBackend;
 let timeline: string[];
+let screenClient: QueryClient;
 
 function wire(opts: FakeOptions = options()) {
   fake = createFakeBackend(opts);
@@ -82,6 +84,7 @@ function Harness({ initial }: { initial: string | null }) {
 
 function renderScreen(initial: string | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  screenClient = client;
   return render(
     <QueryClientProvider client={client}>
       <Harness initial={initial} />
@@ -495,5 +498,114 @@ describe("sekme şeridi + başlık", () => {
     expect(within(tabs).getByRole("button", { name: /İşverenler/ })).toBeDisabled();
     expect(screen.getByRole("heading", { level: 1, name: "Teklif Şablonları" })).toBeInTheDocument();
     expect(screen.getByText("Tekrarlayan iş tipleri için hazır kalem setleri · yeni teklif şablondan başlatılabilir")).toBeInTheDocument();
+  });
+});
+
+/** Sunucu yanıtı `ms` geciksin; SUNUCU DURUMU çağrı anında değişir (gerçekte işlem sürerken yanıt yoldadır). */
+function delayResponses(verb: "POST" | "PUT", pathEnd: string, ms: number) {
+  const real = vi.mocked(backendClient[verb]).getMockImplementation();
+  if (real === undefined) throw new Error("wire() önce çağrılmalı");
+  vi.mocked(backendClient[verb]).mockImplementation(((path: string, init: never) => {
+    const result = (real as (p: string, i: never) => Promise<unknown>)(path, init);
+    return String(path).endsWith(pathEnd) ? new Promise((resolve) => setTimeout(() => resolve(result), ms)) : result;
+  }) as never);
+}
+
+const puts = () => fake.callsTo("PUT", "/offers/templates/{template_id}/content");
+
+describe("TKL-F4.6b · backend her PUT'ta grup/kalem kimliklerini YENİDEN üretir", () => {
+  it("🔴 O1: aynı adlı iki grupta ikinci gruptaki kalemin × işi O grubun kalemini siler; sonra boşalan ikinci grup silinir", async () => {
+    const user = userEvent.setup();
+    const base = options();
+    wire(options({ templates: [{ ...(base.templates[0] as never as Record<string, unknown>), groups: [{ name: "Yeni grup", items: ["cat-1"] }, { name: "Yeni grup", items: ["cat-2"] }] } as never] }));
+    renderScreen();
+    await loaded();
+    await user.click(await within(itemsRegion()).findByRole("button", { name: "Kalemi çıkar: 02.001" }));
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect((puts()[0]?.body as { groups: unknown }).groups).toEqual([
+      { name: "Yeni grup", items: [{ catalog_item_id: "cat-1" }] },
+      { name: "Yeni grup", items: [] },
+    ]);
+    await user.click(await within(itemsRegion()).findByRole("button", { name: "Grubu sil" }));
+    await waitFor(() => expect(puts()).toHaveLength(2));
+    expect((puts()[1]?.body as { groups: unknown }).groups).toEqual([{ name: "Yeni grup", items: [{ catalog_item_id: "cat-1" }] }]);
+  });
+
+  it("🔴 O2: 'Varsayılan yap'ın hemen ardından × — kendi işlemimiz yüzünden 409 YOK (ikisi aynı sıradan)", async () => {
+    const user = userEvent.setup();
+    renderScreen("tpl-b");
+    await loaded();
+    delayResponses("POST", "/default", 60);
+    await user.click(await within(detailRegion()).findByRole("button", { name: "Varsayılan yap" }));
+    await user.click(within(itemsRegion()).getByRole("button", { name: "Kalemi çıkar: 03.001" }));
+    await waitFor(() => expect(fake.row("tpl-b")?.groups[0]?.items).toEqual([]));
+    expect(screen.queryByText(STALE_DETAIL)).not.toBeInTheDocument();
+    expect(puts()).toHaveLength(1);
+    expect(await screen.findByText("Dış cephe mantolama varsayılan şablon yapıldı")).toBeInTheDocument();
+  });
+
+  it("🔴 O3: oran düzenleyicisi AÇILIŞ değerlerine göre karşılaştırır — arada başkası Genel gideri değiştirdiyse yalnız Kâr PATCH'e girer", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await loaded();
+    await user.click(await within(detailRegion()).findByRole("button", { name: /Varsayılan oranlar/ }));
+    // Başka biri Genel gideri %14 yaptı; önbellek tazelendi (taslak açık kalır).
+    fake.handle("PATCH", "/offers/templates/{template_id}", {
+      params: { path: { template_id: "tpl-a" } },
+      body: { overhead_pct: "14.00", expected_updated_at: fake.row("tpl-a")?.updated_at },
+    });
+    await act(async () => {
+      await screenClient.invalidateQueries();
+    });
+    const profit = within(detailRegion()).getByRole("textbox", { name: "Varsayılan Kâr %" });
+    await user.clear(profit);
+    await user.type(profit, "18");
+    await user.tab();
+    const patches = () => fake.callsTo("PATCH", "/offers/templates/{template_id}");
+    await waitFor(() => expect(patches()).toHaveLength(2)); // 1. = başkasının, 2. = bizimki
+    expect(patches()[1]?.body).toMatchObject({ profit_pct: "18" });
+    expect(patches()[1]?.body).not.toHaveProperty("overhead_pct");
+    expect(screen.queryByText(STALE_DETAIL)).not.toBeInTheDocument();
+  });
+
+  it("🔴 O4: grup adı yazılırken PUT dönüp kimlikler değişse de giriş + yazılan metin KALIR ve 'kaydedilmemiş' sayılır", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await loaded();
+    delayResponses("PUT", "/content", 150);
+    await user.click(await within(itemsRegion()).findByRole("button", { name: "Kalemi çıkar: 02.001" }));
+    await user.click(within(itemsRegion()).getByRole("button", { name: "Kalıp" }));
+    const input = within(itemsRegion()).getByRole("textbox", { name: "Grup adı" });
+    await user.clear(input);
+    await user.type(input, "Kalıp 2");
+    await waitFor(() => expect(within(itemsRegion()).queryByRole("button", { name: "Kalemi çıkar: 02.001" })).not.toBeInTheDocument());
+    expect(within(itemsRegion()).getByRole("textbox", { name: "Grup adı" })).toHaveValue("Kalıp 2");
+    expect(unsavedRegistry.hasUnsaved()).toBe(true);
+  });
+
+  it("🔴 D1: tek şablon silinince liste tazelenmesi BEKLENMEDEN boş duruma geçilir; silinen kimliğe GET atılmaz, 'Şablon bulunamadı' hiç görünmez", async () => {
+    const user = userEvent.setup();
+    wire(options({ templates: [options().templates[0] as never] }));
+    renderScreen();
+    await loaded();
+    // Liste tazelemesi yavaş: silinen şablon bu aralıkta listede (bayat) görünmeye devam eder.
+    const realGet = vi.mocked(backendClient.GET).getMockImplementation() as (p: string, i: never) => Promise<unknown>;
+    vi.mocked(backendClient.GET).mockImplementation(((path: string, init: never) => {
+      const result = realGet(path, init);
+      return path === "/offers/templates" && fake.count() === 0 ? new Promise((resolve) => setTimeout(() => resolve(result), 200)) : result;
+    }) as never);
+    const seen: boolean[] = [];
+    const observer = new MutationObserver(() => seen.push(screen.queryByText("Şablon bulunamadı") !== null));
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    await user.click(await within(detailRegion()).findByRole("button", { name: "Sil" }));
+    timeline.length = 0;
+    await user.click(within(await screen.findByRole("dialog", { name: "Şablonu sil" })).getByRole("button", { name: "Şablonu sil" }));
+    await waitFor(() => expect(fake.count()).toBe(0));
+    expect(screen.queryByRole("region", { name: "Şablon ayrıntısı" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Henüz şablon yok · tekrarlayan işler için kalem seti oluşturun")).toBeInTheDocument();
+    await waitFor(() => expect(screenClient.isFetching()).toBe(0));
+    observer.disconnect();
+    expect(timeline.filter((entry) => entry.startsWith("GET /offers/templates/{template_id}"))).toHaveLength(0);
+    expect(seen).not.toContain(true);
   });
 });

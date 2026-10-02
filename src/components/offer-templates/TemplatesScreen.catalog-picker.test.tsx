@@ -248,3 +248,70 @@ describe("kapatma", () => {
     expect(writes()).toHaveLength(0);
   });
 });
+
+/** Başka bir kullanıcı içeriği değiştirdi: backend TÜM grup/kalem kimliklerini yeniden üretir, `updated_at` ilerler. */
+function otherUserReplaces(groups: { name: string; items: string[] }[]) {
+  fake.handle("PUT", "/offers/templates/{template_id}/content", {
+    params: { path: { template_id: "tpl-a" } },
+    body: {
+      groups: groups.map((group) => ({ name: group.name, items: group.items.map((id) => ({ catalog_item_id: id })) })),
+      expected_updated_at: fake.row("tpl-a")?.updated_at,
+    },
+  } as never);
+}
+const ownPuts = () => puts().slice(1); // 1. = başkasının
+
+describe("TKL-F4.6b · sunucu kimlikleri değişir (Y1/O1)", () => {
+  it("🔴 Y1: seçici açıkken kimlikler değişse (409 + tazeleme) seçilen grup SESSİZCE son gruba kaymaz; ekleme seçilen gruba gider", async () => {
+    renderScreen();
+    await openPicker();
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Grup" }), "Betonarme");
+    otherUserReplaces([{ name: "Betonarme", items: [BETON.id] }, { name: "Kalıp", items: [] }]);
+    const gets = fake.callsTo("GET", "/offers/templates/{template_id}").length;
+    await userEvent.click(check(DEMIR.poz_no));
+    await userEvent.click(submitButton());
+    await waitFor(() => expect(within(dialog()).getByTestId("wip-band")).toHaveTextContent(STALE_DETAIL));
+    await waitFor(() => expect(fake.callsTo("GET", "/offers/templates/{template_id}").length).toBe(gets + 1));
+    expect(screen.getByRole("combobox", { name: "Grup" })).toHaveDisplayValue("Betonarme");
+    await userEvent.click(submitButton());
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect((ownPuts().at(-1)?.body as { groups: unknown }).groups).toEqual([
+      { name: "Betonarme", items: [{ catalog_item_id: BETON.id }, { catalog_item_id: DEMIR.id }] },
+      { name: "Kalıp", items: [] },
+    ]);
+  });
+
+  it("🔴 Y1: seçilen grup artık yoksa (yeniden adlandırıldı) sessiz geri düşme YOK — seçim temizlenir, gönderim kilitlenir", async () => {
+    renderScreen();
+    await openPicker();
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Grup" }), "Betonarme");
+    otherUserReplaces([{ name: "Temel", items: [BETON.id] }, { name: "Kalıp", items: [] }]);
+    const gets = fake.callsTo("GET", "/offers/templates/{template_id}").length;
+    await userEvent.click(check(DEMIR.poz_no));
+    await userEvent.click(submitButton());
+    await waitFor(() => expect(fake.callsTo("GET", "/offers/templates/{template_id}").length).toBe(gets + 1));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Grup" })).toHaveDisplayValue("Grup seçin"));
+    expect(submitButton()).toBeDisabled();
+    expect(within(dialog()).getByTestId("wip-band")).toHaveTextContent("Seçili grup artık yok");
+    expect(ownPuts()).toHaveLength(1); // yalnız 409 alan ilk deneme
+    // Yeniden seçince gönderim açılır.
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Grup" }), "Temel");
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it("🔴 O1: aynı adlı iki grupta ikinci gruba seçilen ekleme O gruba gider (ilk eşleşmeye değil)", async () => {
+    const base = options();
+    wire(options({ templates: [{ ...(base.templates[0] as never as Record<string, unknown>), groups: [{ name: "Yeni grup", items: [BETON.id] }, { name: "Yeni grup", items: [] }] } as never] }));
+    renderScreen();
+    await openPicker();
+    const combo = screen.getByRole("combobox", { name: "Grup" });
+    await userEvent.selectOptions(combo, within(combo).getAllByRole("option")[1] as HTMLElement);
+    await userEvent.click(check(DEMIR.poz_no));
+    await userEvent.click(submitButton());
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect((puts()[0]?.body as { groups: unknown }).groups).toEqual([
+      { name: "Yeni grup", items: [{ catalog_item_id: BETON.id }] },
+      { name: "Yeni grup", items: [{ catalog_item_id: DEMIR.id }] },
+    ]);
+  });
+});

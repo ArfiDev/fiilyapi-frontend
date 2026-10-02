@@ -9,7 +9,7 @@ import { useOfferTemplate, useOfferTemplates, type OfferTemplateDetail } from "@
 
 import { addGroup, editAddItems, editRemoveItem, editRenameGroup } from "./template-content";
 import { makeTemplateDetail, makeTemplateGroup } from "./template-fixtures";
-import { useTemplateContentEditor } from "./useTemplateContentEditor";
+import { MSG_TEMPLATE_SAVE_FAILED, useTemplateContentEditor } from "./useTemplateContentEditor";
 
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), PUT: vi.fn(), DELETE: vi.fn() },
@@ -18,6 +18,10 @@ vi.mock("@/lib/api/client", () => ({
 const ID = "tpl-1";
 const STALE = "Şablon başka biri tarafından değiştirildi; sayfayı yenileyin";
 let client: QueryClient;
+/** Sahte sunucunun O ANKİ detayı (GET bunu döner); testler 409 öncesi değiştirir. */
+let server: OfferTemplateDetail;
+/** Doluysa detay GET'i bu söz çözülene kadar BEKLER (tazeleme "sürerken" ölçmek için). */
+let detailGate: Promise<void> | null;
 
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
@@ -82,9 +86,12 @@ function getCalls(path: string): number {
 beforeEach(() => {
   vi.clearAllMocks();
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } } });
+  server = DETAIL0;
+  detailGate = null;
   vi.mocked(backendClient.GET).mockImplementation((async (path: string) => {
     if (path === "/offers/templates") return ok({ items: [], total: 0 });
-    return ok(DETAIL0);
+    if (detailGate !== null) await detailGate;
+    return ok(server);
   }) as never);
 });
 
@@ -184,6 +191,36 @@ describe("409 bayat şablon", () => {
     expect(getCalls("/offers/templates")).toBe(listGets + 1);
   });
 
+  it("🔴 sunucu değişir → 409 → tazeleme SÜRERKEN gelen işlem kuyruğa girer; ikinci PUT TAZELENEN updated_at + grupları taşır", async () => {
+    vi.mocked(backendClient.PUT)
+      .mockImplementationOnce((async () => fail(409, STALE)) as never)
+      .mockImplementationOnce((async (_p: string, init: { body: never }) => ok(serverDetail(init.body, "T6"))) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+    server = makeTemplateDetail({ id: ID, updated_at: "T5", groups: [makeTemplateGroup("Başka", ["c7"])] });
+    const gate = deferred<void>();
+    detailGate = gate.promise;
+    const before = getCalls("/offers/templates/{template_id}");
+    let p1!: Promise<void>;
+    let p2!: Promise<void>;
+    act(() => {
+      p1 = result.current.editor.edit(addGroup("Cephe"));
+    });
+    await waitFor(() => expect(getCalls("/offers/templates/{template_id}")).toBe(before + 1));
+    act(() => {
+      p2 = result.current.editor.edit(addGroup("Tesisat"));
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(backendClient.PUT).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      gate.resolve();
+      await Promise.all([p1, p2]);
+    });
+    expect(backendClient.PUT).toHaveBeenCalledTimes(2);
+    expect(putBody(1).expected_updated_at).toBe("T5");
+    expect(putBody(1).groups.map((g) => g.name)).toEqual(["Başka", "Tesisat"]);
+  });
+
   it("409'dan SONRA yeni gelen işlem normal çalışır (kuyruk kalıcı kilitlenmez)", async () => {
     vi.mocked(backendClient.PUT)
       .mockImplementationOnce((async () => fail(409, STALE)) as never)
@@ -201,7 +238,19 @@ describe("409 bayat şablon", () => {
 });
 
 describe("diğer hatalar ve istemci reddi", () => {
-  it("500: backend metni bantta, önbellek yeniden okunur", async () => {
+  it("🔴 gerçek 500: backend metni bantta, önbellek yeniden okunur", async () => {
+    vi.mocked(backendClient.PUT).mockImplementationOnce((async () => fail(500, "Sunucu hatası")) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+    const before = getCalls("/offers/templates/{template_id}");
+    await act(async () => {
+      await result.current.editor.edit(addGroup("Cephe"));
+    });
+    expect(result.current.editor.error).toBe("Sunucu hatası");
+    await waitFor(() => expect(getCalls("/offers/templates/{template_id}")).toBe(before + 1));
+  });
+
+  it("🔴 404 (katalog kalemi yok): backend metni bantta, önbellek yeniden okunur", async () => {
     vi.mocked(backendClient.PUT).mockImplementationOnce((async () => fail(404, "Katalog iş tipi bulunamadı")) as never);
     const { result } = renderEditor();
     await waitFor(() => expect(result.current.detail.data).toBeDefined());
@@ -211,6 +260,37 @@ describe("diğer hatalar ve istemci reddi", () => {
     });
     expect(result.current.editor.error).toBe("Katalog iş tipi bulunamadı");
     await waitFor(() => expect(getCalls("/offers/templates/{template_id}")).toBe(before + 1));
+  });
+
+  it("🔴 500 sonrası: tazeleme SÜRERKEN gelen işlem tazelenen detayı (updated_at + gruplar) taban alır", async () => {
+    vi.mocked(backendClient.PUT)
+      .mockImplementationOnce((async () => fail(500, "Sunucu hatası")) as never)
+      .mockImplementationOnce((async (_p: string, init: { body: never }) => ok(serverDetail(init.body, "T6"))) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+    // Sunucu başka bir yerden değişti; tazeleme kapıda bekler.
+    server = makeTemplateDetail({ id: ID, updated_at: "T5", groups: [makeTemplateGroup("Başka", ["c7"])] });
+    const gate = deferred<void>();
+    detailGate = gate.promise;
+    const before = getCalls("/offers/templates/{template_id}");
+    let p1!: Promise<void>;
+    let p2!: Promise<void>;
+    act(() => {
+      p1 = result.current.editor.edit(addGroup("Cephe"));
+    });
+    await waitFor(() => expect(getCalls("/offers/templates/{template_id}")).toBe(before + 1));
+    act(() => {
+      p2 = result.current.editor.edit(addGroup("Tesisat"));
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(backendClient.PUT).toHaveBeenCalledTimes(1); // tazeleme bitmeden ikinci PUT gitmez
+    await act(async () => {
+      gate.resolve();
+      await Promise.all([p1, p2]);
+    });
+    expect(backendClient.PUT).toHaveBeenCalledTimes(2);
+    expect(putBody(1).expected_updated_at).toBe("T5");
+    expect(putBody(1).groups.map((g) => g.name)).toEqual(["Başka", "Tesisat"]);
   });
 
   it("aynı ad: istek ATILMAZ, bant 'Bu adla grup var'", async () => {
@@ -289,5 +369,69 @@ describe("tryEdit — işlem sonucu (F4.6: seçici yalnız BAŞARIDA kapanır)",
     });
     expect(rejected).toBe(false);
     expect(backendClient.PUT).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("önbellekte detay yokken (TKL-F4.6b D3)", () => {
+  it("🔴 içerik işlemi BANTSIZ düşmez: 'Şablon kaydedilemedi', false, istek yok", async () => {
+    const { result } = renderHook(() => useTemplateContentEditor(ID), { wrapper });
+    let outcome: boolean | undefined;
+    await act(async () => {
+      outcome = await result.current.tryEdit(addGroup("Cephe"));
+    });
+    expect(outcome).toBe(false);
+    expect(result.current.error).toBe(MSG_TEMPLATE_SAVE_FAILED);
+    expect(backendClient.PUT).not.toHaveBeenCalled();
+  });
+
+  it("🔴 künye PATCH'i de bantsız düşmez", async () => {
+    const { result } = renderHook(() => useTemplateContentEditor(ID), { wrapper });
+    await act(async () => {
+      await result.current.patch({ name: "X" });
+    });
+    expect(result.current.error).toBe(MSG_TEMPLATE_SAVE_FAILED);
+    expect(backendClient.PATCH).not.toHaveBeenCalled();
+  });
+});
+
+describe("varsayılan yap AYNI sıradan geçer (TKL-F4.6b O2)", () => {
+  it("🔴 varsayılan yap uçuştayken gelen işlem bekler; PUT'un expected_updated_at'i varsayılan YANITININ updated_at'idir", async () => {
+    const post = deferred<unknown>();
+    vi.mocked(backendClient.POST).mockImplementationOnce((() => post.promise) as never);
+    vi.mocked(backendClient.PUT).mockImplementationOnce((async (_p: string, init: { body: never }) => ok(serverDetail(init.body, "T9"))) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+
+    let made!: Promise<boolean>;
+    let removed!: Promise<void>;
+    act(() => {
+      made = result.current.editor.makeDefault();
+      removed = result.current.editor.edit(editRemoveItem("Betonarme", "c1"));
+    });
+    await waitFor(() => expect(backendClient.POST).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(backendClient.PUT).not.toHaveBeenCalled(); // varsayılan bitmeden × gitmez
+
+    const after = makeTemplateDetail({ id: ID, updated_at: "T1", is_default: true, groups: DETAIL0.groups });
+    server = after;
+    await act(async () => {
+      post.resolve(ok(after));
+      await Promise.all([made, removed]);
+    });
+    expect(await made).toBe(true);
+    expect(putBody(0).expected_updated_at).toBe("T1");
+    expect(result.current.editor.error).toBeNull();
+  });
+
+  it("varsayılan yap hatası bantta; false döner", async () => {
+    vi.mocked(backendClient.POST).mockImplementationOnce((async () => fail(403, "Yetkiniz yok")) as never);
+    const { result } = renderEditor();
+    await waitFor(() => expect(result.current.detail.data).toBeDefined());
+    let outcome: boolean | undefined;
+    await act(async () => {
+      outcome = await result.current.editor.makeDefault();
+    });
+    expect(outcome).toBe(false);
+    expect(result.current.editor.error).toBe("Yetkiniz yok");
   });
 });

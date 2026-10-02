@@ -203,6 +203,13 @@ describe("🔴 şablon yazmaları: yanıt (TemplateDetailRead) → setQueryData 
     expect(cached("offerList")).toEqual({ primed: true });
   });
 
+  it("🔴 varsayılan yap: yanıt (güncel updated_at) önbelleğe YAZILIR — sıradaki işlem yeni updated_at'le kurulur (TKL-F4.6b O2)", async () => {
+    const response = detail(T_A, { is_default: true, updated_at: "2026-10-02T09:00:05.000000Z" });
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(response));
+    await run(renderHook(() => useSetDefaultTemplate(T_A), { wrapper }), undefined);
+    expect(cached("tplA")).toEqual(response);
+  });
+
   it("sil: liste tazelenir + silinen şablonun detayı ÇIKARILIR (yoktur); diğer detay kalır ve tazelenmez", async () => {
     vi.mocked(backendClient.DELETE).mockResolvedValue(ok(undefined, 204));
     await run(renderHook(() => useDeleteOfferTemplate(), { wrapper }), T_A);

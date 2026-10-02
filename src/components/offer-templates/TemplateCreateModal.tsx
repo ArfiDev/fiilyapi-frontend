@@ -94,12 +94,15 @@ export function TemplateCreateModal({ initialSource, templates, onClose, onCreat
     onCreated(result, check.toast);
   }
 
+  // Akış sürerken kapatılamaz (seçicideki koruma emsali): ilk adım hatası kaybolmasın, ikinci şablon doğmasın.
+  const handleClose = flow.isPending ? noop : onClose;
+
   return (
     <Modal
       title="Yeni Şablon"
       subtitle="Kalem seti, gruplar ve varsayılan oranlar saklanır · miktar ve fiyat saklanmaz"
       className="otpl-modal"
-      onClose={onClose}
+      onClose={handleClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={flow.isPending}>
@@ -235,4 +238,8 @@ function RateField({
       )}
     </Field>
   );
+}
+
+function noop(): void {
+  // Akış sürerken Modal kapatma istekleri (Esc, ×, arka plan) yok sayılır.
 }

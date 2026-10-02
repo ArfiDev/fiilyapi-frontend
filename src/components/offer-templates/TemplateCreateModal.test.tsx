@@ -282,3 +282,26 @@ describe("teklif arama (ÜS-F4-11)", () => {
     });
   });
 });
+
+describe("akış sürerken kapatma (TKL-F4.6b D2)", () => {
+  it("🔴 Şablonu Oluştur uçuştayken Vazgeç / arka plan / Esc kapatmaz (ilk adım hatası kaybolmaz, ikinci şablon doğmaz)", async () => {
+    const user = userEvent.setup();
+    const real = vi.mocked(backendClient.POST).getMockImplementation() as (p: string, i: never) => Promise<unknown>;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.mocked(backendClient.POST).mockImplementation(((path: string, init: never) =>
+      path === "/offers/templates" ? gate.then(() => real(path, init)) : real(path, init)) as never);
+    renderModal();
+    await fillName(user, "Konut");
+    await user.click(submit());
+    await waitFor(() => expect(within(dialog()).getByRole("button", { name: "Vazgeç" })).toBeDisabled());
+    await user.click(document.querySelector(".modal-overlay") as HTMLElement);
+    await user.keyboard("{Escape}");
+    await user.click(within(dialog()).getByRole("button", { name: "Kapat" }));
+    expect(onClose).not.toHaveBeenCalled();
+    release();
+    await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+  });
+});
