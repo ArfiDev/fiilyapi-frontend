@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-import { CatalogPickerModal, type PickerSubmission } from "@/components/work-item-picker/CatalogPickerModal";
+import { CatalogPickerModal, TARGET_GROUP_GONE_MESSAGE, type PickerSubmission } from "@/components/work-item-picker/CatalogPickerModal";
 import type { PickerGroup } from "@/components/work-item-picker/picker-model";
 import { CONVERT_PICKER_TARGET, type ConvertAddBody } from "@/components/work-item-picker/picker-target";
 
@@ -13,8 +13,8 @@ export interface ConvertCatalogPickerHostProps {
   draft: ConvertDraft;
   /** Alt metin bağlamı: "TKL-2026-0014 Rev.2". */
   contextLabel: string;
-  /** Onay: seçici KAPANMADAN önce taslağa yazılır (yerel işlem; ağ YOK). */
-  onAdd: (target: CatalogTarget, entries: readonly CatalogEntry[]) => void;
+  /** Onay: seçici KAPANMADAN önce taslağa yazılır (yerel işlem; ağ YOK). `false` = hedef grup artık yok (yazılmadı). */
+  onAdd: (target: CatalogTarget, entries: readonly CatalogEntry[]) => boolean;
   onClose: () => void;
 }
 
@@ -40,13 +40,16 @@ function toPickerGroups(draft: ConvertDraft): PickerGroup[] {
 export function ConvertCatalogPickerHost({ draft, contextLabel, onAdd, onClose }: ConvertCatalogPickerHostProps) {
   const groups = useMemo(() => toPickerGroups(draft), [draft]);
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   function handleSubmit(submission: PickerSubmission<ConvertAddBody>) {
-    if (submission.newGroup !== null) {
-      onAdd({ newGroupName: submission.newGroup.name }, submission.buildBody("").entries);
-    } else if (submission.body !== null) {
-      onAdd({ groupKey: submission.body.groupId }, submission.body.entries);
-    }
-    onClose();
+    const isAdded =
+      submission.newGroup !== null
+        ? onAdd({ newGroupName: submission.newGroup.name }, submission.buildBody("").entries)
+        : submission.body !== null && onAdd({ groupKey: submission.body.groupId }, submission.body.entries);
+    // Hedef grup kalktıysa seçici AÇIK kalır (seçim korunur); bant aynı "Seçili grup artık yok" metnini basar.
+    if (isAdded) onClose();
+    else setSubmitError(TARGET_GROUP_GONE_MESSAGE);
   }
 
   return (
@@ -57,7 +60,7 @@ export function ConvertCatalogPickerHost({ draft, contextLabel, onAdd, onClose }
       onSubmit={handleSubmit}
       onClose={onClose}
       isSubmitting={false}
-      submitError={null}
+      submitError={submitError}
     />
   );
 }

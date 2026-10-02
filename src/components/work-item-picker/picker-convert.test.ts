@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import { BETON, DEMIR, LAST_SZL, SIVA } from "@/components/work-item-catalog/work-item-fixtures";
 
+import { compareDecimalStrings } from "@/lib/decimal";
+
 import { pickerColumns } from "./picker-columns";
 import {
   MAX_BULK_ITEMS,
@@ -15,6 +17,7 @@ import {
   setQuantity,
   setUnitPrice,
   toggleRow,
+  totalAmount,
   type PickerGroup,
   type PickerInputs,
   type PickerRow,
@@ -90,9 +93,9 @@ describe("'Listede var · {grup}' (dahil YA DA çıkarılmış satır)", () => {
   });
 });
 
-describe("tavan: dönüştürme 2000 − DAHİL kalem, tek seferde 200 (hangisi küçükse)", () => {
-  it("🔴 boş listede 200 (tek seferlik kural) + mevcut metin", () => {
-    expect(selectionLimit(CONVERT_RULES, [])).toEqual({ max: MAX_BULK_ITEMS, message: "Tek seferde en fazla 200 kalem eklenebilir" });
+describe("tavan: dönüştürme YALNIZ 2000 − DAHİL kalem (tek seferlik 200 sınırı YOK — F5.4b)", () => {
+  it("🔴 boş listede 2000 (tek seferde 200 DEĞİL) + dönüştürme metni", () => {
+    expect(selectionLimit(CONVERT_RULES, [])).toEqual({ max: 2000, message: "En fazla 2000 kalem dönüştürülebilir" });
   });
   it("🔴 dahil kalem 2000'e yaklaşınca tavan düşer ve dönüştürme metni basılır", () => {
     expect(selectionLimit(CONVERT_RULES, [group("g", "A", counted(1990))])).toEqual({
@@ -104,12 +107,35 @@ describe("tavan: dönüştürme 2000 − DAHİL kalem, tek seferde 200 (hangisi 
   });
   it("🔴 ÇIKARILMIŞ satırlar tavana sayılmaz (yalnız dahil olan gövdeye girer)", () => {
     expect(selectionLimit(CONVERT_RULES, [group("g", "A", [...counted(1990), ...excluded(500)])]).max).toBe(10);
-    expect(selectionLimit(CONVERT_RULES, [group("g", "A", [...counted(100), ...excluded(900)])]).max).toBe(200);
+    expect(selectionLimit(CONVERT_RULES, [group("g", "A", [...counted(100), ...excluded(900)])]).max).toBe(1900);
+  });
+  it("🔴 sözleşme/teklif hedefinde tek seferde 200 AYNEN kalır (yalnız yerel gövdeli priced hedef kalkar)", () => {
+    expect(selectionLimit(CONTRACT_RULES, [])).toEqual({ max: MAX_BULK_ITEMS, message: "Tek seferde en fazla 200 poz eklenebilir" });
+    expect(selectionLimit(OFFER_RULES, [])).toEqual({ max: MAX_BULK_ITEMS, message: "Tek seferde en fazla 200 kalem eklenebilir" });
   });
   it("diğer hedefler değişmedi: sözleşme/teklif 200, şablon 1000 − mevcut", () => {
     expect(selectionLimit(CONTRACT_RULES, [group("g", "A", counted(1500))]).max).toBe(200);
     expect(selectionLimit(OFFER_RULES, [group("g", "A", counted(1500))]).max).toBe(200);
     expect(selectionLimit(TEMPLATE_RULES, [group("g", "A", counted(990))]).max).toBe(10);
+  });
+});
+
+describe("yeni grup adı sınırı (hedef bazlı)", () => {
+  it("🔴 dönüştürme 200 (backend grup adı); sözleşme/teklif/şablonun mevcut 2000'i DEĞİŞMEZ", () => {
+    expect(CONVERT_RULES.groupNameMax).toBe(200);
+    expect([CONTRACT_RULES, OFFER_RULES, TEMPLATE_RULES].map((rules) => rules.groupNameMax)).toEqual([2000, 2000, 2000]);
+  });
+});
+
+describe("Σ tutar: dönüştürmede SATIR BAŞI ROUND_HALF_UP (tabloyla kuruşu kuruşuna aynı)", () => {
+  const entries = [LAST_SZL, SIVA].map((item) => ({ item, quantity: "0.005", unitPrice: "1.00" }));
+  it("🔴 iki satır 0,005 × 1,00: dönüştürme 0,02 (her satır 0,01)", () => {
+    expect(compareDecimalStrings(totalAmount(entries, CONVERT_RULES), "0.02")).toBe(0);
+  });
+  it("🔴 diğer hedeflerin Σ'sı DEĞİŞMEZ: toplamda yuvarlanır (0,010 → ekranda ₺0,01); kural verilmezse de aynı", () => {
+    expect(compareDecimalStrings(totalAmount(entries, CONTRACT_RULES), "0.01")).toBe(0);
+    expect(compareDecimalStrings(totalAmount(entries, OFFER_RULES), "0.01")).toBe(0);
+    expect(compareDecimalStrings(totalAmount(entries), "0.01")).toBe(0);
   });
 });
 

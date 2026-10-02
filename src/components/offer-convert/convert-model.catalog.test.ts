@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 
 import { BETON, DEMIR, DISCIPLINE_BY_CATALOG, SIVA, makeWonRevision } from "./convert-fixtures";
-import { addCatalogEntries, addFromCatalog, addGroup, toggleIncluded, rowsFromRevision } from "./convert-model";
+import { addCatalogEntries, addFromCatalog, applyCatalogEntries, addGroup, toggleIncluded, rowsFromRevision } from "./convert-model";
+import { parseQty, parseUnitPrice } from "./convert-parse";
 import type { ConvertDraft } from "./convert-types";
 
 function deepFreeze<T>(value: T): T {
@@ -77,5 +78,45 @@ describe("TKL-F5.4 · addCatalogEntries: seçici onayı", () => {
   it("boş seçim: aynı nesne (boş grup AÇILMAZ)", () => {
     const base = baseDraft();
     expect(addCatalogEntries(base, { newGroupName: "Yeni grup" }, [])).toBe(base);
+  });
+});
+
+describe("🔴 F5.4b · applyCatalogEntries: açık sonuç (sessiz no-op YOK)", () => {
+  const entry = { item: SIVA, quantity: "12.5", unitPrice: "3410.00" };
+
+  it("var olmayan hedef grup → {ok:false}; taslağa dokunulmaz", () => {
+    expect(applyCatalogEntries(baseDraft(), { groupKey: "ng:7" }, [entry])).toEqual({ ok: false });
+  });
+
+  it("var olan grup → {ok:true, draft} (satır eklenir); yeni grup adı her zaman ok; boş seçim ok + AYNI taslak", () => {
+    const base = baseDraft();
+    const added = applyCatalogEntries(base, { groupKey: "g:g-ince" }, [entry]);
+    expect(added.ok && rowOf(added.draft, "n:0")?.groupKey).toBe("g:g-ince");
+    const fresh = applyCatalogEntries(base, { newGroupName: "Yeni grup" }, [entry]);
+    expect(fresh.ok && fresh.draft.groups.at(-1)?.name).toBe("Yeni grup");
+    expect(applyCatalogEntries(base, { groupKey: "g:g-ince" }, [])).toEqual({ ok: true, draft: base });
+  });
+});
+
+describe("🔴 F5.4b · seçici → tablo gidiş-dönüş (kutu metni TR biçimi + tablonun ayrıştırıcısı AYNI sayıyı geri verir)", () => {
+  const cases = [
+    { name: "miktar 1000 → '1.000' → 1000 (binlik nokta ondalık sanılmaz)", quantity: "1000", qtyRaw: "1.000" },
+    { name: "3 ondalık 0,125", quantity: "0.125", qtyRaw: "0,125" },
+    { name: "miktar üst sınırı 999.999.999,999", quantity: "999999999.999", qtyRaw: "999.999.999,999" },
+  ];
+  it.each(cases)("$name", ({ quantity, qtyRaw }) => {
+    const draft = addCatalogEntries(baseDraft(), { groupKey: "g:g-ince" }, [{ item: SIVA, quantity, unitPrice: "1.00" }]);
+    const raw = rowOf(draft, "n:0")?.contract.qtyRaw ?? "";
+    expect(raw).toBe(qtyRaw);
+    expect(parseQty(raw)).toEqual({ ok: true, value: quantity });
+  });
+
+  it("B.F. 1e12 sınırı: '1.000.000.000.000,00' → 1000000000000.00; 1000 → '1.000,00'", () => {
+    const limit = addCatalogEntries(baseDraft(), { groupKey: "g:g-ince" }, [{ item: SIVA, quantity: "1", unitPrice: "1000000000000.00" }]);
+    const raw = rowOf(limit, "n:0")?.contract.bfRaw ?? "";
+    expect(raw).toBe("1.000.000.000.000,00");
+    expect(parseUnitPrice(raw)).toEqual({ ok: true, value: "1000000000000.00" });
+    const thousand = addCatalogEntries(baseDraft(), { groupKey: "g:g-ince" }, [{ item: SIVA, quantity: "1", unitPrice: "1000.00" }]);
+    expect(rowOf(thousand, "n:0")?.contract.bfRaw).toBe("1.000,00");
   });
 });

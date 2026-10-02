@@ -18,6 +18,7 @@ import {
   REF_PRICE_AMBIGUOUS_DOT,
   type TrDecimalParse,
 } from "@/lib/tr-decimal";
+import { lineAmount } from "@/components/offer-convert/convert-money";
 import { filterWorkItems, formatPrice, sortByPozNo } from "@/components/work-item-catalog/work-item-model";
 
 import { CONTRACT_RULES, type DecimalBound, type PickerPriceMessages, type PickerRules } from "./picker-rules";
@@ -332,12 +333,13 @@ export function resolveSelection(
  * Σ miktar × birim fiyat — kayıpsız ondalık metin (`0.1 × 3 = 0.3`). Fiyatsız (`null`) satırlar toplama
  * GİRMEZ (teklif "Eklenecek maliyet": yalnız maliyeti dolu satırlar); sayıları `unpricedCount`.
  */
-export function totalAmount(entries: readonly ResolvedEntry[]): string {
-  return sumDecimalStrings(
-    entries.flatMap((entry) =>
-      entry.unitPrice === null ? [] : [multiplyDecimalStrings(entry.quantity, entry.unitPrice)],
-    ),
-  );
+export function totalAmount(entries: readonly ResolvedEntry[], rules: PickerRules = CONTRACT_RULES): string {
+  const amounts = entries.flatMap((entry) => {
+    if (entry.unitPrice === null) return [];
+    // Dönüştürme: sunucu SATIR BAŞI ROUND_HALF_UP yazar → Σ de aynı (tablo Σ'sıyla kuruşu kuruşuna eşit).
+    return [rules.roundsLineAmounts ? lineAmount(entry.quantity, entry.unitPrice) : multiplyDecimalStrings(entry.quantity, entry.unitPrice)];
+  });
+  return sumDecimalStrings(amounts);
 }
 
 /** Fiyatsız (maliyet B.F. boş) seçili satır sayısı — sözleşme hedefinde her zaman 0. */
@@ -417,7 +419,8 @@ export function groupByDiscipline(
 /**
  * Bir seçimde en çok kaç kalem seçilebilir + aşılınca bant metni. `priced`: tek istek tavanı (`MAX_BULK_ITEMS`).
  * `selectOnly` (şablon): hedefteki TOPLAM tavan − mevcut kalem sayısı (eksiye düşmez); metin backend'inkiyle aynı.
- * `priced` + toplam tavan (dönüştürme 2000, çıkarılmış satırlar sayılmaz): tek istek tavanıyla KÜÇÜK olan.
+ * `priced` + toplam tavan: YEREL gövdeli hedefte (dönüştürme 2000, çıkarılmış satırlar sayılmaz) tavan YALNIZ toplam tavan − dahil
+ * (HTTP isteği yok → tek seferlik 200 sınırı YOK, F5.4b); HTTP gövdeli priced hedefte tek istek tavanıyla KÜÇÜK olan.
  */
 export function selectionLimit(rules: PickerRules, groups: HostGroups): { max: number; message: string } {
   const bulk = { max: MAX_BULK_ITEMS, message: `Tek seferde en fazla ${MAX_BULK_ITEMS} ${rules.words.noun} eklenebilir` };
@@ -425,6 +428,6 @@ export function selectionLimit(rules: PickerRules, groups: HostGroups): { max: n
   // `isExcluded` satırlar (dönüştürmede çıkarılmış) gövdeye girmez → toplam tavana SAYILMAZ.
   const existing = groups.reduce((sum, group) => sum + group.items.filter((item) => item.isExcluded !== true).length, 0);
   const total = { max: Math.max(0, rules.maxTotalItems - existing), message: rules.totalCapMessage };
-  if (rules.entryMode === "selectOnly") return total;
+  if (rules.entryMode === "selectOnly" || rules.usesLocalGroups) return total;
   return total.max < bulk.max ? total : bulk;
 }

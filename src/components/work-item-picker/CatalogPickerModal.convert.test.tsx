@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -190,7 +190,7 @@ describe("dönüştürme hedefi — yeni grup (YEREL)", () => {
   });
 });
 
-describe("dönüştürme hedefi — tavan (2000 − dahil kalem; tek seferde 200)", () => {
+describe("dönüştürme hedefi — tavan (2000 − dahil kalem; tek seferde 200 sınırı YOK)", () => {
   it("🔴 dahil kalem 1999 iken ikinci kalem 'En fazla 2000 kalem dönüştürülebilir' + KAPALI; ÇIKARILMIŞ satırlar sayılmaz", async () => {
     renderPicker({ groups: [{ id: "g:1", name: "A", sort_order: 0, items: filler(1999) }] });
     await screen.findByText(SIVA.poz_no);
@@ -208,5 +208,63 @@ describe("dönüştürme hedefi — tavan (2000 − dahil kalem; tek seferde 200
     await userEvent.type(quantityOf(LAST_EMPTY.poz_no), "1");
     await userEvent.type(quantityOf(LAST_SZL.poz_no), "1");
     expect(submit()).toBeEnabled();
+  });
+});
+
+describe("🔴 F5.4b · hedef yerel grup seçici açıkken kalkarsa", () => {
+  const LOCAL: PickerGroup = { id: "ng:1", name: "Yeni grup", sort_order: 2, items: [] };
+
+  function renderWithRerender(groups: PickerGroup[]) {
+    const props: CatalogPickerModalProps<ConvertAddBody> = {
+      target: CONVERT_PICKER_TARGET, groups, onSubmit: vi.fn(), onClose: vi.fn(), isSubmitting: false, submitError: null,
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const tree = (next: PickerGroup[]) => (
+      <QueryClientProvider client={client}>
+        <CatalogPickerModal<ConvertAddBody> {...props} groups={next} />
+      </QueryClientProvider>
+    );
+    const view = render(tree(groups));
+    return { props, rerenderWith: (next: PickerGroup[]) => view.rerender(tree(next)) };
+  }
+
+  it("'Seçili grup artık yok' bantta + grup kutusu 'Grup seçin' + düğme KAPALI (sessiz başka gruba yazma YOK)", async () => {
+    const { rerenderWith } = renderWithRerender([...GROUPS, LOCAL]);
+    await screen.findByText(SIVA.poz_no);
+    expect(screen.getByRole("combobox", { name: "Grup" })).toHaveValue("ng:1");
+    await userEvent.type(quantityOf(LAST_EMPTY.poz_no), "2");
+    expect(submit()).toBeEnabled();
+    rerenderWith(GROUPS);
+    expect(screen.getByTestId("wip-band")).toHaveTextContent("Seçili grup artık yok");
+    expect(screen.getByRole("combobox", { name: "Grup" })).toHaveValue("");
+    expect(submit()).toBeDisabled();
+  });
+});
+
+describe("🔴 F5.4b · yeni grup adı en çok 200 karakter (backend grup adı)", () => {
+  it("kutu maxLength 200; programatik 201 karakter → 'En çok 200 karakter' + düğme KAPALI; 200 geçerli", async () => {
+    renderPicker({ groups: [] });
+    await screen.findByText(SIVA.poz_no);
+    await userEvent.type(quantityOf(LAST_EMPTY.poz_no), "2");
+    const name = screen.getByLabelText("Grup Adı");
+    expect(name).toHaveAttribute("maxlength", "200");
+    fireEvent.change(name, { target: { value: "a".repeat(201) } });
+    expect(screen.getByTestId("wip-band")).toHaveTextContent("En çok 200 karakter");
+    expect(submit()).toBeDisabled();
+    fireEvent.change(name, { target: { value: "a".repeat(200) } });
+    expect(submit()).toBeEnabled();
+  });
+});
+
+describe("🔴 F5.4b · Eklenecek Tutar = SATIR BAŞI ROUND_HALF_UP toplamı (tabloyla aynı)", () => {
+  it("iki satır 0,005 × 1,00 → ₺0,02 (toplamda yuvarlansaydı ₺0,01)", async () => {
+    renderPicker({ groups: [] });
+    await screen.findByText(SIVA.poz_no);
+    for (const item of [LAST_EMPTY, LAST_SZL]) {
+      await userEvent.type(quantityOf(item.poz_no), "0,005");
+      await userEvent.clear(priceOf(item.poz_no));
+      await userEvent.type(priceOf(item.poz_no), "1,00");
+    }
+    expect(screen.getByTestId("wip-total")).toHaveTextContent("₺0,02");
   });
 });

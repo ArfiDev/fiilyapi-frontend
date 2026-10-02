@@ -6,7 +6,8 @@
  * bunu parametre olarak alır, varsayılanı SÖZLEŞMEDİR (F2 davranışı birebir). Metin/gövde farkları
  * `picker-target.ts`te toplanır.
  */
-import { MAX_CONVERT_ITEMS, MSG_TOO_MANY } from "@/components/offer-convert/convert-validate";
+import { MAX_LENGTH } from "@/components/contract-item-form/constants";
+import { MAX_CONVERT_GROUP_NAME, MAX_CONVERT_ITEMS, MSG_TOO_MANY } from "@/components/offer-convert/convert-limits";
 import { MAX_TEMPLATE_ITEMS, MSG_ITEMS_TOO_MANY } from "@/components/offer-templates/template-content";
 import {
   OFFER_PRICE_LIMITS,
@@ -92,6 +93,13 @@ export interface PickerRules {
    * aynı ad reddedilir (şablon, dönüştürme). Sözleşme/teklifte ad boş başlar (grup sunucuda açılır).
    */
   usesLocalGroups: boolean;
+  /** "+ Yeni Grup" adı üst sınırı (karakter): sözleşme/teklif/şablon 2000, dönüştürme 200 (backend grup adı). */
+  groupNameMax: number;
+  /**
+   * Σ "Eklenecek Tutar" SATIR BAŞI ROUND_HALF_UP toplamıdır (dönüştürme: sunucu `Σ ROUND(miktar × B.F.)` yazar, tablo Σ'sı ile
+   * kuruşu kuruşuna aynı). Diğer hedeflerde Σ kayıpsız çarpımların toplamıdır.
+   */
+  roundsLineAmounts: boolean;
 }
 
 function maxBound(limits: DecimalLimits): DecimalBound {
@@ -123,6 +131,8 @@ export const CONTRACT_RULES: PickerRules = {
   priceBound: { kind: "digits", fraction: 2, integer: 16, fractionMessage: "En fazla 2 ondalık", integerMessage: "En fazla 16 basamak" },
   words: CONTRACT_WORDS,
   usesLocalGroups: false,
+  groupNameMax: MAX_LENGTH.groupName,
+  roundsLineAmounts: false,
 };
 
 /** Teklif: maliyet B.F. isteğe bağlı; "Teklifte var · {grup}"; poz no kopya olduğundan kod çakışması engel DEĞİL. */
@@ -145,6 +155,8 @@ export const OFFER_RULES: PickerRules = {
   priceBound: maxBound(OFFER_PRICE_LIMITS),
   words: OFFER_WORDS,
   usesLocalGroups: false,
+  groupNameMax: MAX_LENGTH.groupName,
+  roundsLineAmounts: false,
 };
 
 /** Şablon: miktar/fiyat YOK (`selectOnly`); kalem bağı katalog kimliğidir → poz no çakışması engel DEĞİL; tavan 1000. */
@@ -161,12 +173,14 @@ export const TEMPLATE_RULES: PickerRules = {
   priceBound: maxBound(OFFER_PRICE_LIMITS),
   words: OFFER_WORDS,
   usesLocalGroups: true,
+  groupNameMax: MAX_LENGTH.groupName,
+  roundsLineAmounts: false,
 };
 
 /**
  * TKL-F5.4 · dönüştürme (Dönüştür › Adım 2): fiyatlı mod; gövde YEREL satırlar. Miktar BOŞ + zorunlu, birim fiyat zorunlu
  * (dahil satırda B.F. dolu ≥ 0). Dönüştürme listesinde (dahil YA DA çıkarılmış) olan katalog kalemi "Listede var · {grup}".
- * Poz no çakışması engel DEĞİL (tablo çakışan satırda kod düzenleyicisini açar). Tavan: 2000 − dahil kalem (tek seferde 200 ile küçüğü).
+ * Poz no çakışması engel DEĞİL (tablo çakışan satırda kod düzenleyicisini açar). Tavan: YALNIZ 2000 − dahil kalem (tek seferlik 200 sınırı YOK, F5.4b). Grup adı ≤ 200; Σ satır başı yuvarlanır.
  * Hane sınırları `convert-parse` ile AYNI tek kaynaktan (`lib/offer-limits`).
  */
 export const CONVERT_RULES: PickerRules = {
@@ -186,4 +200,6 @@ export const CONVERT_RULES: PickerRules = {
   priceBound: maxBound(OFFER_PRICE_LIMITS),
   words: OFFER_WORDS,
   usesLocalGroups: true,
+  groupNameMax: MAX_CONVERT_GROUP_NAME,
+  roundsLineAmounts: true,
 };

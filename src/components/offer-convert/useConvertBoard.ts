@@ -159,8 +159,12 @@ export function useConvertBoard({ detail, revision, catalogItems, convert }: Boa
       onCode: (key: string, code: string) => changeDraft((current) => model.setCode(current, key, code)),
       onRename: (groupKey: string, name: string) => changeDraft((current) => model.renameGroup(current, groupKey, name)),
       onDiscipline: (groupKey: string, id: string | null) => changeDraft((current) => model.setGroupDiscipline(current, groupKey, id)),
-      onAddCatalog: (target: model.CatalogTarget, entries: readonly model.CatalogEntry[]) =>
-        changeDraft((current) => model.addCatalogEntries(current, target, entries)),
+      /** `false` = hedef grup artık yok: taslağa DOKUNULMAZ, seçici kapanmaz (F5.4b). */
+      onAddCatalog: (target: model.CatalogTarget, entries: readonly model.CatalogEntry[]): boolean => {
+        if (!model.applyCatalogEntries(draft, target, entries).ok) return false;
+        changeDraft((current) => model.addCatalogEntries(current, target, entries));
+        return true;
+      },
     },
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_LENGTH, NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
+import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
 import { Checkbox, Input, Select } from "@/components/ui";
 import { SearchIcon } from "@/components/ui/icons";
 import type { WorkDisciplineRead } from "@/lib/api/models";
@@ -29,6 +29,8 @@ export interface WorkItemPickerToolbarProps {
   canCreateGroup: boolean;
   onGroup: (value: string) => void;
   newGroupName: string;
+  /** Yeni grup adı üst sınırı (hedefe göre). */
+  groupNameMax: number;
   onNewGroupName: (value: string) => void;
   selectedCount: number;
   visibleCount: number;
@@ -52,6 +54,7 @@ export function WorkItemPickerToolbar({
   canCreateGroup,
   onGroup,
   newGroupName,
+  groupNameMax,
   onNewGroupName,
   selectedCount,
   visibleCount,
@@ -113,7 +116,7 @@ export function WorkItemPickerToolbar({
             onChange={(event) => onNewGroupName(event.target.value)}
             placeholder="Yeni grubun adı"
             aria-label="Grup Adı"
-            maxLength={MAX_LENGTH.groupName}
+            maxLength={groupNameMax}
             disabled={isDisabled}
           />
         )}

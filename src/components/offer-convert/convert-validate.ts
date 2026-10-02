@@ -13,11 +13,9 @@ import { REF_PRICE_AMBIGUOUS_DOT, decimalDigitCounts, parseQuantityInput } from 
 
 import { rowContractAmount, parsedRow } from "./convert-derive";
 import { collidingGroupKeys, collidingRowKeys, includedRows, sentGroupKeys } from "./convert-model";
+import { MAX_CONVERT_GROUP_NAME, MAX_CONVERT_ITEMS, MSG_TOO_MANY, maxCharsMessage } from "./convert-limits";
 import { isOverAmountLimit, sumAmounts } from "./convert-money";
 import type { ConvertDraft, ConvertForm, ConvertRow } from "./convert-types";
-
-/** `convert_schemas.CONVERT_MAX_ITEMS`. */
-export const MAX_CONVERT_ITEMS = 2000;
 
 /** Backend alan uzunlukları (`convert_schemas`): ad/şantiye 150 · il/sözleşme no 100 · grup adı 200. */
 const MAX_PROJECT_NAME = 150;
@@ -26,7 +24,6 @@ const MAX_CITY = 100;
 /** `ConvertProject.code`: 1–50 (boşsa sunucu üretir → boş hata DEĞİL). */
 const MAX_PROJECT_CODE = 50;
 const MAX_CONTRACT_NO = 100;
-const MAX_GROUP_NAME = 200;
 /** `_BaseIndex`: Numeric(12,3) → ≤ 9 tam hane + 3 kesir. */
 const BASE_INDEX_MAX = "999999999.999";
 const BASE_INDEX_MAX_TEXT = "999.999.999,999";
@@ -34,15 +31,15 @@ const BASE_INDEX_FRACTION = 3;
 
 const MSG_GROUP_NAME_REQUIRED = "Grup adı zorunlu";
 const MSG_NO_ITEMS = "En az bir kalem sözleşmeye dahil olmalı";
-/** Seçici (F5.4) tavan bandında AYNI metni basar. */
-export const MSG_TOO_MANY = `En fazla ${MAX_CONVERT_ITEMS} kalem dönüştürülebilir`;
 const MSG_AMOUNT_LIMIT = "Kalem toplamı sözleşme bedeli sınırını aşıyor";
 /** Backend metinleri AYNEN (`convert_service._static_errors`). */
 const MSG_OFFER_ITEM_MISSING = "Kalem teklifin son revizyonunda bulunamadı";
 const MSG_OFFER_ITEM_MISMATCH = "Teklif kaleminin katalog bağı gövdedekiyle uyuşmuyor";
 
-const maxCharsMessage = (max: number): string => `En çok ${max} karakter`;
 const maxFractionMessage = (max: number): string => `En fazla ${max} ondalık`;
+
+/** Sınırlar `convert-limits`te (seçici de okur); mevcut içe alımlar için burada da dışa açık. */
+export { MAX_CONVERT_ITEMS };
 
 export type Step1Errors = Partial<Record<keyof ConvertForm, string>>;
 
@@ -155,7 +152,7 @@ function groupErrors(draft: ConvertDraft): Record<string, string> {
   return Object.fromEntries(
     draft.groups.flatMap((group) => {
       if (!sent.has(group.key)) return [];
-      const message = textError(group.name, MSG_GROUP_NAME_REQUIRED, MAX_GROUP_NAME) ?? (colliding.has(group.key) ? MSG_GROUP_NAME_TAKEN : undefined);
+      const message = textError(group.name, MSG_GROUP_NAME_REQUIRED, MAX_CONVERT_GROUP_NAME) ?? (colliding.has(group.key) ? MSG_GROUP_NAME_TAKEN : undefined);
       return message ? [[group.key, message] as const] : [];
     }),
   );

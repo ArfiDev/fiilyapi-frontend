@@ -166,14 +166,27 @@ export interface CatalogEntry {
   unitPrice: string;
 }
 
-/** F5.4 · seçici onayı: (gerekirse yerel yeni grup) + katalog satırları. Boş seçimde taslak AYNEN döner (boş grup açılmaz). */
-export function addCatalogEntries(draft: ConvertDraft, target: CatalogTarget, entries: readonly CatalogEntry[]): ConvertDraft {
-  if (entries.length === 0) return draft;
+/** Seçici onayının AÇIK sonucu: hedef grup artık yoksa `ok:false` (sessiz no-op YOK; çağıran seçiciyi kapatmaz). */
+export type CatalogAddResult = { ok: true; draft: ConvertDraft } | { ok: false };
+
+/**
+ * F5.4 · seçici onayı: (gerekirse yerel yeni grup) + katalog satırları. Boş seçimde taslak AYNEN döner (boş grup açılmaz);
+ * `groupKey` taslakta yoksa (seçici açıkken grup kalktı) `{ok:false}` — satırlar başka gruba YAZILMAZ.
+ */
+export function applyCatalogEntries(draft: ConvertDraft, target: CatalogTarget, entries: readonly CatalogEntry[]): CatalogAddResult {
+  if ("groupKey" in target && !draft.groups.some((group) => group.key === target.groupKey)) return { ok: false };
+  if (entries.length === 0) return { ok: true, draft };
   const base = "newGroupName" in target ? addGroup(draft, target.newGroupName) : { draft, groupKey: target.groupKey };
   const values = new Map(
     entries.map((entry) => [entry.item.id, { qtyRaw: trQuantityInputValue(entry.quantity), bfRaw: trPriceInputValue(entry.unitPrice) }]),
   );
-  return addFromCatalog(base.draft, base.groupKey, entries.map((entry) => entry.item), values);
+  return { ok: true, draft: addFromCatalog(base.draft, base.groupKey, entries.map((entry) => entry.item), values) };
+}
+
+/** `applyCatalogEntries`in taslak-döndüren kısayolu (güncelleyici işlev içinde); hedef yoksa taslak AYNEN kalır. */
+export function addCatalogEntries(draft: ConvertDraft, target: CatalogTarget, entries: readonly CatalogEntry[]): ConvertDraft {
+  const result = applyCatalogEntries(draft, target, entries);
+  return result.ok ? result.draft : draft;
 }
 
 export function renameGroup(draft: ConvertDraft, groupKey: string, name: string): ConvertDraft {
