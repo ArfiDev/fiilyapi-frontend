@@ -71,6 +71,22 @@ async function createPeriod(
   return (await response.json()) as ApiDetail;
 }
 
+/**
+ * Dönemi açar; AYNI koşuda daha önce açılmışsa (Playwright yeniden denemesi — paylaşılan mock durumu korunur) onu bulur.
+ * Yalnız yeniden-deneme güvenli olması GEREKEN testler kullanır; açılış sözleşmesini ölçen testler `createPeriod` ile 201 ister.
+ */
+async function openOrReusePeriod(page: Page, body: { year: number; month: number }): Promise<string> {
+  const response = await page.request.post("/api/backend/payroll/periods", { data: body });
+  if (response.status() === 201) return ((await response.json()) as ApiDetail).id;
+  expect(response.status(), `dönem açma 201 ya da (yeniden denemede) 409: ${await response.text()}`).toBe(409);
+  const list = await page.request.get("/api/backend/payroll/periods?limit=100");
+  expect(list.status()).toBe(200);
+  const rows = ((await list.json()) as { items: { id: string; year: number; month: number }[] }).items;
+  const row = rows.find((item) => item.year === body.year && item.month === body.month);
+  if (row === undefined) throw new Error(`409 verdi ama ${body.year}-${body.month} listede yok`);
+  return row.id;
+}
+
 async function compute(page: Page, periodId: string): Promise<ApiComputeResult> {
   const response = await page.request.post(
     `/api/backend/payroll/periods/${periodId}/compute`,
@@ -146,17 +162,18 @@ test("donem acmak satir URETMEZ; satirlari compute uretir ve created sayar", asy
 test("compute eksik onceki donemleri sayar (K4)", async ({ page }) => {
   await loginForPayroll(page);
 
-  // Mart 2025: aynı yılda ÖNCE gelen iki ay (Ocak · Şubat) vardır. Ocak başka
-  // bir testin adasıdır ve `fullyParallel` altında AÇILMIŞ ya da AÇILMAMIŞ
-  // olabilir ⇒ iddia bir ARALIKTIR, sabit sayı DEĞİL. Sabit yazılsaydı kapı
-  // koşu sırasına bağlı olur (FLAKY) ve sahte-kırmızı üretirdi.
-  const created = await createPeriod(page, { year: 2025, month: 3 });
-  const result = await compute(page, created.id);
+  // Haziran 2025: aynı yılda ÖNCE gelen beş ay (Ocak–Mayıs). Ocak · Şubat · Nisan başka testlerin adasıdır ve
+  // `fullyParallel` altında açılmış/hesaplanmış OLABİLİR ⇒ iddia bir ARALIKTIR. 🔴 MAYIS 2025 HİÇBİR testin ve
+  // tohumun adası DEĞİLDİR ⇒ HER ZAMAN eksiktir (alt sınır 1 bu yüzden sağlam).
+  // (Eski hâli Mart'tı ve "Şubat hiçbir testin adası değil" diyordu — YANLIŞTI: "açılmış ay 409" testi Şubat'ı
+  // açıp hesaplar. Ocak+Şubat önce bittiğinde sayaç 0 oluyordu; PR #166 CI run 37009367129'da yeniden denemede kırmızı.)
+  // Yeniden denemede dönem zaten açıktır → `openOrReusePeriod` (paylaşılan mock durumu korunur).
+  const periodId = await openOrReusePeriod(page, { year: 2025, month: 6 });
+  const result = await compute(page, periodId);
 
-  expect(result.created).toBeGreaterThan(0);
-  // Şubat 2025 hiçbir testin adası değildir ⇒ HER ZAMAN eksiktir.
-  expect(result.missing_prior_period_count, "en az Şubat eksik").toBeGreaterThanOrEqual(1);
-  expect(result.missing_prior_period_count, "en fazla Ocak+Şubat").toBeLessThanOrEqual(2);
+  expect(result.created + result.updated, "hesap satır üretir ya da (yeniden denemede) günceller").toBeGreaterThan(0);
+  expect(result.missing_prior_period_count, "en az Mayıs eksik").toBeGreaterThanOrEqual(1);
+  expect(result.missing_prior_period_count, "en fazla Ocak–Mayıs").toBeLessThanOrEqual(5);
 });
 
 /* ── 3) Sözleşme kapıları · 409 · 422 ────────────────────────────────────── */
