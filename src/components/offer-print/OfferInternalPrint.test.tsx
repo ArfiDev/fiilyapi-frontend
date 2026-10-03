@@ -42,3 +42,18 @@ describe("OfferInternalPrint — iç döküm (A4 yatay)", () => {
     expect(screen.getByText("Hazırlayan")).toBeInTheDocument();
   });
 });
+
+describe("OfferInternalPrint — sütun genişlikleri (TKL-F1.4b)", () => {
+  it("Poz No ve Birim sütunları genişletildi, toplam %100'ü aşmaz ve tarif sütunu (genişliksiz) en az %20 kalır", () => {
+    const { container } = renderPrint();
+    const widths = Array.from(container.querySelectorAll("col")).map((col) => Number.parseFloat((col as HTMLElement).style.width || "0"));
+    expect(widths[0]).toBe(9);
+    expect(widths[2]).toBe(5);
+    expect(100 - widths.reduce((sum, width) => sum + width, 0)).toBeGreaterThanOrEqual(20);
+  });
+
+  it("poz no hücresi mono ve tek satır sınıfını taşır", () => {
+    const { container } = renderPrint();
+    expect(container.querySelector("td.offer-print__poz")).not.toBeNull();
+  });
+});

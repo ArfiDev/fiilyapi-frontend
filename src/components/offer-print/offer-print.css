@@ -164,6 +164,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Poz no tek satır, harf ortasından bölünmez: "15.100.1001" (11 karakter) mono 9.5px ≈ 63px < %9 sütun iç genişliği (iç döküm A4 YATAY, tablo ≈ 1063px → 96 − 12 = 84px). Birim %5 (53 − 12 = 41px): "Adet"/"Takım"/"BİRİM" başlığı tek satır. */
+.offer-print__poz {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
 .offer-print__description {
   display: block;
   line-height: 1.2;

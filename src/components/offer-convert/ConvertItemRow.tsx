@@ -55,7 +55,7 @@ export function ConvertItemRow({ row, errors, isCodeEditable, onToggle, onQty, o
       <td>
         <div className="convert-row__desc">
           <span className="convert-row__title">
-            <span className="convert-row__text">{row.description}</span>
+            <span className="convert-row__text convert-row__name" title={row.description}>{row.description}</span>
             {tag !== null && <span className={cx("convert-tag", row.isNew && "convert-tag--new", !row.included && !row.isNew && "convert-tag--excluded")}>{tag}</span>}
           </span>
           {row.note !== null && <span className="convert-row__note">{row.note}</span>}

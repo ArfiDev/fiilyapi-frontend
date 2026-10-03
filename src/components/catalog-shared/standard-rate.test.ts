@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CATALOG_UNIT_OPTIONS, unitOptions } from "./catalog-units";
+import { CATALOG_UNIT_OPTIONS, selectedUnit, unitOptions } from "./catalog-units";
 import { standardRateError } from "./standard-rate";
 
 const REQUIRED = "Bu ekranın zorunlu metni";
@@ -25,12 +25,26 @@ describe("standardRateError — iki ekranın ortak A-s kuralı", () => {
 });
 
 describe("catalog-units — tek kaynak", () => {
-  it("kg 'ton'un yanında listede (ÜS-11)", () => {
-    expect(CATALOG_UNIT_OPTIONS).toEqual(["m³", "m²", "m", "ton", "kg", "adet"]);
+  const CANON = ["m³", "m²", "m", "Ton", "Kg", "Adet", "Lt", "Gün", "Saat", "Takım"];
+
+  it("kanonik yazım: kelime birimler ilk harf büyük, metre sembolleri küçük", () => {
+    expect(CATALOG_UNIT_OPTIONS).toEqual(CANON);
   });
 
   it("katalogdaki ve mevcut birim eklenir; tekrar ve boş atılır", () => {
-    expect(unitOptions(["m²", "lt"], "paket")).toEqual(["m³", "m²", "m", "ton", "kg", "adet", "lt", "paket"]);
-    expect(unitOptions([], "")).toEqual([...CATALOG_UNIT_OPTIONS]);
+    expect(unitOptions(["m²", "paket"], "özel")).toEqual([...CANON, "paket", "özel"]);
+    expect(unitOptions([], "")).toEqual([...CANON]);
+  });
+
+  it("aynı birimin farklı yazımı tek seçenek olur, kanonik yazım kazanır (TR duyarsız)", () => {
+    expect(unitOptions(["kg", "ADET", "takim", "gün"], "kg")).toEqual([...CANON, "takim"]);
+    expect(unitOptions(["I"], "")).toContain("I");
+  });
+
+  it("current='kg': listede tek 'Kg' var ve seçili gösterilir; form değeri değişmez", () => {
+    const options = unitOptions([], "kg");
+    expect(options.filter((o) => o.toLocaleLowerCase("tr-TR") === "kg")).toEqual(["Kg"]);
+    expect(selectedUnit(options, "kg")).toBe("Kg");
+    expect(selectedUnit(options, "paket")).toBe("paket");
   });
 });

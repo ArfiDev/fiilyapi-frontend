@@ -399,6 +399,16 @@
 .convert-row__text {
   font-weight: var(--weight-medium);
 }
+/* Uzun Bakanlık adı (≤200): kelime sınırında kır (`anywhere` YOK), 2 satırda kırp; tam metin `title`da. */
+.convert-row__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
 .convert-tag {
   padding: 1px 6px;
   font-size: 10px;

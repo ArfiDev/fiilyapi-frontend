@@ -38,7 +38,7 @@ function RowView({ row }: { row: InternalPrintRow }) {
   }
   return (
     <tr className={row.isUnpriced ? "offer-print__row offer-print__row--unpriced" : "offer-print__row"} data-print-row={row.key}>
-      <td>{row.poz}</td>
+      <td className="offer-print__poz">{row.poz}</td>
       <td>
         <span className="offer-print__description">{row.description}</span>
       </td>
@@ -56,9 +56,9 @@ function RowView({ row }: { row: InternalPrintRow }) {
 }
 
 const HEADERS: readonly { label: string; numeric: boolean; width?: string }[] = [
-  { label: "Poz No", numeric: false, width: "8%" },
+  { label: "Poz No", numeric: false, width: "9%" },
   { label: "Tarif", numeric: false },
-  { label: "Birim", numeric: false, width: "4%" },
+  { label: "Birim", numeric: false, width: "5%" },
   { label: "Miktar", numeric: true, width: "7%" },
   { label: "A-s/birim", numeric: true, width: "6%" },
   { label: "Maliyet B.F. (₺)", numeric: true, width: "9%" },

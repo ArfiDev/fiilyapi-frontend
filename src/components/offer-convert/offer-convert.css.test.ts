@@ -31,3 +31,15 @@ describe("offer-convert.css — kalem tablosu 1440'ta kırpılmaz", () => {
     expect(minWidth).toBeLessThanOrEqual(820);
   });
 });
+
+// TKL-F1.4b: ≤200 karakterlik Bakanlık adı dar tarif sütununda (≥122px) 10+ satıra uzamasın / boşluksuz kelimede taşmasın.
+// `anywhere` YASAK (sözcük bölmez); 2 satırda kırpılır, tam metin `title`da (ConvertItemRow.test).
+describe("offer-convert.css — uzun ad satırı", () => {
+  it(".convert-row__name kelime sınırında kırar ve 2 satırda kırpar", () => {
+    const rule = ruleOf(".convert-row__name");
+    expect(rule).toMatch(/overflow-wrap:\s*break-word;/);
+    expect(rule).not.toMatch(/anywhere/);
+    expect(rule).toMatch(/-webkit-line-clamp:\s*2;/);
+    expect(rule).toMatch(/min-width:\s*0;/);
+  });
+});

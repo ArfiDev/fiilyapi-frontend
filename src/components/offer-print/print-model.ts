@@ -23,7 +23,7 @@ const MONEY_DIGITS = 2;
 
 /**
  * Sayfa başına tablo SATIR kapasitesi (grup başlığı + kalem + ara toplam satırları HEP aynı sabit
- * yükseklikte, `offer-print.css` `--offer-print-row`: 28px; uzun tarif 2 satırda kırpılır).
+ * yükseklikte, `offer-print.css` `--offer-print-row`: 28px; yükseklik ALT SINIRDIR; uzun tarif KIRPILMAZ, satırı büyütür — tam metin kaybı ürün kararı, bkz. offer-print.css).
  *
  * 🔴 STATİK HESAP (F3.7) — playwright'ta (F3.8, T13 onay kareleri) DOĞRULANACAK:
  *   A4 dikey içerik = 1123 − 26 (üst dolgu) − 40 (altlık payı) = 1057 px.

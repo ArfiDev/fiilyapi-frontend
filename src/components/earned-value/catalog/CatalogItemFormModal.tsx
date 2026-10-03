@@ -26,6 +26,7 @@ import {
   catalogOwnHint,
   catalogRateChanged,
   emptyCatalogForm,
+  selectedUnit,
   unitOptions,
   validateCatalogForm,
   type CatalogFormState,
@@ -276,7 +277,7 @@ export function CatalogItemFormModal({
             {(control) => (
               <Select
                 {...control}
-                value={form.uom}
+                value={selectedUnit(units, form.uom)}
                 onChange={(event) => patch({ uom: event.target.value })}
                 disabled={readOnly}
               >

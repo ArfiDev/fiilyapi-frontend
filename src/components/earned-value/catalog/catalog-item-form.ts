@@ -6,7 +6,7 @@
  * Düzenlemede yalnız DEĞİŞEN alanlar PATCH edilir (backend kısmi günceller;
  * oran değişmezse `standard_updated_at` yenilenmez).
  */
-import { CATALOG_UNIT_OPTIONS, unitOptions } from "@/components/catalog-shared/catalog-units";
+import { CATALOG_UNIT_OPTIONS, selectedUnit, unitOptions } from "@/components/catalog-shared/catalog-units";
 import { standardRateError } from "@/components/catalog-shared/standard-rate";
 import { compareDecimalStrings, normalizeDecimalInput } from "@/lib/decimal";
 import type {
@@ -33,7 +33,7 @@ export interface CatalogFormErrors {
 }
 
 /** TKL-F1.3 · birim listesi TEK KAYNAK çekirdekte (`catalog-shared/catalog-units.ts`); KAT bu adla ithal eder. */
-export { CATALOG_UNIT_OPTIONS, unitOptions };
+export { CATALOG_UNIT_OPTIONS, selectedUnit, unitOptions };
 
 /** TKL ÜS-13(a) — düzenlemede disiplin değişince gösterilen uyarı. */
 export const DISCIPLINE_CHANGE_WARNING =
