@@ -940,7 +940,7 @@ describe("ProgressPaymentForm — üst çubuk kaydı (unsavedRegistry) başlık 
 
 /**
  * TKL-F8 (T30/T43) · İŞVEREN hakediş miktarı ve katsayısı TÜRKÇE okunur: nokta binlik, virgül
- * ondalık; belirsiz "1.5"/"0.500" reddedilir. Eskiden `sanitizeQuantityInput` virgülü SİLİYORDU
+ * ondalık; belirsiz "1.5"/"0.500" reddedilir. Eski nokta-ondalık süzgeç virgülü SİLİYORDU
  * ("3,5" → 35 kaydı = sessiz 10× hata). Gövdeye nokta-ondalık METİN gider (Number() turu yok).
  */
 describe("ProgressPaymentForm — T30 Türkçe sayı kuralı (TKL-F8)", () => {

@@ -6,7 +6,6 @@ import {
   findOrphanedAllocationCells,
   rowQuantityTotal,
   rowAmountTotal,
-  sanitizeQuantityInput,
   normalizePivotRowsForSave,
 } from "./pivot";
 import type { ContractDistributionResponse } from "@/lib/api/hooks/useContract";
@@ -215,28 +214,6 @@ describe("rowAmountTotal", () => {
     ];
     const rows = buildPivotRows(DISTRIBUTION, lines);
     expect(rowAmountTotal(rows[0])).toBe("2442000.00");
-  });
-});
-
-// TKL-F8 (T43): İŞVEREN formu artık bu süzgeci KULLANMAZ; yalnız TAŞERON formu tüketicidir
-// (TKL-F7 birleşince fonksiyon ve bu blok kalkar). Eski beklenti `"12,5" → "125"` KALDIRILDI: virgül
-// Türkçede ondalıktır, silmek sessiz 10× hataydı ("3,5" → 35 kaydı); işveren davranışı artık
-// `employer-quantity.test.ts` ve `ProgressPaymentForm.test.tsx` (T30 bloğu) ile korunur.
-describe("sanitizeQuantityInput — yalnız taşeron tüketicisi (kontrolcü bulgusu §2)", () => {
-  it("rakam/nokta dışı karakterleri süzer", () => {
-    expect(sanitizeQuantityInput("12a3")).toBe("123");
-    expect(sanitizeQuantityInput("-5")).toBe("5");
-    expect(sanitizeQuantityInput("abc")).toBe("");
-  });
-
-  it("birden fazla nokta varsa yalnız ilkini korur", () => {
-    expect(sanitizeQuantityInput("1.2.3")).toBe("1.23");
-  });
-
-  it("geçerli ondalık girişi olduğu gibi bırakır (ara hal '12.' dahil)", () => {
-    expect(sanitizeQuantityInput("12.")).toBe("12.");
-    expect(sanitizeQuantityInput("900.500")).toBe("900.500");
-    expect(sanitizeQuantityInput("")).toBe("");
   });
 });
 

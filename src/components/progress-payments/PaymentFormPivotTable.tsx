@@ -2,7 +2,7 @@ import { Input } from "@/components/ui";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import type { ContractDistributionSite } from "@/lib/api/hooks/useContract";
 
-import { sanitizeTrDecimalInput, formatTrQuantityText } from "./employer-quantity";
+import { sanitizeTrDecimalInput, formatTrQuantityText } from "./tr-quantity";
 import { cellKey, rowAmountTotal, rowQuantityTotal, type PivotRow } from "./pivot";
 import { isDiarySourced } from "./quantity-source";
 

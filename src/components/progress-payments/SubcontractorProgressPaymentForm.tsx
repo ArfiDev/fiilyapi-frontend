@@ -28,6 +28,7 @@ import { PERIOD_MONTHS, formatAmount, formatPercent } from "@/lib/format";
 
 import { DiaryFillFeedback } from "./DiaryFillFeedback";
 import { applySubcontractorDiarySuggestion } from "./diary-fill";
+import { omitKeys } from "./omit-keys";
 import { periodFields, type OmittablePeriodField } from "./period-fields";
 import { isDiarySourced } from "./quantity-source";
 import { useDiaryFill } from "./useDiaryFill";
@@ -38,12 +39,10 @@ import {
 import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import {
   buildSubcontractorLineRows,
-  formatTrQuantityText,
-  parseSubcontractorCoefficient,
-  sanitizeTrDecimalInput,
   buildSubcontractorLinesSaveBody,
   type SubcontractorLineRow,
 } from "./th-lines";
+import { formatTrQuantityText, parsePaymentCoefficient, sanitizeTrDecimalInput } from "./tr-quantity";
 import "./progress-payment-form.css";
 import "./subcontractor-progress-payment-form.css";
 import { routes } from "@/lib/routes";
@@ -178,6 +177,9 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
     fetchSuggestion: () => diarySuggestionQuery.refetch(),
     apply: (lines) => applySubcontractorDiarySuggestion(rows ?? [], lines),
     commit: (application) => {
+      // Doldurmanın DEĞİŞTİRDİĞİ satırların hatası kalkar; değişmeyen hatalı satırın hatası kalır.
+      const changedIds = changedLineIds(rows ?? [], application.rows);
+      setLineErrors((prev) => omitKeys(prev, changedIds));
       setRows(application.rows);
     },
   });
@@ -298,7 +300,7 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
       return;
     }
     const { body: linesBody, errors } = buildSubcontractorLinesSaveBody(rows ?? []);
-    const coefficient = parseSubcontractorCoefficient(defaultCoefficient);
+    const coefficient = parsePaymentCoefficient(defaultCoefficient);
     setLineErrors(errors);
     setCoefficientError(coefficient.kind === "error" ? coefficient.message : null);
     if (coefficient.kind === "error" || Object.keys(errors).length > 0) return;
@@ -774,4 +776,9 @@ function parsePeriodYear(raw: string): number | null {
   if (raw === "") return null;
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
+}
+
+function changedLineIds(before: readonly SubcontractorLineRow[], after: readonly SubcontractorLineRow[]): string[] {
+  const previous = new Map(before.map((row) => [row.itemId, row.quantity]));
+  return after.filter((row) => previous.get(row.itemId) !== row.quantity).map((row) => row.itemId);
 }

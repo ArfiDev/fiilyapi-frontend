@@ -2,11 +2,10 @@ import { parseEmployerQuantity } from "@/components/contract-item-form/validate"
 import { formatQuantity } from "@/lib/format";
 import { REF_PRICE_AMBIGUOUS_DOT, decimalDigitCounts, parseQuantityInput } from "@/lib/tr-decimal";
 
-// TKL-F8 (T30/T43) · İŞVEREN hakedişinde miktar ve katsayı TÜRKÇE okunur (nokta binlik, virgül
-// ondalık; belirsiz "1.5" reddedilir) — ayrıştırma `lib/tr-decimal.ts` TEK kaynağından. Hücre/alan
-// state'i EKRAN METNİDİR ("12,5"); gövdeye yalnız buradaki ayrıştırıcılar nokta-ondalık METİN
-// olarak çevirir (`Number()` turu YOK). Taşeron emsali `th-lines.ts` (TKL-F7b) ile aynı kurallar
-// ve AYNI mesajlar; ayrı dosya yalnız iki PR'ın çakışmaması içindir.
+// TKL-F7b/F8 (T30/T42/T43) · İŞVEREN ve TAŞERON hakedişinde miktar ve katsayı TÜRKÇE okunur (nokta
+// binlik, virgül ondalık; belirsiz "1.5" reddedilir) — ayrıştırma `lib/tr-decimal.ts` TEK kaynağından,
+// iki form da BU modülü kullanır. Hücre/alan state'i EKRAN METNİDİR ("12,5"); gövdeye yalnız buradaki
+// ayrıştırıcılar nokta-ondalık METİN olarak çevirir (`Number()` turu YOK).
 
 export type TrFieldParse = { kind: "ok"; value: string } | { kind: "error"; message: string };
 
@@ -19,11 +18,11 @@ export function sanitizeTrDecimalInput(raw: string): string {
 }
 
 /**
- * Hücre miktarı: boş → "0" (0 hakedişte MEŞRU), aksi halde T30 + `Numeric(14,3)` sınırları (en çok
+ * Hakediş miktarı (işveren hücresi / taşeron satırı): boş → "0" (0 hakedişte MEŞRU), aksi halde T30 + `Numeric(14,3)` sınırları (en çok
  * 3 ondalık, 11 basamak; mesajlar `parseEmployerQuantity` ile aynı). Sıfır değeri kabul edilir
  * ("0,000" → "0"); işveren sözleşme kalemi kuralından (sıfırdan büyük) tek farkı budur.
  */
-export function parseEmployerPaymentQuantity(raw: string): TrFieldParse {
+export function parsePaymentQuantity(raw: string): TrFieldParse {
   const text = raw.trim();
   if (text === "") return { kind: "ok", value: "0" };
   const parsed = parseQuantityInput(text);
@@ -34,11 +33,11 @@ export function parseEmployerPaymentQuantity(raw: string): TrFieldParse {
     : { kind: "ok", value: result.value };
 }
 
-export const COEFFICIENT_TOO_BIG = "Katsayı çok büyük, ondalık için virgül kullanın";
-export const COEFFICIENT_NOT_POSITIVE = "Katsayı sıfırdan büyük olmalıdır";
-export const COEFFICIENT_NOT_A_NUMBER = "Katsayı sayı olmalıdır.";
+const COEFFICIENT_TOO_BIG = "Katsayı çok büyük, ondalık için virgül kullanın";
+const COEFFICIENT_NOT_POSITIVE = "Katsayı sıfırdan büyük olmalıdır";
+const COEFFICIENT_NOT_A_NUMBER = "Katsayı sayı olmalıdır.";
 /** Backend `default_coefficient` `Numeric(8,3)`; mesaj miktarla aynı metin. */
-export const COEFFICIENT_FRACTION_LIMIT = "En fazla 3 ondalık";
+const COEFFICIENT_FRACTION_LIMIT = "En fazla 3 ondalık";
 const COEFFICIENT_MAX_FRACTION = 3;
 /** Dn/D0 katsayısı için kullanıcı onaylı üst sınır (T43): 10 dahil geçerli. */
 const COEFFICIENT_MAX = 10;
@@ -48,7 +47,7 @@ const COEFFICIENT_MAX_WHOLE_DIGITS = 2;
  * Fiyat farkı katsayısı: boş → "1" (mevcut davranış); T30 okuması (kesir tamamlanmaz); ayrıştırılmış
  * değer 10'dan büyükse ("1.052" binlik tuzağı → 1052) reddedilir.
  */
-export function parseEmployerCoefficient(raw: string): TrFieldParse {
+export function parsePaymentCoefficient(raw: string): TrFieldParse {
   const text = raw.trim();
   if (text === "") return { kind: "ok", value: "1" };
   const isNegative = text.startsWith("-");
@@ -72,6 +71,6 @@ export function parseEmployerCoefficient(raw: string): TrFieldParse {
 
 /** Ekran metnini ("1.234,5") salt-okunur gösterim için biçimler; okunamazsa ham metni basar. */
 export function formatTrQuantityText(raw: string): string {
-  const parsed = parseEmployerPaymentQuantity(raw);
+  const parsed = parsePaymentQuantity(raw);
   return parsed.kind === "ok" ? formatQuantity(parsed.value) : raw;
 }

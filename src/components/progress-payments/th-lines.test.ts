@@ -2,9 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   buildSubcontractorLineRows,
   buildSubcontractorLinesSaveBody,
-  parseSubcontractorCoefficient,
-  parseSubcontractorQuantity,
-  sanitizeTrDecimalInput,
   type SubcontractorContractItem,
 } from "./th-lines";
 import type { SubcontractorProgressPaymentLineRead } from "@/lib/api/hooks/useSubcontractorProgressPayments";
@@ -136,74 +133,5 @@ describe("buildSubcontractorLinesSaveBody — PUT lines DEĞİŞTİRME semantiğ
     const rows = buildSubcontractorLineRows([item()]).map((r) => ({ ...r, quantity: "" }));
     const { body } = buildSubcontractorLinesSaveBody(rows);
     expect(body[0].quantity).toBe("0");
-  });
-});
-
-describe("parseSubcontractorQuantity (T30)", () => {
-  it.each([
-    ["", "0"],
-    ["0", "0"],
-    ["0,000", "0"],
-    ["3,5", "3.5"],
-    ["1.234,5", "1234.5"],
-    ["3.200", "3200"],
-    ["12,500", "12.5"],
-  ])("'%s' → '%s'", (raw, expected) => {
-    expect(parseSubcontractorQuantity(raw)).toEqual({ kind: "ok", value: expected });
-  });
-
-  it.each(["1.5", "0.500", ",", "1,2345", "123.456.789.012"])("'%s' reddedilir", (raw) => {
-    expect(parseSubcontractorQuantity(raw).kind).toBe("error");
-  });
-
-  it("belirsiz nokta mesajı TAM metin", () => {
-    expect(parseSubcontractorQuantity("0.500")).toEqual({
-      kind: "error",
-      message: "Ondalık için virgül kullanın (ör. 28,50)",
-    });
-  });
-});
-
-describe("parseSubcontractorCoefficient (T43)", () => {
-  it.each([
-    ["", "1"],
-    ["1", "1"],
-    ["10", "10"],
-    ["10,0", "10"],
-    ["1,052", "1.052"],
-  ])("'%s' → '%s'", (raw, expected) => {
-    expect(parseSubcontractorCoefficient(raw)).toEqual({ kind: "ok", value: expected });
-  });
-
-  it.each(["1.052", "10,01", "11", "1.052,5"])("'%s' çok büyük", (raw) => {
-    expect(parseSubcontractorCoefficient(raw)).toEqual({
-      kind: "error",
-      message: "Katsayı çok büyük, ondalık için virgül kullanın",
-    });
-  });
-
-  it("4 ondalık → 'En fazla 3 ondalık'", () => {
-    expect(parseSubcontractorCoefficient("1,0523")).toEqual({ kind: "error", message: "En fazla 3 ondalık" });
-  });
-
-  it.each(["0", "0,000", "-1"])("'%s' → sıfırdan büyük olmalı", (raw) => {
-    expect(parseSubcontractorCoefficient(raw)).toEqual({
-      kind: "error",
-      message: "Katsayı sıfırdan büyük olmalıdır",
-    });
-  });
-
-  it("'1.05' belirsiz", () => {
-    expect(parseSubcontractorCoefficient("1.05")).toEqual({
-      kind: "error",
-      message: "Ondalık için virgül kullanın (ör. 28,50)",
-    });
-  });
-});
-
-describe("sanitizeTrDecimalInput", () => {
-  it("nokta ve ilk virgül kalır, harf/eksi/ikinci virgül süzülür", () => {
-    expect(sanitizeTrDecimalInput("1.234,5")).toBe("1.234,5");
-    expect(sanitizeTrDecimalInput("-1a,2,3")).toBe("1,23");
   });
 });

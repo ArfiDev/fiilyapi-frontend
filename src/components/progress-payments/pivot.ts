@@ -9,7 +9,7 @@ import type { ProgressPaymentLineInput } from "@/lib/api/hooks/useProgressPaymen
 
 import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 
-import { parseEmployerPaymentQuantity } from "./employer-quantity";
+import { parsePaymentQuantity } from "./tr-quantity";
 import { DEFAULT_QUANTITY_SOURCE, type QuantitySource } from "./quantity-source";
 
 // P7 T5 · Hakediş formu pivot dönüşümü — EN RİSKLİ modül (brief §Uyarı).
@@ -123,18 +123,6 @@ export function buildLinesSaveBody(rows: readonly PivotRow[]): ProgressPaymentLi
 }
 
 /**
- * ⚠️ NOKTA-ONDALIK süzgeç (rakam ve nokta kalır, VİRGÜL SİLİNİR). İŞVEREN formu artık KULLANMAZ
- * (TKL-F8: `employer-quantity.ts` · `sanitizeTrDecimalInput`); yalnız TAŞERON hakediş formu hâlâ
- * tüketicidir ve TKL-F7 birleşince bu fonksiyon kaldırılacaktır. Yeni kod BUNU ÇAĞIRMAZ.
- */
-export function sanitizeQuantityInput(raw: string): string {
-  const digitsAndDots = raw.replace(/[^0-9.]/g, "");
-  const firstDot = digitsAndDots.indexOf(".");
-  if (firstDot === -1) return digitsAndDots;
-  return digitsAndDots.slice(0, firstDot + 1) + digitsAndDots.slice(firstDot + 1).replace(/\./g, "");
-}
-
-/**
  * 🔴 TKL-F8 (T30/T43) · Kaydetmeden HEMEN ÖNCE çağrılır: her düzenlenebilir hücrenin EKRAN METNİ
  * ("3,5", "1.234,5") Türkçe kuralla okunur ve nokta-ondalık METNE çevrilir ("3.5", "1234.5";
  * `Number()` YOK). Boş hücre ve sıfır "0"a düşer (0 bu formda MEŞRU; reddetmek gereksiz sürtünme).
@@ -152,7 +140,7 @@ export function normalizePivotRowsForSave(rows: readonly PivotRow[]): {
     ...row,
     cells: row.cells.map((cell) => {
       if (!cell.editable) return cell;
-      const parsed = parseEmployerPaymentQuantity(cell.quantity);
+      const parsed = parsePaymentQuantity(cell.quantity);
       if (parsed.kind === "error") {
         errors[cellKey(row.item.id, cell.siteId)] = parsed.message;
         return cell;
@@ -173,7 +161,7 @@ export function rowQuantityTotal(row: PivotRow): string {
   const editableQuantities = row.cells
     .filter((c) => c.editable)
     .map((c) => {
-      const parsed = parseEmployerPaymentQuantity(c.quantity);
+      const parsed = parsePaymentQuantity(c.quantity);
       return parsed.kind === "ok" ? parsed.value : "0";
     });
   return sumDecimalStrings(editableQuantities.length > 0 ? editableQuantities : ["0"]);

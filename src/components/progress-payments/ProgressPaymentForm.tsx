@@ -34,9 +34,10 @@ import { ProgressPaymentStatusActions } from "./ProgressPaymentStatusActions";
 import { applyEmployerDiarySuggestion } from "./diary-fill";
 import {
   formatTrQuantityText,
-  parseEmployerCoefficient,
+  parsePaymentCoefficient,
   sanitizeTrDecimalInput,
-} from "./employer-quantity";
+} from "./tr-quantity";
+import { omitKeys } from "./omit-keys";
 import { periodFields, type OmittablePeriodField } from "./period-fields";
 import { useDiaryFill } from "./useDiaryFill";
 import {
@@ -294,7 +295,7 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   // Kilitliyken (fiyat farkı yok) metin okunmaz: gövdeye sabit "1" gider (davranış aynen).
   function parseCoefficientToSend() {
     return hasPriceEscalation
-      ? parseEmployerCoefficient(defaultCoefficient)
+      ? parsePaymentCoefficient(defaultCoefficient)
       : ({ kind: "ok", value: DEFAULT_COEFFICIENT_WHEN_LOCKED } as const);
   }
 
@@ -675,14 +676,6 @@ function changedCellKeys(before: readonly PivotRow[], after: readonly PivotRow[]
   return changed;
 }
 
-function omitKeys(
-  errors: Readonly<Record<string, string>>,
-  keys: readonly string[],
-): Readonly<Record<string, string>> {
-  if (!keys.some((key) => key in errors)) return errors;
-  return Object.fromEntries(Object.entries(errors).filter(([key]) => !keys.includes(key)));
-}
-
 // `Field`in render-prop `control`ünden yalnız aria/`id` alanlarını salt-okunur
 // gösterim `div`ine geçirir — `<input>` olmadığından `value`/`onChange` yok.
 function pickAriaProps(control: { id: string; "aria-describedby"?: string }) {
@@ -714,7 +707,7 @@ function parsePeriodYear(raw: string): number | null {
 function coefficientPercentLabel(coefficient: string): string {
   // TKL-F8: alan metni TÜRKÇEDİR ("1,05") — `Number()`a ham metin verilmez, T30 ile okunur.
   // Okunamayan ara hal (yazım sürüyor / hatalı) %0 basar; hata alanın altında ayrıca görünür.
-  const parsed = parseEmployerCoefficient(coefficient);
+  const parsed = parsePaymentCoefficient(coefficient);
   const value = parsed.kind === "ok" ? Number(parsed.value) : Number.NaN;
   // KAÇIŞ: yalnız gösterim amaçlı türetilmiş katsayı yüzdesi (yorum yukarıda);
   // formatPercent sınırında Decimal kanonuyla stringe çevriliyor.
