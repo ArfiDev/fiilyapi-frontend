@@ -16,8 +16,9 @@ export function WorkItemSearchBar({ query, onQueryChange, count }: WorkItemSearc
         type="search"
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
-        placeholder="Poz no ya da tarif ara"
-        aria-label="Poz no ya da tarif ara"
+        // T47 eki (kullanıcı onaylı metin sapması): mockup "Poz no ya da tarif ara" yazar
+        placeholder="Poz no, Bakanlık no veya tanımda ara..."
+        aria-label="Poz no, Bakanlık no veya tanımda ara"
         leftIcon={<SearchIcon width={13} height={13} />}
         wrapperClassName="wik-search__box"
       />

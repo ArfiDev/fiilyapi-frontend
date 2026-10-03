@@ -1,7 +1,10 @@
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 
+import { shouldVirtualize } from "@/components/catalog-shared/virtual-rows";
+
 import { WorkItemEditRow } from "./WorkItemEditRow";
 import { WorkItemRow } from "./WorkItemRow";
+import { WorkItemVirtualRows } from "./WorkItemVirtualRows";
 import { resolveNewDraftDiscipline, type WorkItemDraft } from "./work-item-drafts";
 import type { WorkItemFormState } from "./work-item-form";
 
@@ -37,11 +40,20 @@ export function WorkItemTable({
   onSave,
 }: WorkItemTableProps) {
   const rowHandlers = { catalogUnits, onPatch, onCancel, onSave };
+  // Eşik altında DOM bugünkü gibidir (aria-rowcount/rowindex YOK); eşikte yalnız pencere basılır (WorkItemVirtualRows).
+  const isVirtual = shouldVirtualize(items.length);
+  const headRows = 1;
+  const rowIndexOffset = headRows + newDrafts.length;
   return (
     <div className="wik-scroll">
-      <div role="table" aria-label="İş kalemleri" className="wik-table">
+      <div
+        role="table"
+        aria-label="İş kalemleri"
+        aria-rowcount={isVirtual ? rowIndexOffset + items.length : undefined}
+        className="wik-table"
+      >
         <div role="rowgroup">
-          <div role="row" className="wik-grid wik-head">
+          <div role="row" aria-rowindex={isVirtual ? 1 : undefined} className="wik-grid wik-head">
             <div role="columnheader" className="wik-th wik-th--poz">Poz No</div>
             <div role="columnheader" className="wik-th">Tarif</div>
             <div role="columnheader" className="wik-th wik-th--unit">Birim</div>
@@ -54,9 +66,10 @@ export function WorkItemTable({
           </div>
         </div>
         <div role="rowgroup">
-          {newDrafts.map((draft) => (
+          {newDrafts.map((draft, index) => (
             <WorkItemEditRow
               key={draft.key}
+              ariaRowIndex={isVirtual ? headRows + index + 1 : undefined}
               draft={draft}
               pozNo={null}
               discipline={resolveNewDraftDiscipline(draft, disciplines)}
@@ -64,23 +77,36 @@ export function WorkItemTable({
               {...rowHandlers}
             />
           ))}
-          {items.map((item) => {
-            const draft = editDrafts.get(item.id);
-            return draft ? (
-              <WorkItemEditRow
-                key={item.id}
-                draft={draft}
-                pozNo={item.poz_no}
-                discipline={item.discipline}
-                lastPrice={item.last_price}
-                savedRefPrice={item.ref_price}
-                testId={`wik-edit-${item.id}`}
-                {...rowHandlers}
-              />
-            ) : (
-              <WorkItemRow key={item.id} item={item} now={now} canWrite={canWrite} onEdit={onEdit} />
-            );
-          })}
+          {isVirtual ? (
+            <WorkItemVirtualRows
+              items={items}
+              editDrafts={editDrafts}
+              now={now}
+              canWrite={canWrite}
+              rowIndexOffset={rowIndexOffset}
+              onEdit={onEdit}
+              {...rowHandlers}
+            />
+          ) : (
+            items.map((item) => {
+              const draft = editDrafts.get(item.id);
+              return draft ? (
+                <WorkItemEditRow
+                  key={item.id}
+                  draft={draft}
+                  pozNo={item.poz_no}
+                  source={item}
+                  discipline={item.discipline}
+                  lastPrice={item.last_price}
+                  savedRefPrice={item.ref_price}
+                  testId={`wik-edit-${item.id}`}
+                  {...rowHandlers}
+                />
+              ) : (
+                <WorkItemRow key={item.id} item={item} now={now} canWrite={canWrite} onEdit={onEdit} />
+              );
+            })
+          )}
         </div>
       </div>
     </div>

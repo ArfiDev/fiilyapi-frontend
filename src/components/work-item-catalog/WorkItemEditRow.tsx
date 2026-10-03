@@ -1,12 +1,13 @@
 "use client";
 
 import { CONTRACTOR_OPTIONS } from "@/components/catalog-shared/CatalogBits";
-import { unitOptions } from "@/components/catalog-shared/catalog-units";
+import { selectedUnit, unitOptions } from "@/components/catalog-shared/catalog-units";
 import { Button, Input, Segmented, Select } from "@/components/ui";
 import { AlertIcon } from "@/components/ui/icons";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 
 import { LastPriceCell } from "./LastPriceCell";
+import { refPriceDateLabel, sourceCodeLabel } from "./work-item-model";
 import type { WorkItemDraft } from "./work-item-drafts";
 import {
   firstWorkItemError,
@@ -36,6 +37,8 @@ interface WorkItemEditRowProps {
   pozNo: string | null;
   /** Düzenlemede kalemin, yeni satırda ŞİMDİKİ listeden çözülen disiplin (yoksa null). */
   discipline: WorkItemDisciplineLabel | null;
+  /** KAT-B1 · salt okunur Bakanlık no + fiyat tarihi (yeni satırda verilmez); gövdeye GİRMEZ. */
+  source?: Pick<WorkItemRead, "source_code" | "ref_price_date">;
   /** Düzenlemede kalemin son fiyat okuması (salt okunur hücre); yeni satırda null. */
   lastPrice?: WorkItemRead["last_price"];
   /** Düzenlemede kalemin KAYITLI referans fiyatı (fark tabanı / maske ayrımı); yeni satırda null. */
@@ -46,6 +49,8 @@ interface WorkItemEditRowProps {
   onPatch: (key: string, change: Partial<WorkItemFormState>) => void;
   onCancel: (key: string) => void;
   onSave: (key: string) => void;
+  /** Yalnız SANALLAŞTIRMADA: gerçek satır sırası (1 tabanlı, başlık = 1). */
+  ariaRowIndex?: number;
 }
 
 /**
@@ -56,6 +61,7 @@ export function WorkItemEditRow({
   draft,
   pozNo,
   discipline,
+  source,
   lastPrice = null,
   savedRefPrice = null,
   testId,
@@ -63,6 +69,7 @@ export function WorkItemEditRow({
   onPatch,
   onCancel,
   onSave,
+  ariaRowIndex,
 }: WorkItemEditRowProps) {
   const { form, isSaving } = draft;
   const clientError = firstWorkItemError(form, discipline?.id ?? "");
@@ -71,19 +78,28 @@ export function WorkItemEditRow({
   const patch = (change: Partial<WorkItemFormState>) => onPatch(draft.key, change);
 
   const units = unitOptions(catalogUnits, form.uom);
+  const sourceCode = source ? sourceCodeLabel(source) : null;
+  const dateLabel = source ? refPriceDateLabel(source) : null;
   const subline = discipline ? `${discipline.code} · ${discipline.name}` : "";
 
   return (
     <div role="rowgroup" className="wik-edit" data-testid={testId}>
-      <div role="row" className="wik-grid wik-edit__grid">
+      <div role="row" aria-rowindex={ariaRowIndex} className="wik-grid wik-edit__grid">
         <div role="cell" className="wik-cell wik-cell--edit-poz">
-          {pozNo !== null ? (
-            <span className="wik-poz" data-testid="wik-poz">
-              {pozNo}
-            </span>
-          ) : (
-            <span className="wik-poz wik-poz--pending">{POZ_PENDING_LABEL}</span>
-          )}
+          <span className="wik-pozbox">
+            {pozNo !== null ? (
+              <span className="wik-poz" data-testid="wik-poz">
+                {pozNo}
+              </span>
+            ) : (
+              <span className="wik-poz wik-poz--pending">{POZ_PENDING_LABEL}</span>
+            )}
+            {sourceCode !== null && (
+              <span className="wik-sub wik-sub--mono" data-testid="wik-source-code">
+                {sourceCode}
+              </span>
+            )}
+          </span>
         </div>
         <div role="cell" className="wik-cell wik-cell--edit wik-cell--name">
           <Input
@@ -101,7 +117,7 @@ export function WorkItemEditRow({
           <Select
             size="row"
             aria-label="Birim"
-            value={form.uom}
+            value={selectedUnit(units, form.uom)}
             onChange={(event) => patch({ uom: event.target.value })}
           >
             {units.map((unit) => (
@@ -122,6 +138,11 @@ export function WorkItemEditRow({
             status={errorField === "refPrice" ? "error" : "default"}
             onChange={(event) => patch({ refPrice: event.target.value })}
           />
+          {dateLabel !== null && (
+            <span className="wik-sub wik-sub--mono" data-testid="wik-ref-date">
+              {dateLabel}
+            </span>
+          )}
         </div>
         <div role="cell" className="wik-cell wik-cell--last wik-cell--readonly">
           <LastPriceCell lastPrice={lastPrice} refPrice={savedRefPrice} isNewItem={pozNo === null} readOnly />

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 
 import { Button, Input, Select } from "@/components/ui";
+import { dedupeUnits, selectedUnit } from "@/components/catalog-shared/catalog-units";
 import { CheckIcon, inlineSymbolProps } from "@/components/ui/icons";
 import {
   EMPLOYER_ITEM_TEXT,
@@ -168,8 +169,7 @@ function serverValueOf(item: CellItem, field: InlineCellField): string | null {
  * sessizce kaybeder ve blur'da yanlış birim yazılırdı.
  */
 function unitChoices(currentUnit: string): readonly string[] {
-  const known: readonly string[] = UNIT_OPTIONS;
-  return known.includes(currentUnit) ? known : [...known, currentUnit];
+  return dedupeUnits([...UNIT_OPTIONS, currentUnit]);
 }
 
 /**
@@ -573,7 +573,7 @@ function GroupRows({
                 // uçuşta seçim "son seçim" olarak tutulur ve gösterilir (uçuş
                 // bitince tek ek istek); uçuş işareti `aria-busy` (CSS'te soluk).
                 aria-busy={pendingCells.has(cellKey(item.id, "unit")) || undefined}
-                value={draft.unit ?? item.unit}
+                value={selectedUnit(unitChoices(item.unit), draft.unit ?? item.unit)}
                 // Seçici: değişiklik ANINDA kaydolur (taslak + blur beklenmez).
                 // Blur'da taslak yoktur → ikinci istek ATILMAZ.
                 onChange={(event) => onCommitCell(item, "unit", event.target.value)}

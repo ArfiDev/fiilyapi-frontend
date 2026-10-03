@@ -9,10 +9,11 @@ import {
   formatStandardRate,
   formatWholeNumber,
   isPriceStale,
+  refPriceDateLabel,
   sortByPozNo,
   tabCounts,
 } from "./work-item-model";
-import { BETON, DEMIR, D_DUV, D_KAB, SIVA } from "./work-item-fixtures";
+import { BETON, DEMIR, D_DUV, D_KAB, KAT_BOTH, KAT_DATE_ONLY, SIVA } from "./work-item-fixtures";
 
 describe("sortByPozNo — poz no'ya göre (KIK:247)", () => {
   it("disiplin koduna sonra sıraya göre dizer; girdiyi değiştirmez", () => {
@@ -44,6 +45,15 @@ describe("filterWorkItems — poz no + tarif, tr-TR (KIK:243-246)", () => {
   it("tarifle arar; 'İ'/'ı' tr-TR küçük harfle eşleşir (İç sıva ← 'iç')", () => {
     expect(filterWorkItems(all, { query: "iç sıva", disciplineId: null }).map((i) => i.id)).toEqual(["i-siv"]);
     expect(filterWorkItems(all, { query: "  İÇ  ", disciplineId: null }).map((i) => i.id)).toEqual(["i-siv"]);
+  });
+
+  it("Bakanlık no (source_code) ile arar; null güvenli ('15.100' → kalem bulunur)", () => {
+    const withSource = [BETON, KAT_BOTH, KAT_DATE_ONLY];
+    expect(filterWorkItems(withSource, { query: "15.100", disciplineId: null }).map((i) => i.id)).toEqual(["i-kb"]);
+    expect(filterWorkItems(withSource, { query: "15.100.1001", disciplineId: null }).map((i) => i.id)).toEqual(["i-kb"]);
+    // source_code null/undefined olan kalemler "null" / "undefined" metniyle eşleşmez
+    expect(filterWorkItems(withSource, { query: "null", disciplineId: null })).toEqual([]);
+    expect(filterWorkItems(withSource, { query: "undefined", disciplineId: null })).toEqual([]);
   });
 
   it("disiplin çipi süzer", () => {
@@ -136,5 +146,21 @@ describe("tabCounts — ÜS-9 sayaçları", () => {
   it("İş Kalemleri = kalem sayısı · Disiplinler = disiplin sayısı · Birimler = farklı birim", () => {
     expect(tabCounts([BETON, DEMIR, SIVA], [D_KAB, D_DUV])).toEqual({ items: 3, disciplines: 2, units: 3 });
     expect(tabCounts([BETON, BETON], [D_KAB])).toEqual({ items: 2, disciplines: 1, units: 1 });
+  });
+});
+
+describe("refPriceDateLabel — T47 'Bakanlık · GG.AA.YYYY' (üç durum)", () => {
+  it("kod + tarih → 'Bakanlık · 01.01.2026'", () => {
+    expect(refPriceDateLabel(KAT_BOTH)).toBe("Bakanlık · 01.01.2026");
+  });
+
+  it("kod YOK, tarih var → yalnız tarih", () => {
+    expect(refPriceDateLabel(KAT_DATE_ONLY)).toBe("01.01.2026");
+    expect(refPriceDateLabel({ source_code: "", ref_price_date: "2026-01-01" })).toBe("01.01.2026");
+  });
+
+  it("tarih YOK → null (satır basılmaz); kod olsa bile", () => {
+    expect(refPriceDateLabel(BETON)).toBeNull();
+    expect(refPriceDateLabel({ source_code: "15.100.1001", ref_price_date: null })).toBeNull();
   });
 });

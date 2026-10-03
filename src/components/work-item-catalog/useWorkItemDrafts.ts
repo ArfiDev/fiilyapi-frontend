@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useCreateCatalogItem, useUpdateCatalogItem } from "@/lib/api/hooks/useCatalogItems";
@@ -62,19 +62,20 @@ export function useWorkItemDrafts({ disciplines, onSaved }: UseWorkItemDraftsOpt
     setDrafts((current) => addDraft(current, newDraftFor(next, discipline)));
   }
 
-  function openEdit(item: WorkItemRead) {
+  // Kararlı kimlik (yalnız `setDrafts` kullanır): satır `React.memo`su (WorkItemRow) bozulmasın.
+  const openEdit = useCallback((item: WorkItemRead) => {
     setDrafts((current) =>
       current.some((draft) => draft.key === item.id) ? current : addDraft(current, editDraftFromItem(item)),
     );
-  }
+  }, []);
 
-  function patch(key: string, change: Partial<WorkItemFormState>) {
+  const patch = useCallback((key: string, change: Partial<WorkItemFormState>) => {
     setDrafts((current) => patchDraftForm(current, key, change));
-  }
+  }, []);
 
-  function cancel(key: string) {
+  const cancel = useCallback((key: string) => {
     setDrafts((current) => removeDraft(current, key));
-  }
+  }, []);
 
   async function save(key: string) {
     const draft = drafts.find((candidate) => candidate.key === key);

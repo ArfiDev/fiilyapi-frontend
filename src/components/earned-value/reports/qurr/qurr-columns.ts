@@ -106,11 +106,12 @@ export function qurrCellBand(data: QurrTreeNodeData, key: QurrColumnKey): "red" 
   return key === "q" ? (source.q_band ?? null) : (source.r_band ?? null);
 }
 
+/** Anahtarlar küçük harf; karşılaştırma tr-TR küçük harfle (Ton / Ay kanonik yazımı da eşleşir). */
 const WIDE_QTY_UOM = new Set(["ton", "ay"]);
 
 /** Miktar kolonunun (a-d) ondalık basamağı — UOM'a göre (Q:318 `dec`/`qd`). */
 export function qtyDigits(uom: string | null): number {
-  return uom !== null && WIDE_QTY_UOM.has(uom) ? 1 : 0;
+  return uom !== null && WIDE_QTY_UOM.has(uom.toLocaleLowerCase("tr-TR")) ? 1 : 0;
 }
 
 /**

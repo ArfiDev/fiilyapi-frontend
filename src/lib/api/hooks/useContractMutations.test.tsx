@@ -438,3 +438,15 @@ describe("useBulkCreateEmployerContractItems · TKL-F2.2 katalogdan toplu ekleme
     expect(Object.keys(sentBody.body)).not.toContain("catalog_item_id");
   });
 });
+
+// KAT-F1.2 O3 · `catalog-items` staleTime 5 dk: son fiyatı (SZL) değiştiren yazım listeyi BEKLEMEDEN tazelemeli.
+describe("useUpdateEmployerContractItem · son fiyat (SZL) kaynağı katalog önbelleğini tazeler", () => {
+  it("🔴 kalem PATCH sonrası [catalog-items] geçersiz kılınır", async () => {
+    vi.mocked(backendClient.PATCH).mockResolvedValue({ data: CREATED_ITEM, error: undefined, response: new Response() } as never);
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+    const { result } = renderHook(() => useUpdateEmployerContractItem(PROJECT_ID), { wrapper });
+    act(() => result.current.mutate({ itemId: "ci-1", body: { unit_price: "3000" } }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
+  });
+});

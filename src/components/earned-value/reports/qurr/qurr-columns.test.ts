@@ -90,6 +90,10 @@ describe("qtyDigits / weekQtyDigits", () => {
   it("ton/ay → 1 ondalık, diğerleri 0", () => {
     expect(qtyDigits("ton")).toBe(1);
     expect(qtyDigits("ay")).toBe(1);
+    // Kanonik yazım (T47): "Ton"/"Ay" büyük harfle gelir — 1,5 "2" basılmamalı
+    expect(qtyDigits("Ton")).toBe(1);
+    expect(qtyDigits("Ay")).toBe(1);
+    expect(qtyDigits("TON")).toBe(1);
     expect(qtyDigits("m²")).toBe(0);
     expect(qtyDigits(null)).toBe(0);
   });

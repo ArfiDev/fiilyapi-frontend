@@ -348,3 +348,58 @@ describe("ref_price kayıpsız ondalık dize olarak saklanır", () => {
     expect(near.json.ref_price).toBe("1234567890123456.79");
   });
 });
+
+describe("KAT-B1 · source_code + ref_price_date (üç durum tohumda görünür)", () => {
+  it("tohum: ikisi dolu · yalnız tarih · ikisi de null; alanlar HER yanıtta var (null dahil)", async () => {
+    const items = await listItems();
+    const both = items.filter((i) => i.source_code && i.ref_price_date);
+    const dateOnly = items.filter((i) => !i.source_code && i.ref_price_date);
+    const neither = items.filter((i) => !i.source_code && !i.ref_price_date);
+    expect(both.length).toBeGreaterThan(0);
+    expect(dateOnly.length).toBeGreaterThan(0);
+    expect(neither.length).toBeGreaterThan(0);
+    for (const item of items) {
+      expect(item).toHaveProperty("source_code");
+      expect(item).toHaveProperty("ref_price_date");
+    }
+  });
+
+  it("POST gövdesindeki source_code + ref_price_date yanıta yazılır", async () => {
+    const created = await create(KAB, "Bakanlık kaynaklı kalem", {
+      source_code: "15.999.9001",
+      ref_price_date: "2026-01-01",
+    });
+    expect(created.status).toBe(201);
+    expect(created.json.source_code).toBe("15.999.9001");
+    expect(created.json.ref_price_date).toBe("2026-01-01");
+  });
+});
+
+describe("KAT-B1 · PATCH ref_price_date kuralı (CEO teyidi)", () => {
+  const seeded = (name: string) =>
+    create(KAB, name, { ref_price: "100.00", ref_price_date: "2026-01-01", source_code: "15.888.0001" });
+
+  it("ref_price değişir, ref_price_date verilmez → ref_price_date null", async () => {
+    const created = await seeded("Tarih sıfırlama kalemi");
+    const patched = await call<WorkItemRead>("PATCH", `/catalog/items/${created.json.id}`, { ref_price: "120.00" });
+    expect(patched.status).toBe(200);
+    expect(patched.json.ref_price).toBe("120.00");
+    expect(patched.json.ref_price_date).toBeNull();
+    expect(patched.json.source_code).toBe("15.888.0001");
+  });
+
+  it("ref_price + ref_price_date birlikte → yeni tarih yazılır", async () => {
+    const created = await seeded("Tarih birlikte kalemi");
+    const patched = await call<WorkItemRead>("PATCH", `/catalog/items/${created.json.id}`, {
+      ref_price: "130.00",
+      ref_price_date: "2027-01-01",
+    });
+    expect(patched.json.ref_price_date).toBe("2027-01-01");
+  });
+
+  it("ref_price değişmez (yalnız ad) → ref_price_date korunur", async () => {
+    const created = await seeded("Tarih korunan kalem");
+    const patched = await call<WorkItemRead>("PATCH", `/catalog/items/${created.json.id}`, { name: "Tarih korunan kalem 2" });
+    expect(patched.json.ref_price_date).toBe("2026-01-01");
+  });
+});

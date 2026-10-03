@@ -206,10 +206,21 @@ describe("EmployerContractItemsTable — SZK-F1 metin hücreleri", () => {
   });
 
   it("listede OLMAYAN birim korunur: seçili kalır ve ayrı seçenek olarak vardır", () => {
-    renderTable(vi.fn(), withUnit("takım"));
+    renderTable(vi.fn(), withUnit("paket"));
     const unit = screen.getByLabelText(`${ITEM_CODE} birimi`) as HTMLSelectElement;
-    expect(unit).toHaveValue("takım");
-    expect(Array.from(unit.options).map((o) => o.value)).toContain("takım");
+    expect(unit).toHaveValue("paket");
+    expect(Array.from(unit.options).map((o) => o.value)).toContain("paket");
+  });
+
+  it("katalogdan gelen 'kg' ayrı seçenek açmaz: tek 'Kg' seçili görünür, değişiklik yazılmaz", () => {
+    const onCommit = vi.fn();
+    renderTable(onCommit, withUnit("kg"));
+    const unit = screen.getByLabelText(`${ITEM_CODE} birimi`) as HTMLSelectElement;
+    expect(unit).toHaveValue("Kg");
+    const kgOptions = Array.from(unit.options).filter((o) => o.value.toLocaleLowerCase("tr-TR") === "kg");
+    expect(kgOptions.map((o) => o.value)).toEqual(["Kg"]);
+    fireEvent.blur(unit);
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   it("listede olan birim için fazladan seçenek EKLENMEZ", () => {

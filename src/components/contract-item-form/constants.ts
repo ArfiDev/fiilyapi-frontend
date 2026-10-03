@@ -35,7 +35,7 @@ export const MAX_LENGTH = {
 export const UNIT_OPTIONS: readonly string[] = [
   "m³",
   "m²",
-  "mt",
+  "m", // T47 (kullanıcı onaylı mockup sapması): metre kanonu "m"; mockup "mt" yazar
   "Ton",
   "Adet",
   "Kg",

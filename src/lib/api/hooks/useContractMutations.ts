@@ -210,6 +210,8 @@ export function useUpdateEmployerContractItem(
         queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_ITEMS_QUERY_KEY, projectId] }),
         queryClient.invalidateQueries({ queryKey: [CONTRACT_DISTRIBUTION_QUERY_KEY, projectId] }),
         queryClient.invalidateQueries({ queryKey: [EMPLOYER_CONTRACT_QUERY_KEY, projectId] }),
+        // Birim fiyat değişimi katalog "son fiyat" kaynağı SZL'yi besler (`price_changed_at`); `catalog-items` 5 dk taze sayılır.
+        queryClient.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] }),
       ]),
   });
 }

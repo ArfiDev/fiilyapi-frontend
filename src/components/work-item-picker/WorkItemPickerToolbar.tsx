@@ -68,8 +68,9 @@ export function WorkItemPickerToolbar({
           type="search"
           value={query}
           onChange={(event) => onQuery(event.target.value)}
-          placeholder="Poz no veya tanımda ara..."
-          aria-label="Poz no veya tanımda ara"
+          // T47 eki (kullanıcı onaylı metin sapması): mockup "Poz no veya tanımda ara..." yazar
+          placeholder="Poz no, Bakanlık no veya tanımda ara..."
+          aria-label="Poz no, Bakanlık no veya tanımda ara"
           leftIcon={<SearchIcon width={13} height={13} />}
           wrapperClassName="wip-toolbar__search"
           disabled={isDisabled}

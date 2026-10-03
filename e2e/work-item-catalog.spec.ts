@@ -77,7 +77,7 @@ test("liste yuklenir: poz no sirasi ve fiyat kolonlari", async ({ page }) => {
 
 test("arama poz no ve tarif uzerinde calisir", async ({ page }) => {
   await openWorkItemCatalog(page);
-  const search = page.getByRole("searchbox", { name: "Poz no ya da tarif ara" });
+  const search = page.getByRole("searchbox", { name: "Poz no, Bakanlık no veya tanımda ara" });
 
   await search.fill("kab-0003");
   await expect(page.getByTestId("wik-count")).toContainText("1 kalem");

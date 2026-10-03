@@ -153,6 +153,6 @@ describe("CatalogItemFormModal — poz no ve numara uyarıları", () => {
 
   it("birim listesinde kg seçeneği var", () => {
     renderModal();
-    expect(screen.getByRole("option", { name: "kg" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Kg" })).toBeInTheDocument();
   });
 });

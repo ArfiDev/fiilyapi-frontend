@@ -165,3 +165,11 @@ describe("validateEmployerItem · T30 miktar/fiyat metni (K6)", () => {
     ).toBeNull();
   });
 });
+
+describe("UNIT_OPTIONS — T47 metre kanonu", () => {
+  it("birim listesinde 'm' var, 'mt' yok (kullanıcı onaylı mockup sapması)", async () => {
+    const { UNIT_OPTIONS } = await import("./constants");
+    expect(UNIT_OPTIONS).toContain("m");
+    expect(UNIT_OPTIONS).not.toContain("mt");
+  });
+});

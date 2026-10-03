@@ -26,6 +26,7 @@ import {
   MAX_BULK_ITEMS,
   resolveSelection,
   resolveTargetGroup,
+  selectRowsUpTo,
   setQuantity,
   setUnitPrice,
   suggestUnitPrice,
@@ -402,5 +403,36 @@ describe("isPickerInputsDirty — yalnız B.F. yazılan satır da kirlidir (TKL-
     const toggled = toggleRow(toggleRow(NO_INPUTS, priced, true), priced, false);
     expect(toggled.get(LAST_SZL.id)?.unitPrice).toBe("3.410,00");
     expect(isPickerInputsDirty([priced], toggled)).toBe(false);
+  });
+});
+
+describe("selectRowsUpTo — 'tümünü seç' tavanı (KAT-F1.2 3c)", () => {
+  const thousand = buildPickerRows(
+    Array.from({ length: 1000 }, (_, i) => ({ ...SIVA, id: `m-${i}`, poz_no: `DUV-${String(i + 1000).padStart(4, "0")}` })),
+    GROUPS,
+  );
+  const selectedIds = (inputs: PickerInputs) => [...inputs].filter(([, v]) => v.selected).map(([id]) => id);
+
+  it("1.000 satırda tümünü seç YALNIZ ilk 200'ü seçer ve kesildiğini bildirir", () => {
+    const result = selectRowsUpTo(NO_INPUTS, thousand, MAX_BULK_ITEMS);
+    expect(selectedIds(result.inputs)).toHaveLength(MAX_BULK_ITEMS);
+    expect(selectedIds(result.inputs)[0]).toBe("m-0");
+    expect(result.isTruncated).toBe(true);
+  });
+
+  it("mevcut seçimle birlikte toplam tavanı aşmaz (görünmeyen satırdaki seçim de sayılır)", () => {
+    const seeded = toggleRows(NO_INPUTS, [{ item: { ...SIVA, id: "gizli" }, block: null }], true);
+    const result = selectRowsUpTo(seeded, thousand, MAX_BULK_ITEMS);
+    expect(selectedIds(result.inputs)).toHaveLength(MAX_BULK_ITEMS);
+    expect(result.inputs.get("gizli")?.selected).toBe(true);
+    expect(result.isTruncated).toBe(true);
+  });
+
+  it("tavanın altında hepsini seçer, kesilme bildirmez; seçilemeyen satıra dokunmaz", () => {
+    const rows = buildPickerRows([BETON, DEMIR, SIVA], GROUPS);
+    const result = selectRowsUpTo(NO_INPUTS, rows, MAX_BULK_ITEMS);
+    expect(result.isTruncated).toBe(false);
+    expect(result.inputs.get(BETON.id)?.selected).not.toBe(true);
+    expect(result.inputs.get(SIVA.id)?.selected).toBe(true);
   });
 });

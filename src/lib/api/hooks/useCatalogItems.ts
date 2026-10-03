@@ -37,10 +37,25 @@ import {
  */
 export { CATALOG_DISCIPLINES_QUERY_KEY, CATALOG_ITEMS_QUERY_KEY };
 
+/**
+ * Katalog listesi ~1,5 MB / ~1 sn (canlı 1.657 kalem, KAT-F0): ekranlar ve seçiciler AYNI anahtarı paylaşır, taze
+ * veri varken yeniden çekilmez. Genel 30 sn yerine 5 dk: katalog nadiren değişir.
+ *
+ * Tazelik `invalidateQueries` ile korunur (staleTime beklenmez). `last_price` SOKETİNİ besleyen kaynaklar (backend
+ * `app/core/last_price` sağlayıcıları) ve onların yazımları:
+ *   · SZL — işveren sözleşme kalemi: toplu ekleme (`useBulkCreateEmployerContractItems`), birim fiyat PATCH (`useUpdateEmployerContractItem`)
+ *   · HK — ONAYLI/ÖDENMİŞ işveren hakedişi satırı: onayla / onayı geri al / fiyatları tazele / sil (`useProgressPaymentMutations`)
+ *   · TKL — KAZANILAN teklif maliyet B.F.: kazanma (`useOfferMutations`) ve teklif seçicisi her açılışta
+ * Taşeron hakedişi/sözleşmesi kaynak DEĞİLDİR. Katalog yazımları da (`invalidateCatalogViews`, EV katalog) tazeler.
+ * Başka kullanıcının değişikliği en geç 5 dk sonra (ya da sayfa yenilenince) görünür; eski veri anında gösterilip arkada tazelenir.
+ */
+export const CATALOG_ITEMS_STALE_MS = 5 * 60_000;
+
 /** Tüm liste tek istekte; süzgeç/arama istemcide (KAT deseni). */
 export function useCatalogItems(): UseQueryResult<WorkItemRead[], Error> {
   return useQuery({
     queryKey: [CATALOG_ITEMS_QUERY_KEY],
+    staleTime: CATALOG_ITEMS_STALE_MS,
     queryFn: async () => unwrap(await backendClient.GET("/catalog/items", {})).items,
   });
 }

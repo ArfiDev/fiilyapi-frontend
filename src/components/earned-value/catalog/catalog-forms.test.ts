@@ -67,12 +67,12 @@ describe("iş tipi formu", () => {
   });
 
   it("birim seçenekleri: KAT örnek birimleri + katalogdakiler + mevcut değer, tekil", () => {
-    expect(unitOptions(["m³", "gtr"], "lt")).toEqual(["m³", "m²", "m", "ton", "kg", "adet", "gtr", "lt"]);
+    expect(unitOptions(["m³", "gtr"], "paket")).toEqual([...CATALOG_UNIT_OPTIONS, "gtr", "paket"]);
   });
 
   it("birim seçeneklerinde kg var (ÜS-11) ve ton'un yanında durur", () => {
-    expect(CATALOG_UNIT_OPTIONS).toContain("kg");
-    expect(unitOptions([], "m³")).toEqual(["m³", "m²", "m", "ton", "kg", "adet"]);
+    expect(CATALOG_UNIT_OPTIONS).toContain("Kg");
+    expect(unitOptions([], "m³")).toEqual([...CATALOG_UNIT_OPTIONS]);
   });
 
   it("catalogRateChanged: yalnız GEÇERLİ ve orijinalden FARKLI oranda true (KAT:120-122)", () => {
