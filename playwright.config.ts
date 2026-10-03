@@ -18,7 +18,8 @@ export default defineConfig({
     command: "pnpm build && pnpm start",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    // CI'da build + start 120 sn'yi 2026-10-03'te 3 kez aştı (webServer zaman aşımı, kare değil altyapı).
+    timeout: 300_000,
     env: { BACKEND_URL: "http://127.0.0.1:4319" },
   },
 });
