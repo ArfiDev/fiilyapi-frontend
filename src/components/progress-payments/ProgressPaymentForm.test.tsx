@@ -492,8 +492,9 @@ describe("ProgressPaymentForm — geçersiz-değer koruması (kontrolcü bulgusu
     renderForm({ mode: "create", projectId: PROJECT_ID });
     const qtyInput = await screen.findByLabelText(`${ITEM_1.description} — ${SITE_A.name} miktar`);
     await userEvent.clear(qtyInput);
-    await userEvent.type(qtyInput, "12a-3.5.6");
-    expect(qtyInput).toHaveValue("123.56");
+    await userEvent.type(qtyInput, "12a-3,5,6");
+    // TKL-F8: virgül SİLİNMEZ (Türkçe ondalık), yalnız ikincisi atılır.
+    expect(qtyInput).toHaveValue("123,56");
   });
 
   it("miktar hücresi boş bırakılıp kaydedilirse gövdeye '0' gider (reddedilmez)", async () => {
@@ -744,7 +745,7 @@ describe("ProgressPaymentForm — Günlükten Doldur", () => {
       "1 satır günlük kayıtlardan dolduruldu.",
     );
     expect(screen.getByLabelText(`${ITEM_1.description} — ${SITE_A.name} miktar`)).toHaveValue(
-      "320.000",
+      "320",
     );
   });
 
@@ -832,7 +833,7 @@ describe("ProgressPaymentForm — Günlükten Doldur", () => {
     await userEvent.click(screen.getByRole("button", { name: "Üzerine yaz" }));
 
     expect(screen.getByLabelText(`${ITEM_1.description} — ${SITE_A.name} miktar`)).toHaveValue(
-      "320.000",
+      "320",
     );
     expect(await screen.findByTestId("pp-form-diary-fill-notice")).toHaveTextContent(
       "1 satırda elle girdiğiniz miktarın üzerine yazıldı.",
@@ -864,7 +865,7 @@ describe("ProgressPaymentForm — Günlükten Doldur", () => {
     expect(body.body.lines).toContainEqual({
       contract_item_id: "item-1",
       site_id: SITE_A.id,
-      quantity: "320.000",
+      quantity: "320",
     });
   });
 });
@@ -934,5 +935,369 @@ describe("ProgressPaymentForm — üst çubuk kaydı (unsavedRegistry) başlık 
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
 
     unmount();
+  });
+});
+
+/**
+ * TKL-F8 (T30/T43) · İŞVEREN hakediş miktarı ve katsayısı TÜRKÇE okunur: nokta binlik, virgül
+ * ondalık; belirsiz "1.5"/"0.500" reddedilir. Eski nokta-ondalık süzgeç virgülü SİLİYORDU
+ * ("3,5" → 35 kaydı = sessiz 10× hata). Gövdeye nokta-ondalık METİN gider (Number() turu yok).
+ */
+describe("ProgressPaymentForm — T30 Türkçe sayı kuralı (TKL-F8)", () => {
+  const CELL_A = `${ITEM_1.description} — ${SITE_A.name} miktar`;
+  const CELL_B = `${ITEM_1.description} — ${SITE_B.name} miktar`;
+  const AMBIGUOUS = "Ondalık için virgül kullanın (ör. 28,50)";
+
+  function savedLine(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "line-1",
+      contract_item_id: ITEM_1.id,
+      site_id: SITE_A.id,
+      code: ITEM_1.code,
+      description: ITEM_1.description,
+      unit: ITEM_1.unit,
+      contract_unit_price: ITEM_1.unit_price,
+      coefficient: "1.000",
+      quantity: "12.500",
+      group_name: "A — Betonarme İşleri",
+      sort_order: 0,
+      adjusted_unit_price: ITEM_1.unit_price,
+      line_total: "23125.00",
+      previous_quantity: "0.000",
+      previous_amount: "0.00",
+      cumulative_quantity: "12.500",
+      cumulative_amount: "23125.00",
+      is_price_stale: false,
+      ...overrides,
+    };
+  }
+
+  function lineOf(mutate: ReturnType<typeof vi.fn>, itemId: string, siteId: string) {
+    const lines = mutate.mock.calls[0][0].body.lines;
+    return lines.find(
+      (l: { contract_item_id: string; site_id: string }) =>
+        l.contract_item_id === itemId && l.site_id === siteId,
+    );
+  }
+
+  async function saveCreate(mutate: ReturnType<typeof vi.fn>) {
+    vi.mocked(useCreateProgressPayment).mockReturnValue(mutationResult({ mutate }));
+    renderForm({ mode: "create", projectId: PROJECT_ID });
+    await screen.findByText("İşveren Hakediş Oluştur");
+  }
+
+  async function typeInto(label: string, text: string) {
+    const input = screen.getByLabelText(label);
+    await userEvent.clear(input);
+    await userEvent.type(input, text);
+    return input;
+  }
+
+  async function clickSave() {
+    await userEvent.click(screen.getAllByRole("button", { name: "Taslak Kaydet" })[0]);
+  }
+
+  it("'3,5' virgül ondalıktır: hücre '3,5' kalır, gövdeye '3.5' gider (35 DEĞİL)", async () => {
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    const input = await typeInto(CELL_A, "3,5");
+    expect(input).toHaveValue("3,5");
+    await clickSave();
+    expect(lineOf(mutate, ITEM_1.id, SITE_A.id).quantity).toBe("3.5");
+  });
+
+  it("'1.234,5' binlik + ondalık: gövdeye '1234.5' gider", async () => {
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    await typeInto(CELL_A, "1.234,5");
+    await clickSave();
+    expect(lineOf(mutate, ITEM_1.id, SITE_A.id).quantity).toBe("1234.5");
+  });
+
+  it("'0.500' belirsizdir: görünür hata, istek GİTMEZ, role=alert YOK", async () => {
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    await typeInto(CELL_A, "0.500");
+    await clickSave();
+    expect(mutate).not.toHaveBeenCalled();
+    expect(await screen.findByText(AMBIGUOUS)).toBeVisible();
+    expect(screen.queryByRole("alert", { name: AMBIGUOUS })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(CELL_A)).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("hatalı hücre düzeltilince hata kalkar ve istek gider", async () => {
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    await typeInto(CELL_A, "1.5");
+    await clickSave();
+    expect(await screen.findByText(AMBIGUOUS)).toBeVisible();
+    await typeInto(CELL_A, "1,5");
+    expect(screen.queryByText(AMBIGUOUS)).not.toBeInTheDocument();
+    await clickSave();
+    expect(lineOf(mutate, ITEM_1.id, SITE_A.id).quantity).toBe("1.5");
+  });
+
+  it("4 ondalık ve 12 basamak sınırları işveren sözleşme kalemiyle AYNI metni verir", async () => {
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    await typeInto(CELL_A, "1,2345");
+    await clickSave();
+    expect(await screen.findByText("En fazla 3 ondalık")).toBeVisible();
+    await typeInto(CELL_A, "123456789012");
+    await clickSave();
+    expect(await screen.findByText("En fazla 11 basamak")).toBeVisible();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("boş hücre '0' gider, '0,000' de '0' (0 hakedişte meşrudur)", async () => {
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    await userEvent.clear(screen.getByLabelText(CELL_A));
+    await typeInto(CELL_B, "0,000");
+    await clickSave();
+    expect(lineOf(mutate, ITEM_1.id, SITE_A.id).quantity).toBe("0");
+    expect(lineOf(mutate, ITEM_1.id, SITE_B.id).quantity).toBe("0");
+  });
+
+  it("yazarken harf/işaret süzülür, tek virgül kalır, nokta korunur", async () => {
+    await saveCreate(vi.fn());
+    const input = await typeInto(CELL_A, "12a-3,5,6");
+    expect(input).toHaveValue("123,56");
+  });
+
+  it("sunucu '12.500' → hücre '12,5'; '3200.000' → '3.200'; dokunmadan kaydet '12.5' (12500 DEĞİL), form kirli değil", async () => {
+    const updateMutate = vi.fn((_vars, opts) => opts?.onSuccess?.());
+    const replaceMutate = vi.fn();
+    vi.mocked(useProgressPayment).mockReturnValue(
+      queryResult({
+        data: detailFixture({
+          lines: [
+            savedLine(),
+            savedLine({ id: "line-2", site_id: SITE_B.id, quantity: "3200.000" }),
+          ] as never,
+        }),
+      }),
+    );
+    vi.mocked(useUpdateProgressPayment).mockReturnValue(mutationResult({ mutate: updateMutate }));
+    vi.mocked(useReplaceProgressPaymentLines).mockReturnValue(mutationResult({ mutate: replaceMutate }));
+    const { unmount } = renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByText("İşveren Hakediş #5");
+    expect(screen.getByLabelText(CELL_A)).toHaveValue("12,5");
+    expect(screen.getByLabelText(CELL_B)).toHaveValue("3.200");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+
+    await clickSave();
+    const lines = replaceMutate.mock.calls[0][0].body.lines;
+    expect(lines).toContainEqual({ contract_item_id: ITEM_1.id, site_id: SITE_A.id, quantity: "12.5" });
+    expect(lines).toContainEqual({ contract_item_id: ITEM_1.id, site_id: SITE_B.id, quantity: "3200" });
+    unmount();
+  });
+
+  it("satır toplamı Türkçe hücre metnini doğru okur: '1.234,5' + '3,5' → 1.238", async () => {
+    await saveCreate(vi.fn());
+    await typeInto(CELL_A, "1.234,5");
+    await typeInto(CELL_B, "3,5");
+    const row = screen.getByText(ITEM_1.code).closest("tr") as HTMLElement;
+    expect(row.querySelector(".pp-table__cell--total")).toHaveTextContent(/^1\.238$/);
+  });
+
+  it("okunamayan hücre toplamda 0 sayılır (uydurma değer yok), diğer hücre toplanır", async () => {
+    await saveCreate(vi.fn());
+    await typeInto(CELL_A, "0.500");
+    await typeInto(CELL_B, "3,5");
+    const row = screen.getByText(ITEM_1.code).closest("tr") as HTMLElement;
+    expect(row.querySelector(".pp-table__cell--total")).toHaveTextContent(/^3,5$/);
+  });
+
+  it("günlükten doldurulan '1234.500' hücrede '1.234,5' görünür ve '1234.5' kaydedilir", async () => {
+    const refetch = vi.fn().mockResolvedValue({
+      error: null,
+      data: {
+        year: 2026,
+        month: 7,
+        skipped_unbridged_count: 0,
+        reason: null,
+        project_id: PROJECT_ID,
+        lines: [
+          { contract_item_id: "item-1", site_id: SITE_A.id, quantity: "1234.500", coefficient: null },
+        ],
+      },
+    });
+    vi.mocked(useEmployerDiarySuggestion).mockReturnValue({ refetch } as never);
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    await userEvent.click(screen.getByTestId("pp-form-diary-fill"));
+    await screen.findByTestId("pp-form-diary-fill-notice");
+    expect(screen.getByLabelText(CELL_A)).toHaveValue("1.234,5");
+    await clickSave();
+    expect(lineOf(mutate, ITEM_1.id, SITE_A.id).quantity).toBe("1234.5");
+  });
+
+  it("tahsisi kaldırılmış kayıtlı hücre uyarısı Türkçe miktarı bozmadan gösterir", async () => {
+    vi.mocked(useContractDistribution).mockReturnValue(
+      queryResult({
+        data: distributionFixture({
+          groups: [
+            {
+              id: "g-1",
+              name: "A — Betonarme İşleri",
+              sort_order: 10,
+              items: [{ ...ITEM_1, allocations: [ITEM_1.allocations[0]] }, ITEM_2],
+            },
+          ],
+        }),
+      }),
+    );
+    vi.mocked(useProgressPayment).mockReturnValue(
+      queryResult({
+        data: detailFixture({
+          lines: [savedLine({ site_id: SITE_B.id, quantity: "1234.500" })] as never,
+        }),
+      }),
+    );
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    const alert = await screen.findByTestId("pp-form-orphaned-alert");
+    expect(alert).toHaveTextContent("(1.234,5)");
+  });
+
+  it("günlükten doldurma hücreyi DEĞİŞTİRİNCE o hücrenin hatası kalkar; değişmeyenin hatası kalır", async () => {
+    const refetch = vi.fn().mockResolvedValue({
+      error: null,
+      data: {
+        year: 2026,
+        month: 7,
+        skipped_unbridged_count: 0,
+        reason: null,
+        project_id: PROJECT_ID,
+        lines: [{ contract_item_id: "item-1", site_id: SITE_A.id, quantity: "320.000", coefficient: null }],
+      },
+    });
+    vi.mocked(useEmployerDiarySuggestion).mockReturnValue({ refetch } as never);
+    const mutate = vi.fn();
+    await saveCreate(mutate);
+    await typeInto(CELL_A, "1.5");
+    await typeInto(CELL_B, "0.500");
+    await clickSave();
+    expect(await screen.findAllByText(AMBIGUOUS)).toHaveLength(2);
+
+    await userEvent.click(screen.getByTestId("pp-form-diary-fill"));
+    await userEvent.click(await screen.findByRole("button", { name: "Üzerine yaz" }));
+
+    expect(screen.getByLabelText(CELL_A)).toHaveValue("320");
+    expect(screen.getByLabelText(CELL_A)).not.toHaveAttribute("aria-invalid");
+    expect(screen.getAllByText(AMBIGUOUS)).toHaveLength(1);
+    expect(screen.getByLabelText(CELL_B)).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("Fiyatları Tazele satırları yeniden kurunca TÜM hücre hataları temizlenir", async () => {
+    const refreshMutate = vi.fn((_id, opts) => opts?.onSuccess?.());
+    const detail = detailFixture({ lines: [savedLine()] as never });
+    vi.mocked(useProgressPayment).mockReturnValue(
+      queryResult({ data: detail, refetch: vi.fn().mockResolvedValue({ data: detail }) } as never),
+    );
+    vi.mocked(useRefreshProgressPaymentPrices).mockReturnValue(mutationResult({ mutate: refreshMutate }));
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByText("İşveren Hakediş #5");
+    await typeInto(CELL_A, "0.500");
+    await clickSave();
+    expect(await screen.findByText(AMBIGUOUS)).toBeVisible();
+
+    await userEvent.click(screen.getByTestId("pp-form-refresh-prices"));
+    await userEvent.click(await screen.findByRole("button", { name: "Tazele" }));
+
+    expect(await screen.findByLabelText(CELL_A)).toHaveValue("12,5");
+    expect(screen.queryByText(AMBIGUOUS)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(CELL_A)).not.toHaveAttribute("aria-invalid");
+  });
+
+  describe("katsayı", () => {
+    const COEFFICIENT = "Katsayı (Dn/D0)";
+
+    function pctLabel(): HTMLElement {
+      return document.querySelector(".pp-form__ff-pct") as HTMLElement;
+    }
+
+    function headerCoefficient(mutate: ReturnType<typeof vi.fn>): string {
+      return mutate.mock.calls[0][0].body.default_coefficient;
+    }
+
+    it("'1,05' → gövdeye '1.05'; yüzde etiketi %5", async () => {
+      const mutate = vi.fn();
+      await saveCreate(mutate);
+      await typeInto(COEFFICIENT, "1,05");
+      expect(pctLabel()).toHaveTextContent(/^%5$/);
+      await clickSave();
+      expect(headerCoefficient(mutate)).toBe("1.05");
+    });
+
+    it("'1.052' → 'Katsayı çok büyük' (1052 okunmaz), istek yok", async () => {
+      const mutate = vi.fn();
+      await saveCreate(mutate);
+      await typeInto(COEFFICIENT, "1.052");
+      await clickSave();
+      expect(mutate).not.toHaveBeenCalled();
+      expect(await screen.findByText("Katsayı çok büyük, ondalık için virgül kullanın")).toBeVisible();
+    });
+
+    it("'1.5' belirsiz → REF_PRICE_AMBIGUOUS_DOT", async () => {
+      const mutate = vi.fn();
+      await saveCreate(mutate);
+      await typeInto(COEFFICIENT, "1.5");
+      await clickSave();
+      expect(mutate).not.toHaveBeenCalled();
+      expect(await screen.findByText(AMBIGUOUS)).toBeVisible();
+    });
+
+    it("'1,0523' → 'En fazla 3 ondalık'", async () => {
+      const mutate = vi.fn();
+      await saveCreate(mutate);
+      await typeInto(COEFFICIENT, "1,0523");
+      await clickSave();
+      expect(mutate).not.toHaveBeenCalled();
+      expect(await screen.findByText("En fazla 3 ondalık")).toBeVisible();
+    });
+
+    it("'0' → 'Katsayı sıfırdan büyük olmalıdır'", async () => {
+      const mutate = vi.fn();
+      await saveCreate(mutate);
+      await typeInto(COEFFICIENT, "0");
+      await clickSave();
+      expect(mutate).not.toHaveBeenCalled();
+      expect(await screen.findByText("Katsayı sıfırdan büyük olmalıdır")).toBeVisible();
+    });
+
+    it("boş katsayı '1' gider (mevcut davranış)", async () => {
+      const mutate = vi.fn();
+      await saveCreate(mutate);
+      await userEvent.clear(screen.getByLabelText(COEFFICIENT));
+      await clickSave();
+      expect(headerCoefficient(mutate)).toBe("1");
+    });
+
+    it("sunucu '1.050' → '1,05' + %5 etiketi; dokunmadan kaydet '1.05'; form kirli değil", async () => {
+      const updateMutate = vi.fn();
+      vi.mocked(useProgressPayment).mockReturnValue(
+        queryResult({ data: detailFixture({ default_coefficient: "1.050" }) }),
+      );
+      vi.mocked(useUpdateProgressPayment).mockReturnValue(mutationResult({ mutate: updateMutate }));
+      const { unmount } = renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+      await screen.findByText("İşveren Hakediş #5");
+      expect(screen.getByLabelText(COEFFICIENT)).toHaveValue("1,05");
+      expect(pctLabel()).toHaveTextContent(/^%5$/);
+      expect(unsavedRegistry.hasUnsaved()).toBe(false);
+      await clickSave();
+      expect(updateMutate.mock.calls[0][0].body.default_coefficient).toBe("1.05");
+      unmount();
+    });
+
+    it("kilitli (fiyat farkı yok) katsayı '1' gider, hata üretmez", async () => {
+      vi.mocked(useEmployerContract).mockReturnValue(
+        queryResult({ data: contractFixture({ has_price_escalation: false }) }),
+      );
+      const mutate = vi.fn();
+      await saveCreate(mutate);
+      await clickSave();
+      expect(headerCoefficient(mutate)).toBe("1");
+    });
   });
 });

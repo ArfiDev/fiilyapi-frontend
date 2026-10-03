@@ -67,7 +67,11 @@ export function applyEmployerDiarySuggestion(
 ): DiaryFillApplication<PivotRow> {
   const suggestionByKey = new Map<string, string>();
   for (const line of lines) {
-    suggestionByKey.set(diaryCellKey(line.contract_item_id, line.site_id), line.quantity);
+    // 🔴 TKL-F8: hücre miktarı EKRAN METNİDİR (Türkçe) — öneri de aynı biçime çevrilir.
+    suggestionByKey.set(
+      diaryCellKey(line.contract_item_id, line.site_id),
+      trQuantityInputValue(line.quantity),
+    );
   }
 
   const matchedKeys = new Set<string>();

@@ -161,6 +161,14 @@
 .pp-form-table__qty-cell {
   min-width: 96px;
 }
+.pp-form-table__qty-error {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--color-danger-strong, var(--color-danger));
+  text-align: right;
+  white-space: nowrap;
+}
 .pp-form-table__locked-cell {
   color: var(--color-text-subtle);
   cursor: help;

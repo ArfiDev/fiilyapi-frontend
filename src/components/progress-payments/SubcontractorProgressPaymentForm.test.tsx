@@ -939,6 +939,41 @@ describe("SubcontractorProgressPaymentForm — miktar Türkçe okunur (TKL-F7b)"
   });
 });
 
+describe("SubcontractorProgressPaymentForm — Günlükten Doldur bayat satır hatasını temizler (TKL-F8 adım 2)", () => {
+  it("doldurmanın DEĞİŞTİRDİĞİ satırın hatası kalkar; değişmeyen hatalı satırın hatası kalır", async () => {
+    mockCreateFlow();
+    vi.mocked(useSubcontractorDiarySuggestion).mockReturnValue({
+      refetch: vi.fn().mockResolvedValue({
+        data: {
+          year: 2026, month: 7, skipped_unbridged_count: 0, reason: null,
+          contract_id: CONTRACT_ID, site_id: SITE_ID,
+          lines: [{ contract_item_id: ITEM_DIARY.id, quantity: "320.000", coefficient: null, sort_order: 0 }],
+        },
+        error: null,
+      }),
+    } as never);
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await screen.findByTestId("thf-hierarchy");
+    const manualInput = screen.getByLabelText(QTY_LABEL);
+    const diaryInput = screen.getByLabelText(`${ITEM_DIARY.description} — miktar`);
+    await userEvent.clear(manualInput);
+    await userEvent.type(manualInput, "1.5");
+    await userEvent.clear(diaryInput);
+    await userEvent.type(diaryInput, "1.5");
+    await save();
+    expect(await screen.findAllByText(AMBIGUOUS)).toHaveLength(2);
+
+    await userEvent.click(screen.getByTestId("thf-diary-fill"));
+    await userEvent.click(await screen.findByRole("button", { name: "Üzerine yaz" }));
+    await screen.findByTestId("thf-diary-fill-notice");
+
+    expect(diaryInput).toHaveValue("320");
+    expect(diaryInput).not.toHaveAttribute("aria-invalid");
+    expect(manualInput).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getAllByText(AMBIGUOUS)).toHaveLength(1);
+  });
+});
+
 describe("SubcontractorProgressPaymentForm — katsayı Türkçe okunur (TKL-F7b · T43)", () => {
   async function typeCoefficient(text: string) {
     const input = await screen.findByLabelText("Katsayı (Dn/D0)");

@@ -90,12 +90,13 @@ test("hakediş: Günlükten Doldur önerilen miktarları forma yazar, atlananlar
   const notice = page.getByTestId("pp-form-diary-fill-notice");
   await expect(notice).toContainText("2 satır günlük kayıtlardan dolduruldu.");
   await expect(notice).toContainText("günlük pozu sözleşme kalemine bağlı olmadığı için atlandı");
+  // TKL-F8 (T30): hücre metni TÜRKÇEDİR — sunucu "120.000" → "120", "8.500" → "8,5".
   await expect(
     page.locator("main").getByLabel("Kat Döşemesi C25/30 — A-Blok Şantiyesi miktar"),
-  ).toHaveValue("120.000");
+  ).toHaveValue("120");
   await expect(
     page.locator("main").getByLabel("Nervürlü Demir Ø12–Ø20 — A-Blok Şantiyesi miktar"),
-  ).toHaveValue("8.500");
+  ).toHaveValue("8,5");
 
   // Kullanıcı düzeltebilir (spec §4: "kullanıcı düzeltebilir").
   await page.locator("main").getByLabel("Kat Döşemesi C25/30 — A-Blok Şantiyesi miktar").fill("100");

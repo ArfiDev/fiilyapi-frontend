@@ -6,8 +6,6 @@ import {
   findOrphanedAllocationCells,
   rowQuantityTotal,
   rowAmountTotal,
-  sanitizeQuantityInput,
-  normalizeQuantityForSave,
   normalizePivotRowsForSave,
 } from "./pivot";
 import type { ContractDistributionResponse } from "@/lib/api/hooks/useContract";
@@ -104,7 +102,8 @@ describe("buildPivotRows", () => {
     const lines = [line({ site_id: SITE_A.id, quantity: "750.500" })];
     const rows = buildPivotRows(DISTRIBUTION, lines);
     const cellA = rows[0].cells.find((c) => c.siteId === SITE_A.id)!;
-    expect(cellA.quantity).toBe("750.500");
+    // TKL-F8: sunucu "750.500" EKRAN METNİ olarak Türkçe gösterilir.
+    expect(cellA.quantity).toBe("750,5");
     expect(cellA.lineTotal).toBe("1665000.00");
   });
 
@@ -180,7 +179,25 @@ describe("rowQuantityTotal", () => {
   it("düzenlenebilir hücrelerin miktarını kuruş hassasiyetli toplar", () => {
     const lines = [line({ site_id: SITE_A.id, quantity: "900.500" }), line({ site_id: SITE_B.id, quantity: "420.250" })];
     const rows = buildPivotRows(DISTRIBUTION, lines);
-    expect(rowQuantityTotal(rows[0])).toBe("1320.750");
+    expect(rowQuantityTotal(rows[0])).toBe("1320.75");
+  });
+
+  it("hücre metni TÜRKÇE okunur: '1.234,5' + '3,5' = 1238 (nokta-ondalık sanılmaz)", () => {
+    const rows = buildPivotRows(DISTRIBUTION);
+    const typed = {
+      ...rows[0],
+      cells: rows[0].cells.map((c) => ({ ...c, quantity: c.siteId === SITE_A.id ? "1.234,5" : "3,5" })),
+    };
+    expect(rowQuantityTotal(typed)).toBe("1238.0");
+  });
+
+  it("okunamayan ('0.500') ve boş hücre 0 sayılır", () => {
+    const rows = buildPivotRows(DISTRIBUTION);
+    const typed = {
+      ...rows[0],
+      cells: rows[0].cells.map((c) => ({ ...c, quantity: c.siteId === SITE_A.id ? "0.500" : "" })),
+    };
+    expect(rowQuantityTotal(typed)).toBe("0");
   });
 });
 
@@ -197,25 +214,6 @@ describe("rowAmountTotal", () => {
     ];
     const rows = buildPivotRows(DISTRIBUTION, lines);
     expect(rowAmountTotal(rows[0])).toBe("2442000.00");
-  });
-});
-
-describe("sanitizeQuantityInput — geçersiz-değer koruması (kontrolcü bulgusu §2)", () => {
-  it("rakam/nokta dışı karakterleri süzer", () => {
-    expect(sanitizeQuantityInput("12a3")).toBe("123");
-    expect(sanitizeQuantityInput("-5")).toBe("5");
-    expect(sanitizeQuantityInput("12,5")).toBe("125");
-    expect(sanitizeQuantityInput("abc")).toBe("");
-  });
-
-  it("birden fazla nokta varsa yalnız ilkini korur", () => {
-    expect(sanitizeQuantityInput("1.2.3")).toBe("1.23");
-  });
-
-  it("geçerli ondalık girişi olduğu gibi bırakır (ara hal '12.' dahil)", () => {
-    expect(sanitizeQuantityInput("12.")).toBe("12.");
-    expect(sanitizeQuantityInput("900.500")).toBe("900.500");
-    expect(sanitizeQuantityInput("")).toBe("");
   });
 });
 
@@ -244,7 +242,7 @@ describe("findOrphanedAllocationCells — final inceleme #2 (tahsisi kaldırılm
     expect(orphaned[0]).toMatchObject({
       siteId: SITE_B.id,
       siteName: SITE_B.name,
-      quantity: "150.000",
+      quantity: "150",
     });
     expect(orphaned[0].item.id).toBe(ITEM_2.id);
   });
@@ -257,39 +255,69 @@ describe("findOrphanedAllocationCells — final inceleme #2 (tahsisi kaldırılm
   });
 });
 
-describe("normalizeQuantityForSave / normalizePivotRowsForSave — kaydetmeden önce", () => {
-  it("boş veya yalnız nokta olan miktarı '0'a çevirir (reddetmez)", () => {
-    expect(normalizeQuantityForSave("")).toBe("0");
-    expect(normalizeQuantityForSave(".")).toBe("0");
-  });
-
-  it("geçerli miktarı DEĞİŞTİRMEZ (kuruş hassasiyeti korunur)", () => {
-    expect(normalizeQuantityForSave("900.500")).toBe("900.500");
-    expect(normalizeQuantityForSave("0")).toBe("0");
-  });
-
-  it("yalnız düzenlenebilir hücreleri normalize eder, kapalı hücreye dokunmaz", () => {
+describe("normalizePivotRowsForSave — kaydetmeden önce Türkçe okuma (TKL-F8)", () => {
+  function withQuantities(quantities: Record<string, string>) {
     const rows = buildPivotRows(DISTRIBUTION);
-    // item-1 × A-Blok'u boş bırakılmış gibi simüle et.
-    const withBlank = [
-      { ...rows[0], cells: rows[0].cells.map((c) => (c.siteId === SITE_A.id ? { ...c, quantity: "" } : c)) },
-      rows[1],
-    ];
-    const normalized = normalizePivotRowsForSave(withBlank);
-    const cellA = normalized[0].cells.find((c) => c.siteId === SITE_A.id)!;
-    const cellBLocked = normalized[1].cells.find((c) => c.siteId === SITE_B.id)!;
-    expect(cellA.quantity).toBe("0");
+    return rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((c) => {
+        const q = quantities[`${row.item.id}::${c.siteId}`];
+        return c.editable && q !== undefined ? { ...c, quantity: q } : c;
+      }),
+    }));
+  }
+
+  const key = (itemId: string, siteId: string) => `${itemId}::${siteId}`;
+
+  it("boş miktarı '0'a çevirir (reddetmez)", () => {
+    const { rows, errors } = normalizePivotRowsForSave(
+      withQuantities({ [key(ITEM_1.id, SITE_A.id)]: "" }),
+    );
+    expect(rows[0].cells.find((c) => c.siteId === SITE_A.id)!.quantity).toBe("0");
+    expect(errors).toEqual({});
+  });
+
+  it("Türkçe metni nokta-ondalık METNE çevirir: '3,5' → '3.5', '1.234,5' → '1234.5', '0,000' → '0'", () => {
+    const { rows, errors } = normalizePivotRowsForSave(
+      withQuantities({
+        [key(ITEM_1.id, SITE_A.id)]: "3,5",
+        [key(ITEM_1.id, SITE_B.id)]: "1.234,5",
+        [key(ITEM_2.id, SITE_A.id)]: "0,000",
+      }),
+    );
+    expect(rows[0].cells.find((c) => c.siteId === SITE_A.id)!.quantity).toBe("3.5");
+    expect(rows[0].cells.find((c) => c.siteId === SITE_B.id)!.quantity).toBe("1234.5");
+    expect(rows[1].cells.find((c) => c.siteId === SITE_A.id)!.quantity).toBe("0");
+    expect(errors).toEqual({});
+  });
+
+  it("belirsiz '0.500' ve fazla ondalık hücre anahtarıyla errors'a düşer", () => {
+    const { errors } = normalizePivotRowsForSave(
+      withQuantities({
+        [key(ITEM_1.id, SITE_A.id)]: "0.500",
+        [key(ITEM_1.id, SITE_B.id)]: "1,2345",
+      }),
+    );
+    expect(errors).toEqual({
+      [key(ITEM_1.id, SITE_A.id)]: "Ondalık için virgül kullanın (ör. 28,50)",
+      [key(ITEM_1.id, SITE_B.id)]: "En fazla 3 ondalık",
+    });
+  });
+
+  it("kapalı hücreye dokunmaz", () => {
+    const { rows, errors } = normalizePivotRowsForSave(buildPivotRows(DISTRIBUTION));
+    const cellBLocked = rows[1].cells.find((c) => c.siteId === SITE_B.id)!;
     expect(cellBLocked.editable).toBe(false);
-    expect(cellBLocked.quantity).toBe(""); // kapalı hücre normalize edilmez, "" kalır (zaten gövdeye girmiyor)
+    expect(cellBLocked.quantity).toBe(""); // kapalı hücre okunmaz, "" kalır (zaten gövdeye girmiyor)
+    expect(errors).toEqual({});
   });
 
   it("normalize edilmiş satırlar buildLinesSaveBody'e verildiğinde boş hücre '0' olarak gövdeye girer", () => {
-    const rows = buildPivotRows(DISTRIBUTION);
-    const withBlank = rows.map((row) => ({
+    const blank = buildPivotRows(DISTRIBUTION).map((row) => ({
       ...row,
       cells: row.cells.map((c) => (c.editable ? { ...c, quantity: "" } : c)),
     }));
-    const body = buildLinesSaveBody(normalizePivotRowsForSave(withBlank));
+    const body = buildLinesSaveBody(normalizePivotRowsForSave(blank).rows);
     expect(body.every((l) => l.quantity === "0")).toBe(true);
     expect(body).toHaveLength(3);
   });
