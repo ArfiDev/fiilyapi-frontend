@@ -10586,6 +10586,8 @@ export interface components {
             quantity: string | null;
             /** Remaining Quantity */
             remaining_quantity: string | null;
+            /** Source Code */
+            source_code: string | null;
             /** Unit */
             unit: string;
             /** Unit Price */
@@ -11657,6 +11659,8 @@ export interface components {
             remaining_quantity: string | null;
             /** Sort Order */
             sort_order: number;
+            /** Source Code */
+            source_code: string | null;
             /** Unit */
             unit: string;
             /** Unit Price */
@@ -15531,6 +15535,8 @@ export interface components {
             quantity: string | null;
             /** Sort Order */
             sort_order: number;
+            /** Source Code */
+            source_code: string | null;
             /** Unit */
             unit: string;
             /** Unit Mhr */
@@ -17532,6 +17538,8 @@ export interface components {
             site_id: string;
             /** Sort Order */
             sort_order: number;
+            /** Source Code */
+            source_code: string | null;
             /** Unit */
             unit: string;
         };
@@ -22769,6 +22777,8 @@ export interface components {
             quantity: string | null;
             /** Sort Order */
             sort_order: number;
+            /** Source Code */
+            source_code: string | null;
             /** Source Contract Item Id */
             source_contract_item_id: string | null;
             /** Unit */
@@ -23269,6 +23279,8 @@ export interface components {
             quantity_source: components["schemas"]["QuantitySource"];
             /** Sort Order */
             sort_order: number;
+            /** Source Code */
+            source_code: string | null;
             /** Unit */
             unit: string;
         };
