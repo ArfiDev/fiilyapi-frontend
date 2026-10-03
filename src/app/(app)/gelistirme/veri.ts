@@ -34,8 +34,24 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-02 13:45",
+  guncellendi: "2026-10-03 11:40",
   gorevler: [
+    {
+      kod: "CLN",
+      acilim: "Canlı Veri Sıfırlama",
+      aciklama: "Canlı yeni boş veritabanına (Postgres-v2) geçti; eski veritabanı pasif tutuluyor. Kullanıcılar yeniden açılacak.",
+      durum: "bitti",
+      spec: "CANLI-YENI-DB-PLANI.md",
+      dilimler: [
+        { kod: "B0 / B1", aciklama: "Ölçüm, boş veritabanı provası, geçiş planı", durum: "bitti", hat: "backend" },
+        { kod: "B2", aciklama: "Geçiş: yeni servis, bağlantı çevirme, kurulum kontrolü, demo projeler silindi", durum: "bitti", hat: "backend" },
+      ],
+      kararlar: [
+        "Mevcut veritabanı temizlenmez; yeni boş veritabanı açılır.",
+        "Yedek alınmadı; eski veritabanı silinmeden pasif tutulur.",
+        "Demo projeler silindi; izinler taze kurulumla birebir aynı.",
+      ],
+    },
     {
       kod: "BLF",
       acilim: "Bölüm Formu",
@@ -89,6 +105,9 @@ export const VERI: GelistirmeVerisi = {
         { kod: "B4 / F3", aciklama: "Teklif çekirdeği + Liste / Yeni / Detay / kalem tablosu / PDF (işveren + iç döküm)", durum: "bitti", hat: "frontend", pr: "backend #158 · frontend #164" },
         { kod: "B5 / F4", aciklama: "Şablonlar, tekliften kopya, Excel işveren/iç, miktarsız kalem", durum: "bitti", hat: "frontend", pr: "backend #159 · frontend #165" },
         { kod: "B6 / F5", aciklama: "Kazanılan teklifi projeye dönüştürme + adam-saat Rev.0 taslak + dönüştürme ekranı + Sözleşmeden doldur", durum: "bitti", hat: "frontend", pr: "backend #160 #162 · frontend #166" },
+        { kod: "F6", aciklama: "Eski revizyon görüntülenirken Projeye Dönüştür gizli (T41)", durum: "bitti", hat: "frontend", pr: "frontend #168" },
+        { kod: "F7", aciklama: "Taşeron sözleşmesi ve hakedişinde Türkçe sayı kuralı; hakedişte '3,5' → 35 kusuru (T42, T43)", durum: "bitti", hat: "frontend", pr: "frontend #169" },
+        { kod: "F8", aciklama: "İşveren hakedişinde Türkçe sayı kuralı; virgül silme kusuru; katsayı korkulukları (T43)", durum: "bitti", hat: "frontend", pr: "frontend #170" },
       ],
       kararlar: [
         "Veri düzeyinde tek katalog; Planlama'da fiyatsız Birim Oran Kataloğu, teklif/sözleşmede fiyatlı İş Kalemi Kataloğu.",
@@ -98,6 +117,8 @@ export const VERI: GelistirmeVerisi = {
         "Çoklu seçici ve PDF mevcut ekranlardan türetilir, onaya sunulur.",
         "Kazanıldı ile dönüştürme ayrı; gruplar sözleşmeye taşınır; durum revizyon başına.",
         "Poz no: disiplin kodu + 4 hane (MIM-0001), otomatik sıradaki; disiplin kodu değişirse yeniden numaralanır; mevcut 28 kaleme otomatik numara.",
+        "Eski revizyon projeye dönüşmez; dönüştürme her zaman son revizyon (T41).",
+        "Taşeron ve işveren tarafında sayı girişi tek kural: virgül ondalık; katsayı 10'dan büyükse uyarı (T42, T43).",
       ],
     },
     {
@@ -160,6 +181,18 @@ export const VERI: GelistirmeVerisi = {
     },
   ],
   bekleyenler: [
+    {
+      kod: "TKL-B7",
+      acilim: "Dönüştürme yetkisi + Planlama Mühendisi rolü",
+      aciklama: "İzin matrisi turunda yapılacak (tasarım hazır: TKL-B7-TASARIM.md).",
+      kararlar: ["Dönüştürmeyi yalnız tüm projeler erişimi olan yapar.", "Planlama Mühendisi rol paketi uygun."],
+    },
+    {
+      kod: "PNL / PUANTAJ",
+      acilim: "Gösterge paneli + puantaj",
+      aciklama: "Şimdilik bekliyor (kullanıcı). Puantaj detaylı konuşulacak.",
+      kararlar: [],
+    },
     {
       kod: "BOQ-E2E",
       acilim: "İş kalemi düzenleme testi",
