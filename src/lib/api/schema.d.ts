@@ -747,7 +747,8 @@ export interface paths {
         };
         /**
          * List Work Items Endpoint
-         * @description İş kalemi kataloğu — poz no sırasıyla. `q` ad veya poz no içinde arar.
+         * @description İş kalemi kataloğu — poz no sırasıyla. `q` ad veya poz no içinde, kaynak poz no'da
+         *     ÖNEKLE arar.
          */
         get: operations["list_work_items_endpoint_catalog_items_get"];
         put?: never;
@@ -756,6 +757,30 @@ export interface paths {
          * @description Kalem ekler; poz no sunucuda otomatik üretilir (gövdede gönderilemez).
          */
         post: operations["create_work_item_endpoint_catalog_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/items/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Work Items Endpoint
+         * @description Toplu kalem ekleme / fiyat güncelleme (1..200, hep-ya-hiç, TEK denetim satırı).
+         *
+         *     Poz no sunucuda üretilir. `source_code` DB'de zaten varsa: `on_source_conflict="error"`
+         *     (varsayılan) → 422; `"update_price"` → yalnız `ref_price` + `ref_price_date` güncellenir.
+         *     Hatalar `errors[]` içinde `loc: ["body","items",i,alan]` ile döner; hiçbir şey yazılmaz.
+         */
+        post: operations["bulk_work_items_endpoint_catalog_items_bulk_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25721,6 +25746,23 @@ export interface components {
             /** Sort Order */
             sort_order: number;
         };
+        /** WorkItemBulkResultRow */
+        WorkItemBulkResultRow: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "created" | "price_updated" | "unchanged";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Index */
+            index: number;
+            /** Poz No */
+            poz_no: string;
+        };
         /** WorkItemCreate */
         WorkItemCreate: {
             /**
@@ -25739,6 +25781,10 @@ export interface components {
             name: string;
             /** Ref Price */
             ref_price?: number | string | null;
+            /** Ref Price Date */
+            ref_price_date?: string | null;
+            /** Source Code */
+            source_code?: string | null;
             /** Standard Unit Mhr */
             standard_unit_mhr: number | string;
             /** Uom */
@@ -25778,6 +25824,10 @@ export interface components {
             price_updated_at: string | null;
             /** Ref Price */
             ref_price: string | null;
+            /** Ref Price Date */
+            ref_price_date?: string | null;
+            /** Source Code */
+            source_code?: string | null;
             /** Standard Unit Mhr */
             standard_unit_mhr: string;
             /**
@@ -25808,10 +25858,43 @@ export interface components {
             name?: string | null;
             /** Ref Price */
             ref_price?: number | string | null;
+            /** Ref Price Date */
+            ref_price_date?: string | null;
+            /** Source Code */
+            source_code?: string | null;
             /** Standard Unit Mhr */
             standard_unit_mhr?: number | string | null;
             /** Uom */
             uom?: string | null;
+        };
+        /**
+         * WorkItemsBulkCreate
+         * @description `POST /catalog/items/bulk` govdesi (hep-ya-hic, 1..200).
+         *
+         *     `on_source_conflict`: `source_code`u DB'de ZATEN olan kalem icin `error` (varsayilan →
+         *     422) ya da `update_price` (yalniz `ref_price` + `ref_price_date` guncellenir, digerleri
+         *     yok sayilir). Yeni kodlu / kodsuz kalemler her iki kipte EKLENIR.
+         */
+        WorkItemsBulkCreate: {
+            /** Items */
+            items: components["schemas"]["WorkItemCreate"][];
+            /**
+             * On Source Conflict
+             * @default error
+             * @enum {string}
+             */
+            on_source_conflict: "error" | "update_price";
+        };
+        /** WorkItemsBulkResponse */
+        WorkItemsBulkResponse: {
+            /** Created */
+            created: number;
+            /** Items */
+            items: components["schemas"]["WorkItemBulkResultRow"][];
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
         };
         /**
          * WorkLogCreate
@@ -27712,6 +27795,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkItemRead"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_work_items_endpoint_catalog_items_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkItemsBulkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkItemsBulkResponse"];
                 };
             };
             /** @description Yetkisiz işlem */
