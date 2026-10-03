@@ -11,6 +11,25 @@ describe("backendErrorMessage", () => {
     expect(backendErrorMessage(new BackendError(422, { detail: [{ msg: "gecersiz e-posta", loc: ["body", "email"] }] }))).toBe("gecersiz e-posta");
   });
 
+  it("katalog servis 422 zarfı {detail: string, errors: [...]} → detail metni", () => {
+    const err = new BackendError(422, {
+      detail: "Satır 3: Bakanlık no zaten kayıtlı",
+      errors: [{ index: 2, field: "source_code", message: "zaten kayıtlı" }],
+    });
+    expect(backendErrorMessage(err)).toBe("Satır 3: Bakanlık no zaten kayıtlı");
+  });
+
+  it("pydantic 422 zarfı {detail: [{loc, msg, type}]} → ilk msg; bozuk öğe çökertmez", () => {
+    const pydantic = new BackendError(422, {
+      detail: [{ loc: ["body", "source_code"], msg: "String should have at most 32 characters", type: "string_too_long" }],
+    });
+    expect(backendErrorMessage(pydantic)).toBe("String should have at most 32 characters");
+    expect(backendErrorMessage(new BackendError(422, { detail: [null] }), "yedek")).toBe("yedek");
+    expect(backendErrorMessage(new BackendError(422, { detail: [] }), "yedek")).toBe("yedek");
+    expect(backendErrorMessage(new BackendError(422, { detail: [{ loc: [], type: "x" }] }), "yedek")).toBe("yedek");
+    expect(backendErrorMessage(new BackendError(422, null), "yedek")).toBe("yedek");
+  });
+
   it("bilinmeyen hatada fallback dondurur", () => {
     expect(backendErrorMessage(new Error("x"))).toBe("Beklenmeyen bir hata oluştu.");
   });

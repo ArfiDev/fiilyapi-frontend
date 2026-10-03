@@ -113,3 +113,21 @@ export const LAST_UNKNOWN_SOURCE: WorkItemRead = {
     doc_id: null,
   },
 };
+
+/** KAT-F1.1 · Bakanlık no + fiyat tarihi örnekleri (üç durum: ikisi dolu · yalnız tarih · ikisi de null = BETON). */
+export const KAT_BOTH: WorkItemRead = {
+  ...BETON,
+  id: "i-kb",
+  poz_no: "KAB-0201",
+  name: "Bakanlık kalemi",
+  source_code: "15.100.1001",
+  ref_price_date: "2026-01-01",
+};
+export const KAT_DATE_ONLY: WorkItemRead = {
+  ...BETON,
+  id: "i-kd",
+  poz_no: "KAB-0202",
+  name: "Yalnız tarihli kalem",
+  source_code: null,
+  ref_price_date: "2026-01-01",
+};

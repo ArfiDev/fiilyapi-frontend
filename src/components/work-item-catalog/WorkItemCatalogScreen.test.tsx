@@ -11,6 +11,8 @@ import {
   DEMIR,
   D_DUV,
   D_KAB,
+  KAT_BOTH,
+  KAT_DATE_ONLY,
   LAST_EMPTY,
   LAST_HK_HIGH,
   LAST_MASKED,
@@ -861,5 +863,115 @@ describe("Son fiyat kolonu (TKL-F2.5 · KIK:138-141, 252-256)", () => {
     expect(screen.getByText(`son fiyat referansın %${LAST_PRICE_HIGH_PCT} üstünde`)).toBeInTheDocument();
     expect(screen.getByText("turuncu tarih")).toBeInTheDocument();
     expect(screen.getByText("6 aydan eski fiyat")).toBeInTheDocument();
+  });
+});
+
+describe("KAT-F1.1 · Bakanlık no + fiyat tarihi alt satırları (T45/T47)", () => {
+  const failBody = (status: number, error: unknown) =>
+    ({ data: undefined, error, response: new Response(null, { status }) }) as never;
+
+  async function renderThree() {
+    mockGets({ disciplines: [D_KAB, D_DUV], items: [BETON, KAT_BOTH, KAT_DATE_ONLY] });
+    renderScreen();
+    await screen.findByText("Bakanlık kalemi");
+  }
+  const rowOf = (id: string) => within(screen.getByTestId(`wik-row-${id}`));
+
+  it("ikisi dolu: Bakanlık no poz no hücresinde, 'Bakanlık · 01.01.2026' referans fiyat hücresinde", async () => {
+    await renderThree();
+    const row = rowOf("i-kb");
+    expect(row.getByTestId("wik-source-code")).toHaveTextContent("15.100.1001");
+    expect(row.getByTestId("wik-ref-date")).toHaveTextContent(/^Bakanlık · 01\.01\.2026$/);
+  });
+
+  it("yalnız tarih: kod satırı YOK, tarih satırı yalnız '01.01.2026'", async () => {
+    await renderThree();
+    const row = rowOf("i-kd");
+    expect(row.queryByTestId("wik-source-code")).not.toBeInTheDocument();
+    expect(row.getByTestId("wik-ref-date")).toHaveTextContent(/^01\.01\.2026$/);
+  });
+
+  it("ikisi de null: hiçbir alt satır basılmaz", async () => {
+    await renderThree();
+    const row = rowOf("i-bet");
+    expect(row.queryByTestId("wik-source-code")).not.toBeInTheDocument();
+    expect(row.queryByTestId("wik-ref-date")).not.toBeInTheDocument();
+  });
+
+  it("arama Bakanlık no'da da bulur ('15.100' → yalnız o kalem)", async () => {
+    const user = userEvent.setup();
+    await renderThree();
+    await user.type(screen.getByPlaceholderText("Poz no ya da tarif ara"), "15.100");
+    expect(screen.getByText("Bakanlık kalemi")).toBeInTheDocument();
+    expect(screen.queryByText("Beton döküm")).not.toBeInTheDocument();
+    expect(screen.queryByText("Yalnız tarihli kalem")).not.toBeInTheDocument();
+  });
+
+  it("düzenleme satırı Bakanlık no + tarihi SALT OKUMA gösterir; PATCH gövdesine girmez", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok({ ...KAT_BOTH, ref_price: "1300.00" }));
+    await renderThree();
+    await user.click(screen.getByRole("button", { name: /KAB-0201.*düzenle/i }));
+    const edit = within(screen.getByTestId("wik-edit-i-kb"));
+    expect(edit.getByTestId("wik-source-code")).toHaveTextContent("15.100.1001");
+    expect(edit.getByTestId("wik-ref-date")).toHaveTextContent("Bakanlık · 01.01.2026");
+    expect(edit.queryByRole("textbox", { name: /bakanlık|kaynak|tarih/i })).not.toBeInTheDocument();
+    const price = edit.getByLabelText("Referans fiyat");
+    await user.clear(price);
+    await user.type(price, "1300,00");
+    await user.click(edit.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(backendClient.PATCH).toHaveBeenCalled());
+    expect(vi.mocked(backendClient.PATCH).mock.calls[0]?.[1]).toMatchObject({ body: { ref_price: "1300.00" } });
+    const sent = (vi.mocked(backendClient.PATCH).mock.calls[0] as unknown as [string, { body: object }])[1].body;
+    expect(Object.keys(sent)).toEqual(["ref_price"]);
+  });
+
+  it("servis 422 zarfı {detail: string, errors: [...]} satırda detail metniyle görünür", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.PATCH).mockResolvedValue(
+      failBody(422, { detail: "Bakanlık no zaten kayıtlı", errors: [{ index: 0, field: "source_code" }] }),
+    );
+    await renderThree();
+    await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+    const edit = within(screen.getByTestId("wik-edit-i-bet"));
+    await user.clear(edit.getByLabelText("Tarif"));
+    await user.type(edit.getByLabelText("Tarif"), "Beton");
+    await user.click(edit.getByRole("button", { name: "Kaydet" }));
+    expect(await edit.findByText("Bakanlık no zaten kayıtlı")).toBeInTheDocument();
+  });
+
+  it("pydantic 422 zarfı {detail: [{loc,msg,type}]} satırda ilk msg ile görünür (çökme yok)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(backendClient.PATCH).mockResolvedValue(
+      failBody(422, { detail: [{ loc: ["body", "name"], msg: "Tarif çok uzun", type: "string_too_long" }] }),
+    );
+    await renderThree();
+    await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
+    const edit = within(screen.getByTestId("wik-edit-i-bet"));
+    await user.clear(edit.getByLabelText("Tarif"));
+    await user.type(edit.getByLabelText("Tarif"), "Beton");
+    await user.click(edit.getByRole("button", { name: "Kaydet" }));
+    expect(await edit.findByText("Tarif çok uzun")).toBeInTheDocument();
+  });
+});
+
+describe("KAT-F1.1 EK · eski harf yazımlı birim ('kg') düzenlemede kanonik seçenekte görünür", () => {
+  it("uom 'kg' → birim seçicide 'Kg' seçili; dokunmadan kaydet → PATCH gövdesinde uom YOK", async () => {
+    const user = userEvent.setup();
+    const kgItem = { ...BETON, id: "i-kg", poz_no: "KAB-0301", name: "Kg kalemi", uom: "kg" };
+    mockGets({ disciplines: [D_KAB, D_DUV], items: [kgItem] });
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok({ ...kgItem, name: "Kg kalemi 2" }));
+    renderScreen();
+    await screen.findByText("Kg kalemi");
+    await user.click(screen.getByRole("button", { name: /KAB-0301.*düzenle/i }));
+    const edit = within(screen.getByTestId("wik-edit-i-kg"));
+    const select = edit.getByLabelText("Birim") as HTMLSelectElement;
+    expect(select.selectedOptions[0]?.textContent).toBe("Kg");
+    await user.clear(edit.getByLabelText("Tarif"));
+    await user.type(edit.getByLabelText("Tarif"), "Kg kalemi 2");
+    await user.click(edit.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(backendClient.PATCH).toHaveBeenCalled());
+    const sent = (vi.mocked(backendClient.PATCH).mock.calls[0] as unknown as [string, { body: object }])[1].body;
+    expect(Object.keys(sent)).toEqual(["name"]);
   });
 });

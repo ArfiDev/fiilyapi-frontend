@@ -155,6 +155,10 @@
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
+.wip-sub--mono {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
 .wip-sub--error {
   color: var(--color-danger-text);
 }

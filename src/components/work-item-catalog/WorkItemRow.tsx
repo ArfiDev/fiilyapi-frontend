@@ -9,6 +9,8 @@ import {
   formatPriceUpdated,
   formatStandardRate,
   isPriceStale,
+  refPriceDateLabel,
+  sourceCodeLabel,
 } from "./work-item-model";
 
 interface WorkItemRowProps {
@@ -21,12 +23,21 @@ interface WorkItemRowProps {
 /** KIK:134-147 — görünüm satırı. */
 export function WorkItemRow({ item, now, canWrite, onEdit }: WorkItemRowProps) {
   const isStale = isPriceStale(item.price_updated_at, now);
+  const sourceCode = sourceCodeLabel(item);
+  const dateLabel = refPriceDateLabel(item);
   return (
     <div role="row" className="wik-row wik-grid" data-testid={`wik-row-${item.id}`}>
       <div role="cell" className="wik-cell wik-cell--poz">
         <DisciplineSwatch color={item.discipline.color} />
-        <span className="wik-poz" data-testid="wik-poz">
-          {item.poz_no}
+        <span className="wik-pozbox">
+          <span className="wik-poz" data-testid="wik-poz">
+            {item.poz_no}
+          </span>
+          {sourceCode !== null && (
+            <span className="wik-sub wik-sub--mono" data-testid="wik-source-code">
+              {sourceCode}
+            </span>
+          )}
         </span>
       </div>
       <div role="cell" className="wik-cell wik-cell--name">
@@ -37,7 +48,14 @@ export function WorkItemRow({ item, now, canWrite, onEdit }: WorkItemRowProps) {
         {item.uom}
       </div>
       <div role="cell" className="wik-cell wik-cell--num wik-cell--ref">
-        {formatPrice(item.ref_price)}
+        <span className="wik-refbox">
+          <span>{formatPrice(item.ref_price)}</span>
+          {dateLabel !== null && (
+            <span className="wik-sub wik-sub--mono" data-testid="wik-ref-date">
+              {dateLabel}
+            </span>
+          )}
+        </span>
       </div>
       <div role="cell" className="wik-cell wik-cell--last">
         <LastPriceCell lastPrice={item.last_price} refPrice={item.ref_price} />

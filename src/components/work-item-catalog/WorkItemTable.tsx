@@ -71,6 +71,7 @@ export function WorkItemTable({
                 key={item.id}
                 draft={draft}
                 pozNo={item.poz_no}
+                source={item}
                 discipline={item.discipline}
                 lastPrice={item.last_price}
                 savedRefPrice={item.ref_price}

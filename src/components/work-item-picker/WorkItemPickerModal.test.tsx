@@ -12,6 +12,8 @@ import {
   DEMIR,
   D_DUV,
   D_KAB,
+  KAT_BOTH,
+  KAT_DATE_ONLY,
   LAST_MASKED,
   LAST_SZL,
   SIVA,
@@ -608,5 +610,40 @@ describe("Son fiyat hücresi yeniden kullanılır (F2.5 LastPriceCell)", () => {
     await ready();
     expect(within(rowOf(LAST_SZL.poz_no)).getByText("Sözleşme · GNK · 12.09")).toBeInTheDocument();
     expect(within(rowOf(LAST_SZL.poz_no)).getByText("+%1,8")).toBeInTheDocument();
+  });
+});
+
+describe("KAT-F1.1 · Bakanlık no + fiyat tarihi alt satırları (T47)", () => {
+  beforeEach(() => {
+    mockCatalog([BETON, SIVA, KAT_BOTH, KAT_DATE_ONLY]);
+  });
+
+  it("ikisi dolu: poz hücresinde Bakanlık no, ref. fiyat hücresinde 'Bakanlık · 01.01.2026'", async () => {
+    renderPicker();
+    await ready(KAT_BOTH.poz_no);
+    const row = within(rowOf(KAT_BOTH.poz_no));
+    expect(row.getByTestId("wip-source-code")).toHaveTextContent("15.100.1001");
+    expect(row.getByTestId("wip-ref-date")).toHaveTextContent(/^Bakanlık · 01\.01\.2026$/);
+  });
+
+  it("yalnız tarih → yalnız '01.01.2026', kod satırı yok; ikisi null → hiçbiri", async () => {
+    renderPicker();
+    await ready(KAT_BOTH.poz_no);
+    const dateOnly = within(rowOf(KAT_DATE_ONLY.poz_no));
+    expect(dateOnly.queryByTestId("wip-source-code")).not.toBeInTheDocument();
+    expect(dateOnly.getByTestId("wip-ref-date")).toHaveTextContent(/^01\.01\.2026$/);
+    const none = within(rowOf(SIVA.poz_no));
+    expect(none.queryByTestId("wip-source-code")).not.toBeInTheDocument();
+    expect(none.queryByTestId("wip-ref-date")).not.toBeInTheDocument();
+  });
+
+  it("arama Bakanlık no'da bulur ('15.100' → yalnız o kalem)", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+    await ready(KAT_BOTH.poz_no);
+    await user.type(screen.getByPlaceholderText("Poz no veya tanımda ara..."), "15.100");
+    expect(screen.getByText(KAT_BOTH.poz_no)).toBeInTheDocument();
+    expect(screen.queryByText(SIVA.poz_no)).not.toBeInTheDocument();
+    expect(screen.queryByText(KAT_DATE_ONLY.poz_no)).not.toBeInTheDocument();
   });
 });

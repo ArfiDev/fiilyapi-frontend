@@ -346,6 +346,21 @@
   font-size: var(--text-small);
   color: var(--color-text-subtle);
 }
+.wik-sub--mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.wik-pozbox,
+.wik-refbox {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.wik-refbox {
+  align-items: flex-end;
+}
 .wik-sub--nowrap {
   font-size: 10.5px;
   white-space: nowrap;

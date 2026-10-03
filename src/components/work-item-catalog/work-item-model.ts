@@ -39,13 +39,30 @@ export function sortByPozNo(items: readonly WorkItemRead[]): WorkItemRead[] {
   });
 }
 
-/** KIK:243-246 — `poz_no + tarif` içinde, tr-TR küçük harf, boşluk kırpılır. */
+/** T47 — Bakanlık poz no'su ("15.100.1001"); yok/boş → null (alt satır basılmaz). */
+export function sourceCodeLabel(item: Pick<WorkItemRead, "source_code">): string | null {
+  const code = item.source_code?.trim();
+  return code ? code : null;
+}
+
+/**
+ * T47 — referans fiyatın kaynak tarihi alt satırı: kod VARSA "Bakanlık · 01.01.2026", kod yoksa
+ * yalnız "01.01.2026", tarih yoksa null (satır basılmaz; kod tek başına bu satırı üretmez).
+ */
+export function refPriceDateLabel(item: Pick<WorkItemRead, "source_code" | "ref_price_date">): string | null {
+  if (!item.ref_price_date) return null;
+  const date = formatDateDots(item.ref_price_date);
+  return sourceCodeLabel(item) === null ? date : `Bakanlık · ${date}`;
+}
+
+/** KIK:243-246 + T47 — `poz_no + Bakanlık no + tarif` içinde, tr-TR küçük harf, boşluk kırpılır. */
 export function filterWorkItems(items: readonly WorkItemRead[], { query, disciplineId }: WorkItemFilter): WorkItemRead[] {
   const needle = query.trim().toLocaleLowerCase(LOCALE);
   return items.filter(
     (item) =>
       (disciplineId === null || item.discipline.id === disciplineId) &&
-      (needle === "" || `${item.poz_no} ${item.name}`.toLocaleLowerCase(LOCALE).includes(needle)),
+      (needle === "" ||
+        `${item.poz_no} ${item.source_code ?? ""} ${item.name}`.toLocaleLowerCase(LOCALE).includes(needle)),
   );
 }
 

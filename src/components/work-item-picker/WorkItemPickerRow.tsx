@@ -3,7 +3,7 @@
 import { Checkbox, Input } from "@/components/ui";
 import { DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 import { LastPriceCell } from "@/components/work-item-catalog/LastPriceCell";
-import { formatPrice } from "@/components/work-item-catalog/work-item-model";
+import { formatPrice, refPriceDateLabel, sourceCodeLabel } from "@/components/work-item-catalog/work-item-model";
 import "@/components/work-item-catalog/work-item-catalog.css";
 import { cx } from "@/lib/cx";
 import { EMPTY_CELL } from "@/lib/format";
@@ -44,6 +44,8 @@ export function WorkItemPickerRow({
   const { item, block } = row;
   const isBlocked = block !== null;
   const isSelected = input?.selected === true;
+  const sourceCode = sourceCodeLabel(item);
+  const dateLabel = refPriceDateLabel(item);
   return (
     <tr
       className={cx(
@@ -64,6 +66,11 @@ export function WorkItemPickerRow({
       <td className="wip-cell wip-cell--poz">
         <DisciplineSwatch color={item.discipline.color} />
         <span className="wip-poz">{item.poz_no}</span>
+        {sourceCode !== null && (
+          <span className="wip-sub wip-sub--mono" data-testid="wip-source-code">
+            {sourceCode}
+          </span>
+        )}
       </td>
       <td className="wip-cell wip-cell--name">
         <span className="wip-name">{item.name}</span>
@@ -76,7 +83,14 @@ export function WorkItemPickerRow({
         )}
       </td>
       <td className="wip-cell wip-cell--unit">{item.uom}</td>
-      <td className="wip-cell wip-cell--num">{formatPrice(item.ref_price)}</td>
+      <td className="wip-cell wip-cell--num">
+        {formatPrice(item.ref_price)}
+        {dateLabel !== null && (
+          <span className="wip-sub wip-sub--mono" data-testid="wip-ref-date">
+            {dateLabel}
+          </span>
+        )}
+      </td>
       <td className="wip-cell wip-cell--last">
         <LastPriceCell lastPrice={item.last_price} refPrice={item.ref_price} />
       </td>

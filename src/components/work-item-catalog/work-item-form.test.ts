@@ -115,6 +115,15 @@ describe("buildWorkItemCreateBody — poz_no ASLA gövdede değil", () => {
 describe("buildWorkItemUpdateBody — yalnız DEĞİŞEN alan", () => {
   const initial = workItemFormFromItem(BETON);
 
+  it("Bakanlık no + fiyat tarihi salt okunur: form durumuna girmez, PATCH gövdesinde ASLA yok", () => {
+    const withSource = { ...BETON, source_code: "15.100.1001", ref_price_date: "2026-01-01" };
+    const start = workItemFormFromItem(withSource);
+    expect(Object.keys(start).sort()).toEqual(["name", "own", "rate", "refPrice", "uom"]);
+    const body = buildWorkItemUpdateBody(start, { ...start, name: "Yeni", refPrice: "1300,00" });
+    expect(Object.keys(body).sort()).toEqual(["name", "ref_price"]);
+    expect(buildWorkItemUpdateBody(start, { ...start })).toEqual({});
+  });
+
   it("değişiklik yoksa boş gövde", () => {
     expect(buildWorkItemUpdateBody(initial, { ...initial })).toEqual({});
   });

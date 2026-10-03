@@ -20414,6 +20414,10 @@ interface EvCatalogEntry {
   refPrice: string | null;
   /** Yalnız `refPrice` DEĞİŞİNCE ilerler (ilk atama ve temizleme dahil). */
   priceUpdatedAt: string | null;
+  /** KAT-B1 · Bakanlık poz no ("15.100.1001"); poz no'dan AYRI, null olabilir. */
+  sourceCode: string | null;
+  /** KAT-B1 · referans fiyatın kaynak tarihi (YYYY-MM-DD); null olabilir. */
+  refPriceDate: string | null;
 }
 
 interface EvLeafInput {
@@ -20590,6 +20594,17 @@ function evCatalogId(code: string): string {
 }
 
 /**
+ * KAT-B1 · tohum Bakanlık no + fiyat tarihi — üç durum görünür: ikisi dolu (KAL, BET), yalnız tarih
+ * (DEM, TUG), ikisi de null (diğerleri; PIS fiyatlı ama kaynaksız).
+ */
+const EV_CATALOG_SOURCES: Readonly<Record<string, readonly [string | null, string | null]>> = {
+  "KAB-KAL": ["15.100.1001", "2026-01-01"],
+  "KAB-BET": ["15.150.1003", "2026-01-01"],
+  "KAB-DEM": [null, "2026-01-01"],
+  "DUV-TUG": [null, "2026-01-01"],
+};
+
+/**
  * TKL-B2.2 · tohum referans fiyatları (KDV hariç TL) — [fiyat, tarih]. Kalan kalemler fiyatsız
  * (null). Tarihler EV_NOW (24.09.2026) göre: `Demir` ve `Pis su borusu` 182 günden ESKİ
  * (F1.3 "eski fiyat" görseli); `Kalıp`/`Beton döküm`/`Tuğla duvar` yakın.
@@ -20623,6 +20638,8 @@ function evSeedCatalog(): EvCatalogEntry[] {
       pozNo: evPozNo(disc, issued[disc]),
       refPrice: price?.[0] ?? null,
       priceUpdatedAt: price === undefined ? null : `${price[1]}T09:00:00Z`,
+      sourceCode: EV_CATALOG_SOURCES[code]?.[0] ?? null,
+      refPriceDate: EV_CATALOG_SOURCES[code]?.[1] ?? null,
     };
   });
 }
@@ -22227,6 +22244,8 @@ function evCreateCatalogItem(state: EvState, req: EvRequest, body: EvBody): void
     pozNo: evIssuePozNo(state, disciplineId),
     refPrice: null,
     priceUpdatedAt: null,
+    sourceCode: null,
+    refPriceDate: null,
   };
   state.catalog = [...state.catalog, entry];
   req.send(201, evCatalogOut(state, entry));
@@ -22317,6 +22336,8 @@ function evWorkItemOut(
     default_contractor_type: entry.defaultContractorType,
     ref_price: entry.refPrice,
     price_updated_at: entry.priceUpdatedAt,
+    source_code: entry.sourceCode,
+    ref_price_date: entry.refPriceDate,
     last_price: lastPrice,
     standard_updated_at: entry.standardUpdatedAt,
     created_at: entry.standardUpdatedAt,
@@ -22389,6 +22410,8 @@ function evCreateWorkItem(state: EvState, req: EvRequest, body: EvBody): void {
     pozNo: evIssuePozNo(state, disciplineId),
     refPrice,
     priceUpdatedAt: refPrice === null ? null : EV_NOW,
+    sourceCode: typeof body.source_code === "string" && body.source_code !== "" ? body.source_code : null,
+    refPriceDate: typeof body.ref_price_date === "string" && body.ref_price_date !== "" ? body.ref_price_date : null,
   };
   state.catalog = [...state.catalog, entry];
   req.send(201, evWorkItemOut(state, entry, req.lastPrices().get(entry.id) ?? null));

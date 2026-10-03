@@ -348,3 +348,29 @@ describe("ref_price kayıpsız ondalık dize olarak saklanır", () => {
     expect(near.json.ref_price).toBe("1234567890123456.79");
   });
 });
+
+describe("KAT-B1 · source_code + ref_price_date (üç durum tohumda görünür)", () => {
+  it("tohum: ikisi dolu · yalnız tarih · ikisi de null; alanlar HER yanıtta var (null dahil)", async () => {
+    const items = await listItems();
+    const both = items.filter((i) => i.source_code && i.ref_price_date);
+    const dateOnly = items.filter((i) => !i.source_code && i.ref_price_date);
+    const neither = items.filter((i) => !i.source_code && !i.ref_price_date);
+    expect(both.length).toBeGreaterThan(0);
+    expect(dateOnly.length).toBeGreaterThan(0);
+    expect(neither.length).toBeGreaterThan(0);
+    for (const item of items) {
+      expect(item).toHaveProperty("source_code");
+      expect(item).toHaveProperty("ref_price_date");
+    }
+  });
+
+  it("POST gövdesindeki source_code + ref_price_date yanıta yazılır", async () => {
+    const created = await create(KAB, "Bakanlık kaynaklı kalem", {
+      source_code: "15.999.9001",
+      ref_price_date: "2026-01-01",
+    });
+    expect(created.status).toBe(201);
+    expect(created.json.source_code).toBe("15.999.9001");
+    expect(created.json.ref_price_date).toBe("2026-01-01");
+  });
+});
