@@ -7,6 +7,9 @@ import type {
 import type { ProgressPaymentLineDetail } from "@/lib/api/hooks/useProgressPayments";
 import type { ProgressPaymentLineInput } from "@/lib/api/hooks/useProgressPaymentMutations";
 
+import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
+
+import { parseEmployerPaymentQuantity } from "./employer-quantity";
 import { DEFAULT_QUANTITY_SOURCE, type QuantitySource } from "./quantity-source";
 
 // P7 T5 · Hakediş formu pivot dönüşümü — EN RİSKLİ modül (brief §Uyarı).
@@ -17,7 +20,12 @@ import { DEFAULT_QUANTITY_SOURCE, type QuantitySource } from "./quantity-source"
 export interface PivotCell {
   siteId: string;
   editable: boolean;
-  /** Düzenlenebilir hücrede DAİMA sayısal string ("0" dahil); kapalı hücrede "". */
+  /**
+   * EKRAN METNİ (TKL-F8 · T30): Türkçe yazım — "12,5", "1.234,5", "0". Sunucu değeri
+   * `trQuantityInputValue` ile çevrilir ("12.500" → "12,5"); gövdeye `normalizePivotRowsForSave`
+   * nokta-ondalık metin olarak çevirir. Düzenlenebilir hücrede boş girişe izin vardır (kayıtta "0");
+   * kapalı hücrede "".
+   */
   quantity: string;
   /** Var olan kaydedilmiş satırın `line_total`'ı (salt okunur gösterim) — yoksa null. */
   lineTotal: string | null;
@@ -36,7 +44,8 @@ export interface PivotRow {
   cells: PivotCell[];
 }
 
-function cellKey(contractItemId: string, siteId: string): string {
+/** Hücre kimliği: (kalem, şantiye) çifti — satır eşleme ve hücre hata anahtarı. */
+export function cellKey(contractItemId: string, siteId: string): string {
   return `${contractItemId}::${siteId}`;
 }
 
@@ -73,7 +82,7 @@ export function buildPivotRows(
         return {
           siteId: site.id,
           editable,
-          quantity: existing ? existing.quantity : editable ? "0" : "",
+          quantity: existing ? trQuantityInputValue(existing.quantity) : editable ? "0" : "",
           lineTotal: existing ? existing.line_total : null,
           isPriceStale: existing ? (existing.is_price_stale ?? null) : null,
           quantitySource: existing ? existing.quantity_source : DEFAULT_QUANTITY_SOURCE,
@@ -114,13 +123,9 @@ export function buildLinesSaveBody(rows: readonly PivotRow[]): ProgressPaymentLi
 }
 
 /**
- * Miktar hücresine YAZARKEN uygulanan filtre (kontrolcü incelemesi bulgusu:
- * ham `event.target.value` doğrulamasız state'e giriyordu). Rakam/nokta
- * DIŞI her karakter (harf, işaret, boşluk) süzülür; ikinci nokta atılır.
- * Miktar şeması negatif kabul etmediğinden (`ProgressPaymentLineInput.quantity
- * >= 0`) eksi işareti hiç üretilmez. Kullanıcı yazarken geçici ara haller
- * ("12.", "") serbest bırakılır — kaydetmeden hemen önce
- * `normalizeQuantityForSave` bunları güvenli hale getirir.
+ * ⚠️ NOKTA-ONDALIK süzgeç (rakam ve nokta kalır, VİRGÜL SİLİNİR). İŞVEREN formu artık KULLANMAZ
+ * (TKL-F8: `employer-quantity.ts` · `sanitizeTrDecimalInput`); yalnız TAŞERON hakediş formu hâlâ
+ * tüketicidir ve TKL-F7 birleşince bu fonksiyon kaldırılacaktır. Yeni kod BUNU ÇAĞIRMAZ.
  */
 export function sanitizeQuantityInput(raw: string): string {
   const digitsAndDots = raw.replace(/[^0-9.]/g, "");
@@ -130,39 +135,47 @@ export function sanitizeQuantityInput(raw: string): string {
 }
 
 /**
- * Kaydetmeden HEMEN ÖNCE çağrılır (brief-fix §2): boş ("") veya yalnız nokta
- * (".") gibi geçersiz ara haller `PUT …/lines` gövdesine sızmadan `"0"`a
- * normalize edilir — REDDETMEK yerine geçerli bir varsayılana düşmek tercih
- * edildi, çünkü `"0"` zaten bu formda MEŞRU bir miktardır (bkz.
- * `buildLinesSaveBody` yorumu); kullanıcıyı "boş bıraktın, düzelt" diye
- * engellemek bu bağlamda gereksiz sürtünme yaratır. `Number()`/`parseFloat`
- * KULLANILMAZ — string zaten geçerli ondalık biçimindeyse (sanitize
- * filtresinden geçmiş) olduğu gibi döner, kuruş hassasiyeti bozulmaz.
+ * 🔴 TKL-F8 (T30/T43) · Kaydetmeden HEMEN ÖNCE çağrılır: her düzenlenebilir hücrenin EKRAN METNİ
+ * ("3,5", "1.234,5") Türkçe kuralla okunur ve nokta-ondalık METNE çevrilir ("3.5", "1234.5";
+ * `Number()` YOK). Boş hücre ve sıfır "0"a düşer (0 bu formda MEŞRU; reddetmek gereksiz sürtünme).
+ * Okunamayan hücre (belirsiz "0.500", "1,2345", "12a") `errors`a `hücre anahtarı → görünür mesaj`
+ * olarak düşer; `errors` boş değilse çağıran İSTEK ATMAZ. Hatalı hücrenin gövde karşılığı uydurulmaz:
+ * satırda "0" kalır ama gövde zaten gönderilmez.
+ * `buildLinesSaveBody`nin kendisi BİLEREK değiştirilmedi (kritik testleri ona kilitli).
  */
-export function normalizeQuantityForSave(raw: string): string {
-  if (raw === "" || raw === ".") return "0";
-  return raw;
+export function normalizePivotRowsForSave(rows: readonly PivotRow[]): {
+  rows: PivotRow[];
+  errors: Record<string, string>;
+} {
+  const errors: Record<string, string> = {};
+  const normalized = rows.map((row) => ({
+    ...row,
+    cells: row.cells.map((cell) => {
+      if (!cell.editable) return cell;
+      const parsed = parseEmployerPaymentQuantity(cell.quantity);
+      if (parsed.kind === "error") {
+        errors[cellKey(row.item.id, cell.siteId)] = parsed.message;
+        return cell;
+      }
+      return { ...cell, quantity: parsed.value };
+    }),
+  }));
+  return { rows: normalized, errors };
 }
 
 /**
- * `buildLinesSaveBody`e vermeden önce TÜM düzenlenebilir hücreleri
- * `normalizeQuantityForSave`ten geçirir. `buildLinesSaveBody`nin kendisi
- * BİLEREK değiştirilmedi (brief'in atlanmaması istediği 3 kritik test bu
- * fonksiyona kilitli) — normalize etme sorumluluğu ayrı, dar kapsamlı bir
- * fonksiyona verildi.
+ * Satırın düzenlenebilir hücrelerindeki miktar toplamı — kuruş hassasiyetli TOPLAMA (çarpma yok,
+ * güvenli). Hücre metni TÜRKÇEDİR: T30 ile okunur, nokta-ondalık değer toplanır. Boş hücre 0'dır;
+ * okunamayan hücre (yazım sürüyor ya da belirsiz "0.500") de 0 sayılır — uydurma değer yoktur, hata
+ * kaydetmede hücrenin altında görünür. Dönen değer nokta-ondalık metindir (gösterimi çağıran biçimler).
  */
-export function normalizePivotRowsForSave(rows: readonly PivotRow[]): PivotRow[] {
-  return rows.map((row) => ({
-    ...row,
-    cells: row.cells.map((cell) =>
-      cell.editable ? { ...cell, quantity: normalizeQuantityForSave(cell.quantity) } : cell,
-    ),
-  }));
-}
-
-/** Satırın düzenlenebilir hücrelerindeki miktar toplamı — kuruş hassasiyetli TOPLAMA (çarpma yok, güvenli). */
 export function rowQuantityTotal(row: PivotRow): string {
-  const editableQuantities = row.cells.filter((c) => c.editable).map((c) => c.quantity || "0");
+  const editableQuantities = row.cells
+    .filter((c) => c.editable)
+    .map((c) => {
+      const parsed = parseEmployerPaymentQuantity(c.quantity);
+      return parsed.kind === "ok" ? parsed.value : "0";
+    });
   return sumDecimalStrings(editableQuantities.length > 0 ? editableQuantities : ["0"]);
 }
 

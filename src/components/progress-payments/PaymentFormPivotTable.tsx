@@ -2,13 +2,19 @@ import { Input } from "@/components/ui";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import type { ContractDistributionSite } from "@/lib/api/hooks/useContract";
 
-import { rowAmountTotal, rowQuantityTotal, sanitizeQuantityInput, type PivotRow } from "./pivot";
+import { sanitizeTrDecimalInput, formatTrQuantityText } from "./employer-quantity";
+import { cellKey, rowAmountTotal, rowQuantityTotal, type PivotRow } from "./pivot";
 import { isDiarySourced } from "./quantity-source";
+
+/** 11 basamak + 3 binlik nokta + virgül + 3 ondalık. */
+const QUANTITY_INPUT_MAX_LENGTH = 18;
 
 export interface PaymentFormPivotTableProps {
   sites: ContractDistributionSite[];
   rows: PivotRow[];
   disabled: boolean;
+  /** Hatalı hücreler: `cellKey(kalem, şantiye)` → görünür mesaj (kayıt denemesinde dolar). */
+  cellErrors?: Readonly<Record<string, string>>;
   onQuantityChange: (itemId: string, siteId: string, value: string) => void;
 }
 
@@ -27,6 +33,7 @@ export function PaymentFormPivotTable({
   sites,
   rows,
   disabled,
+  cellErrors = {},
   onQuantityChange,
 }: PaymentFormPivotTableProps) {
   return (
@@ -87,28 +94,35 @@ export function PaymentFormPivotTable({
                     {row.cells.map((cell) => (
                       <td key={cell.siteId} className="pp-table__cell pp-form-table__qty-cell">
                         {cell.editable ? (
-                          <Input
-                            size="row"
-                            numeric
-                            inputMode="decimal"
-                            aria-label={`${row.item.description} — ${
-                              sites.find((s) => s.id === cell.siteId)?.name ?? ""
-                            } miktar`}
-                            value={cell.quantity}
-                            disabled={disabled}
-                            onChange={(event) =>
-                              // Ham deger degil, sanitize edilmis deger state'e yazilir
-                              // (kontrolcu bulgusu §2): harf/isaret hicbir zaman
-                              // state'e girmez, "12." gibi gecici ara haller
-                              // serbest birakilir — kaydetmeden hemen once
-                              // `normalizePivotRowsForSave` bunlari "0"a cevirir.
-                              onQuantityChange(
-                                row.item.id,
-                                cell.siteId,
-                                sanitizeQuantityInput(event.target.value),
-                              )
-                            }
-                          />
+                          <>
+                            <Input
+                              size="row"
+                              numeric
+                              inputMode="decimal"
+                              maxLength={QUANTITY_INPUT_MAX_LENGTH}
+                              aria-label={`${row.item.description} — ${
+                                sites.find((s) => s.id === cell.siteId)?.name ?? ""
+                              } miktar`}
+                              aria-invalid={cellErrors[cellKey(row.item.id, cell.siteId)] ? true : undefined}
+                              value={cell.quantity}
+                              disabled={disabled}
+                              onChange={(event) =>
+                                // Hücre durumu EKRAN METNİDİR (Türkçe): yalnız rakam, nokta ve tek
+                                // virgül girer; "12," gibi geçici ara haller serbesttir — okuma ve
+                                // hata kaydetmede (`normalizePivotRowsForSave`).
+                                onQuantityChange(
+                                  row.item.id,
+                                  cell.siteId,
+                                  sanitizeTrDecimalInput(event.target.value),
+                                )
+                              }
+                            />
+                            {cellErrors[cellKey(row.item.id, cell.siteId)] && (
+                              <span className="pp-form-table__qty-error" data-testid="pp-form-qty-error">
+                                {cellErrors[cellKey(row.item.id, cell.siteId)]}
+                              </span>
+                            )}
+                          </>
                         ) : (
                           // FİNAL İNCELEME düzeltmesi #2: hücre kilitli AMA
                           // sunucuda kayıtlı bir miktar taşıyorsa (tahsisi
@@ -124,7 +138,7 @@ export function PaymentFormPivotTable({
                                 : "Bu poz seçilen şantiyeye dağıtılmadı; önce poz dağılımını yapın."
                             }
                           >
-                            {cell.lineTotal !== null ? formatQuantity(cell.quantity) : "—"}
+                            {cell.lineTotal !== null ? formatTrQuantityText(cell.quantity) : "—"}
                           </span>
                         )}
                       </td>

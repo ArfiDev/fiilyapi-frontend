@@ -21,8 +21,9 @@ import { useProgressPayment } from "@/lib/api/hooks/useProgressPayments";
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PERIOD_MONTHS, formatPercent, formatQuantity } from "@/lib/format";
+import { PERIOD_MONTHS, formatPercent } from "@/lib/format";
 import { toDecimalString } from "@/lib/decimal";
+import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import { asPercent } from "@/lib/api/scale";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -31,11 +32,17 @@ import { PaymentCalculationCard } from "./PaymentCalculationCard";
 import { PaymentFormPivotTable } from "./PaymentFormPivotTable";
 import { ProgressPaymentStatusActions } from "./ProgressPaymentStatusActions";
 import { applyEmployerDiarySuggestion } from "./diary-fill";
+import {
+  formatTrQuantityText,
+  parseEmployerCoefficient,
+  sanitizeTrDecimalInput,
+} from "./employer-quantity";
 import { periodFields, type OmittablePeriodField } from "./period-fields";
 import { useDiaryFill } from "./useDiaryFill";
 import {
   buildLinesSaveBody,
   buildPivotRows,
+  cellKey,
   findOrphanedAllocationCells,
   normalizePivotRowsForSave,
   type PivotRow,
@@ -48,6 +55,8 @@ export type ProgressPaymentFormProps =
   | { mode: "edit"; paymentId: string };
 
 const DEFAULT_COEFFICIENT_WHEN_LOCKED = "1";
+/** "10,000" — katsayı üst sınırı 10 (T43), 3 ondalık. */
+const COEFFICIENT_INPUT_MAX_LENGTH = 10;
 
 /**
  * Hakediş oluştur/düzenle formu (P7 T5). `create` ve `edit` kipleri AYNI
@@ -88,6 +97,9 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   const [description, setDescription] = useState("");
   const [defaultCoefficient, setDefaultCoefficient] = useState("1");
   const [formError, setFormError] = useState<string | null>(null);
+  // TKL-F8 · görünür alan hataları (kayıt denemesinde dolar; ilgili alan düzenlenince temizlenir).
+  const [cellErrors, setCellErrors] = useState<Readonly<Record<string, string>>>({});
+  const [coefficientError, setCoefficientError] = useState<string | null>(null);
   // no 179 · `edit` kaydetmesi PATCH-SONRA-PUT sıralıdır: PATCH başarılı olup
   // PUT (satırlar) PATLARSA başlık zaten sunucuda kaydedilmiştir ve geri
   // alma (rollback) YOKTUR. `formError` sunucunun ham cümlesini taşımaya
@@ -136,7 +148,8 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
     const seedYear = detail?.period_year ?? new Date().getFullYear();
     const seedMonth = detail?.period_month ?? new Date().getMonth() + 1;
     const seedDescription = detail?.description ?? "";
-    const seedCoefficient = detail?.default_coefficient ?? "1";
+    // TKL-F8: katsayı alanı EKRAN METNİDİR (Türkçe) — sunucu "1.050" → "1,05".
+    const seedCoefficient = trQuantityInputValue(detail?.default_coefficient ?? "1");
     setRows(buildPivotRows(distributionQuery.data, detail?.lines ?? []));
     setPeriodYear(seedYear);
     setPeriodMonth(seedMonth);
@@ -163,6 +176,9 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
     fetchSuggestion: () => diarySuggestionQuery.refetch(),
     apply: (lines) => applyEmployerDiarySuggestion(rows ?? [], lines),
     commit: (application) => {
+      // Doldurmanın DEĞİŞTİRDİĞİ hücrelerin hatası kalkar; değişmeyen hatalı hücrenin hatası kalır.
+      const changedKeys = changedCellKeys(rows ?? [], application.rows);
+      setCellErrors((prev) => omitKeys(prev, changedKeys));
       setRows(application.rows);
       setDirty(true);
     },
@@ -223,6 +239,13 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
 
   function updateCellQuantity(itemId: string, siteId: string, value: string) {
     setDirty(true);
+    setCellErrors((prev) => {
+      const key = cellKey(itemId, siteId);
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
     setRows((prev) =>
       (prev ?? []).map((row) =>
         row.item.id !== itemId
@@ -268,8 +291,11 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
             : []),
         ];
 
-  function coefficientToSend(): string {
-    return hasPriceEscalation ? defaultCoefficient || "1" : DEFAULT_COEFFICIENT_WHEN_LOCKED;
+  // Kilitliyken (fiyat farkı yok) metin okunmaz: gövdeye sabit "1" gider (davranış aynen).
+  function parseCoefficientToSend() {
+    return hasPriceEscalation
+      ? parseEmployerCoefficient(defaultCoefficient)
+      : ({ kind: "ok", value: DEFAULT_COEFFICIENT_WHEN_LOCKED } as const);
   }
 
   // no 180 · ikiz taşeron formuyla (`SubcontractorProgressPaymentForm
@@ -287,14 +313,19 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
       setFormError(validationError);
       return;
     }
-    // Kaydetmeden HEMEN önce normalize edilir (kontrolcü bulgusu §2): boş/
-    // geçersiz ara haller ("", ".") `"0"`a çevrilir — `buildLinesSaveBody`nin
+    // Kaydetmeden HEMEN önce hücre metinleri Türkçe okunur ve nokta-ondalık metne çevrilir
+    // (TKL-F8 · T30): boş → "0", okunamayan hücre görünür hata + İSTEK GİTMEZ. `buildLinesSaveBody`nin
     // KENDİSİ değiştirilmedi, kritik testleri korunur (bkz. `pivot.ts`).
-    const linesBody = buildLinesSaveBody(normalizePivotRowsForSave(rows ?? []));
+    const normalized = normalizePivotRowsForSave(rows ?? []);
+    const coefficient = parseCoefficientToSend();
+    setCellErrors(normalized.errors);
+    setCoefficientError(coefficient.kind === "error" ? coefficient.message : null);
+    if (coefficient.kind === "error" || Object.keys(normalized.errors).length > 0) return;
+    const linesBody = buildLinesSaveBody(normalized.rows);
     const headerBody = {
       ...periodFields(periodYear, periodMonth, omittedPeriodFields),
       description: description.trim() ? description.trim() : null,
-      default_coefficient: coefficientToSend(),
+      default_coefficient: coefficient.value,
     };
 
     if (props.mode === "create") {
@@ -359,6 +390,8 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
         const fresh = await detailQuery.refetch();
         if (fresh.data) {
           setRows(buildPivotRows(distribution, fresh.data.lines));
+          // Satırlar sunucudan yeniden kuruldu: eski hücre hataları artık geçersiz.
+          setCellErrors({});
           setDirty(false);
         }
       },
@@ -448,7 +481,7 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
           {orphanedCells.length} satırın tahsisi bu şantiyeden kaldırılmış — kaydedince bu
           satırlar SİLİNECEK:{" "}
           {orphanedCells
-            .map((cell) => `${cell.item.code} — ${cell.siteName} (${formatQuantity(cell.quantity)})`)
+            .map((cell) => `${cell.item.code} — ${cell.siteName} (${formatTrQuantityText(cell.quantity)})`)
             .join(", ")}
           .
         </Alert>
@@ -484,16 +517,20 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
       <div className="pp-form__ff-band" data-testid="pp-form-ff-band">
         <span>Fiyat Farkı: {hasPriceEscalation ? "Var" : "Yok"}</span>
         <div className="pp-form__ff-coefficient">
-          <Field label="Katsayı (Dn/D0)" size="md">
+          <Field label="Katsayı (Dn/D0)" size="md" error={hasPriceEscalation ? coefficientError : null}>
             {(control) => (
               <Input
                 {...control}
                 size="row"
                 numeric
                 inputMode="decimal"
+                maxLength={COEFFICIENT_INPUT_MAX_LENGTH}
                 value={hasPriceEscalation ? defaultCoefficient : DEFAULT_COEFFICIENT_WHEN_LOCKED}
                 disabled={!hasPriceEscalation}
-                onChange={(event) => setDefaultCoefficient(event.target.value)}
+                onChange={(event) => {
+                  setCoefficientError(null);
+                  setDefaultCoefficient(sanitizeTrDecimalInput(event.target.value));
+                }}
               />
             )}
           </Field>
@@ -578,6 +615,7 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
         sites={distribution.sites}
         rows={rows}
         disabled={isSaving}
+        cellErrors={cellErrors}
         onQuantityChange={updateCellQuantity}
       />
 
@@ -622,6 +660,29 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   );
 }
 
+function changedCellKeys(before: readonly PivotRow[], after: readonly PivotRow[]): string[] {
+  const previous = new Map<string, string>();
+  for (const row of before) {
+    for (const cell of row.cells) previous.set(cellKey(row.item.id, cell.siteId), cell.quantity);
+  }
+  const changed: string[] = [];
+  for (const row of after) {
+    for (const cell of row.cells) {
+      const key = cellKey(row.item.id, cell.siteId);
+      if (previous.get(key) !== cell.quantity) changed.push(key);
+    }
+  }
+  return changed;
+}
+
+function omitKeys(
+  errors: Readonly<Record<string, string>>,
+  keys: readonly string[],
+): Readonly<Record<string, string>> {
+  if (!keys.some((key) => key in errors)) return errors;
+  return Object.fromEntries(Object.entries(errors).filter(([key]) => !keys.includes(key)));
+}
+
 // `Field`in render-prop `control`ünden yalnız aria/`id` alanlarını salt-okunur
 // gösterim `div`ine geçirir — `<input>` olmadığından `value`/`onChange` yok.
 function pickAriaProps(control: { id: string; "aria-describedby"?: string }) {
@@ -651,7 +712,10 @@ function parsePeriodYear(raw: string): number | null {
 }
 
 function coefficientPercentLabel(coefficient: string): string {
-  const value = Number(coefficient);
+  // TKL-F8: alan metni TÜRKÇEDİR ("1,05") — `Number()`a ham metin verilmez, T30 ile okunur.
+  // Okunamayan ara hal (yazım sürüyor / hatalı) %0 basar; hata alanın altında ayrıca görünür.
+  const parsed = parseEmployerCoefficient(coefficient);
+  const value = parsed.kind === "ok" ? Number(parsed.value) : Number.NaN;
   // KAÇIŞ: yalnız gösterim amaçlı türetilmiş katsayı yüzdesi (yorum yukarıda);
   // formatPercent sınırında Decimal kanonuyla stringe çevriliyor.
   if (!Number.isFinite(value)) return formatPercent(asPercent("0"));

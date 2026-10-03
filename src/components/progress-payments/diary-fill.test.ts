@@ -80,7 +80,7 @@ describe("applyEmployerDiarySuggestion", () => {
 
     const result = applyEmployerDiarySuggestion(rows, [employerLine("item-1", SITE_A, "320.000")]);
 
-    expect(result.rows[0].cells[0].quantity).toBe("320.000");
+    expect(result.rows[0].cells[0].quantity).toBe("320");
     expect(result.plan).toEqual({ fillCount: 1, overwriteCount: 0, unmatchedCount: 0 });
   });
 
@@ -90,6 +90,24 @@ describe("applyEmployerDiarySuggestion", () => {
     applyEmployerDiarySuggestion(rows, [employerLine("item-1", SITE_A, "5")]);
 
     expect(rows[0].cells[0].quantity).toBe("0");
+  });
+
+  it("öneri Türkçe ekran metnine çevrilir ('1234.500' → '1.234,5'); aynı değer 'değişti' sayılmaz", () => {
+    const rows = [
+      pivotRow("item-1", [
+        { siteId: SITE_A, editable: true, quantity: "0" },
+        { siteId: SITE_B, editable: true, quantity: "12,5" },
+      ]),
+    ];
+
+    const result = applyEmployerDiarySuggestion(rows, [
+      employerLine("item-1", SITE_A, "1234.500"),
+      employerLine("item-1", SITE_B, "12.500"),
+    ]);
+
+    expect(result.rows[0].cells[0].quantity).toBe("1.234,5");
+    expect(result.rows[0].cells[1].quantity).toBe("12,5");
+    expect(result.plan).toEqual({ fillCount: 1, overwriteCount: 0, unmatchedCount: 0 });
   });
 
   it("sıfırdan farklı elle girilmiş miktarın üzerine yazmayı SAYAR", () => {
