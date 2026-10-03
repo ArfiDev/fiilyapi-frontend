@@ -55,7 +55,7 @@ function fillRequired() {
     target: { value: "Perde betonu C30/37" },
   });
   fireEvent.change(screen.getByLabelText(TEXT.unit), { target: { value: "m³" } });
-  fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1240.5" } });
+  fireEvent.change(screen.getByLabelText(TEXT.quantity), { target: { value: "1240,5" } }); // TKL-F7a (T30): Türkçe ondalık
 }
 
 beforeEach(() => {

@@ -353,6 +353,26 @@ describe("TSD — poz tablosu (88-182)", () => {
     });
   });
 
+  // TKL-F7a ek iş · T42 — hücre T30 okur; gövdeye nokta-ondalık METİN gider.
+  it("B.F. '1.234,5' → mutate gövdesi unit_price \"1234.50\"; '28.5' belirsiz → istek YOK", async () => {
+    const user = userEvent.setup();
+    setup();
+    const input = screen.getByLabelText("03.001 taşeron birim fiyatı");
+    await user.clear(input);
+    await user.type(input, "1.234,5");
+    await user.tab();
+    expect(updateItemMutate.mock.calls[0][0]).toEqual({
+      itemId: "sci-1",
+      body: { unit_price: "1234.50" },
+    });
+
+    updateItemMutate.mockClear();
+    await user.clear(input);
+    await user.type(input, "28.5");
+    await user.tab();
+    expect(updateItemMutate).not.toHaveBeenCalled();
+  });
+
   it("değişmeyen hücrede istek ATILMAZ", async () => {
     const user = userEvent.setup();
     setup();

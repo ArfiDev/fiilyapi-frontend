@@ -662,7 +662,7 @@ describe("SubcontractorProgressPaymentForm — Günlükten Doldur", () => {
     expect(await screen.findByTestId("thf-diary-fill-notice")).toHaveTextContent(
       "1 satır günlük kayıtlardan dolduruldu.",
     );
-    expect(screen.getByLabelText(`${ITEM_DIARY.description} — miktar`)).toHaveValue("60.000");
+    expect(screen.getByLabelText(`${ITEM_DIARY.description} — miktar`)).toHaveValue("60");
   });
 
   // F-P10 T2 · rozet göçü (KARAR S1): rozetin TEK kaynağı sunucunun kalıcı
@@ -731,7 +731,7 @@ describe("SubcontractorProgressPaymentForm — Günlükten Doldur", () => {
       await screen.findByText(/1 satırda elle girdiğiniz sıfırdan farklı miktar var/),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Üzerine yaz" }));
-    expect(screen.getByLabelText(`${ITEM_DIARY.description} — miktar`)).toHaveValue("60.000");
+    expect(screen.getByLabelText(`${ITEM_DIARY.description} — miktar`)).toHaveValue("60");
   });
 
   it("dolan miktarlar MEVCUT kaydetme yolundan (PUT lines) gönderilir", async () => {
@@ -759,7 +759,7 @@ describe("SubcontractorProgressPaymentForm — Günlükten Doldur", () => {
     };
     expect(body.body.lines).toContainEqual({
       contract_item_id: ITEM_DIARY.id,
-      quantity: "60.000",
+      quantity: "60",
       sort_order: 1,
     });
   });
@@ -802,5 +802,240 @@ describe("SubcontractorProgressPaymentForm — SEKME-F1.3b kaydedilmemiş deği�
     renderForm({ mode: "edit", paymentId: PAYMENT_ID });
     await screen.findByTestId("thf-hierarchy");
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+});
+
+// TKL-F7b · T30/T42/T43 — taşeron hakedişinde miktar ve katsayı TÜRKÇE okunur (nokta binlik, virgül ondalık).
+const AMBIGUOUS = "Ondalık için virgül kullanın (ör. 28,50)";
+const COEFFICIENT_TOO_BIG = "Katsayı çok büyük, ondalık için virgül kullanın";
+const QTY_LABEL = `${ITEM_MANUAL.description} — miktar`;
+
+function mockCreateFlow() {
+  const createMutate = vi.fn((_vars, opts) => opts?.onSuccess?.({ id: PAYMENT_ID }));
+  const replaceMutate = vi.fn();
+  vi.mocked(useCreateSubcontractorProgressPayment).mockReturnValue(mutationResult({ mutate: createMutate }));
+  vi.mocked(useReplaceSubcontractorProgressPaymentLines).mockReturnValue(mutationResult({ mutate: replaceMutate }));
+  return { createMutate, replaceMutate };
+}
+
+function mockEditFlow(detail: Record<string, unknown>) {
+  const updateMutate = vi.fn((_vars, opts) => opts?.onSuccess?.());
+  const replaceMutate = vi.fn();
+  vi.mocked(useSubcontractorProgressPayment).mockReturnValue(queryResult({ data: detailFixture(detail) }));
+  vi.mocked(useUpdateSubcontractorProgressPayment).mockReturnValue(mutationResult({ mutate: updateMutate }));
+  vi.mocked(useReplaceSubcontractorProgressPaymentLines).mockReturnValue(mutationResult({ mutate: replaceMutate }));
+  return { updateMutate, replaceMutate };
+}
+
+function manualLine(quantity: string) {
+  return {
+    id: "line-1",
+    contract_item_id: ITEM_MANUAL.id,
+    code: ITEM_MANUAL.code,
+    description: ITEM_MANUAL.description,
+    unit: ITEM_MANUAL.unit,
+    contract_unit_price: "95.00",
+    coefficient: "1",
+    quantity,
+    group_name: null,
+    sort_order: 0,
+    quantity_source: "manual",
+    adjusted_unit_price: "95.00",
+    line_total: "0",
+  };
+}
+
+async function typeQuantity(text: string) {
+  const input = await screen.findByLabelText(QTY_LABEL);
+  await userEvent.clear(input);
+  await userEvent.type(input, text);
+}
+
+async function save() {
+  await userEvent.click(screen.getByRole("button", { name: "Taslak Kaydet" }));
+}
+
+function savedQuantity(replaceMutate: ReturnType<typeof vi.fn>, itemId = ITEM_MANUAL.id) {
+  const [{ body }] = replaceMutate.mock.calls[0];
+  return body.lines.find((l: { contract_item_id: string }) => l.contract_item_id === itemId).quantity;
+}
+
+describe("SubcontractorProgressPaymentForm — miktar Türkçe okunur (TKL-F7b)", () => {
+  it("'1.234,5' → gövde '1234.5'", async () => {
+    const { replaceMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeQuantity("1.234,5");
+    await save();
+    expect(savedQuantity(replaceMutate)).toBe("1234.5");
+  });
+
+  it("'3,5' → gövde '3.5' (eskiden virgül silinip 35 gidiyordu)", async () => {
+    const { replaceMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeQuantity("3,5");
+    await save();
+    expect(savedQuantity(replaceMutate)).toBe("3.5");
+  });
+
+  it.each(["0.500", "1.5"])("'%s' belirsiz: satır hatası görünür, istek GİTMEZ", async (text) => {
+    const { createMutate, replaceMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeQuantity(text);
+    await save();
+    expect(await screen.findByText(AMBIGUOUS)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(replaceMutate).not.toHaveBeenCalled();
+  });
+
+  it("hata satırı düzeltilince hata kalkar ve kayıt gider", async () => {
+    const { replaceMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeQuantity("0.500");
+    await save();
+    await screen.findByText(AMBIGUOUS);
+    await typeQuantity("0,5");
+    expect(screen.queryByText(AMBIGUOUS)).not.toBeInTheDocument();
+    await save();
+    expect(savedQuantity(replaceMutate)).toBe("0.5");
+  });
+
+  it("düzenleme: sunucu '12.500' → input '12,5'; dokunmadan kaydet '12.5' (12500 DEĞİL), form kirli değil", async () => {
+    const { replaceMutate } = mockEditFlow({ lines: [manualLine("12.500")] });
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    expect(await screen.findByLabelText(QTY_LABEL)).toHaveValue("12,5");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    await save();
+    expect(savedQuantity(replaceMutate)).toBe("12.5");
+  });
+
+  it("düzenleme: sunucu '3200.000' → '3.200'; kaydet '3200'", async () => {
+    const { replaceMutate } = mockEditFlow({ lines: [manualLine("3200.000")] });
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    expect(await screen.findByLabelText(QTY_LABEL)).toHaveValue("3.200");
+    await save();
+    expect(savedQuantity(replaceMutate)).toBe("3200");
+  });
+
+  it("günlükten doldurulan '1234.500' Türkçe gösterilir ('1.234,5') ve '1234.5' gider", async () => {
+    const { replaceMutate } = mockCreateFlow();
+    vi.mocked(useSubcontractorDiarySuggestion).mockReturnValue({
+      refetch: vi.fn().mockResolvedValue({
+        data: {
+          year: 2026, month: 7, skipped_unbridged_count: 0, reason: null,
+          contract_id: CONTRACT_ID, site_id: SITE_ID,
+          lines: [{ contract_item_id: ITEM_MANUAL.id, quantity: "1234.500", coefficient: null, sort_order: 0 }],
+        },
+        error: null,
+      }),
+    } as never);
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await screen.findByTestId("thf-hierarchy");
+    await userEvent.click(screen.getByTestId("thf-diary-fill"));
+    await screen.findByTestId("thf-diary-fill-notice");
+    expect(screen.getByLabelText(QTY_LABEL)).toHaveValue("1.234,5");
+    await save();
+    expect(savedQuantity(replaceMutate)).toBe("1234.5");
+  });
+});
+
+describe("SubcontractorProgressPaymentForm — katsayı Türkçe okunur (TKL-F7b · T43)", () => {
+  async function typeCoefficient(text: string) {
+    const input = await screen.findByLabelText("Katsayı (Dn/D0)");
+    await userEvent.clear(input);
+    await userEvent.type(input, text);
+  }
+
+  it("'1,052' → gövde default_coefficient '1.052'", async () => {
+    const { createMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeCoefficient("1,052");
+    await save();
+    expect(createMutate.mock.calls[0][0].body.default_coefficient).toBe("1.052");
+  });
+
+  it("'1,0523' → 'En fazla 3 ondalık', istek GİTMEZ", async () => {
+    const { createMutate, replaceMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeCoefficient("1,0523");
+    await save();
+    expect(await screen.findByText("En fazla 3 ondalık")).toBeInTheDocument();
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(replaceMutate).not.toHaveBeenCalled();
+  });
+
+  it.each(["0", "0,000"])("'%s' → 'Katsayı sıfırdan büyük olmalıdır', istek GİTMEZ", async (text) => {
+    const { createMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeCoefficient(text);
+    await save();
+    expect(await screen.findByText("Katsayı sıfırdan büyük olmalıdır")).toBeInTheDocument();
+    expect(createMutate).not.toHaveBeenCalled();
+  });
+
+  it.each(["1.052", "10,01", "1.052,5"])("'%s' → 'çok büyük' hatası görünür, istek GİTMEZ", async (text) => {
+    const { createMutate, replaceMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeCoefficient(text);
+    await save();
+    expect(await screen.findByText(COEFFICIENT_TOO_BIG)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(replaceMutate).not.toHaveBeenCalled();
+  });
+
+  it("'1.05' → belirsiz nokta hatası, istek GİTMEZ", async () => {
+    const { createMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeCoefficient("1.05");
+    await save();
+    expect(await screen.findByText(AMBIGUOUS)).toBeInTheDocument();
+    expect(createMutate).not.toHaveBeenCalled();
+  });
+
+  it("'10' geçerli (sınır dahil)", async () => {
+    const { createMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    await typeCoefficient("10");
+    await save();
+    expect(createMutate.mock.calls[0][0].body.default_coefficient).toBe("10");
+  });
+
+  it("boş bırakılırsa mevcut davranış: '1' gider", async () => {
+    const { createMutate } = mockCreateFlow();
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    const input = await screen.findByLabelText("Katsayı (Dn/D0)");
+    await userEvent.clear(input);
+    await save();
+    expect(createMutate.mock.calls[0][0].body.default_coefficient).toBe("1");
+  });
+
+  it("düzenleme: sunucu '1.052' → input '1,052'; dokunmadan kaydet '1.052', form kirli değil", async () => {
+    const { updateMutate } = mockEditFlow({ default_coefficient: "1.052" });
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    expect(await screen.findByLabelText("Katsayı (Dn/D0)")).toHaveValue("1,052");
+    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    await save();
+    expect(updateMutate.mock.calls[0][0].body.default_coefficient).toBe("1.052");
+  });
+
+  it("düzenleme: sunucu '1' → '1'", async () => {
+    mockEditFlow({ default_coefficient: "1" });
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    expect(await screen.findByLabelText("Katsayı (Dn/D0)")).toHaveValue("1");
+  });
+});
+
+describe("SubcontractorProgressPaymentForm — günlük etiketi Türkçe metni doğru okur (TKL-F7b denetim)", () => {
+  it.each([
+    ["1234.500", "1.234,5"],
+    ["12.500", "12,5"],
+  ])("sunucu '%s' diary satırı → etiket '%s'", async (server, shown) => {
+    mockEditFlow({
+      lines: [{ ...manualLine(server), quantity_source: "diary" }],
+    });
+    const { container } = renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    await screen.findByText("Günlük kayıttan ↑");
+    expect(container.textContent).toContain(`Günlük kayıttan: ${shown} ${ITEM_MANUAL.unit} hesaplandı`);
   });
 });

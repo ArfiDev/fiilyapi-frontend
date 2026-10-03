@@ -24,20 +24,23 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
-import { PERIOD_MONTHS, formatAmount, formatPercent, formatQuantity } from "@/lib/format";
+import { PERIOD_MONTHS, formatAmount, formatPercent } from "@/lib/format";
 
 import { DiaryFillFeedback } from "./DiaryFillFeedback";
 import { applySubcontractorDiarySuggestion } from "./diary-fill";
 import { periodFields, type OmittablePeriodField } from "./period-fields";
 import { isDiarySourced } from "./quantity-source";
 import { useDiaryFill } from "./useDiaryFill";
-import { sanitizeQuantityInput } from "./pivot";
 import {
   buildPaymentCalculationRows,
   type PaymentCalculationRow,
 } from "./shared/payment-calculation-rows";
+import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import {
   buildSubcontractorLineRows,
+  formatTrQuantityText,
+  parseSubcontractorCoefficient,
+  sanitizeTrDecimalInput,
   buildSubcontractorLinesSaveBody,
   type SubcontractorLineRow,
 } from "./th-lines";
@@ -106,6 +109,9 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [defaultCoefficient, setDefaultCoefficient] = useState("1");
   const [formError, setFormError] = useState<string | null>(null);
+  // TKL-F7b · görünür alan hataları (kayıt denemesinde dolar; ilgili alan düzenlenince temizlenir).
+  const [lineErrors, setLineErrors] = useState<Readonly<Record<string, string>>>({});
+  const [coefficientError, setCoefficientError] = useState<string | null>(null);
   // Kullanıcının GERÇEKTEN dokunduğu dönem alanları. Mockup'ta ay seçicisinin
   // boş seçeneği yoktur, ekranda hep dolu görünür ve "görünen değer"
   // kullanıcının KARARI DEĞİLDİR (bkz. `omittedPeriodFields`).
@@ -146,7 +152,7 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
     const seededYear = detail?.period_year ?? new Date().getFullYear();
     const seededMonth = detail?.period_month ?? new Date().getMonth() + 1;
     const seededSection = detail?.section_id ?? null;
-    const seededCoefficient = detail?.default_coefficient ?? "1";
+    const seededCoefficient = trQuantityInputValue(detail?.default_coefficient ?? "1");
     setRows(seededRows);
     setPeriodYear(seededYear);
     setPeriodMonth(seededMonth);
@@ -219,6 +225,12 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
     submitPayment.isPending;
 
   function updateQuantity(itemId: string, value: string) {
+    setLineErrors((prev) => {
+      if (!(itemId in prev)) return prev;
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
     setRows((prev) =>
       (prev ?? []).map((row) => (row.itemId !== itemId ? row : { ...row, quantity: value })),
     );
@@ -257,10 +269,10 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
             : []),
         ];
 
-  function headerBody() {
+  function headerBody(coefficient: string) {
     return {
       ...periodFields(periodYear, periodMonth, omittedPeriodFields),
-      default_coefficient: defaultCoefficient.trim() ? defaultCoefficient : "1",
+      default_coefficient: coefficient,
       section_id: sectionId,
     };
   }
@@ -285,7 +297,12 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
       setFormError(validationError);
       return;
     }
-    const linesBody = buildSubcontractorLinesSaveBody(rows ?? []);
+    const { body: linesBody, errors } = buildSubcontractorLinesSaveBody(rows ?? []);
+    const coefficient = parseSubcontractorCoefficient(defaultCoefficient);
+    setLineErrors(errors);
+    setCoefficientError(coefficient.kind === "error" ? coefficient.message : null);
+    if (coefficient.kind === "error" || Object.keys(errors).length > 0) return;
+    const savedCoefficient = coefficient.value;
 
     function afterLinesSaved(paymentId: string) {
       if (!alsoSubmit) {
@@ -300,7 +317,7 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
 
     if (props.mode === "create") {
       createPayment.mutate(
-        { contractId: resolvedContractId, body: headerBody() },
+        { contractId: resolvedContractId, body: headerBody(savedCoefficient) },
         {
           onSuccess: (created) => {
             replaceLines.mutate(
@@ -320,7 +337,7 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
 
     const paymentId = props.paymentId;
     updatePayment.mutate(
-      { paymentId, body: headerBody() },
+      { paymentId, body: headerBody(savedCoefficient) },
       {
         onSuccess: () => {
           replaceLines.mutate(
@@ -499,7 +516,7 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
       <div className="pp-form__ff-band" data-testid="thf-coefficient-band">
         <span>Fiyat Farkı Katsayısı</span>
         <div className="pp-form__ff-coefficient">
-          <Field label="Katsayı (Dn/D0)" size="md">
+          <Field label="Katsayı (Dn/D0)" size="md" error={coefficientError}>
             {(control) => (
               <Input
                 {...control}
@@ -508,9 +525,10 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
                 inputMode="decimal"
                 maxLength={10}
                 value={defaultCoefficient}
-                onChange={(event) =>
-                  setDefaultCoefficient(sanitizeQuantityInput(event.target.value))
-                }
+                onChange={(event) => {
+                  setCoefficientError(null);
+                  setDefaultCoefficient(sanitizeTrDecimalInput(event.target.value));
+                }}
               />
             )}
           </Field>
@@ -637,7 +655,7 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
                             className="thf-table__source thf-table__source--diary"
                             data-testid="thf-diary-source"
                           >
-                            📅 Günlük kayıttan: {formatQuantity(row.quantity)} {row.unit} hesaplandı
+                            📅 Günlük kayıttan: {formatTrQuantityText(row.quantity)} {row.unit} hesaplandı
                           </div>
                         ) : (
                           <div className="thf-table__source">Elle giriş</div>
@@ -668,17 +686,23 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
                             size="row"
                             numeric
                             inputMode="decimal"
-                            maxLength={16}
+                            maxLength={18}
                             aria-label={`${row.description} — miktar`}
+                            aria-invalid={lineErrors[row.itemId] ? true : undefined}
                             disabled={isSaving}
                             className={isDiaryRow ? "thf-table__qty-input--diary" : undefined}
                             value={row.quantity}
                             onChange={(event) =>
-                              updateQuantity(row.itemId, sanitizeQuantityInput(event.target.value))
+                              updateQuantity(row.itemId, sanitizeTrDecimalInput(event.target.value))
                             }
                           />
                           {isDiaryRow && (
                             <span className="thf-table__qty-tag">Günlük kayıttan ↑</span>
+                          )}
+                          {lineErrors[row.itemId] && (
+                            <span className="thf-table__qty-error" data-testid="thf-qty-error">
+                              {lineErrors[row.itemId]}
+                            </span>
                           )}
                         </span>
                       </td>

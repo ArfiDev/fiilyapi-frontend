@@ -27,47 +27,50 @@ const VALID_EMPLOYER: EmployerItemFormValues = {
   groupName: "",
 };
 
+// 🔴 TKL-F7a (T42): TAŞ formu da T30 okur — nokta-ondalık "1240.5" belirsizdir (REF_PRICE_AMBIGUOUS_DOT).
+const VALID_SUB: ContractItemFormValues = { ...VALID, quantity: "1240,5" };
+
 describe("validateSubcontractorItem (TAŞ)", () => {
   it("geçerli formda sorun bulmaz", () => {
-    expect(validateSubcontractorItem(VALID)).toBeNull();
+    expect(validateSubcontractorItem(VALID_SUB)).toBeNull();
   });
 
   it("🔴 birim fiyat BOŞ bırakılabilir — hata değildir", () => {
-    expect(validateSubcontractorItem({ ...VALID, unitPrice: "" })).toBeNull();
+    expect(validateSubcontractorItem({ ...VALID_SUB, unitPrice: "" })).toBeNull();
   });
 
   it("zorunlu alanları mockup sırasıyla yakalar", () => {
-    expect(validateSubcontractorItem({ ...VALID, code: " " })?.field).toBe("code");
-    expect(validateSubcontractorItem({ ...VALID, description: "" })?.field).toBe("description");
-    expect(validateSubcontractorItem({ ...VALID, unit: "" })?.field).toBe("unit");
-    expect(validateSubcontractorItem({ ...VALID, quantity: "" })?.field).toBe("quantity");
+    expect(validateSubcontractorItem({ ...VALID_SUB, code: " " })?.field).toBe("code");
+    expect(validateSubcontractorItem({ ...VALID_SUB, description: "" })?.field).toBe("description");
+    expect(validateSubcontractorItem({ ...VALID_SUB, unit: "" })?.field).toBe("unit");
+    expect(validateSubcontractorItem({ ...VALID_SUB, quantity: "" })?.field).toBe("quantity");
   });
 
   it("miktar sıfır veya negatifken reddeder (şema `exclusiveMinimum: 0`)", () => {
-    expect(validateSubcontractorItem({ ...VALID, quantity: "0" })?.field).toBe("quantity");
-    expect(validateSubcontractorItem({ ...VALID, quantity: "-5" })?.field).toBe("quantity");
+    expect(validateSubcontractorItem({ ...VALID_SUB, quantity: "0" })?.field).toBe("quantity");
+    expect(validateSubcontractorItem({ ...VALID_SUB, quantity: "-5" })?.field).toBe("quantity");
   });
 
   it("sayı olmayan miktarı reddeder", () => {
-    expect(validateSubcontractorItem({ ...VALID, quantity: "abc" })?.field).toBe("quantity");
+    expect(validateSubcontractorItem({ ...VALID_SUB, quantity: "abc" })?.field).toBe("quantity");
   });
 
   it("negatif birim fiyatı reddeder (şema `minimum: 0`)", () => {
-    expect(validateSubcontractorItem({ ...VALID, unitPrice: "-1" })?.field).toBe("unitPrice");
+    expect(validateSubcontractorItem({ ...VALID_SUB, unitPrice: "-1" })?.field).toBe("unitPrice");
   });
 
   it("uzunluk sınırlarını şemadan uygular", () => {
     const longCode = "x".repeat(MAX_LENGTH.code + 1);
-    expect(validateSubcontractorItem({ ...VALID, code: longCode })?.field).toBe("code");
+    expect(validateSubcontractorItem({ ...VALID_SUB, code: longCode })?.field).toBe("code");
     const longUnit = "x".repeat(MAX_LENGTH.unit + 1);
-    expect(validateSubcontractorItem({ ...VALID, unit: longUnit })?.field).toBe("unit");
+    expect(validateSubcontractorItem({ ...VALID_SUB, unit: longUnit })?.field).toBe("unit");
   });
 
   it("Sıra boş olabilir ama ondalık/negatif olamaz", () => {
-    expect(validateSubcontractorItem({ ...VALID, sortOrder: "" })).toBeNull();
-    expect(validateSubcontractorItem({ ...VALID, sortOrder: "3" })).toBeNull();
-    expect(validateSubcontractorItem({ ...VALID, sortOrder: "-1" })?.field).toBe("sortOrder");
-    expect(validateSubcontractorItem({ ...VALID, sortOrder: "1.5" })?.field).toBe("sortOrder");
+    expect(validateSubcontractorItem({ ...VALID_SUB, sortOrder: "" })).toBeNull();
+    expect(validateSubcontractorItem({ ...VALID_SUB, sortOrder: "3" })).toBeNull();
+    expect(validateSubcontractorItem({ ...VALID_SUB, sortOrder: "-1" })?.field).toBe("sortOrder");
+    expect(validateSubcontractorItem({ ...VALID_SUB, sortOrder: "1.5" })?.field).toBe("sortOrder");
   });
 });
 

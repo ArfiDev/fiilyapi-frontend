@@ -8,9 +8,11 @@ import { formatAmount, formatCurrencyPrecise, formatPercent, formatQuantity } fr
 import { toDecimalString } from "@/lib/decimal";
 import { asPercent } from "@/lib/api/scale";
 import type { SubcontractorContractItemResponse } from "@/lib/api/hooks/useSubcontractorContractMutations";
-import { decimalInputValue, groupContractItems } from "@/components/subcontractor-contract-form/item-rows";
+import { groupContractItems } from "@/components/subcontractor-contract-form/item-rows";
+import { parseSubcontractorUnitPrice } from "@/components/contract-item-form/validate";
 import { FSO_TEXT } from "@/components/subcontractor-contract-form/constants";
 
+import { trPriceInputValue } from "./employer-item-inline";
 import { contractProgressWidth } from "./contract-progress";
 import { tsdProgressTone } from "./subcontractor-item-progress";
 import "./employer-contract-detail.css";
@@ -74,6 +76,8 @@ export function SubcontractorContractItemsTable({
   onAddItem,
 }: SubcontractorContractItemsTableProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  // TKL-F7a · T42: hücre okunamadığında (belirsiz nokta vb.) istek uçmaz, mesaj tabloda görünür.
+  const [cellError, setCellError] = useState<string | null>(null);
   const groups = groupContractItems(items);
 
   function commit(item: SubcontractorContractItemResponse) {
@@ -84,9 +88,21 @@ export function SubcontractorContractItemsTable({
       return Object.fromEntries(Object.entries(prev).filter(([key]) => key !== item.id));
     });
     if (draft === undefined) return;
-    const next = draft.trim();
-    if (next === decimalInputValue(item.unit_price)) return;
-    onCommitUnitPrice(item.id, next);
+    // 🔴 TKL-F7a · T42: hücre T30 ile okunur (nokta binlik, virgül ondalık, belirsiz nokta RED).
+    const parsed = parseSubcontractorUnitPrice(draft);
+    if (parsed.kind === "error") {
+      setCellError(parsed.problem.message);
+      return;
+    }
+    setCellError(null);
+    // Değişmedi: gösterim biçimi üzerinden karşılaştırılır ("28500" ≡ "28.500,00" ≡ sunucu "28500.00").
+    const unchanged =
+      parsed.value === null
+        ? item.unit_price === null
+        : item.unit_price !== null &&
+          trPriceInputValue(parsed.value) === trPriceInputValue(item.unit_price);
+    if (unchanged) return;
+    onCommitUnitPrice(item.id, parsed.value ?? "");
   }
 
   return (
@@ -118,6 +134,11 @@ export function SubcontractorContractItemsTable({
         <p className="tsd-items__notice" data-testid="tsd-missing-price">
           {itemsMissingPrice} pozun Taşeron B.F. değeri {FSO_TEXT.missingPriceLabel} — bu satırlar
           sözleşme bedeline katkı vermez.
+        </p>
+      )}
+      {cellError && (
+        <p className="tsd-items__notice tsd-items__notice--error" data-testid="tsd-cell-error">
+          {cellError}
         </p>
       )}
       {errorMessage && (
@@ -161,7 +182,10 @@ export function SubcontractorContractItemsTable({
                   progressPctByItemId={progressPctByItemId}
                   progressPendingReason={progressPendingReason}
                   onDraft={(itemId, value) =>
-                    setDrafts((prev) => ({ ...prev, [itemId]: value }))
+                    {
+                      setCellError(null);
+                      setDrafts((prev) => ({ ...prev, [itemId]: value }));
+                    }
                   }
                   onCommit={commit}
                 />
@@ -253,12 +277,11 @@ function ItemGroup({
                 size="row"
                 inputMode="decimal"
                 numeric
-                min={0}
                 className="tsd-items__price-input"
                 aria-label={`${item.code} taşeron birim fiyatı`}
                 placeholder={FSO_TEXT.missingPriceLabel}
                 disabled={isBusy}
-                value={drafts[item.id] ?? decimalInputValue(item.unit_price)}
+                value={drafts[item.id] ?? trPriceInputValue(item.unit_price)}
                 onChange={(event) => onDraft(item.id, event.target.value)}
                 onBlur={() => onCommit(item)}
               />

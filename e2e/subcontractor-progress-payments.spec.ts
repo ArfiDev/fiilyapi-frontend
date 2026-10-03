@@ -290,8 +290,8 @@ test("taşeron: Günlükten Doldur miktarları yazar", async ({ page }) => {
   await expect(page.getByTestId("thf-diary-fill-notice")).toContainText(
     "2 satır günlük kayıtlardan dolduruldu.",
   );
-  await expect(page.locator("main").getByLabel("Duvar Örgü İşleri — miktar")).toHaveValue("320.000");
-  await expect(page.locator("main").getByLabel("Sıva İşleri — miktar")).toHaveValue("260.000");
+  await expect(page.locator("main").getByLabel("Duvar Örgü İşleri — miktar")).toHaveValue("320");
+  await expect(page.locator("main").getByLabel("Sıva İşleri — miktar")).toHaveValue("260");
   // F-P10 T2 · rozet göçü: rozet artık YALNIZ sunucunun `quantity_source`
   // damgasından basılır — kaydedilmemiş doldurma rozet üretmez.
   await expect(page.getByTestId("thf-diary-source")).toHaveCount(0);

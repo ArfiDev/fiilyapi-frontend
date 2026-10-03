@@ -37,18 +37,3 @@ export function groupContractItems(
   }
   return groups;
 }
-
-/**
- * Ondalık string'i `<input type="number">` için okunur hâle getirir:
- * backend `"1200.000"` gönderir, kullanıcı `1200` görmelidir. Bilimsel
- * gösterime KAÇMAZ (string üzerinde çalışır), `Number()` turu yoktur.
- */
-export function decimalInputValue(raw: string | null): string {
-  if (raw === null) return "";
-  const trimmed = raw.trim();
-  if (!trimmed.includes(".")) return trimmed;
-  const withoutTrailingZeros = trimmed.replace(/0+$/, "");
-  return withoutTrailingZeros.endsWith(".")
-    ? withoutTrailingZeros.slice(0, -1)
-    : withoutTrailingZeros;
-}

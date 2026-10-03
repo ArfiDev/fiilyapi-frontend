@@ -61,7 +61,7 @@ test("TSD: poz tablosunda YALNIZ Taşeron B.F. yazılabilir, tfoot şemadan geli
 
   // Üç kalem → üç girdi; Sözleşme Miktarı sütununda girdi YOKTUR.
   await expect(items.locator("input")).toHaveCount(3);
-  await expect(items.getByLabel("E.01 taşeron birim fiyatı")).toHaveValue("45");
+  await expect(items.getByLabel("E.01 taşeron birim fiyatı")).toHaveValue("45,00"); // TKL-F7a (T42): Türkçe gösterim
 
   // tfoot TEK KAYNAK `contract_total`: 5200×45 + 620×120 + 18×3500 = 371.400
   await expect(page.getByTestId("tsd-items-total")).toContainText("371.400");

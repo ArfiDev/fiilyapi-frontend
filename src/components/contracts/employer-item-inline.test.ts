@@ -13,7 +13,7 @@ import {
  * ancak burada bekçilenir.
  */
 describe("commitInlineCell · satır-içi hücre kaydetme kararı", () => {
-  // 🔴 Metin alanları `decimalInputValue`dan GEÇMEZ: "03.010" ondalık gösterimde
+  // 🔴 Metin alanları (eski nokta-ondalık gösterimden) GEÇMEZ: "03.010" ondalık gösterimde
   // "03.01"e düşer ve değişmemiş kod her blur'da PATCH atardı.
   it("sonu sıfırla biten poz kodu değişmediyse noop (metin ondalık sayılmaz)", () => {
     expect(commitInlineCell("code", "03.010", "03.010")).toEqual({ kind: "noop" });

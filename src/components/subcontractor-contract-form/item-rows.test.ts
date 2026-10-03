@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import type { SubcontractorContractItemResponse } from "@/lib/api/hooks/useSubcontractorContractMutations";
 
-import { decimalInputValue, groupContractItems } from "./item-rows";
+import { groupContractItems } from "./item-rows";
 
 function item(
   id: string,
@@ -42,17 +42,5 @@ describe("groupContractItems", () => {
 
   it("boş listede grup üretmez", () => {
     expect(groupContractItems([])).toEqual([]);
-  });
-});
-
-describe("decimalInputValue", () => {
-  it("backend'in sondaki sıfırlarını atar", () => {
-    expect(decimalInputValue("1200.000")).toBe("1200");
-    expect(decimalInputValue("85.500")).toBe("85.5");
-  });
-
-  it("tam sayıya dokunmaz, `null` boş string olur", () => {
-    expect(decimalInputValue("340")).toBe("340");
-    expect(decimalInputValue(null)).toBe("");
   });
 });

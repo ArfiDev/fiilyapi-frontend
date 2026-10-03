@@ -4,12 +4,12 @@
  *
  * Emsal İCAT EDİLMEDİ: taşeron tarafında satır-içi düzenleme zaten vardır
  * (`subcontractor-contract-form/ContractItemsCard.tsx` — hücrede `Input`,
- * `onBlur`da kaydetme, Türkçe biçimli gösterim — K7). Bu modül aynı
+ * `onBlur`da kaydetme, Türkçe biçimli gösterim — K7; TKL-F7'den beri o da T30 okur). Bu modül aynı
  * etkileşim dilinin işveren tarafındaki karar tablosudur.
  *
  * 🔴 EMSALDEN TEK BİLİNÇLİ SAPMA — İSTEMCİ KORKULUĞU:
- * taşeron kartı hücreyi doğrulamadan gönderir ve sunucunun 422'sini basar.
- * İşveren ucunun kısıtları (`quantity` `exclusiveMinimum: 0`, `unit_price`
+ * (tarihsel not: taşeron kartı ilk hâlinde hücreyi doğrulamadan gönderiyordu; TKL-F7'den beri
+ * taşeron hücreleri de T30 okur ve belirsiz girdiyi göndermez.) İşveren ucunun kısıtları (`quantity` `exclusiveMinimum: 0`, `unit_price`
  * `minimum: 0`) üretilen TS tipinde İFADE EDİLEMEZ; `typecheck` yeşilken
  * `quantity = 0` canlıda 422 döner. Bu yüzden istek UÇMADAN ÖNCE elenir.
  * Kural burada YAZILMAZ, `contract-item-form/validate.ts`ten ÇAĞRILIR —
@@ -28,9 +28,9 @@ import type { DeepScale } from "@/lib/api/scale";
 
 /**
  * 🔴 TKL-F2.6a · K7 — hücre GÖSTERİMİ de T30'dur (ayrıştırma ile AYNI değişiklikte; yoksa gösterilen
- * "2.125" yeniden okunurken 2125 olurdu). Taşeron emsalinin `decimalInputValue`si nokta-ondalık
- * gösterir ve taşeron tarafında KALIR; İŞV hücresi Türkçe biçim kullanır: binlik nokta + ondalık
- * virgül. Dize üzerinde çalışır (`Number()` YOK) ve `parseEmployerQuantity/UnitPrice` ile gidiş-dönüş
+ * "2.125" yeniden okunurken 2125 olurdu). TKL-F7 · T42: taşeron hücreleri (ContractItemsCard,
+ * SubcontractorContractItemsTable) ve şartlar kartı da BU gösterim yardımcılarını kullanır
+ * (eski nokta-ondalık gösterim kaldırıldı); biçim: binlik nokta + ondalık virgül. Dize üzerinde çalışır (`Number()` YOK) ve `parseEmployerQuantity/UnitPrice` ile gidiş-dönüş
  * KAYIPSIZDIR — gösterilen metin aynen geri yazılırsa istek uçmaz.
  */
 const PLAIN_DECIMAL = /^(\d+)(?:\.(\d*))?$/;

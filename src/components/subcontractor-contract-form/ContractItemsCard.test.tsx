@@ -181,7 +181,7 @@ describe("`unit_price` boş = 'girilmedi' (0 DEĞİL)", () => {
         onDeleteItem={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText("03.001 miktar")).toHaveValue(1500);
+    expect(screen.getByLabelText("03.001 miktar")).toHaveValue("1500"); // TKL-F7a: hücre artık metin girişi (sayı değil)
   });
 
   it("no 328 · mutasyon SETTLE olunca (isBusy geri false) taslak temizlenir — HATADA sunucu değerine geri döner", () => {
@@ -209,7 +209,7 @@ describe("`unit_price` boş = 'girilmedi' (0 DEĞİL)", () => {
     // Mutasyon HATAYLA settle olur — item prop DEĞİŞMEDEN kalır (1200.000).
     rerender(<ContractItemsCard {...baseProps} isBusy={false} />);
 
-    expect(screen.getByLabelText("03.001 miktar")).toHaveValue(1200);
+    expect(screen.getByLabelText("03.001 miktar")).toHaveValue("1.200"); // TKL-F7a: sunucu "1200.000" Türkçe gösterilir
   });
 });
 

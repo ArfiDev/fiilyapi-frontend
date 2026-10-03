@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Checkbox, DateInput, Field, Input, Select } from "@/components/ui";
 import { PAYMENT_PERIOD_OPTIONS, type PaymentPeriod } from "@/lib/contract-labels";
 
-import { FSO_TEXT, MAX_LENGTH, PCT_MAX, PCT_MIN } from "./constants";
+import { FSO_TEXT, MAX_LENGTH } from "./constants";
 import type { ContractTermsValues } from "./form-state";
 
 // ⚠️ Bu kart PAYLAŞILIR (FSO formu + TSD detayı). Stillerini kendisi
@@ -128,8 +128,7 @@ export function ContractTermsCard({
           {(control) => (
             <Input
               {...control}
-              type="number"
-              min={0}
+              inputMode="decimal"
               numeric
               placeholder="5000"
               value={values.latePenaltyDaily}
@@ -150,9 +149,7 @@ export function ContractTermsCard({
           {(control) => (
             <Input
               {...control}
-              type="number"
-              min={PCT_MIN}
-              max={PCT_MAX}
+              inputMode="decimal"
               numeric
               value={values.advancePct}
               disabled={disabled}
@@ -166,9 +163,7 @@ export function ContractTermsCard({
           {(control) => (
             <Input
               {...control}
-              type="number"
-              min={PCT_MIN}
-              max={PCT_MAX}
+              inputMode="decimal"
               numeric
               value={values.retainagePct}
               disabled={disabled}

@@ -134,7 +134,7 @@ describe("applySubcontractorDiarySuggestion", () => {
 
     const result = applySubcontractorDiarySuggestion(rows, [subcontractorLine("sci-4", "60.000")]);
 
-    expect(result.rows[0].quantity).toBe("60.000");
+    expect(result.rows[0].quantity).toBe("60");
     expect(result.rows[1].quantity).toBe("0");
     expect(result.plan).toEqual({ fillCount: 1, overwriteCount: 0, unmatchedCount: 0 });
   });
