@@ -5,6 +5,7 @@
  */
 import { toDecimalString } from "@/lib/decimal";
 import { EMPTY_CELL, formatDateDots, formatFixedDecimal, toIstanbulDateOnly } from "@/lib/format";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 
 /** KIK:240 — fiyat bu günden eskiyse (`> 182`) tarih turuncu. */
@@ -37,12 +38,6 @@ export function sortByPozNo(items: readonly WorkItemRead[]): WorkItemRead[] {
     const [codeB, seqB] = pozParts(b.poz_no);
     return codeA.localeCompare(codeB, LOCALE) || seqA - seqB || a.poz_no.localeCompare(b.poz_no, LOCALE);
   });
-}
-
-/** T47 — Bakanlık poz no'su ("15.100.1001"); yok/boş → null (alt satır basılmaz). */
-export function sourceCodeLabel(item: Pick<WorkItemRead, "source_code">): string | null {
-  const code = item.source_code?.trim();
-  return code ? code : null;
 }
 
 /**

@@ -17,6 +17,7 @@ const SITE_B = { id: "site-b", name: "B-Blok" };
 const ITEM_1 = {
   id: "item-1",
   code: "03.001",
+  source_code: null,
   description: "Kat Döşemesi C25/30",
   unit: "m³",
   quantity: "1500.000",
@@ -32,6 +33,7 @@ const ITEM_1 = {
 const ITEM_2 = {
   id: "item-2",
   code: "03.002",
+  source_code: null,
   description: "Kolon Betonu C30/37",
   unit: "m³",
   quantity: "300.000",
@@ -53,6 +55,7 @@ function line(overrides: Partial<ProgressPaymentLineDetail>): ProgressPaymentLin
     contract_item_id: ITEM_1.id,
     site_id: SITE_A.id,
     code: ITEM_1.code,
+    source_code: null,
     description: ITEM_1.description,
     unit: ITEM_1.unit,
     contract_unit_price: ITEM_1.unit_price,

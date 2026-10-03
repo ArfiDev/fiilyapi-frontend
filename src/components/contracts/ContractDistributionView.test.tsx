@@ -55,6 +55,7 @@ const DISTRIBUTION: ContractDistributionResponse = {
         {
           id: "ci-1",
           code: "03.001",
+          source_code: null,
           description: "Kat Döşemesi Betonu C25/30",
           unit: "m³",
           quantity: "3200.000",
@@ -68,6 +69,7 @@ const DISTRIBUTION: ContractDistributionResponse = {
         {
           id: "ci-3",
           code: "03.003",
+          source_code: null,
           description: "Nervürlü Demir Ø12–Ø20",
           unit: "Ton",
           quantity: "200.000",
@@ -88,6 +90,7 @@ const DISTRIBUTION: ContractDistributionResponse = {
         {
           id: "ci-5",
           code: "05.001",
+          source_code: null,
           description: "İnce Sıva (Alçı)",
           unit: "m²",
           quantity: "18400.000",

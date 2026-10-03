@@ -50,6 +50,7 @@ export function makeItem(spec: ItemSpec): OfferItemRead {
     sort_order: 0,
     catalog_item_id: `cat-${spec.id}`,
     poz_no: spec.poz,
+    source_code: null,
     description: spec.description ?? `Tarif ${spec.poz}`,
     unit: "m3",
     quantity,

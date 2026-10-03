@@ -112,6 +112,7 @@ const baseDetail: SubcontractorProgressPaymentDetail = {
       id: "l-1",
       contract_item_id: "ci-1",
       code: "A-01",
+      source_code: null,
       description: "Kablo tesisatı",
       unit: "m",
       contract_unit_price: "100.00",

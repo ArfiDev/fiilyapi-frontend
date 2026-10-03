@@ -5,6 +5,7 @@ import { Button } from "@/components/ui";
 import { cx } from "@/lib/cx";
 import type { WorkItemRead } from "@/lib/api/models";
 
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 import { LastPriceCell } from "./LastPriceCell";
 import {
   formatPrice,
@@ -12,7 +13,6 @@ import {
   formatStandardRate,
   isPriceStale,
   refPriceDateLabel,
-  sourceCodeLabel,
 } from "./work-item-model";
 
 interface WorkItemRowProps {

@@ -2027,7 +2027,7 @@ function buildContractDistributionResponse(state: MockState, projectId: string):
     name,
     sort_order: contractItems.find((i) => i.groupName === name)?.groupSortOrder ?? 0,
     items: contractItems.filter((i) => i.groupName === name).map((item) => ({
-      id: item.id, code: item.code, description: item.description, unit: item.unit,
+      id: item.id, code: item.code, source_code: null, description: item.description, unit: item.unit,
       quantity: item.quantity, unit_price: item.unit_price,
       allocations: item.allocations.map((a) => ({ site_id: a.site_id, quantity: a.quantity, boq_item_id: item.id })),
       remaining_quantity: money2(
@@ -2300,6 +2300,7 @@ function buildEmployerContractItemsResponse(
             id: item.id,
             group_id: id,
             code: item.code,
+            source_code: null,
             description: item.description,
             unit: item.unit,
             quantity: item.quantity,
@@ -2742,7 +2743,7 @@ function buildPaymentDetail(state: MockState, payment: MockProgressPayment): com
     created_by: payment.created_by,
     created_at: payment.created_at,
     updated_at: payment.updated_at,
-    lines: payment.lines,
+    lines: payment.lines.map((line) => ({ ...line, source_code: null })),
     groups: payment.groups,
     calculation: payment.calculation,
     progress: payment.progress,
@@ -3160,7 +3161,7 @@ function buildSubcontractorPaymentDetail(state: MockState, payment: MockSubcontr
     created_by: payment.created_by,
     created_at: payment.created_at,
     updated_at: payment.updated_at,
-    lines: payment.lines,
+    lines: payment.lines.map((line) => ({ ...line, source_code: null })),
     calculation: payment.calculation,
     dropped_orphan_count: payment.dropped_orphan_count,
   };
@@ -3229,6 +3230,7 @@ function buildSubcontractorContractDetailResponse(contract: MockSubcontractorCon
     contract_id: contract.id,
     source_contract_item_id: null,
     code: item.code,
+    source_code: null,
     description: item.description,
     unit: item.unit,
     quantity: item.contractQuantity,
