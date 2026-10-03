@@ -46,3 +46,11 @@ describe("yeni ekranda disiplin işareti mockup'a birebir (daire)", () => {
     expect(body).toMatch(/box-shadow:\s*inset 0 0 0 1px var\(--color-border-strong\)/);
   });
 });
+
+describe("Düzenle hücresi mockup gibi sağa taşar (KIK:146)", () => {
+  it("justify-content flex-start: düğme sola taşıp fiyat güncelleme tarihini örtmez", () => {
+    const body = ruleBody(screenCss, ".wik-cell--action");
+    expect(body).toMatch(/justify-content:\s*flex-start/);
+    expect(body).not.toMatch(/justify-content:\s*flex-end/);
+  });
+});

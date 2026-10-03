@@ -318,7 +318,9 @@
   padding-top: 9px;
 }
 .wik-cell--action {
-  justify-content: flex-end;
+  /* KIK:146 — mockup'ta hücre `text-align:right` BLOK: 64px'e sığmayan "Düzenle" düğmesi SAĞA taşar.
+     `flex-end` onu SOLA taşırıp "Fiyat güncelleme" tarihinin üstüne bindiriyordu. */
+  justify-content: flex-start;
   padding: 6px var(--space-2);
 }
 .wik-upd {
