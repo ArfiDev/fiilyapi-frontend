@@ -146,8 +146,15 @@
 .wip-cell--name {
   min-width: 220px;
 }
+/* KAT-F1.4c · uzun Bakanlık adı (≤200): `.wik-name` ile aynı desen (kelime sınırı, 2 satır, tam metin `title`da). */
 .wip-name {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+  overflow-wrap: break-word;
   font-weight: var(--weight-medium);
 }
 .wip-sub {
@@ -232,4 +239,32 @@
   margin-left: var(--space-1);
   font-family: var(--font-mono);
   color: var(--color-text-strong);
+}
+
+/* KAT-F1.2 · sanallaştırılmış tablo (≥ VIRTUALIZE_MIN_ROWS): pencere kayarken sütun genişliği satır içeriğine göre
+   zıplamasın → SABİT düzen + `<colgroup>` genişlikleri (Tanım kalanı alır; min-width Tanım ≥ 220px'i korur). */
+.wip-table--virtual {
+  table-layout: fixed;
+  min-width: 1010px;
+}
+.wip-col--check {
+  width: 36px;
+}
+.wip-col--poz {
+  width: 120px;
+}
+.wip-col--unit {
+  width: 56px;
+}
+.wip-col--ref {
+  width: 120px;
+}
+.wip-col--last {
+  width: 150px;
+}
+.wip-col--input {
+  width: 104px;
+}
+.wip-col--amount {
+  width: 100px;
 }

@@ -1,26 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 
-import { DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
+import { shouldVirtualize } from "@/components/catalog-shared/virtual-rows";
 import { Checkbox } from "@/components/ui";
-import { formatPrice } from "@/components/work-item-catalog/work-item-model";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
-import { multiplyDecimalStrings } from "@/lib/decimal";
 import { routes } from "@/lib/routes";
 
 import { pickerColumns } from "./picker-columns";
-import {
-  validateRow,
-  type DisciplineSection,
-  type PickerInputs,
-  type PickerRow,
-  type ResolvedEntry,
-} from "./picker-model";
+import type { DisciplineSection, PickerInputs, PickerRow, ResolvedEntry } from "./picker-model";
 import type { PickerRules } from "./picker-rules";
 import type { PickerWords } from "./picker-rules";
 import type { PickerTarget } from "./picker-target";
-import { WorkItemPickerRow } from "./WorkItemPickerRow";
+import { WorkItemPickerBodyRow, type WorkItemPickerBodyRowProps } from "./WorkItemPickerBodyRow";
+import { WorkItemPickerGroupRow } from "./WorkItemPickerGroupRow";
+import { WorkItemPickerVirtualRows } from "./WorkItemPickerVirtualRows";
 import "./work-item-picker.css";
 
 /** Onay kutusu kolonu + `pickerColumns` (moddan türer; `selectOnly`te Miktar/fiyat/Tutar yok). */
@@ -98,12 +93,32 @@ export function WorkItemPickerTable({
   const entryById = new Map(entries.map((entry) => [entry.item.id, entry]));
   const columns = pickerColumns(target.entryMode, target.priceHeader);
   const columnCount = columns.length + CHECK_COLUMN_COUNT;
+  // Durum (useRef DEĞİL): ilk çizimde sanal gövde ile birlikte bağlanır; alt bileşenin layout efekti kap ref'inden ÖNCE koşar
+  // (önbellek doluyken satırlar hiç basılmazdı) — kap bağlanınca durum değişir, sanallaştırıcı yeniden ölçer.
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
+  // Eşik altında DOM bugünkü gibidir (aria-rowcount/rowindex, colgroup YOK); eşikte yalnız pencere basılır.
+  const rowCount = sections.reduce((sum, section) => sum + section.rows.length, 0);
+  const isVirtual = emptyReason === null && shouldVirtualize(rowCount);
+  const headRows = 1;
+  const rowProps = { inputs, entryById, target, isDisabled, onToggle, onQuantity, onUnitPrice };
   return (
-    <div className="wip-table-scroll">
-      <table className="wip-table">
+    <div className="wip-table-scroll" ref={setScrollElement}>
+      <table
+        className={isVirtual ? "wip-table wip-table--virtual" : "wip-table"}
+        aria-rowcount={isVirtual ? headRows + rowCount + sections.length : undefined}
+      >
         <caption className="sr-only">{target.tableCaption}</caption>
+        {isVirtual && (
+          // Sabit sütun düzeni: pencere kayarken sütun genişlikleri satır içeriğine göre zıplamasın.
+          <colgroup>
+            <col className="wip-col wip-col--check" />
+            {columns.map((column) => (
+              <col key={column} className={columnClass(column)} />
+            ))}
+          </colgroup>
+        )}
         <thead>
-          <tr>
+          <tr aria-rowindex={isVirtual ? 1 : undefined}>
             <th scope="col" className="wip-th wip-th--check">
               <Checkbox
                 checked={header.isChecked}
@@ -120,77 +135,68 @@ export function WorkItemPickerTable({
             ))}
           </tr>
         </thead>
-        <tbody>
-          {emptyReason !== null ? (
-            <tr>
-              <td colSpan={columnCount} className="wip-empty">
-                <EmptyBody reason={emptyReason} restrictedNames={restrictedNames} words={target.words} />
-              </td>
-            </tr>
-          ) : (
-            sections.map((section) => (
-              <SectionRows
-                key={section.discipline.id}
-                section={section}
-                inputs={inputs}
-                entryById={entryById}
-                columnCount={columnCount}
-                target={target}
-                isDisabled={isDisabled}
-                onToggle={onToggle}
-                onQuantity={onQuantity}
-                onUnitPrice={onUnitPrice}
-              />
-            ))
-          )}
-        </tbody>
+        {isVirtual ? (
+          <WorkItemPickerVirtualRows
+            sections={sections}
+            scrollElement={scrollElement}
+            columnCount={columnCount}
+            noun={target.words.noun}
+            headRows={headRows}
+            {...rowProps}
+          />
+        ) : (
+          <tbody>
+            {emptyReason !== null ? (
+              <tr>
+                <td colSpan={columnCount} className="wip-empty">
+                  <EmptyBody reason={emptyReason} restrictedNames={restrictedNames} words={target.words} />
+                </td>
+              </tr>
+            ) : (
+              sections.map((section) => (
+                <SectionRows key={section.discipline.id} section={section} columnCount={columnCount} noun={target.words.noun} {...rowProps} />
+              ))
+            )}
+          </tbody>
+        )}
       </table>
     </div>
   );
 }
 
-interface SectionRowsProps {
-  section: DisciplineSection;
-  inputs: PickerInputs;
-  entryById: ReadonlyMap<string, ResolvedEntry>;
-  columnCount: number;
-  target: WorkItemPickerTableProps["target"];
-  isDisabled: boolean;
-  onToggle: WorkItemPickerTableProps["onToggle"];
-  onQuantity: WorkItemPickerTableProps["onQuantity"];
-  onUnitPrice: WorkItemPickerTableProps["onUnitPrice"];
+/** Sütun başlığı → `<col>` sınıfı (yalnız sanallaştırılmış, sabit düzenli tabloda kullanılır). */
+function columnClass(column: string): string {
+  switch (column) {
+    case "Poz No":
+      return "wip-col wip-col--poz";
+    case "Tanım":
+      return "wip-col wip-col--name";
+    case "Birim":
+      return "wip-col wip-col--unit";
+    case "Ref. fiyat":
+      return "wip-col wip-col--ref";
+    case "Son fiyat":
+      return "wip-col wip-col--last";
+    case "Tutar":
+      return "wip-col wip-col--amount";
+    default:
+      return "wip-col wip-col--input";
+  }
 }
 
-function SectionRows({ section, inputs, entryById, columnCount, target, isDisabled, onToggle, onQuantity, onUnitPrice }: SectionRowsProps) {
-  const { discipline, rows } = section;
+type SectionRowsProps = Omit<WorkItemPickerBodyRowProps, "row" | "virtualIndex" | "ariaRowIndex" | "measureRef"> & {
+  section: DisciplineSection;
+  columnCount: number;
+  noun: string;
+};
+
+function SectionRows({ section, columnCount, noun, ...rowProps }: SectionRowsProps) {
   return (
     <>
-      <tr className="wip-group">
-        <td colSpan={columnCount}>
-          <DisciplineSwatch color={discipline.color} />
-          <span className="wip-group__title">{`${discipline.code} — ${discipline.name}`}</span>
-          <span className="wip-group__count">{`${rows.length} ${target.words.noun}`}</span>
-        </td>
-      </tr>
-      {rows.map((row) => {
-        const input = inputs.get(row.item.id);
-        const entry = entryById.get(row.item.id);
-        return (
-          <WorkItemPickerRow
-            key={row.item.id}
-            row={row}
-            input={input}
-            error={input?.selected === true && row.block === null ? validateRow(input, target) : null}
-            amountText={entry === undefined || entry.unitPrice === null ? null : formatPrice(multiplyDecimalStrings(entry.quantity, entry.unitPrice))}
-            rules={target}
-            priceAriaSuffix={target.priceAriaSuffix}
-            isDisabled={isDisabled}
-            onToggle={onToggle}
-            onQuantity={onQuantity}
-            onUnitPrice={onUnitPrice}
-          />
-        );
-      })}
+      <WorkItemPickerGroupRow section={section} columnCount={columnCount} noun={noun} />
+      {section.rows.map((row) => (
+        <WorkItemPickerBodyRow key={row.item.id} row={row} {...rowProps} />
+      ))}
     </>
   );
 }

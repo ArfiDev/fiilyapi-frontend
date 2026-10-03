@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui";
@@ -32,6 +32,9 @@ const WRITE_LEVEL = "full";
 const TOAST_MS = 2800;
 /** Yalnız "Excel'den İçe Aktar" için kalır (TKL-F4.3: "Excel İndir" açıldı). */
 const EXCEL_SOON_TITLE = "Yakında · Excel desteği sonraki sürümde açılacak";
+
+/** Katalog yüklenmeden önce `items` için kararlı boş liste (her render yeni dizi = memo kırılır). */
+const NO_ITEMS: readonly WorkItemRead[] = [];
 
 /** ÜS-10 — şerit metni; yazma yetkisi yoksa nedene göre. */
 function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean): string {
@@ -83,20 +86,38 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
     onSaved: (saved) => setToast((current) => ({ text: `${saved.poz_no} · ${saved.name} kaydedildi`, id: (current?.id ?? 0) + 1 })),
   });
 
-  if (isForbidden(catalog.error)) return <AccessDenied />;
-
-  const items = catalog.data ?? [];
-  const allNewDrafts = drafts.drafts.filter(isNewDraft);
-  const editDrafts: ReadonlyMap<string, WorkItemDraft> = new Map(
-    drafts.drafts.filter((draft) => !isNewDraft(draft)).map((draft) => [draft.key, draft]),
+  const items = catalog.data ?? NO_ITEMS;
+  // Arama kutusu ANINDA yansır (`query`); büyük listenin süzülmesi ertelenir (`deferredQuery`, KAT-F0 ölçümü: 1.700 kalemde tuş→paint 135 ms).
+  const deferredQuery = useDeferredValue(query);
+  const allNewDrafts = useMemo(() => drafts.drafts.filter(isNewDraft), [drafts.drafts]);
+  const editDrafts: ReadonlyMap<string, WorkItemDraft> = useMemo(
+    () => new Map(drafts.drafts.filter((draft) => !isNewDraft(draft)).map((draft) => [draft.key, draft])),
+    [drafts.drafts],
   );
-  const filter = { query, disciplineId: activeId };
   // KIK:244, :277-279 — yeni satırlar listenin parçası: süzgece, "N kalem"e, çip ve sekme sayaçlarına girer.
-  const visibleNew = filterNewDrafts(allNewDrafts, filter);
-  const counts = countByDiscipline(items, allNewDrafts.map((draft) => draft.disciplineId));
-  const visible = sortByPozNo(filterWorkItems(items, filter));
-  const catalogUnits = Array.from(new Set(items.map((item) => item.uom)));
+  const visibleNew = useMemo(
+    () => filterNewDrafts(allNewDrafts, { query: deferredQuery, disciplineId: activeId }),
+    [allNewDrafts, deferredQuery, activeId],
+  );
+  const counts = useMemo(
+    () => countByDiscipline(items, allNewDrafts.map((draft) => draft.disciplineId)),
+    [items, allNewDrafts],
+  );
+  const visible = useMemo(
+    () => sortByPozNo(filterWorkItems(items, { query: deferredQuery, disciplineId: activeId })),
+    [items, deferredQuery, activeId],
+  );
+  const catalogUnits = useMemo(() => Array.from(new Set(items.map((item) => item.uom))), [items]);
+  const tabCountValues = useMemo(
+    () => (catalog.data ? tabCounts(items, disciplines, allNewDrafts.length) : null),
+    [catalog.data, items, disciplines, allNewDrafts.length],
+  );
+  // `now` veri tazelendiğinde yenilenir; her render'da yeni `Date` satır memo'sunu kırardı.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(() => new Date(), [catalog.dataUpdatedAt]);
   const canAddRow = disciplineQuery.data !== undefined;
+
+  if (isForbidden(catalog.error)) return <AccessDenied />;
 
   function openNew() {
     // KIK:285 — aktif çipin disiplini, "Tüm disiplinler"de İLK disiplin (sessizce); yalnız KİMLİĞİ saklanır.
@@ -113,7 +134,7 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
 
   return (
     <div className="wik">
-      <WorkItemCatalogTabs counts={catalog.data ? tabCounts(items, disciplines, allNewDrafts.length) : null} />
+      <WorkItemCatalogTabs counts={tabCountValues} />
 
       <header className="wik__head">
         <div className="wik__titles">
@@ -183,7 +204,7 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
           onNew={openNew}
           newDraftCount={allNewDrafts.length}
           table={{
-            now: new Date(),
+            now,
             items: visible,
             newDrafts: visibleNew,
             editDrafts,

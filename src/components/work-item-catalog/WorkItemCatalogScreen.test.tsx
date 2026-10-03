@@ -203,6 +203,11 @@ describe("sekmeler, Excel, çipler, arama (KIK:72-125)", () => {
     expect(importButton).toHaveAttribute("title");
   });
 
+  it("arama kutusunun erişilebilir adı görünür yer tutucuyla uyumlu (KAT-F1.2 D-a11y)", async () => {
+    renderScreen();
+    expect(await screen.findByRole("searchbox", { name: "Poz no, Bakanlık no veya tanımda ara" })).toBeInTheDocument();
+  });
+
   it("Excel İndir: 'Tüm disiplinler'de süzgeçsiz; çip seçiliyse o disiplinle; arama metni ASLA gitmez (ÜS-F4-14)", async () => {
     const user = userEvent.setup();
     renderScreen();
@@ -212,7 +217,7 @@ describe("sekmeler, Excel, çipler, arama (KIK:72-125)", () => {
     expect(await screen.findByText("Excel indiriliyor · Is-Kalemi-Katalogu.xlsx")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Duvar & Sıva/ }));
-    await user.type(screen.getByPlaceholderText("Poz no ya da tarif ara"), "siva");
+    await user.type(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara..."), "siva");
     await user.click(screen.getByRole("button", { name: "Excel İndir" }));
     expect(downloadCatalogExport).toHaveBeenLastCalledWith({ disciplineId: "d-duv" });
   });
@@ -245,7 +250,7 @@ describe("sekmeler, Excel, çipler, arama (KIK:72-125)", () => {
     const user = userEvent.setup();
     renderScreen();
     await screen.findByText("Beton döküm");
-    const search = screen.getByPlaceholderText("Poz no ya da tarif ara");
+    const search = screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara...");
 
     await user.type(search, "duv-0");
     expect(screen.queryByText("Beton döküm")).not.toBeInTheDocument();
@@ -509,10 +514,10 @@ describe("F1.3.1-1 · taslaklar EKRAN düzeyindedir (süzgeç satırı düşürs
     await user.click(screen.getByRole("button", { name: /KAB-0001.*düzenle/i }));
     const tarif = within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif");
     await user.type(tarif, "x");
-    await user.type(screen.getByPlaceholderText("Poz no ya da tarif ara"), "duv");
+    await user.type(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara..."), "duv");
     expect(screen.queryByTestId("wik-edit-i-bet")).not.toBeInTheDocument();
     expect(unsavedRegistry.hasUnsaved()).toBe(true);
-    await user.clear(screen.getByPlaceholderText("Poz no ya da tarif ara"));
+    await user.clear(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara..."));
     expect(within(screen.getByTestId("wik-edit-i-bet")).getByLabelText("Tarif")).toHaveValue("Beton dökümx");
   });
 
@@ -716,7 +721,7 @@ describe("F1.3.1-12 · yeni satır listenin PARÇASIDIR (KIK:244, :277-279)", ()
     const user = userEvent.setup();
     renderScreen();
     await screen.findByText("Beton döküm");
-    const search = screen.getByPlaceholderText("Poz no ya da tarif ara");
+    const search = screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara...");
     await user.type(search, "duv");
     await user.click(screen.getByRole("button", { name: "+ Kalem Ekle" }));
     expect(search).toHaveValue("");
@@ -901,7 +906,7 @@ describe("KAT-F1.1 · Bakanlık no + fiyat tarihi alt satırları (T45/T47)", ()
   it("arama Bakanlık no'da da bulur ('15.100' → yalnız o kalem)", async () => {
     const user = userEvent.setup();
     await renderThree();
-    await user.type(screen.getByPlaceholderText("Poz no ya da tarif ara"), "15.100");
+    await user.type(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara..."), "15.100");
     expect(screen.getByText("Bakanlık kalemi")).toBeInTheDocument();
     expect(screen.queryByText("Beton döküm")).not.toBeInTheDocument();
     expect(screen.queryByText("Yalnız tarihli kalem")).not.toBeInTheDocument();

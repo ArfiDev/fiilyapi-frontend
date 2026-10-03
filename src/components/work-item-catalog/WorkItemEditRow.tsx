@@ -49,6 +49,8 @@ interface WorkItemEditRowProps {
   onPatch: (key: string, change: Partial<WorkItemFormState>) => void;
   onCancel: (key: string) => void;
   onSave: (key: string) => void;
+  /** Yalnız SANALLAŞTIRMADA: gerçek satır sırası (1 tabanlı, başlık = 1). */
+  ariaRowIndex?: number;
 }
 
 /**
@@ -67,6 +69,7 @@ export function WorkItemEditRow({
   onPatch,
   onCancel,
   onSave,
+  ariaRowIndex,
 }: WorkItemEditRowProps) {
   const { form, isSaving } = draft;
   const clientError = firstWorkItemError(form, discipline?.id ?? "");
@@ -81,7 +84,7 @@ export function WorkItemEditRow({
 
   return (
     <div role="rowgroup" className="wik-edit" data-testid={testId}>
-      <div role="row" className="wik-grid wik-edit__grid">
+      <div role="row" aria-rowindex={ariaRowIndex} className="wik-grid wik-edit__grid">
         <div role="cell" className="wik-cell wik-cell--edit-poz">
           <span className="wik-pozbox">
             {pozNo !== null ? (

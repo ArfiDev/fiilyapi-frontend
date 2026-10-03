@@ -9,6 +9,7 @@ import {
   type ProgressPaymentDetail,
 } from "./useProgressPayments";
 import type { DeepScale } from "@/lib/api/scale";
+import { CATALOG_ITEMS_QUERY_KEY } from "./catalog-query-keys";
 
 // P7 · İşveren Hakedişi ekranları — yazma/aksiyon uçları. Tipler `pnpm gen:api`
 // çıktısından takma ad olarak alınır; elle arayüz yazmak yasak.
@@ -32,7 +33,13 @@ export type RefreshPricesResponse = DeepScale<components["schemas"]["RefreshPric
 // tasiyorsa — proje bazli ozet (spec §9.6, hakedis sayaclari degisir).
 function useProgressPaymentInvalidator() {
   const queryClient = useQueryClient();
-  return (paymentId: string, projectId?: string) => {
+  /**
+   * `affectsLastPrice`: katalog "son fiyat" kaynağı HK = YALNIZ onaylı/ödenmiş hakediş satırı
+   * (backend `progress_payments/last_price_provider.py`). Onayı/silmeyi/satır fiyatını değiştiren yazımlar
+   * `catalog-items`ı da bayatlatır (5 dk staleTime beklenmez); taslak düzenleme ve "ödendi" kaynak kümesini değiştirmez.
+   */
+  return (paymentId: string, projectId?: string, affectsLastPrice = false) => {
+    if (affectsLastPrice) queryClient.invalidateQueries({ queryKey: [CATALOG_ITEMS_QUERY_KEY] });
     queryClient.invalidateQueries({ queryKey: [PROGRESS_PAYMENTS_QUERY_KEY] });
     queryClient.invalidateQueries({ queryKey: [PROGRESS_PAYMENT_QUERY_KEY, paymentId] });
     if (projectId) {
@@ -125,7 +132,7 @@ export function useDeleteProgressPayment(): UseMutationResult<void, Error, strin
         }),
       );
     },
-    onSuccess: (_data, paymentId) => invalidate(paymentId),
+    onSuccess: (_data, paymentId) => invalidate(paymentId, undefined, true),
   });
 }
 
@@ -159,7 +166,7 @@ export function useApproveProgressPayment(): UseMutationResult<ProgressPaymentDe
           params: { path: { payment_id: paymentId } },
         }),
       ),
-    onSuccess: (data) => invalidate(data.id, data.project_id),
+    onSuccess: (data) => invalidate(data.id, data.project_id, true),
   });
 }
 
@@ -187,7 +194,7 @@ export function useUnapproveProgressPayment(): UseMutationResult<ProgressPayment
           params: { path: { payment_id: paymentId } },
         }),
       ),
-    onSuccess: (data) => invalidate(data.id, data.project_id),
+    onSuccess: (data) => invalidate(data.id, data.project_id, true),
   });
 }
 
@@ -244,6 +251,6 @@ export function useRefreshProgressPaymentPrices(): UseMutationResult<
           params: { path: { payment_id: paymentId } },
         }),
       ),
-    onSuccess: (_data, paymentId) => invalidate(paymentId),
+    onSuccess: (_data, paymentId) => invalidate(paymentId, undefined, true),
   });
 }

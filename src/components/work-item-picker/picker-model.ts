@@ -221,6 +221,30 @@ export function toggleRows(inputs: PickerInputs, rows: readonly PickerRow[], sel
   return rows.reduce((acc, row) => toggleRow(acc, row, selected), inputs);
 }
 
+/**
+ * "Tümünü seç" TAVANLI: görünen seçilebilir satırları sırayla seçer; mevcut seçimle (görünmeyenler dahil)
+ * toplam `max`ı AŞMAZ. `isTruncated` = tavan yüzünden en az bir satır seçilmedi.
+ */
+export function selectRowsUpTo(
+  inputs: PickerInputs,
+  rows: readonly PickerRow[],
+  max: number,
+): { inputs: PickerInputs; isTruncated: boolean } {
+  let room = Math.max(0, max - [...inputs.values()].filter((input) => input.selected).length);
+  let next = inputs;
+  let isTruncated = false;
+  for (const row of rows) {
+    if (row.block !== null || next.get(row.item.id)?.selected === true) continue;
+    if (room === 0) {
+      isTruncated = true;
+      break;
+    }
+    next = toggleRow(next, row, true);
+    room -= 1;
+  }
+  return { inputs: next, isTruncated };
+}
+
 /** Miktar yazmak satırı otomatik seçer (BoqItemPicker alışkanlığı); silmek seçimi bozmaz. */
 export function setQuantity(inputs: PickerInputs, row: PickerRow, text: string): PickerInputs {
   if (row.block !== null) return inputs;

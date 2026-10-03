@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { backendClient } from "@/lib/api/client";
 import type { EmployerContractItemsResponse } from "@/lib/api/hooks/useContract";
 import type { WorkItemRead } from "@/lib/api/models";
+import { mockVirtualViewport } from "@/components/catalog-shared/virtual-viewport.testkit";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 import {
   BETON,
@@ -118,7 +119,9 @@ describe("kabuk ve metinler (§1.4, §6 varsayılanları)", () => {
       screen.getByText("Gökova Konutları · İş Kalemi Kataloğu'ndan işveren sözleşmesine poz ekle"),
     ).toBeInTheDocument();
     expect(screen.getByText(/Poz no, tanım ve birim katalogdan kopyalanır\./)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Poz no veya tanımda ara...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara...")).toBeInTheDocument();
+    // Erişilebilir ad görünür yer tutucuyla uyumlu (üç noktasız).
+    expect(screen.getByRole("searchbox", { name: "Poz no, Bakanlık no veya tanımda ara" })).toBeInTheDocument();
     expect(screen.getByTestId("wip-count")).toHaveTextContent("0 poz seçili · 3 poz listede");
   });
 
@@ -183,7 +186,7 @@ describe("yükleme / hata / boş hâller (§1.6)", () => {
     const user = userEvent.setup();
     renderPicker();
     await ready();
-    await user.type(screen.getByPlaceholderText("Poz no veya tanımda ara..."), "zzzz");
+    await user.type(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara..."), "zzzz");
     expect(screen.getByText("Süzgece uyan poz yok.")).toBeInTheDocument();
   });
 });
@@ -216,7 +219,7 @@ describe("süzgeçler", () => {
     const user = userEvent.setup();
     renderPicker();
     await ready();
-    const search = screen.getByPlaceholderText("Poz no veya tanımda ara...");
+    const search = screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara...");
     await user.type(search, "İÇ SIVA");
     expect(screen.getByText(SIVA.poz_no)).toBeInTheDocument();
     expect(screen.queryByText(LAST_SZL.poz_no)).not.toBeInTheDocument();
@@ -350,20 +353,99 @@ describe("seçim ve para girişi (§1.5)", () => {
     expect(boxOf(LAST_SZL.poz_no)).not.toBeChecked();
   });
 
-  it("200 tavanı: aşınca bant + düğme KAPALI", async () => {
-    const many = Array.from({ length: 201 }, (_, i) => ({
+  it("🔴 1.000 satırda tümünü seç 200'de DURUR; mevcut bant metniyle bildirir", async () => {
+    const many = Array.from({ length: 1000 }, (_, i) => ({
       ...SIVA,
       id: `m-${i}`,
-      poz_no: `DUV-${String(i + 100).padStart(4, "0")}`,
+      poz_no: `DUV-${String(i + 1000).padStart(4, "0")}`,
       name: `Kalem ${i}`,
     }));
     mockCatalog(many);
+    const restoreViewport = mockVirtualViewport(); // eşik üstü: jsdom'da pencere yüksekliği taklit edilir
     const user = userEvent.setup();
     renderPicker();
-    await screen.findByText("DUV-0100");
+    await screen.findByText("DUV-1000");
+    await user.click(screen.getByRole("checkbox", { name: "Görünen pozların tümünü seç" }));
+    expect(screen.getByTestId("wip-selected")).toHaveTextContent("200");
+    expect(screen.getByTestId("wip-band")).toHaveTextContent("Tek seferde en fazla 200 poz eklenebilir");
+    restoreViewport();
+  });
+
+  it("tavan bildirimi tek bir seçimi kaldırınca söner", async () => {
+    const many = Array.from({ length: 250 }, (_, i) => ({ ...SIVA, id: `m-${i}`, poz_no: `DUV-${String(i + 1000).padStart(4, "0")}` }));
+    mockCatalog(many);
+    const restoreViewport = mockVirtualViewport(); // eşik üstü: jsdom'da pencere yüksekliği taklit edilir
+    const user = userEvent.setup();
+    renderPicker();
+    await screen.findByText("DUV-1000");
     await user.click(screen.getByRole("checkbox", { name: "Görünen pozların tümünü seç" }));
     expect(screen.getByTestId("wip-band")).toHaveTextContent("Tek seferde en fazla 200 poz eklenebilir");
-    expect(submitButton()).toBeDisabled();
+    await user.click(boxOf("DUV-1000"));
+    expect(screen.getByTestId("wip-band")).not.toHaveTextContent("Tek seferde en fazla 200 poz eklenebilir");
+    restoreViewport();
+  });
+});
+
+describe("tümünü seç tavanı — ekran sırası ve geri alma (KAT-F1.2 Y1/O2)", () => {
+  const ALL = "Görünen pozların tümünü seç";
+  let restoreViewport: () => void;
+  beforeEach(() => {
+    restoreViewport = mockVirtualViewport();
+  });
+  afterEach(() => restoreViewport());
+
+  it("🔴 Y1 · tavan EKRANDA görünen sırayla seçer: KAB (sort_order 1, üstte) 150 + DUV 150 → KAB'ın TÜMÜ + DUV'un ilk 50'si", async () => {
+    const kab = Array.from({ length: 150 }, (_, i) => ({ ...BETON, id: `k-${i}`, poz_no: `KAB-${String(i + 1000).padStart(4, "0")}` }));
+    const duv = Array.from({ length: 150 }, (_, i) => ({ ...SIVA, id: `d-${i}`, poz_no: `DUV-${String(i + 1000).padStart(4, "0")}` }));
+    mockCatalog([...duv, ...kab]);
+    const user = userEvent.setup();
+    renderPicker();
+    await screen.findByText("KAB-1000");
+    await user.click(screen.getByRole("checkbox", { name: ALL }));
+    expect(screen.getByTestId("wip-selected")).toHaveTextContent("200");
+    const scroller = document.querySelector(".wip-table-scroll") as HTMLElement;
+    act(() => {
+      scroller.scrollTop = 64 * 140;
+      fireEvent.scroll(scroller);
+    });
+    expect(await screen.findByText("KAB-1149")).toBeInTheDocument();
+    expect(boxOf("KAB-1149")).toBeChecked(); // ekranda üstteki disiplinin SON satırı seçili
+    act(() => {
+      scroller.scrollTop = 64 * 320;
+      fireEvent.scroll(scroller);
+    });
+    expect(await screen.findByText("DUV-1149")).toBeInTheDocument();
+    expect(boxOf("DUV-1149")).not.toBeChecked(); // alttaki disiplinin sonu seçili DEĞİL
+  });
+
+  it("🔴 O2 · tavan devredeyken başlık kutusu seçimi KALDIRIR: 1000 satırda tık dizisi 200 → 0 → 200", async () => {
+    const many = Array.from({ length: 1000 }, (_, i) => ({ ...SIVA, id: `m-${i}`, poz_no: `DUV-${String(i + 1000).padStart(4, "0")}` }));
+    mockCatalog(many);
+    const user = userEvent.setup();
+    renderPicker();
+    await screen.findByText("DUV-1000");
+    const header = screen.getByRole("checkbox", { name: ALL });
+    const selected = () => screen.getByTestId("wip-selected");
+    await user.click(header);
+    expect(selected()).toHaveTextContent(/^200$/);
+    await user.click(header);
+    expect(selected()).toHaveTextContent(/^0$/);
+    await user.click(header);
+    expect(selected()).toHaveTextContent(/^200$/);
+  });
+
+  it("O2 · tavan altında eski davranış: kısmi seçimde tık hepsini seçer, tekrar tık hiçbirini bırakmaz", async () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({ ...SIVA, id: `m-${i}`, poz_no: `DUV-${String(i + 1000).padStart(4, "0")}` }));
+    mockCatalog(many);
+    const user = userEvent.setup();
+    renderPicker();
+    await screen.findByText("DUV-1000");
+    await user.click(boxOf("DUV-1000"));
+    const header = screen.getByRole("checkbox", { name: ALL });
+    await user.click(header);
+    expect(screen.getByTestId("wip-selected")).toHaveTextContent(/^150$/);
+    await user.click(header);
+    expect(screen.getByTestId("wip-selected")).toHaveTextContent(/^0$/);
   });
 });
 
@@ -641,7 +723,7 @@ describe("KAT-F1.1 · Bakanlık no + fiyat tarihi alt satırları (T47)", () => 
     const user = userEvent.setup();
     renderPicker();
     await ready(KAT_BOTH.poz_no);
-    await user.type(screen.getByPlaceholderText("Poz no veya tanımda ara..."), "15.100");
+    await user.type(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara..."), "15.100");
     expect(screen.getByText(KAT_BOTH.poz_no)).toBeInTheDocument();
     expect(screen.queryByText(SIVA.poz_no)).not.toBeInTheDocument();
     expect(screen.queryByText(KAT_DATE_ONLY.poz_no)).not.toBeInTheDocument();

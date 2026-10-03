@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 
 import { nextSortOrder } from "@/components/contract-item-form/build-body";
 import { NEW_GROUP_OPTION } from "@/components/contract-item-form/constants";
@@ -24,6 +24,7 @@ import {
   resolveSelection,
   resolveTargetGroup,
   selectionLimit,
+  selectRowsUpTo,
   setQuantity,
   setUnitPrice,
   toggleRow,
@@ -118,6 +119,8 @@ export function CatalogPickerModal<TBody>({
   const [disciplineId, setDisciplineId] = useState(NO_FILTER);
   const [hideInContract, setHideInContract] = useState(true);
   const [inputs, setInputs] = useState<PickerInputs>(() => new Map());
+  /** "Tümünü seç" tavan yüzünden kesildi → tavan bildirimi bantta kalır (başka bir giriş değişince söner). */
+  const [isBulkCapped, setIsBulkCapped] = useState(false);
   const [groupChoice, setGroupChoice] = useState(() => defaultGroupId(groups));
   // YEREL gruplu hedefler (şablon, dönüştürme): yeni grup adı "Yeni grup"/"Yeni grup 2"… ile DOLU başlar (offer-group-names);
   // sözleşme/teklif: boş (grup sunucuda açılır).
@@ -129,9 +132,16 @@ export function CatalogPickerModal<TBody>({
     () => buildPickerRows(sortByPozNo(itemsQuery.data ?? []), groups, target),
     [itemsQuery.data, groups, target],
   );
+  // Arama kutusu ANINDA yansır (`query`); büyük listenin süzülmesi ertelenir (KAT-F0: 1.700 kalemde tuş→paint 135 ms).
+  const deferredQuery = useDeferredValue(query);
   const visible = useMemo(
-    () => filterRows(rows, { query, disciplineId: disciplineId === NO_FILTER ? null : disciplineId, hideInContract }),
-    [rows, query, disciplineId, hideInContract],
+    () =>
+      filterRows(rows, {
+        query: deferredQuery,
+        disciplineId: disciplineId === NO_FILTER ? null : disciplineId,
+        hideInContract,
+      }),
+    [rows, deferredQuery, disciplineId, hideInContract],
   );
   const sections = useMemo(() => groupByDiscipline(visible, disciplines), [visible, disciplines]);
   const resolution = useMemo(() => resolveSelection(rows, inputs, target), [rows, inputs, target]);
@@ -152,8 +162,11 @@ export function CatalogPickerModal<TBody>({
       : []),
   ];
 
-  const selectableVisible = visible.filter((row) => row.block === null);
-  const selectedVisibleCount = selectableVisible.filter((row) => inputs.get(row.item.id)?.selected === true).length;
+  const selectableVisible = useMemo(() => visible.filter((row) => row.block === null), [visible]);
+  const selectedVisibleCount = useMemo(
+    () => selectableVisible.filter((row) => inputs.get(row.item.id)?.selected === true).length,
+    [selectableVisible, inputs],
+  );
   const isAllChecked = selectableVisible.length > 0 && selectedVisibleCount === selectableVisible.length;
 
   const isDirty = (newGroupName.trim() !== "" && newGroupName.trim() !== defaultNewGroupName) || isPickerInputsDirty(rows, inputs);
@@ -168,7 +181,7 @@ export function CatalogPickerModal<TBody>({
   const bandLines = [
     ...(submitError === null ? [] : [submitError]),
     ...(isTargetGone ? [TARGET_GROUP_GONE_MESSAGE] : []),
-    ...(selectedCount > limit.max ? [limit.message] : []),
+    ...(selectedCount > limit.max || (isBulkCapped && selectedCount >= limit.max) ? [limit.message] : []),
     ...(problems[0] === undefined
       ? []
       : [
@@ -190,9 +203,23 @@ export function CatalogPickerModal<TBody>({
     !isGroupNameTooLong &&
     !isGroupNameDuplicate;
 
-  function updateInputs(change: (current: PickerInputs) => PickerInputs) {
+  // Kararlı kimlik (yalnız set* kullanır): satır `React.memo`su (WorkItemPickerRow) bozulmasın.
+  const updateInputs = useCallback((change: (current: PickerInputs) => PickerInputs) => {
+    setIsBulkCapped(false);
     setInputs((current) => change(current));
-  }
+  }, []);
+  const handleToggle = useCallback(
+    (row: PickerRow, selected: boolean) => updateInputs((current) => toggleRow(current, row, selected)),
+    [updateInputs],
+  );
+  const handleQuantity = useCallback(
+    (row: PickerRow, text: string) => updateInputs((current) => setQuantity(current, row, text)),
+    [updateInputs],
+  );
+  const handleUnitPrice = useCallback(
+    (row: PickerRow, text: string) => updateInputs((current) => setUnitPrice(current, row, text)),
+    [updateInputs],
+  );
 
   // Sözleşmede "Elle poz ekle" seçiciyi KAPATIR → kirli seçim Modal'ın arka plan onayıyla AYNI soruyla korunur.
   // Teklifte bağlantı katalogu YENİ sekmede açar, seçici açık kalır → onay gerekmez.
@@ -201,8 +228,23 @@ export function CatalogPickerModal<TBody>({
     if (!target.manualAddClosesPicker || confirmDiscardIfDirty(isDirty)) onManualAdd();
   }
 
+  // Tavan EKRANDA görünen sırayla uygulanır (disiplin grubu sırası + grup içi poz sırası = `sections`); `visible` poz_no sıralıdır.
+  const selectableOnScreen = useMemo(
+    () => sections.flatMap((section) => section.rows).filter((row) => row.block === null),
+    [sections],
+  );
+
   function handleToggleAll() {
-    updateInputs((current) => toggleRows(current, selectableVisible, !isAllChecked));
+    const isCapFull = selectedCount >= limit.max;
+    // Tümü seçili ya da kısmi seçim + tavan dolu/bildirimli (eklenecek yer yok): tık görünür seçimi KALDIRIR.
+    if (isAllChecked || (selectedVisibleCount > 0 && (isBulkCapped || isCapFull))) {
+      updateInputs((current) => toggleRows(current, selectableVisible, false));
+      return;
+    }
+    // Seçme yönü TAVANLI: en çok `limit.max` (mevcut seçimle toplam); kesilirse mevcut tavan metni bantta görünür.
+    const capped = selectRowsUpTo(inputs, selectableOnScreen, limit.max);
+    setInputs(capped.inputs);
+    setIsBulkCapped(capped.isTruncated);
   }
 
   function handleSubmit() {
@@ -299,9 +341,9 @@ export function CatalogPickerModal<TBody>({
           isDisabled: selectableVisible.length === 0,
         }}
         onToggleAll={handleToggleAll}
-        onToggle={(row: PickerRow, selected: boolean) => updateInputs((current) => toggleRow(current, row, selected))}
-        onQuantity={(row: PickerRow, text: string) => updateInputs((current) => setQuantity(current, row, text))}
-        onUnitPrice={(row: PickerRow, text: string) => updateInputs((current) => setUnitPrice(current, row, text))}
+        onToggle={handleToggle}
+        onQuantity={handleQuantity}
+        onUnitPrice={handleUnitPrice}
       />
     </Modal>
   );

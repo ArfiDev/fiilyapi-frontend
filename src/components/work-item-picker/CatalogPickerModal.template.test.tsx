@@ -7,6 +7,7 @@ import { MSG_ITEMS_TOO_MANY } from "@/components/offer-templates/template-conten
 import { backendClient } from "@/lib/api/client";
 import type { WorkItemRead } from "@/lib/api/models";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { mockVirtualViewport } from "@/components/catalog-shared/virtual-viewport.testkit";
 import { BETON, DEMIR, D_DUV, D_KAB, SIVA } from "@/components/work-item-catalog/work-item-fixtures";
 
 import { CatalogPickerModal, type CatalogPickerModalProps } from "./CatalogPickerModal";
@@ -161,11 +162,13 @@ describe("şablon hedefi — seçim tavanı (1000 − mevcut)", () => {
   it("🔴 sözleşme/teklif 200 tavanı bu hedefte uygulanmaz (şablon 200'den fazla seçilebilir)", async () => {
     const many = Array.from({ length: 201 }, (_, i) => ({ ...DEMIR, id: `m-${i}`, poz_no: `KAB-9${String(i).padStart(3, "0")}` }));
     mockCatalog(many);
+    const restoreViewport = mockVirtualViewport(); // 201 satır = sanallaştırma eşiği üstü: jsdom'da pencere yüksekliği taklit edilir
     renderPicker({ groups: [] });
     await screen.findByText("KAB-9000");
     await userEvent.click(screen.getByRole("checkbox", { name: "Görünen kalemlerin tümünü seç" }));
     expect(screen.getByTestId("wip-selected")).toHaveTextContent("201");
     expect(submit()).toBeEnabled();
+    restoreViewport();
   });
 });
 

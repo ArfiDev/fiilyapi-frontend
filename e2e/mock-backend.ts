@@ -22452,6 +22452,10 @@ function evUpdateWorkItem(state: EvState, req: EvRequest, id: string, body: EvBo
     refPrice: nextPrice,
     // `price_updated_at` YALNIZ `ref_price` DEĞİŞİNCE (ilk atama ve temizleme dahil) şimdi olur.
     priceUpdatedAt: priceChanged ? EV_NOW : current.priceUpdatedAt,
+    // KAT-B1 (CEO teyidi): gövdede verilirse o değer; verilmeden `ref_price` DEĞİŞİRSE NULL; aksi hâlde korunur.
+    refPriceDate: "ref_price_date" in body
+      ? typeof body.ref_price_date === "string" && body.ref_price_date !== "" ? body.ref_price_date : null
+      : priceChanged ? null : current.refPriceDate,
     ...(typeof body.default_contractor_type === "string"
       ? { defaultContractorType: body.default_contractor_type as EvContractor }
       : {}),

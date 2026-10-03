@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import { Checkbox, Input } from "@/components/ui";
 import { DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 import { LastPriceCell } from "@/components/work-item-catalog/LastPriceCell";
@@ -26,10 +28,15 @@ export interface WorkItemPickerRowProps {
   onToggle: (row: PickerRow, selected: boolean) => void;
   onQuantity: (row: PickerRow, text: string) => void;
   onUnitPrice: (row: PickerRow, text: string) => void;
+  /** Yalnız SANALLAŞTIRMADA (`WorkItemPickerVirtualRows`): liste dizini (`data-index`), gerçek satır sırası, ölçüm ref'i.
+   *  Düz (kararlı) prop'lar: nesne olsaydı her render yeni kimlik → `React.memo` boşa düşerdi. */
+  virtualIndex?: number;
+  ariaRowIndex?: number;
+  measureRef?: (element: Element | null) => void;
 }
 
 /** PS:100-199 — tek poz satırı; 9 kolon (`selectOnly`te 6: Miktar/fiyat/Tutar hücreleri yok). Seçilemeyen satır soluk + kutu kapalı + gerekçe alt satırı (PS:184-187). */
-export function WorkItemPickerRow({
+export const WorkItemPickerRow = memo(function WorkItemPickerRow({
   row,
   input,
   error,
@@ -40,6 +47,9 @@ export function WorkItemPickerRow({
   onToggle,
   onQuantity,
   onUnitPrice,
+  virtualIndex,
+  ariaRowIndex,
+  measureRef,
 }: WorkItemPickerRowProps) {
   const { item, block } = row;
   const isBlocked = block !== null;
@@ -48,6 +58,9 @@ export function WorkItemPickerRow({
   const dateLabel = refPriceDateLabel(item);
   return (
     <tr
+      ref={measureRef}
+      data-index={virtualIndex}
+      aria-rowindex={ariaRowIndex}
       className={cx(
         "wip-row",
         isSelected && "wip-row--selected",
@@ -73,7 +86,9 @@ export function WorkItemPickerRow({
         )}
       </td>
       <td className="wip-cell wip-cell--name">
-        <span className="wip-name">{item.name}</span>
+        <span className="wip-name" title={item.name}>
+          {item.name}
+        </span>
         {isBlocked ? (
           <span className="wip-sub wip-sub--block">{blockReasonText(block, rules)}</span>
         ) : error !== null ? (
@@ -127,4 +142,4 @@ export function WorkItemPickerRow({
       )}
     </tr>
   );
-}
+});

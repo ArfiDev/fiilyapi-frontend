@@ -22,6 +22,7 @@ import {
 } from "./useProgressPayments";
 import { backendClient } from "@/lib/api/client";
 import { BackendError } from "@/lib/api/unwrap";
+import { CATALOG_ITEMS_QUERY_KEY } from "./catalog-query-keys";
 
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), PUT: vi.fn(), DELETE: vi.fn() },
@@ -155,7 +156,7 @@ describe("useDeleteProgressPayment", () => {
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [PROGRESS_PAYMENTS_QUERY_KEY] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [PROGRESS_PAYMENT_QUERY_KEY, PAYMENT_ID] });
-    expect(invalidateSpy).toHaveBeenCalledTimes(2);
+    expect(invalidateSpy).toHaveBeenCalledTimes(3);
   });
 
   it("404'te hiçbir sorgu geçersiz kılınmaz", async () => {
@@ -248,7 +249,7 @@ describe("useRefreshProgressPaymentPrices", () => {
     expect(result.current.data?.refreshed_count).toBe(3);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [PROGRESS_PAYMENTS_QUERY_KEY] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [PROGRESS_PAYMENT_QUERY_KEY, PAYMENT_ID] });
-    expect(invalidateSpy).toHaveBeenCalledTimes(2);
+    expect(invalidateSpy).toHaveBeenCalledTimes(3);
   });
 
   it("hata durumunda hiçbir sorgu geçersiz kılınmaz", async () => {
@@ -259,5 +260,38 @@ describe("useRefreshProgressPaymentPrices", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+});
+
+// KAT-F1.2 O3 · `catalog-items` staleTime 5 dk. Son fiyat kaynağı HK = YALNIZ onaylı/ödenmiş hakediş satırı
+// (backend `progress_payments/last_price_provider.py`): onay durumunu ve satır fiyatını değiştiren yazımlar listeyi tazeler.
+describe("hakediş yazımları · son fiyat (HK) kaynağı katalog önbelleğini tazeler", () => {
+  const CATALOG = { queryKey: [CATALOG_ITEMS_QUERY_KEY] };
+  const cases: [string, () => unknown, "POST", unknown][] = [
+    ["onayla", () => useApproveProgressPayment(), "POST", PAYMENT_ID],
+    ["onayı geri al", () => useUnapproveProgressPayment(), "POST", PAYMENT_ID],
+    ["fiyatları tazele", () => useRefreshProgressPaymentPrices(), "POST", PAYMENT_ID],
+    ["sil", () => useDeleteProgressPayment(), "POST", PAYMENT_ID],
+  ];
+
+  it.each(cases)("🔴 %s sonrası [catalog-items] geçersiz kılınır", async (_ad, useHook) => {
+    vi.mocked(backendClient.POST).mockResolvedValue(okResponse({ ...DETAIL, updated_count: 0 }));
+    vi.mocked(backendClient.DELETE).mockResolvedValue(okResponse(undefined));
+    const { result } = renderHook(() => useHook() as ReturnType<typeof useApproveProgressPayment>, { wrapper });
+    act(() => result.current.mutate(PAYMENT_ID));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith(CATALOG);
+  });
+
+  it.each([
+    ["ödendi işaretle (onaylı → ödenmiş: kaynak kümesi değişmez)", () => useMarkProgressPaymentPaid()],
+    ["taslak satır değiştir", () => useReplaceProgressPaymentLines()],
+  ] as const)("%s: 1,5 MB listeyi boşuna bayatlatmaz", async (_ad, useHook) => {
+    vi.mocked(backendClient.POST).mockResolvedValue(okResponse(DETAIL));
+    vi.mocked(backendClient.PUT).mockResolvedValue(okResponse(DETAIL));
+    const { result } = renderHook(() => useHook() as unknown as ReturnType<typeof useMarkProgressPaymentPaid>, { wrapper });
+    act(() => (result.current.mutate as (v: unknown) => void)(_ad.startsWith("taslak") ? { paymentId: PAYMENT_ID, body: { lines: [] } } : PAYMENT_ID));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).not.toHaveBeenCalledWith(CATALOG);
   });
 });

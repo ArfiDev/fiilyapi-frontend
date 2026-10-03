@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import {
   CATALOG_DISCIPLINES_QUERY_KEY,
   CATALOG_ITEMS_QUERY_KEY,
+  CATALOG_ITEMS_STALE_MS,
   useCatalogDisciplines,
   useCatalogItems,
   useCreateCatalogItem,
@@ -226,5 +227,75 @@ describe("çekirdek katalog yazmaları disiplin listesini (ev-disciplines) tazel
       ([filters]) => JSON.stringify(filters) === JSON.stringify({ queryKey: [keys.EV_DISCIPLINES_QUERY_KEY] }),
     );
     expect(calls).toHaveLength(2);
+  });
+});
+
+// KAT-F1.2 · önbellek paylaşımı: ~1,5 MB liste taze iken yeniden çekilmez; yazma tazelemesi staleTime'ı beklemez.
+describe("useCatalogItems · staleTime (5 dk) ve tazeleme", () => {
+  const MINUTE = 60_000;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Üretim varsayılanı (QueryProvider): 30 sn — hook kendi staleTime'ıyla bunu EZMELİ.
+    client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
+    });
+    vi.mocked(backendClient.GET).mockResolvedValue(ok({ items: [ITEM] }));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const itemCalls = () => vi.mocked(backendClient.GET).mock.calls.filter((call) => (call as unknown[])[0] === "/catalog/items").length;
+
+  it("sabit 5 dk", () => {
+    expect(CATALOG_ITEMS_STALE_MS).toBe(5 * MINUTE);
+  });
+
+  it("ikinci tüketici (ör. seçici) 30 sn SONRA ama 5 dk içinde bağlanınca ağa GİTMEZ", async () => {
+    const first = renderHook(() => useCatalogItems(), { wrapper });
+    await waitFor(() => expect(first.result.current.data).toEqual([ITEM]));
+    first.unmount();
+    vi.setSystemTime(Date.now() + 2 * MINUTE);
+    const second = renderHook(() => useCatalogItems(), { wrapper });
+    expect(second.result.current.data).toEqual([ITEM]);
+    await act(async () => {});
+    expect(itemCalls()).toBe(1);
+  });
+
+  it("5 dk sonra bağlanınca eski veri ANINDA gelir ve arkada bir kez tazelenir", async () => {
+    const first = renderHook(() => useCatalogItems(), { wrapper });
+    await waitFor(() => expect(first.result.current.data).toEqual([ITEM]));
+    first.unmount();
+    vi.setSystemTime(Date.now() + 6 * MINUTE);
+    const second = renderHook(() => useCatalogItems(), { wrapper });
+    expect(second.result.current.data).toEqual([ITEM]);
+    await waitFor(() => expect(itemCalls()).toBe(2));
+  });
+
+  it("🔴 yazma (ekleme) sonrası invalidation staleTime'ı BEKLEMEDEN listeyi yeniden çeker", async () => {
+    const list = renderHook(() => useCatalogItems(), { wrapper });
+    await waitFor(() => expect(list.result.current.data).toEqual([ITEM]));
+    vi.mocked(backendClient.POST).mockResolvedValue(ok(ITEM, 201));
+    const create = renderHook(() => useCreateCatalogItem(), { wrapper });
+    await act(async () => {
+      await create.result.current.mutateAsync({
+        discipline_id: "d-kab",
+        name: "Yeni",
+        uom: "m³",
+        standard_unit_mhr: "1",
+        default_contractor_type: "own",
+      } as WorkItemCreate);
+    });
+    await waitFor(() => expect(itemCalls()).toBe(2));
+  });
+
+  it("🔴 güncelleme sonrası da aynı: aktif liste hemen tazelenir (5 dk dolmadan)", async () => {
+    const list = renderHook(() => useCatalogItems(), { wrapper });
+    await waitFor(() => expect(list.result.current.data).toEqual([ITEM]));
+    vi.mocked(backendClient.PATCH).mockResolvedValue(ok(ITEM));
+    const update = renderHook(() => useUpdateCatalogItem(), { wrapper });
+    await act(async () => {
+      await update.result.current.mutateAsync({ id: ITEM.id, body: { name: "Yeni ad" } });
+    });
+    await waitFor(() => expect(itemCalls()).toBe(2));
   });
 });

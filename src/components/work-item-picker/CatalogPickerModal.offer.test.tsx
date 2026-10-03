@@ -119,7 +119,7 @@ describe("teklif hedefi — sözlük: 'poz' değil 'kalem' (TKL-F3.6.1 madde 14)
     await userEvent.clear(priceOf(DEMIR.poz_no));
     await userEvent.type(priceOf(DEMIR.poz_no), "abc");
     expect(screen.getByTestId("wip-band")).toHaveTextContent("1 kalemde eksik ya da hatalı değer var");
-    await userEvent.type(screen.getByPlaceholderText("Poz no veya tanımda ara..."), "zzzzzz");
+    await userEvent.type(screen.getByPlaceholderText("Poz no, Bakanlık no veya tanımda ara..."), "zzzzzz");
     expect(await screen.findByText("Süzgece uyan kalem yok.")).toBeInTheDocument();
   });
 });
