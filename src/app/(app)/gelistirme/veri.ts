@@ -34,35 +34,40 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-04 14:30",
+  guncellendi: "2026-10-04 17:00",
   gorevler: [
     {
       kod: "IZN",
       acilim: "İzin Sistemi Yeniden",
       aciklama: "Ayarlar'da rol × sayfa izin tablosu (Görmez / Görür / Düzenler, gerekirse Onaylar), hassas alan gizleme, yeni roller; silme yalnız Sistem Yöneticisi ve her koşulda.",
       durum: "devam",
-      spec: "IZN-OLCUM.md",
+      spec: "IZN-PLAN.md",
       dilimler: [
         { kod: "B0", aciklama: "Bugünkü izin sisteminin ölçümü (roller, düzeyler, silme engelleri)", durum: "bitti", hat: "backend" },
-        { kod: "T0", aciklama: "Sayfa ve proje sekmesi envanteri, hassas alanlar", durum: "devam", hat: "frontend" },
-        { kod: "Tasarım", aciklama: "Yeni Ayarlar izin ekranı taslağı, kullanıcı onayı", durum: "sirada", hat: "frontend" },
+        { kod: "T0", aciklama: "Sayfa ve proje sekmesi envanteri, hassas alanlar", durum: "bitti", hat: "frontend" },
+        { kod: "M1 / M2", aciklama: "Sayfa İzinleri, Kullanıcılar, Rol Yönetimi mockup'ları (onaylı)", durum: "bitti", hat: "frontend" },
+        { kod: "P0", aciklama: "Mimari plan + dilim sırası (IZN-PLAN.md)", durum: "bitti", hat: "backend" },
+        { kod: "B1", aciklama: "100 sayfalık katalog, yeni izin tabloları, giriş yapanın sayfaları", durum: "devam", hat: "backend" },
+        { kod: "F1", aciklama: "Menüde görülemeyen sayfalar gizlenir", durum: "sirada", hat: "frontend", bagimlilik: "IZN-B1" },
       ],
       kararlar: [
         "Süper düzeyi kalkar; silme yalnız Sistem Yöneticisi, her koşulda.",
         "Silinen kayda bağlı kayıtlar da silinir: önce liste + onay, denetim günlüğüne yazılır.",
         "Satırlar = sayfalar + proje içindeki her sekme; rol geneli 'Tutarları görmez' kutucuğu + sayfaya özel hassas alanlar.",
         "Yeni roller: Planlama Mühendisi, Teknik Ofis, Depo Sorumlusu, Görüntüleyici, Finans Müdürü, Maliyet Mühendisi.",
+        "Proje ekibi: kişi yalnız ekibindeki projeyi görür; rol ve disiplin proje başına; Tüm projeler işareti kalır.",
+        "Onayı o projede o role atanmış kişi verir; rol boşsa gönderim engellenir.",
       ],
     },
     {
       kod: "OKT",
       acilim: "Onay Kutusu Geçmişi",
       aciklama: "Onay Verildi / Reddedildi / Tümü sekmeleri çalışır; reddedilen onay artık silinmez.",
-      durum: "devam",
+      durum: "bitti",
       spec: "-",
       dilimler: [
-        { kod: "B1", aciklama: "Ret kaydı + geçmiş ucu", durum: "devam", hat: "backend" },
-        { kod: "F1", aciklama: "Sekmeler + karar rozeti, karar veren, tarih, gerekçe", durum: "sirada", hat: "frontend", bagimlilik: "OKT-B1" },
+        { kod: "B1", aciklama: "Ret kaydı + geçmiş ucu", durum: "bitti", hat: "backend", pr: "backend #169" },
+        { kod: "F1", aciklama: "Sekmeler + karar rozeti, karar veren, tarih, gerekçe", durum: "bitti", hat: "frontend", bagimlilik: "OKT-B1", pr: "frontend #176" },
       ],
       kararlar: ["Görünüm bekleyen karttan türetilir (onaylı sapma).", "Eski retler geri gelmez."],
     },
