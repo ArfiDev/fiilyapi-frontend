@@ -49,11 +49,13 @@ const REJECT_REASON_MAX_LENGTH = 500;
  */
 export function ProgressPaymentStatusActions({ detail }: ProgressPaymentStatusActionsProps) {
   const { level } = useModulePermission("progress_payments");
+  // IZN-F3.2b · kapılar bu hakedişin projesindeki rolden okunur (yeni istek yok: `detail.project_id`).
+  const projectId = detail.project_id;
   // IZN-F2.x · Gönder = hakediş sayfaları Düzenler; Onayla/Reddet/Ödendi = hakediş Onaylar; Onayı Geri Al = yalnız SA.
   // Grant yoksa bugünkü seviye eşikleri (`permittedPaymentActions` varsayılanı).
-  const canSubmit = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: hasAtLeast(level, "draft") });
-  const canApprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "approve", fallback: hasAtLeast(level, "approve") });
-  const canUnapprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "sa", fallback: hasAtLeast(level, "admin") });
+  const canSubmit = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: hasAtLeast(level, "draft"), projectId });
+  const canApprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "approve", fallback: hasAtLeast(level, "approve"), projectId });
+  const canUnapprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "sa", fallback: hasAtLeast(level, "admin"), projectId });
   const queryClient = useQueryClient();
 
   const submit = useSubmitProgressPayment();

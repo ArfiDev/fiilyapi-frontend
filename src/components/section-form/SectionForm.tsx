@@ -314,6 +314,7 @@ export function SectionForm(props: SectionFormProps) {
               siteId={siteId}
               sectionId={sectionId}
               canWrite={canWrite}
+              projectKey={props.projectKey}
             />
           ) : (
             <BoqAssignmentCard mode="create" />
