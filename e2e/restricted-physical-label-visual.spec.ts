@@ -17,14 +17,14 @@ import { prepareFrame } from "./visual-scroll";
 
 const VIEWPORT = { width: 1440, height: 900 } as const;
 const FIXED_TODAY = new Date("2026-08-20T12:00:00Z");
-const KAB = { id: "00000000-0000-4000-8000-0000000000a1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
+const KAB = { id: "e7d15000-0000-4000-8000-000000000001", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
 const RESTRICTED_LABEL = "Fiziksel (disiplinlerim)";
 
 async function restrictToOneDiscipline(page: Page) {
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
     const me = (await response.json()) as Record<string, unknown>;
-    await route.fulfill({ response, json: { ...me, disciplines: [KAB] } });
+    await route.fulfill({ response, json: { ...me, all_projects: false, projects: [{ project_id: "p-1", role_key: "patron", discipline_ids: [KAB.id] }] } });
   });
 }
 

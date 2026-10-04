@@ -25,6 +25,7 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
 let searchParams = new URLSearchParams();
 const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   useRouter: () => ({ replace: replaceMock }),
   usePathname: () => "/gunluk-rapor",
   useSearchParams: () => searchParams,

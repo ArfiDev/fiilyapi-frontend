@@ -6,7 +6,8 @@ import { prepareFrame } from "./visual-scroll";
 //
 // 🔴 IZN-F3.2: kullanıcı tablosu / disiplin ataması modalı kareleri KALDIRILDI — o ekranlar
 // "Kullanıcıyı düzenle" modalına taşındı (`settings-users-access-visual.spec.ts`). Geriye yalnız
-// `/auth/me.disciplines` okuyan avatar menüsü kareleri kaldı (hâlâ geçerli sözleşme).
+// `/auth/me` proje ekibi (`projects[].discipline_ids`) okuyan avatar menüsü kareleri kaldı. IZN-F3.1c: `me.disciplines`
+// kalktı; kimlikler sahte backend'in EV disiplin kataloğunun GERÇEK kimlikleridir (adlar katalogdan çözülür).
 //
 // 🔒 İZOLASYON: `/auth/me` yalnız bu sayfada `page.route` ile değiştirilir; paylaşılan sahte
 // backend durumuna YAZILMAZ.
@@ -22,10 +23,8 @@ interface Discipline {
   readonly color: string;
 }
 
-const KAB: Discipline = { id: "00000000-0000-4000-8000-0000000000a1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
-const DUV: Discipline = { id: "00000000-0000-4000-8000-0000000000a2", code: "DUV", name: "Duvar & Sıva", color: "#93c5fd" };
-
-const ref = (d: Discipline) => ({ id: d.id, code: d.code, name: d.name, color: d.color });
+const KAB: Discipline = { id: "e7d15000-0000-4000-8000-000000000001", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
+const DUV: Discipline = { id: "e7d15000-0000-4000-8000-000000000002", code: "DUV", name: "Duvar & Sıva", color: "#93c5fd" };
 
 function fulfillJson(route: Route, body: unknown, status = 200) {
   return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
@@ -55,11 +54,15 @@ test("gorsel: avatar menusu acik atamasiz", async ({ page }) => {
 
 test("gorsel: avatar menusu acik kisitli", async ({ page }) => {
   await login(page);
-  // `/auth/me` yalnız bu sayfada 2 disiplinli döner; sahte backend durumu kirlenmez.
+  // `/auth/me` yalnız bu sayfada bir projede 2 disiplinli döner; sahte backend durumu kirlenmez.
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
     const body = (await response.json()) as Record<string, unknown>;
-    return fulfillJson(route, { ...body, disciplines: [ref(KAB), ref(DUV)] });
+    return fulfillJson(route, {
+      ...body,
+      all_projects: false,
+      projects: [{ project_id: "p-1", role_key: "patron", discipline_ids: [KAB.id, DUV.id] }],
+    });
   });
   await page.goto("/ayarlar/kullanicilar");
   await expect(page.getByRole("cell", { name: /Ahmet Yılmaz/ })).toBeVisible();

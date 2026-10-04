@@ -543,8 +543,6 @@ const ME = {
   role_key: "patron",
   status: "active",
   permissions: { earned_value: "admin" },
-  // DSC-B0: atamasız kullanıcı = kısıtsız (boş liste).
-  disciplines: [],
   // IZN-F1.2: hücresiz rol = `pages: {}` → bilinmez = GÖRÜNÜR (menü ve kareler değişmez).
   is_system_admin: false,
   pages: {},
@@ -9246,7 +9244,16 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       // DSC-F1.2: ME'nin disiplinleri kullanıcı listesindeki AYNI kişiden türetilir
       // (tohum e-postaları farklı — `patron@fiil.com` ↔ `patron@fiilinsaat.com` — ad ortak).
       const meUser = state.users.find((u) => u.full_name === ME.full_name);
-      return send(200, { ...ME, disciplines: evDisciplineRefs(evState, meUser ? (evState.userDisciplines.get(meUser.id) ?? []) : []) });
+      // IZN-B3: `me.disciplines` kalktı → proje ekibi satırlarındaki `discipline_ids`. ME'nin satırı ana-rol kullanıcısından türer.
+      const access = meUser ? state.userAccess[meUser.id] : undefined;
+      return send(200, {
+        ...ME,
+        projects: (access?.projects ?? []).map((member) => ({
+          project_id: member.project_id,
+          role_key: state.roles.find((role) => role.id === member.role_id)?.key ?? "",
+          discipline_ids: member.discipline_ids,
+        })),
+      });
     }
 
     // SIL-F1.2 — ortak silme ucları (`/admin/silme/{kind}/{id}`). YAZAN akış sahte

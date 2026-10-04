@@ -2,24 +2,49 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import { UserMenu } from "./UserMenu";
+import { useSession } from "./SessionProvider";
 import type { MeResponse } from "@/lib/auth/types";
+
+// IZN-F3.1c: "Disiplin: …" satırı `useDisciplineScope(null)` (tüm projelerin birleşimi) ile beslenir; kaynak
+// oturumdaki `projects[].discipline_ids` + önbellekteki şirket disiplin kataloğu.
+vi.mock("./SessionProvider", () => ({ useSession: vi.fn() }));
+
+type Ref = { id: string; code: string; name: string; color: string };
+const EV_DISCIPLINES_KEY = ["ev-disciplines"];
 
 const ME = {
   full_name: "Murat Çelik",
   title: "Saha Mühendisi",
   role_key: "field_engineer",
-  disciplines: [] as { id: string; code: string; name: string; color: string }[],
 } as unknown as MeResponse;
 
-function setup(over: Partial<MeResponse> = {}, extra: { logoutError?: string | null } = {}) {
+/** `assigned`: iki projeye dağılmış disiplinler (birleşim); `catalog` önbellekte hazır (ağ isteği YOK). */
+function setup(
+  opts: { assigned?: Ref[]; catalog?: Ref[]; allProjects?: boolean } = {},
+  extra: { logoutError?: string | null } = {},
+) {
+  const assigned = opts.assigned ?? [];
+  const me = {
+    ...ME,
+    all_projects: opts.allProjects ?? false,
+    projects: [
+      { project_id: "11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa", role_key: "x", discipline_ids: assigned.slice(0, 1).map((d) => d.id) },
+      { project_id: "22222222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", role_key: "x", discipline_ids: assigned.slice(1).map((d) => d.id) },
+    ],
+  } as unknown as MeResponse;
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(EV_DISCIPLINES_KEY, opts.catalog ?? assigned);
   const onLogout = vi.fn().mockResolvedValue(undefined);
   render(
-    <div>
+    <QueryClientProvider client={client}>
       <button type="button">dışarıdaki</button>
-      <UserMenu me={{ ...ME, ...over }} onLogout={onLogout} logoutError={extra.logoutError ?? null} />
+      <UserMenu me={me} onLogout={onLogout} logoutError={extra.logoutError ?? null} />
       <button type="button">sonraki</button>
-    </div>,
+    </QueryClientProvider>,
   );
   return { onLogout, trigger: screen.getByRole("button", { name: "Kullanıcı menüsü" }) };
 }
@@ -84,7 +109,7 @@ describe("UserMenu", () => {
 
   it("atamasız kullanıcı → 'Disiplin: Tümü (kısıtsız)'", async () => {
     const user = userEvent.setup();
-    const { trigger } = setup({ disciplines: [] });
+    const { trigger } = setup();
     await user.click(trigger);
     expect(screen.getByText("Disiplin:")).toBeInTheDocument();
     expect(screen.getByText("Tümü (kısıtsız)")).toBeInTheDocument();
@@ -92,7 +117,7 @@ describe("UserMenu", () => {
 
   it("kısıtlı kullanıcı, tek disiplin → 'Disiplin: Civil Works' ve nokta o disiplinin rengi", async () => {
     const user = userEvent.setup();
-    const { trigger } = setup({ disciplines: [{ id: "d1", code: "CW", name: "Civil Works", color: "#123456" }] });
+    const { trigger } = setup({ assigned: [{ id: "d1", code: "CW", name: "Civil Works", color: "#123456" }] });
     await user.click(trigger);
     expect(screen.getByText("Civil Works")).toBeInTheDocument();
     const dot = document.querySelector(".user-menu__dot") as HTMLElement;
@@ -102,17 +127,37 @@ describe("UserMenu", () => {
   it("çok disiplin → Türkçe birleştirilmiş adlar, nokta nötr (inline renk yok)", async () => {
     const user = userEvent.setup();
     const ref = (id: string, name: string) => ({ id, code: id, name, color: "#123456" });
-    const { trigger } = setup({ disciplines: [ref("a", "Civil Works"), ref("b", "Mekanik"), ref("c", "Elektrik")] });
+    const { trigger } = setup({ assigned: [ref("a", "Civil Works"), ref("b", "Mekanik"), ref("c", "Elektrik")] });
     await user.click(trigger);
     expect(screen.getByText("Civil Works, Mekanik ve Elektrik")).toBeInTheDocument();
     expect((document.querySelector(".user-menu__dot") as HTMLElement).getAttribute("style")).toBeNull();
   });
 
-  it("`disciplines` alanı hiç yoksa (eski oturum) çökmez, kısıtsız yazar", async () => {
+  it("projeler yoksa/alan yoksa (eski oturum) çökmez, kısıtsız yazar", async () => {
     const user = userEvent.setup();
-    const { trigger } = setup({ disciplines: undefined as unknown as [] });
+    vi.mocked(useSession).mockReturnValue({ me: ME, isLoading: false });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <UserMenu me={ME} onLogout={vi.fn()} logoutError={null} />
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Kullanıcı menüsü" }));
+    expect(screen.getByText("Tümü (kısıtsız)")).toBeInTheDocument();
+  });
+
+  it("all_projects → disiplin satırı 'Tümü (kısıtsız)'", async () => {
+    const user = userEvent.setup();
+    const { trigger } = setup({ assigned: [{ id: "d1", code: "CW", name: "Civil Works", color: "#123456" }], allProjects: true });
     await user.click(trigger);
     expect(screen.getByText("Tümü (kısıtsız)")).toBeInTheDocument();
+  });
+
+  it("kısıtlı ama adlar çözülemedi (katalog yok/403) → satır BASILMAZ ('kısıtsız' denmez)", async () => {
+    const user = userEvent.setup();
+    const { trigger } = setup({ assigned: [{ id: "d1", code: "CW", name: "Civil Works", color: "#123456" }], catalog: [] });
+    await user.click(trigger);
+    expect(screen.queryByText("Disiplin:")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tümü (kısıtsız)")).not.toBeInTheDocument();
   });
 
   it("Esc kapatır ve odağı avatar düğmesine iade eder", async () => {

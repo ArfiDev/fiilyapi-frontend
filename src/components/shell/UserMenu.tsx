@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { initials } from "@/lib/shell/initials";
 import { summarizeDisciplines } from "@/lib/shell/disciplineSummary";
 import type { MeResponse } from "@/lib/auth/types";
+import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import "./user-menu.css";
 
 interface UserMenuProps {
@@ -29,7 +30,11 @@ export function UserMenu({ me, onLogout, logoutError }: UserMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const avatar = me ? initials(me.full_name) : "";
-  const discipline = summarizeDisciplines(me?.disciplines);
+  // IZN-F3.1c · BAĞLAMSIZ özet: tüm projelerin disiplin birleşimi (`null` = proje adresinden okuma).
+  // Kısıtlı ama adlar henüz gelmediyse (yükleniyor/403) satır BASILMAZ — "kısıtsız" demek yanlış olurdu.
+  const scope = useDisciplineScope(null);
+  const discipline = summarizeDisciplines(scope.disciplines);
+  const showDiscipline = !scope.isRestricted || scope.disciplines.length > 0;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -86,6 +91,7 @@ export function UserMenu({ me, onLogout, logoutError }: UserMenuProps) {
             <span className="user-menu__who">
               <span className="user-menu__name">{me.full_name}</span>
               <span className="user-menu__role">{me.title}</span>
+              {showDiscipline && (
               <span className="user-menu__discipline">
                 <span
                   className="user-menu__dot"
@@ -96,6 +102,7 @@ export function UserMenu({ me, onLogout, logoutError }: UserMenuProps) {
                   Disiplin: <b>{discipline.label}</b>
                 </span>
               </span>
+              )}
             </span>
           </div>
           <div className="user-menu__rule" aria-hidden="true" />

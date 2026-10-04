@@ -856,7 +856,7 @@ export interface paths {
         };
         /**
          * Export Catalog Endpoint
-         * @description Fiyatli katalog xlsx — liste ucuyla AYNI suzgecler (`q`, `discipline_id`) ve kapsam.
+         * @description Fiyatli katalog xlsx — liste ucuyla AYNI suzgecler (`q`, `discipline_id`).
          */
         get: operations["export_catalog_endpoint_catalog_items_export_get"];
         put?: never;
@@ -1518,6 +1518,9 @@ export interface paths {
         /**
          * List Disciplines Endpoint
          * @description Sirket disiplinleri (K2) — `sort_order`, sonra `code` sirasiyla.
+         *
+         *     IZN-B3: disiplin atamasi PROJE BASINA oldugu icin sirket katalogu kullanici kapsamina gore
+         *     SUZULMEZ (herkes tum disiplinleri gorur).
          */
         get: operations["list_disciplines_endpoint_earned_value_disciplines_get"];
         put?: never;
@@ -15511,8 +15514,6 @@ export interface components {
         MeResponse: {
             /** All Projects */
             all_projects: boolean;
-            /** Disciplines */
-            disciplines: components["schemas"]["DisciplineRef"][];
             /**
              * Email
              * Format: email

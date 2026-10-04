@@ -13,6 +13,7 @@ let currentPath = "/projeler/gunesken-konut";
 // davranışı `TopbarBreadcrumb.test.tsx`de bekçilenir; burada yalnız YERİ
 // (logo ile sekme yuvası arası) ve varlığı ölçülür.
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   usePathname: () => currentPath,
 }));
 // SEKME-F1.4a — şerit yuvasının kendi davranışı `workspace-tabs/` testlerinde;

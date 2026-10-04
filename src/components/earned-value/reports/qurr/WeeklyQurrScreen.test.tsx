@@ -65,6 +65,7 @@ vi.mock("@/lib/api/hooks/useEvReports", () => ({
 const replaceMock = vi.fn();
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   useRouter: () => ({ replace: replaceMock }),
   useSearchParams: () => searchParams,
 }));

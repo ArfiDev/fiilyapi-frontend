@@ -12,6 +12,7 @@ vi.mock("@/lib/api/hooks/useProjects", async (importOriginal) => ({
   useProjects: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   useRouter: () => ({ replace: vi.fn() }),
   usePathname: () => "/projeler",
   useSearchParams: () => new URLSearchParams(""),

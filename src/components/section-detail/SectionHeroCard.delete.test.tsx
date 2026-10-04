@@ -10,7 +10,7 @@ const session = vi.hoisted(() => ({ me: null as { is_system_admin?: boolean } | 
 vi.mock("@/components/shell/SessionProvider", () => ({
   useSession: () => ({ me: session.me, isLoading: false }),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useParams: () => ({}), useRouter: () => ({ push: vi.fn() }) }));
 
 const SECTION: SectionDetailResponse = {
   id: "55555555-5555-5555-5555-555555555555",

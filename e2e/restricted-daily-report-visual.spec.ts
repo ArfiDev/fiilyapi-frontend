@@ -20,7 +20,7 @@ import { prepareFrame } from "./visual-scroll";
 const GIR_URL = "/projeler/p-1/santiyeler/s-1/gunluk-ilerleme-raporu";
 const VIEWPORT = { width: 1440, height: 900 } as const;
 const APPROVED_DAY = "2026-09-22";
-const KAB = { id: "00000000-0000-4000-8000-0000000000a1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
+const KAB = { id: "e7d15000-0000-4000-8000-000000000001", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
 
 interface KpiRow {
   kind: string;
@@ -38,7 +38,7 @@ async function restrictToOneDiscipline(page: Page) {
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
     const me = (await response.json()) as Record<string, unknown>;
-    await route.fulfill({ response, json: { ...me, disciplines: [KAB] } });
+    await route.fulfill({ response, json: { ...me, all_projects: false, projects: [{ project_id: "p-1", role_key: "patron", discipline_ids: [KAB.id] }] } });
   });
 }
 

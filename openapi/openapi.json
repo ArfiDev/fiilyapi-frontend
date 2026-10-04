@@ -18123,13 +18123,6 @@
             "title": "All Projects",
             "type": "boolean"
           },
-          "disciplines": {
-            "items": {
-              "$ref": "#/components/schemas/DisciplineRef"
-            },
-            "title": "Disciplines",
-            "type": "array"
-          },
           "email": {
             "format": "email",
             "title": "Email",
@@ -18207,7 +18200,6 @@
           "is_system_admin",
           "status",
           "permissions",
-          "disciplines",
           "pages",
           "hidden_fields",
           "all_projects",
@@ -51867,7 +51859,7 @@
     },
     "/catalog/items/export": {
       "get": {
-        "description": "Fiyatli katalog xlsx — liste ucuyla AYNI suzgecler (`q`, `discipline_id`) ve kapsam.",
+        "description": "Fiyatli katalog xlsx — liste ucuyla AYNI suzgecler (`q`, `discipline_id`).",
         "operationId": "export_catalog_endpoint_catalog_items_export_get",
         "parameters": [
           {
@@ -54313,7 +54305,7 @@
     },
     "/earned-value/disciplines": {
       "get": {
-        "description": "Sirket disiplinleri (K2) — `sort_order`, sonra `code` sirasiyla.",
+        "description": "Sirket disiplinleri (K2) — `sort_order`, sonra `code` sirasiyla.\n\nIZN-B3: disiplin atamasi PROJE BASINA oldugu icin sirket katalogu kullanici kapsamina gore\nSUZULMEZ (herkes tum disiplinleri gorur).",
         "operationId": "list_disciplines_endpoint_earned_value_disciplines_get",
         "responses": {
           "200": {
