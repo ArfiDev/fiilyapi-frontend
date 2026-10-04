@@ -34,13 +34,52 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-04 10:35",
+  guncellendi: "2026-10-04 14:30",
   gorevler: [
+    {
+      kod: "IZN",
+      acilim: "İzin Sistemi Yeniden",
+      aciklama: "Ayarlar'da rol × sayfa izin tablosu (Görmez / Görür / Düzenler, gerekirse Onaylar), hassas alan gizleme, yeni roller; silme yalnız Sistem Yöneticisi ve her koşulda.",
+      durum: "devam",
+      spec: "IZN-OLCUM.md",
+      dilimler: [
+        { kod: "B0", aciklama: "Bugünkü izin sisteminin ölçümü (roller, düzeyler, silme engelleri)", durum: "bitti", hat: "backend" },
+        { kod: "T0", aciklama: "Sayfa ve proje sekmesi envanteri, hassas alanlar", durum: "devam", hat: "frontend" },
+        { kod: "Tasarım", aciklama: "Yeni Ayarlar izin ekranı taslağı, kullanıcı onayı", durum: "sirada", hat: "frontend" },
+      ],
+      kararlar: [
+        "Süper düzeyi kalkar; silme yalnız Sistem Yöneticisi, her koşulda.",
+        "Silinen kayda bağlı kayıtlar da silinir: önce liste + onay, denetim günlüğüne yazılır.",
+        "Satırlar = sayfalar + proje içindeki her sekme; rol geneli 'Tutarları görmez' kutucuğu + sayfaya özel hassas alanlar.",
+        "Yeni roller: Planlama Mühendisi, Teknik Ofis, Depo Sorumlusu, Görüntüleyici, Finans Müdürü, Maliyet Mühendisi.",
+      ],
+    },
+    {
+      kod: "OKT",
+      acilim: "Onay Kutusu Geçmişi",
+      aciklama: "Onay Verildi / Reddedildi / Tümü sekmeleri çalışır; reddedilen onay artık silinmez.",
+      durum: "devam",
+      spec: "-",
+      dilimler: [
+        { kod: "B1", aciklama: "Ret kaydı + geçmiş ucu", durum: "devam", hat: "backend" },
+        { kod: "F1", aciklama: "Sekmeler + karar rozeti, karar veren, tarih, gerekçe", durum: "sirada", hat: "frontend", bagimlilik: "OKT-B1" },
+      ],
+      kararlar: ["Görünüm bekleyen karttan türetilir (onaylı sapma).", "Eski retler geri gelmez."],
+    },
+    {
+      kod: "NAV-F2",
+      acilim: "Sekme Temizliği + Disiplin Yönetimi",
+      aciklama: "Teklif ve katalog üst sekmeleri kalktı; menüde Teklif Şablonları ve Planlama > Disiplin Yönetimi.",
+      durum: "bitti",
+      spec: "-",
+      dilimler: [{ kod: "F2", aciklama: "Sekmeler, menü, Disiplin Yönetimi sayfası", durum: "bitti", hat: "frontend", pr: "frontend #175" }],
+      kararlar: [],
+    },
     {
       kod: "KAT",
       acilim: "Bakanlık Birim Fiyatları → İş Kalemi Kataloğu",
       aciklama: "Çevre ve Şehircilik Bakanlığı 2026 listesinden 1.657 kalem 8 disiplinle katalogda; Bakanlık poz no ve fiyat tarihi görünür ve aranır, teklif/sözleşme/hakediş kalemlerine taşınır.",
-      durum: "devam",
+      durum: "bitti",
       spec: "KAT-PLAN.md",
       dilimler: [
         { kod: "D0", aciklama: "PDF'ten temiz veri + disiplin eşlemesi", durum: "bitti", hat: "backend" },
@@ -48,9 +87,9 @@ export const VERI: GelistirmeVerisi = {
         { kod: "IMP", aciklama: "Canlı aktarım: 8 disiplin + 1.657 kalem", durum: "bitti", hat: "backend" },
         { kod: "F1", aciklama: "Katalogda alt satırlar, Bakanlık no ile arama, 1.700 kalemde hız, birim kanonu", durum: "bitti", hat: "frontend", pr: "frontend #171" },
         { kod: "B2", aciklama: "Bakanlık no teklif, sözleşme (işveren/taşeron) ve hakediş kalemlerine", durum: "bitti", hat: "backend", pr: "backend #164 #165" },
-        { kod: "F1.5", aciklama: "Katalogda fiyat tarihi ve Düzenle düğmesi tam görünür", durum: "devam", hat: "frontend", pr: "frontend #172" },
-        { kod: "B3", aciklama: "Teklif Excel'inde ayrı Bakanlık No sütunu", durum: "devam", hat: "backend", pr: "backend #166" },
-        { kod: "F2", aciklama: "Teklif, PDF, sözleşme, dağılım ve hakediş ekranlarında Bakanlık no", durum: "devam", hat: "frontend" },
+        { kod: "F1.5", aciklama: "Katalogda fiyat tarihi ve Düzenle düğmesi tam görünür", durum: "bitti", hat: "frontend", pr: "frontend #172" },
+        { kod: "B3", aciklama: "Teklif Excel'inde ayrı Bakanlık No sütunu", durum: "bitti", hat: "backend", pr: "backend #166" },
+        { kod: "F2", aciklama: "Teklif, PDF, sözleşme, dağılım ve hakediş ekranlarında Bakanlık no", durum: "bitti", hat: "frontend" },
       ],
       kararlar: [
         "Tüm 1.657 kalem; Bakanlık fiyatı = referans fiyat (KDV hariç, 01.01.2026).",
@@ -63,7 +102,7 @@ export const VERI: GelistirmeVerisi = {
       kod: "KOP",
       acilim: "Köprü Güçlendirme örnek projesi",
       aciklama: "İBB Anadolu Yakası 2. Grup Köprü Güçlendirme hakediş dosyası deneme verisi olarak uygulamaya baştan sona işleniyor: teklif → proje → 4 şantiye → günlük/puantaj/planlama → 5 hakediş.",
-      durum: "devam",
+      durum: "beklemede",
       spec: "KOP-PLAN.md",
       dilimler: [
         { kod: "B0", aciklama: "Excel analizi, mutabakat (6 hakedişte 0,00 fark)", durum: "bitti", hat: "backend" },
@@ -79,7 +118,7 @@ export const VERI: GelistirmeVerisi = {
     {
       kod: "CLN",
       acilim: "Canlı Veri Sıfırlama",
-      aciklama: "Canlı yeni boş veritabanına (Postgres-v2) geçti; eski veritabanı pasif tutuluyor. 4 kullanıcı (patron, muhasebe, proje müdürü, şantiye şefi) yeniden açıldı.",
+      aciklama: "Canlı veritabanı Postgres-v3 (ikinci sıfırlama, 2026-10-04): kullanıcılar + Bakanlık kataloğu, proje yok. İlk veritabanı pasif tutuluyor.",
       durum: "bitti",
       spec: "CANLI-YENI-DB-PLANI.md",
       dilimler: [
