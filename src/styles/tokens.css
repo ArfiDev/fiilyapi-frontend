@@ -667,8 +667,8 @@
   --text-restricted-empty-desc: 12px; /* açıklama satırı (277-278) */
 
   /* IZN-F2 · Sayfa İzinleri — Ayarlar - Sayfa İzinleri (TASLAK).dc.html: değişen
-     satır vurgusu. Turuncu şerit/nokta (#f97316, satır 70-71 · 142) ve "önce: X"
-     etiketi zemini (#ffedd5, 145); metin/kenarlık/zemin mevcut --color-orange-tint*
+     satır vurgusu. Turuncu şerit/nokta (satır 70-71 · 142) ve "önce: X"
+     etiketi zemini (145); metin/kenarlık/zemin mevcut --color-orange-tint*
      ve --color-warning-tint token'larıyla karşılanır. */
   --color-orange-accent: #f97316;
   --color-orange-chip: #ffedd5;
