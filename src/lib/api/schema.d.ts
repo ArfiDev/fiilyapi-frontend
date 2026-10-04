@@ -95,6 +95,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/silme/{kind}/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Kaydı bağlı kayıtlarıyla birlikte sil
+         * @description Yalnız Sistem Yöneticisi, HER KOŞULDA. Kök kaydı ve bağlı ağacını TEK işlemde siler.
+         *
+         *     Kök `FOR UPDATE` kilitlenir, ağaç yeniden hesaplanır; karması `preview_token`la
+         *     uyuşmazsa HİÇBİR ŞEY silinmez ve 409 `preview_stale` döner. Denetim günlüğüne tek satır
+         *     yazılır (kim, ne, kaç bağlı kayıt).
+         */
+        delete: operations["delete_with_dependents_endpoint_admin_silme__kind___record_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/silme/{kind}/{record_id}/onizleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Silme önizlemesi: kayıtla birlikte silinecek bağlı kayıtlar
+         * @description Yalnız Sistem Yöneticisi. SİLMEZ; yazma yapmaz.
+         *
+         *     Önizleme ile `DELETE` AYNI çözücüyü kullanır: burada sayılan ağaç, silinecek ağaçtır.
+         *     `groups` boşsa kaydın bağlı kaydı yoktur (yine de onay istenir).
+         */
+        get: operations["preview_delete_endpoint_admin_silme__kind___record_id__onizleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/chat": {
         parameters: {
             query?: never;
@@ -11401,6 +11448,114 @@ export interface components {
          * @enum {string}
          */
         DeedCondition: "full_payment" | "after_down_payment" | "at_contract";
+        /**
+         * DeleteDetachedGroup
+         * @description SilinMEYEN ama köke bağı KOPACAK kayıtların bir türü (SET NULL).
+         */
+        DeleteDetachedGroup: {
+            /** Count */
+            count: number;
+            /** Label */
+            label: string;
+            /** Table */
+            table: string;
+        };
+        /**
+         * DeleteErrorResponse
+         * @description 409 ve 428 gövdesi. `code` yalnız silme önkoşullarında dolar: 428 `preview_required`,
+         *     409 `preview_stale`. Başka 409'lar (ör. beklenmeyen veri bütünlüğü hatası) yalnız `detail`
+         *     taşır, `code` boştur.
+         */
+        DeleteErrorResponse: {
+            /** Code */
+            code?: ("preview_required" | "preview_stale") | null;
+            /** Detail */
+            detail: string;
+        };
+        /**
+         * DeleteKind
+         * @description Önizleme/silme motorunun tanıdığı kayıt türleri. Her dilim yeni üye ekler (SIL-B2…).
+         *
+         *     Üye adı = URL parçası. Motorun kayıt defteri (`core/silme`) ile üye kümesi birebir eşit
+         *     olmak ZORUNDADIR; `tests/modules/silme/test_silme_tur_bekcisi.py` çakar.
+         * @enum {string}
+         */
+        DeleteKind: "site" | "section" | "block" | "unit";
+        /**
+         * DeletePreviewGroup
+         * @description Silinecek bağlı kayıtların bir türü.
+         */
+        DeletePreviewGroup: {
+            /** Count */
+            count: number;
+            /**
+             * Is Financial
+             * @description Mali kayıt (hakediş, fatura, ödeme, muhasebe fişi): onay penceresi vurgular.
+             */
+            is_financial: boolean;
+            /**
+             * Label
+             * @description Türkçe tür adı (ör. `Günlük kaydı`).
+             */
+            label: string;
+            relation: components["schemas"]["DeleteRelation"];
+            /**
+             * Samples
+             * @description İlk birkaç kaydın adı (en çok 5; adı olmayan türlerde boş). Sayı `count`tur.
+             */
+            samples: string[];
+            /**
+             * Table
+             * @description Teknik tablo anahtarı (ör. `site_diary_entries`); yalnız anahtar.
+             */
+            table: string;
+        };
+        /** DeletePreviewResponse */
+        DeletePreviewResponse: {
+            /**
+             * Dependent Count
+             * @description Kök HARİÇ, birlikte silinecek toplam kayıt sayısı (`groups` toplamı).
+             */
+            dependent_count: number;
+            /**
+             * Detached
+             * @description Silinmeyecek, yalnız bağı kopacak kayıtlar (ör. bölümü boşalan personel).
+             */
+            detached: components["schemas"]["DeleteDetachedGroup"][];
+            /**
+             * Groups
+             * @description Birlikte silinecek kayıtlar: `count` azalan, sonra `label`. Boş = bağlı yok.
+             */
+            groups: components["schemas"]["DeletePreviewGroup"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["DeleteKind"];
+            /**
+             * Kind Label
+             * @description Kök türün Türkçe adı (ör. `Şantiye`).
+             */
+            kind_label: string;
+            /**
+             * Label
+             * @description Kök kaydın görünen adı (ör. `Kule Şantiyesi`).
+             */
+            label: string;
+            /**
+             * Preview Token
+             * @description Bu ağacın karması. DELETE'e `preview_token` olarak AYNEN verilir; ağaç arada değişirse DELETE 409 `preview_stale` döner.
+             */
+            preview_token: string;
+        };
+        /**
+         * DeleteRelation
+         * @description Bağlı kaydın kökle ilişkisi. Bir tablo birden çok yoldan bağlıysa EN GÜÇLÜSÜ yazılır
+         *     (restrict > linked > cascade).
+         * @enum {string}
+         */
+        DeleteRelation: "cascade" | "restrict" | "linked";
         /**
          * DiaryStatus
          * @description Günlük kaydın durumu (spec §2). İKİ durum: hakediş evrakının dört durumlu
@@ -26651,6 +26806,117 @@ export interface operations {
             };
         };
     };
+    delete_with_dependents_endpoint_admin_silme__kind___record_id__delete: {
+        parameters: {
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
+            header?: never;
+            path: {
+                kind: components["schemas"]["DeleteKind"];
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı (ör. `Şantiye bulunamadı`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_delete_endpoint_admin_silme__kind___record_id__onizleme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["schemas"]["DeleteKind"];
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletePreviewResponse"];
+                };
+            };
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı (ör. `Şantiye bulunamadı`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ai_chat_endpoint_ai_chat_post: {
         parameters: {
             query?: never;
@@ -27681,7 +27947,10 @@ export interface operations {
     };
     delete_block_endpoint_blocks__block_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 block_id: string;
@@ -27711,6 +27980,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -27718,6 +27996,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -41977,7 +42264,10 @@ export interface operations {
     };
     delete_section_endpoint_sections__section_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 section_id: string;
@@ -42007,6 +42297,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -42014,6 +42313,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -42372,7 +42680,10 @@ export interface operations {
     };
     delete_site_endpoint_sites__site_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 site_id: string;
@@ -42402,6 +42713,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -42409,6 +42729,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -47295,7 +47624,10 @@ export interface operations {
     };
     delete_unit_endpoint_units__unit_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 unit_id: string;
@@ -47325,6 +47657,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -47332,6 +47673,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };

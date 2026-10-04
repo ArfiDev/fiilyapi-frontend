@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButton";
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules";
@@ -226,6 +227,13 @@ export function SiteHeroBar({ site }: SiteHeroBarProps) {
           <Link href={`${base}/bolumler/yeni`} className="site-hero__btn site-hero__btn--solid">
             + Bölüm Ekle
           </Link>
+          {/* SIL-F1.2 — yalnız Sistem Yöneticisi görür; silince projeye döner. */}
+          <DeleteRecordButton
+            kind="site"
+            recordId={site.id}
+            redirectTo={routes.projects.detail({ projectId: routeKeyOf(site.project) })}
+            className="site-hero__btn site-hero__btn--danger"
+          />
         </div>
       </div>
       <div className="site-hero__kpis">

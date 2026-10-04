@@ -70,6 +70,13 @@
   color: var(--color-primary);
   font-weight: 700;
 }
+/* SIL-F1.2 — marka degradesi üstünde dolu tehlike düğmesi (ghost/solid ikilisine karışmaz). */
+.site-hero__btn--danger {
+  font-family: inherit;
+  background: var(--color-danger);
+  color: var(--color-on-brand);
+  font-weight: 600;
+}
 /* Marka degradesi ustunde durur (project-hero__tab ile ayni gerekce) —
    jenerik --focus-ring goze carpmaz, on-brand renginde dis hat kullanilir. */
 .site-hero__btn:focus-visible {

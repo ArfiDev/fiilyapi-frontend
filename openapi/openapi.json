@@ -7294,6 +7294,188 @@
         "title": "DeedCondition",
         "type": "string"
       },
+      "DeleteDetachedGroup": {
+        "description": "SilinMEYEN ama köke bağı KOPACAK kayıtların bir türü (SET NULL).",
+        "properties": {
+          "count": {
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "label",
+          "count"
+        ],
+        "title": "DeleteDetachedGroup",
+        "type": "object"
+      },
+      "DeleteErrorResponse": {
+        "description": "409 ve 428 gövdesi. `code` yalnız silme önkoşullarında dolar: 428 `preview_required`,\n409 `preview_stale`. Başka 409'lar (ör. beklenmeyen veri bütünlüğü hatası) yalnız `detail`\ntaşır, `code` boştur.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "preview_required",
+                  "preview_stale"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "DeleteErrorResponse",
+        "type": "object"
+      },
+      "DeleteKind": {
+        "description": "Önizleme/silme motorunun tanıdığı kayıt türleri. Her dilim yeni üye ekler (SIL-B2…).\n\nÜye adı = URL parçası. Motorun kayıt defteri (`core/silme`) ile üye kümesi birebir eşit\nolmak ZORUNDADIR; `tests/modules/silme/test_silme_tur_bekcisi.py` çakar.",
+        "enum": [
+          "site",
+          "section",
+          "block",
+          "unit"
+        ],
+        "title": "DeleteKind",
+        "type": "string"
+      },
+      "DeletePreviewGroup": {
+        "description": "Silinecek bağlı kayıtların bir türü.",
+        "properties": {
+          "count": {
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "is_financial": {
+            "description": "Mali kayıt (hakediş, fatura, ödeme, muhasebe fişi): onay penceresi vurgular.",
+            "title": "Is Financial",
+            "type": "boolean"
+          },
+          "label": {
+            "description": "Türkçe tür adı (ör. `Günlük kaydı`).",
+            "title": "Label",
+            "type": "string"
+          },
+          "relation": {
+            "$ref": "#/components/schemas/DeleteRelation"
+          },
+          "samples": {
+            "description": "İlk birkaç kaydın adı (en çok 5; adı olmayan türlerde boş). Sayı `count`tur.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Samples",
+            "type": "array"
+          },
+          "table": {
+            "description": "Teknik tablo anahtarı (ör. `site_diary_entries`); yalnız anahtar.",
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "label",
+          "count",
+          "relation",
+          "is_financial",
+          "samples"
+        ],
+        "title": "DeletePreviewGroup",
+        "type": "object"
+      },
+      "DeletePreviewResponse": {
+        "properties": {
+          "dependent_count": {
+            "description": "Kök HARİÇ, birlikte silinecek toplam kayıt sayısı (`groups` toplamı).",
+            "minimum": 0.0,
+            "title": "Dependent Count",
+            "type": "integer"
+          },
+          "detached": {
+            "description": "Silinmeyecek, yalnız bağı kopacak kayıtlar (ör. bölümü boşalan personel).",
+            "items": {
+              "$ref": "#/components/schemas/DeleteDetachedGroup"
+            },
+            "title": "Detached",
+            "type": "array"
+          },
+          "groups": {
+            "description": "Birlikte silinecek kayıtlar: `count` azalan, sonra `label`. Boş = bağlı yok.",
+            "items": {
+              "$ref": "#/components/schemas/DeletePreviewGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DeleteKind"
+          },
+          "kind_label": {
+            "description": "Kök türün Türkçe adı (ör. `Şantiye`).",
+            "title": "Kind Label",
+            "type": "string"
+          },
+          "label": {
+            "description": "Kök kaydın görünen adı (ör. `Kule Şantiyesi`).",
+            "title": "Label",
+            "type": "string"
+          },
+          "preview_token": {
+            "description": "Bu ağacın karması. DELETE'e `preview_token` olarak AYNEN verilir; ağaç arada değişirse DELETE 409 `preview_stale` döner.",
+            "title": "Preview Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "kind_label",
+          "label",
+          "dependent_count",
+          "groups",
+          "detached",
+          "preview_token"
+        ],
+        "title": "DeletePreviewResponse",
+        "type": "object"
+      },
+      "DeleteRelation": {
+        "description": "Bağlı kaydın kökle ilişkisi. Bir tablo birden çok yoldan bağlıysa EN GÜÇLÜSÜ yazılır\n(restrict > linked > cascade).",
+        "enum": [
+          "cascade",
+          "restrict",
+          "linked"
+        ],
+        "title": "DeleteRelation",
+        "type": "string"
+      },
       "DiaryStatus": {
         "description": "Günlük kaydın durumu (spec §2). İKİ durum: hakediş evrakının dört durumlu\nonay makinesi burada YOKTUR — günlük ya taslaktır ya gönderilmiştir.\n\nE7'nin iki butonu (Taslak Kaydet / Gönder) bu ikiliyi birebir karşılar;\nGK'nin tek \"Kaydet & Gönder\" butonu ikisinin bileşimidir.",
         "enum": [
@@ -49210,6 +49392,164 @@
         ]
       }
     },
+    "/admin/silme/{kind}/{record_id}": {
+      "delete": {
+        "description": "Yalnız Sistem Yöneticisi, HER KOŞULDA. Kök kaydı ve bağlı ağacını TEK işlemde siler.\n\nKök `FOR UPDATE` kilitlenir, ağaç yeniden hesaplanır; karması `preview_token`la\nuyuşmazsa HİÇBİR ŞEY silinmez ve 409 `preview_stale` döner. Denetim günlüğüne tek satır\nyazılır (kim, ne, kaç bağlı kayıt).",
+        "operationId": "delete_with_dependents_endpoint_admin_silme__kind___record_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DeleteKind"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+            "in": "query",
+            "name": "preview_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+              "title": "Preview Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Bu işlemi yalnızca Sistem Yöneticisi yapabilir"
+          },
+          "404": {
+            "description": "Kayıt bulunamadı (ör. `Şantiye bulunamadı`)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın`"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Kaydı bağlı kayıtlarıyla birlikte sil",
+        "tags": [
+          "silme"
+        ]
+      }
+    },
+    "/admin/silme/{kind}/{record_id}/onizleme": {
+      "get": {
+        "description": "Yalnız Sistem Yöneticisi. SİLMEZ; yazma yapmaz.\n\nÖnizleme ile `DELETE` AYNI çözücüyü kullanır: burada sayılan ağaç, silinecek ağaçtır.\n`groups` boşsa kaydın bağlı kaydı yoktur (yine de onay istenir).",
+        "operationId": "preview_delete_endpoint_admin_silme__kind___record_id__onizleme_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DeleteKind"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Bu işlemi yalnızca Sistem Yöneticisi yapabilir"
+          },
+          "404": {
+            "description": "Kayıt bulunamadı (ör. `Şantiye bulunamadı`)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Silme önizlemesi: kayıtla birlikte silinecek bağlı kayıtlar",
+        "tags": [
+          "silme"
+        ]
+      }
+    },
     "/ai/chat": {
       "post": {
         "description": "Tek bir kullanıcı mesajı için ajan turunu akıtır.\n\nKapı: `ai:view` (`_VIEW`). 🔴 `ai:full` diye bir şey YOKTUR.\n\n🔴 Sağlayıcı yapılandırılmamışsa **503 + dürüst mesaj** döner, genel bir 500\nDEĞİL: \"sistem hatası\" cümlesi operatörü yanlış yerde arattırır. Hata akış\nBAŞLAMADAN verilir; yarısı akmış bir yanıtın içine hata gömmek, istemciye\n\"cevap geldi ama eksik\" hissi verirdi.\n\n🔴 KAPI SIRASI (AI-BAĞLAM): görünürlük → sahiplik → sağlayıcı. Üçü de akış\nbaşlamadan koşar ve ilk ikisi **aynı** 404 gövdesini üretir.",
@@ -50642,6 +50982,25 @@
               "title": "Block Id",
               "type": "string"
             }
+          },
+          {
+            "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+            "in": "query",
+            "name": "preview_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+              "title": "Preview Token"
+            }
           }
         ],
         "responses": {
@@ -50654,6 +51013,16 @@
           "404": {
             "description": "Kayıt bulunamadı"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -50663,6 +51032,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın`"
           }
         },
         "security": [
@@ -69743,6 +70122,25 @@
               "title": "Section Id",
               "type": "string"
             }
+          },
+          {
+            "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+            "in": "query",
+            "name": "preview_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+              "title": "Preview Token"
+            }
           }
         ],
         "responses": {
@@ -69755,6 +70153,16 @@
           "404": {
             "description": "Kayıt bulunamadı"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -69764,6 +70172,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın`"
           }
         },
         "security": [
@@ -70255,6 +70673,25 @@
               "title": "Site Id",
               "type": "string"
             }
+          },
+          {
+            "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+            "in": "query",
+            "name": "preview_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+              "title": "Preview Token"
+            }
           }
         ],
         "responses": {
@@ -70267,6 +70704,16 @@
           "404": {
             "description": "Kayıt bulunamadı"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -70276,6 +70723,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın`"
           }
         },
         "security": [
@@ -77608,6 +78065,25 @@
               "title": "Unit Id",
               "type": "string"
             }
+          },
+          {
+            "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+            "in": "query",
+            "name": "preview_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`.",
+              "title": "Preview Token"
+            }
           }
         ],
         "responses": {
@@ -77620,6 +78096,16 @@
           "404": {
             "description": "Kayıt bulunamadı"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -77629,6 +78115,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteErrorResponse"
+                }
+              }
+            },
+            "description": "`code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın`"
           }
         },
         "security": [

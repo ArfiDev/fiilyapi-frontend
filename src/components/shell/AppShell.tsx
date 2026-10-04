@@ -6,6 +6,7 @@ import { QueryProvider } from "@/lib/query/QueryProvider";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import { StaleBuildBanner } from "./StaleBuildBanner";
+import { FlashNoticeHost } from "./FlashNoticeHost";
 import { TabsRouterSync } from "./workspace-tabs/TabsRouterSync";
 import "./shell.css";
 
@@ -27,6 +28,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <main className="app-content">
           {/* PLN-F2.0 — yalnız sürüm uyumsuzluğunda basılır (bkz. app-build.ts). */}
           <StaleBuildBanner />
+          {/* SIL-F1.2 — silme sonrası başarı bildirimi (yalnız doluyken basılır). */}
+          <FlashNoticeHost />
           {/* SEKME-F1.7a — kırıntı kabuk düzeyinden ÇIKTI, üst çubuğa döndü
               (`Topbar.tsx` → `TopbarBreadcrumb`). `<main>` artık kırıntı
               BASMAZ; ekranların kendi başlık-üstü satırları DEĞİŞMEDİ. */}

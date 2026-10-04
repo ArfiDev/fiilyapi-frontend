@@ -334,6 +334,11 @@ const ALLOWED_ROOTS = new Set([
   // ikiz kuralını uygulayamaz (404). jsdom ve e2e mock-backend BFF'yi atladığı
   // için GÖRMEZ.
   "pages",
+  // SIL-F1.2 — Ortak silme ucları (`GET /admin/silme/{kind}/{id}/onizleme`,
+  // `DELETE /admin/silme/{kind}/{id}`) bu yeni kökten geçer; ilk path segmenti
+  // "sites"/"sections" DEĞİL "admin"dir. Eksikse silme penceresi YALNIZ CANLIDA
+  // 404 alır; jsdom ve e2e mock-backend BFF'yi atladığı için GÖRMEZ.
+  "admin",
 ]);
 
 // JSON/metin sayilan icerik tipleri: govde metne cozulup JSON olarak islenir.
