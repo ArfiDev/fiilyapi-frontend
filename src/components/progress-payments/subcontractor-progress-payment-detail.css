@@ -54,6 +54,12 @@
   font-family: var(--font-mono);
   color: var(--color-text-subtle);
 }
+/* KAT-F2.4 · Q4 — kod + altında Bakanlık poz no'su; açıklama yanında kalır */
+.thd-line-table__code-stack {
+  display: inline-block;
+  vertical-align: top;
+  max-width: 14rem;
+}
 
 /* Sözleşme İlerlemesi kartı — üç çubuk HER ZAMAN pending (brief §Sağ sütun,
    `SubcontractorContractProgressCard`). `pp-progress-track__fill--*` (renkli

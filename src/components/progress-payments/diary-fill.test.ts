@@ -28,6 +28,7 @@ function pivotRow(itemId: string, cells: { siteId: string; editable: boolean; qu
       allocations: [],
       remaining_quantity: "0.000",
     } as unknown as PivotRow["item"],
+    sourceCode: null,
     groupName: "A — Betonarme",
     cells: cells.map((cell) => ({
       ...cell,
@@ -46,6 +47,7 @@ function subcontractorRow(itemId: string, quantity: string): SubcontractorLineRo
   return {
     itemId,
     code: itemId,
+    sourceCode: null,
     description: `${itemId} açıklama`,
     unit: "m²",
     groupName: null,

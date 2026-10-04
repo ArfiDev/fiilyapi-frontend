@@ -325,3 +325,40 @@ describe("normalizePivotRowsForSave — kaydetmeden önce Türkçe okuma (TKL-F8
     expect(body).toHaveLength(3);
   });
 });
+
+// KAT-F2.4 · Q2: satırın Bakanlık poz no'su — kayıtlı satır VARSA satırın anlık görüntüsü, yoksa kalemin kodu.
+describe("buildPivotRows — sourceCode (Q2)", () => {
+  const withCode = (code: string | null) => ({
+    ...DISTRIBUTION,
+    groups: [{ ...DISTRIBUTION.groups[0], items: [{ ...ITEM_1, source_code: code }, ITEM_2] }],
+  });
+
+  it("kayıtlı satır yok → kalemin source_code'u", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"));
+    expect(rows[0].sourceCode).toBe("15.150.1003");
+    expect(rows[1].sourceCode).toBeNull();
+  });
+
+  it("kayıtlı satır VAR ve snapshot'ı kalemden FARKLI → SATIRIN snapshot'ı", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"), [line({ source_code: "35.140.3195-D" })]);
+    expect(rows[0].sourceCode).toBe("35.140.3195-D");
+  });
+
+  it("kayıtlı satırın snapshot'ı null ise kalemin kodu ÖRTÜLMEZ: null", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"), [line({ source_code: null })]);
+    expect(rows[0].sourceCode).toBeNull();
+  });
+
+  it("aynı kalemin birden çok şantiye satırı farklı snapshot taşırsa İLK kayıtlı satır kazanır", () => {
+    const rows = buildPivotRows(withCode(null), [
+      line({ id: "l-a", site_id: SITE_A.id, source_code: "11.111" }),
+      line({ id: "l-b", site_id: SITE_B.id, source_code: "22.222" }),
+    ]);
+    expect(rows[0].sourceCode).toBe("11.111");
+  });
+
+  it("gövde (PUT lines) source_code TAŞIMAZ", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"), [line({ source_code: "35.140.3195-D" })]);
+    for (const entry of buildLinesSaveBody(rows)) expect(entry).not.toHaveProperty("source_code");
+  });
+});

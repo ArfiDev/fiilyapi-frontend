@@ -135,3 +135,29 @@ describe("buildSubcontractorLinesSaveBody — PUT lines DEĞİŞTİRME semantiğ
     expect(body[0].quantity).toBe("0");
   });
 });
+
+// KAT-F2.4 · Q2: kayıtlı satır VARSA satırın Bakanlık poz no'su anlık görüntüsü, yoksa kalemin kodu.
+describe("buildSubcontractorLineRows — sourceCode (Q2)", () => {
+  it("kayıtlı satır yok → kalemin source_code'u", () => {
+    const rows = buildSubcontractorLineRows([item({ source_code: "15.250.1011" })]);
+    expect(rows[0].sourceCode).toBe("15.250.1011");
+  });
+
+  it("kayıtlı satır VAR ve snapshot'ı kalemden FARKLI → SATIRIN snapshot'ı", () => {
+    const rows = buildSubcontractorLineRows(
+      [item({ source_code: "15.250.1011" })],
+      [line({ source_code: "35.140.3195-D" })],
+    );
+    expect(rows[0].sourceCode).toBe("35.140.3195-D");
+  });
+
+  it("kayıtlı satırın snapshot'ı null ise kalemin kodu ÖRTÜLMEZ: null", () => {
+    const rows = buildSubcontractorLineRows([item({ source_code: "15.250.1011" })], [line({ source_code: null })]);
+    expect(rows[0].sourceCode).toBeNull();
+  });
+
+  it("gövde (PUT lines) source_code TAŞIMAZ", () => {
+    const rows = buildSubcontractorLineRows([item({ source_code: "15.250.1011" })], [line({ source_code: "1" })]);
+    for (const entry of buildSubcontractorLinesSaveBody(rows).body) expect(entry).not.toHaveProperty("source_code");
+  });
+});

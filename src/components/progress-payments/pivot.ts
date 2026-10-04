@@ -8,6 +8,7 @@ import type { ProgressPaymentLineDetail } from "@/lib/api/hooks/useProgressPayme
 import type { ProgressPaymentLineInput } from "@/lib/api/hooks/useProgressPaymentMutations";
 
 import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 
 import { parsePaymentQuantity } from "./tr-quantity";
 import { DEFAULT_QUANTITY_SOURCE, type QuantitySource } from "./quantity-source";
@@ -40,6 +41,12 @@ export interface PivotCell {
 
 export interface PivotRow {
   item: ContractDistributionItem;
+  /**
+   * Bakanlık poz no'su (KAT-F2.4 · Q2, kalem düzeyi): kalemin KAYITLI satırı varsa SATIRIN anlık görüntüsü
+   * (null olsa da kalemin koduyla örtülmez), yoksa kalemin `source_code`u. Aynı kalemin birden çok şantiye
+   * satırı varsa `existingLines` sırasındaki İLK kayıtlı satır kazanır. Yazma gövdesine GİRMEZ.
+   */
+  sourceCode: string | null;
   groupName: string;
   cells: PivotCell[];
 }
@@ -67,9 +74,11 @@ export function buildPivotRows(
   existingLines: readonly ProgressPaymentLineDetail[] = [],
 ): PivotRow[] {
   const lineByKey = new Map<string, ProgressPaymentLineDetail>();
+  const firstLineByItemId = new Map<string, ProgressPaymentLineDetail>();
   for (const line of existingLines) {
     if (!line.contract_item_id) continue;
     lineByKey.set(cellKey(line.contract_item_id, line.site_id), line);
+    if (!firstLineByItemId.has(line.contract_item_id)) firstLineByItemId.set(line.contract_item_id, line);
   }
 
   const rows: PivotRow[] = [];
@@ -88,7 +97,13 @@ export function buildPivotRows(
           quantitySource: existing ? existing.quantity_source : DEFAULT_QUANTITY_SOURCE,
         };
       });
-      rows.push({ item, groupName: group.name, cells });
+      const savedLine = firstLineByItemId.get(item.id);
+      rows.push({
+        item,
+        sourceCode: sourceCodeLabel(savedLine ?? item),
+        groupName: group.name,
+        cells,
+      });
     }
   }
   return rows;

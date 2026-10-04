@@ -1301,3 +1301,61 @@ describe("ProgressPaymentForm — T30 Türkçe sayı kuralı (TKL-F8)", () => {
     });
   });
 });
+
+// KAT-F2.4 · Q2/Q3: poz kodunun altında Bakanlık poz no'su (kayıtlı satırın snapshot'ı kalemi ÖRTER).
+describe("ProgressPaymentForm — Bakanlık poz no'su alt satırı", () => {
+  const SAVED_LINE = {
+    id: "line-1",
+    contract_item_id: ITEM_1.id,
+    site_id: SITE_A.id,
+    code: ITEM_1.code,
+    source_code: "35.140.3195-D",
+    description: ITEM_1.description,
+    unit: ITEM_1.unit,
+    contract_unit_price: ITEM_1.unit_price,
+    coefficient: "1.000",
+    quantity: "900.000",
+    group_name: "A — Betonarme İşleri",
+    sort_order: 0,
+    quantity_source: "manual",
+    adjusted_unit_price: ITEM_1.unit_price,
+    line_total: "1665000.00",
+    previous_quantity: "0.000",
+    previous_amount: "0.00",
+    cumulative_quantity: "900.000",
+    cumulative_amount: "1665000.00",
+    is_price_stale: false,
+  };
+
+  it("kayıtlı satır yokken kalemin kodu poz kodunun altında basılır; kodsuz kalemde HİÇBİR ŞEY", async () => {
+    vi.mocked(useContractDistribution).mockReturnValue(
+      queryResult({
+        data: distributionFixture({
+          groups: [
+            { id: "g-1", name: "A — Betonarme İşleri", sort_order: 10, items: [{ ...ITEM_1, source_code: "15.150.1003" }, { ...ITEM_2, source_code: null }] },
+          ],
+        }),
+      }),
+    );
+    renderForm({ mode: "create", projectId: PROJECT_ID });
+    const subs = await screen.findAllByTestId("pp-form-source-code");
+    expect(subs).toHaveLength(1);
+    expect(subs[0]).toHaveTextContent("15.150.1003");
+    expect(screen.getByText("03.001").closest("td")).toContainElement(subs[0]);
+  });
+
+  it("kayıtlı satırın snapshot'ı kalemden FARKLIYSA SATIRINKİ görünür (kalemin kodu değil)", async () => {
+    vi.mocked(useContractDistribution).mockReturnValue(
+      queryResult({
+        data: distributionFixture({
+          groups: [{ id: "g-1", name: "A — Betonarme İşleri", sort_order: 10, items: [{ ...ITEM_1, source_code: "15.150.1003" }, ITEM_2] }],
+        }),
+      }),
+    );
+    vi.mocked(useProgressPayment).mockReturnValue(queryResult({ data: detailFixture({ lines: [SAVED_LINE] as never }) }));
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    const sub = await screen.findByTestId("pp-form-source-code");
+    expect(sub).toHaveTextContent("35.140.3195-D");
+    expect(screen.queryByText("15.150.1003")).not.toBeInTheDocument();
+  });
+});

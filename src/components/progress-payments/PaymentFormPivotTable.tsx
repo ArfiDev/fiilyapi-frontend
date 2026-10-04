@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui";
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import type { ContractDistributionSite } from "@/lib/api/hooks/useContract";
 
@@ -80,7 +81,10 @@ export function PaymentFormPivotTable({
                     </tr>
                   )}
                   <tr className="pp-table__row">
-                    <td className="pp-table__cell pp-table__col--item">{row.item.code}</td>
+                    <td className="pp-table__cell pp-table__col--item">
+                      {row.item.code}
+                      <SourceCodeSub code={row.sourceCode} data-testid="pp-form-source-code" />
+                    </td>
                     <td className="pp-table__cell pp-table__col--item">
                       {row.item.description}
                       {isDiaryFilled && (
