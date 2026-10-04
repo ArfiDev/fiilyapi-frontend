@@ -343,3 +343,8 @@
 .ev-cat-toast--inline {
   margin: 0;
 }
+
+/* NAV-F2 · Disiplin Yönetimi sayfası — M6 liste gövdesi modal yerine kartta (modal gövdesi dolgusu). */
+.ev-cat-dpage {
+  padding: var(--space-6);
+}

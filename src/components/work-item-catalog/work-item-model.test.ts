@@ -11,7 +11,6 @@ import {
   isPriceStale,
   refPriceDateLabel,
   sortByPozNo,
-  tabCounts,
 } from "./work-item-model";
 import { BETON, DEMIR, D_DUV, D_KAB, KAT_BOTH, KAT_DATE_ONLY, SIVA } from "./work-item-fixtures";
 
@@ -135,17 +134,6 @@ describe("kaydedilmemiş yeni satırlar sayaçlara girer (KIK:277-279)", () => {
     const counts = countByDiscipline([BETON, SIVA], ["d-kab", "d-kab", "d-duv"]);
     expect(counts.get("d-kab")).toBe(3);
     expect(counts.get("d-duv")).toBe(2);
-  });
-
-  it("tabCounts kalem sayacına yeni satırları ekler; birim/disiplin sayacı değişmez", () => {
-    expect(tabCounts([BETON, DEMIR, SIVA], [D_KAB, D_DUV], 2)).toEqual({ items: 5, disciplines: 2, units: 3 });
-  });
-});
-
-describe("tabCounts — ÜS-9 sayaçları", () => {
-  it("İş Kalemleri = kalem sayısı · Disiplinler = disiplin sayısı · Birimler = farklı birim", () => {
-    expect(tabCounts([BETON, DEMIR, SIVA], [D_KAB, D_DUV])).toEqual({ items: 3, disciplines: 2, units: 3 });
-    expect(tabCounts([BETON, BETON], [D_KAB])).toEqual({ items: 2, disciplines: 1, units: 1 });
   });
 });
 

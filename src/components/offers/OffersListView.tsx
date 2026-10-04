@@ -39,9 +39,6 @@ export interface OffersListViewProps {
   onSearchTextChange: (value: string) => void;
   onClear: () => void;
   employers: readonly EmployerOption[];
-  catalogCount: number | null;
-  /** "Teklif Şablonları N" sekme sayacı (TKL-F4.5); bilinmiyorsa `null`. */
-  templateCount?: number | null;
   canWrite: boolean;
   /** Yazma yetkisi yoksa şerit metni (boş = şerit yok). */
   readOnlyText: string;
@@ -66,7 +63,7 @@ export function OffersListView(props: OffersListViewProps) {
 
   return (
     <div className="offers">
-      <OfferTabs offerCount={offerCount} catalogCount={props.catalogCount} templateCount={props.templateCount ?? null} />
+      <OfferTabs offerCount={offerCount} />
 
       <header className="offers__head">
         <div className="offers__titles">

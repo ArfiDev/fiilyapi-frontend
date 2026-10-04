@@ -32,9 +32,6 @@
   border-bottom: 2px solid transparent;
   cursor: pointer;
 }
-.offers-tab:disabled {
-  cursor: not-allowed;
-}
 .offers-tab--active {
   font-weight: var(--weight-semibold);
   color: var(--color-primary);
@@ -44,14 +41,6 @@
   font-family: var(--font-mono);
   font-size: var(--text-small);
   color: var(--color-text-subtle);
-}
-.offers-tab__soon {
-  padding: 1px 6px;
-  font-size: var(--text-small);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-muted);
-  background: var(--color-surface-muted);
-  border-radius: var(--radius-sm);
 }
 
 /* ---------------------------------------------------------------- başlık (TL:86-89) */

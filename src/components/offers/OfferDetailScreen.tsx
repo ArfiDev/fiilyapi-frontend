@@ -133,7 +133,7 @@ function OfferRevisionLoader({ detail, revNo, ...rest }: OfferRevisionLoaderProp
   }
   return (
     <div className="offer-detail__page">
-      <OfferTabs offerCount={null} catalogCount={null} listHref={routes.offers.list()} />
+      <OfferTabs offerCount={null} listHref={routes.offers.list()} />
       <OfferDetailView detail={detail} revision={revisionQuery.data} {...rest} />
     </div>
   );

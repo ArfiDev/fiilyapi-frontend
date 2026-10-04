@@ -11,49 +11,6 @@
   gap: var(--space-4);
 }
 
-/* ---------------------------------------------------------------- sekmeler (KIK:72-76) */
-.wik-tabs {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--color-border);
-}
-.wik-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: -1px;
-  padding: var(--space-2) 14px;
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-muted);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-}
-.wik-tab:disabled {
-  cursor: not-allowed;
-}
-.wik-tab--active {
-  font-weight: var(--weight-semibold);
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-}
-.wik-tab__count {
-  font-family: var(--font-mono);
-  font-size: var(--text-small);
-  color: var(--color-text-subtle);
-}
-.wik-tab__soon {
-  padding: 1px 6px;
-  font-size: var(--text-small);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-muted);
-  background: var(--color-surface-muted);
-  border-radius: var(--radius-sm);
-}
-
 /* ---------------------------------------------------------------- başlık (KIK:81-88) */
 .wik__head {
   display: flex;

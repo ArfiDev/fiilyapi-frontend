@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
-import { useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
 import { useEmployers } from "@/lib/api/hooks/useEmployers";
 import { useCreateOfferRevision, useDeleteOffer } from "@/lib/api/hooks/useOfferMutations";
 import { useOffers, type OfferListResponse } from "@/lib/api/hooks/useOffers";
-import { useOfferTemplates } from "@/lib/api/hooks/useOfferTemplates";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
@@ -79,9 +77,6 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
   const [lastReady, setLastReady] = useState<OfferListResponse | null>(null);
   if (list.data && list.data !== lastReady) setLastReady(list.data);
   const employers = useEmployers();
-  const catalog = useCatalogItems();
-  // Sekme sayacı ("Teklif Şablonları N"); okunamazsa (403 / yükleniyor) sayaç basılmaz.
-  const templates = useOfferTemplates();
   const createRevision = useCreateOfferRevision();
   const deleteOffer = useDeleteOffer();
 
@@ -163,8 +158,6 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
         onSearchTextChange={setSearchText}
         onClear={clearFilters}
         employers={employerOptions}
-        catalogCount={catalog.data ? catalog.data.length : null}
-        templateCount={templates.data ? templates.data.total : null}
         canWrite={canWrite}
         readOnlyText={canWrite ? "" : readOnlyMessage(level, scope.isRestricted)}
         now={new Date()}

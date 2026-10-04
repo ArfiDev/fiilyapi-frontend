@@ -8,7 +8,7 @@ import type { EvDisciplineRead } from "@/lib/api/models";
 
 import { ContractorBadge, DisciplineSwatch } from "@/components/catalog-shared/CatalogBits";
 
-interface DisciplineListModalProps {
+export interface DisciplineListPanelProps {
   disciplines: readonly EvDisciplineRead[] | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -21,6 +21,9 @@ interface DisciplineListModalProps {
   onAdd: () => void;
   onEdit: (discipline: EvDisciplineRead) => void;
   onDelete: (discipline: EvDisciplineRead) => void;
+}
+
+interface DisciplineListModalProps extends DisciplineListPanelProps {
   onClose: () => void;
 }
 
@@ -37,7 +40,22 @@ const SKELETON_ROWS = 3;
  * yalnız ikisi de 0 iken açıktır (B1-9); gerekçe düğmenin altında düz metin
  * (M6:204). Yarışta kullanım doğarsa backend 409 döner, onay modalında gösterilir.
  */
-export function DisciplineListModal({
+export function DisciplineListModal({ onClose, ...panel }: DisciplineListModalProps) {
+  const footer = (
+    <Button variant="secondary" onClick={onClose}>
+      Kapat
+    </Button>
+  );
+
+  return (
+    <Modal title="Disiplinler" onClose={onClose} footer={footer} className="ev-cat-modal--list">
+      <DisciplineListPanel {...panel} />
+    </Modal>
+  );
+}
+
+/** M6 liste gövdesi — modalda (Birim Oran Kataloğu) ve sayfada (NAV-F2 · Disiplin Yönetimi) AYNI. */
+export function DisciplineListPanel({
   disciplines,
   isLoading,
   isError,
@@ -48,16 +66,9 @@ export function DisciplineListModal({
   onAdd,
   onEdit,
   onDelete,
-  onClose,
-}: DisciplineListModalProps) {
-  const footer = (
-    <Button variant="secondary" onClick={onClose}>
-      Kapat
-    </Button>
-  );
-
+}: DisciplineListPanelProps) {
   return (
-    <Modal title="Disiplinler" onClose={onClose} footer={footer} className="ev-cat-modal--list">
+    <>
       <div className="ev-cat-modal__intro">
         <p className="ev-cat-modal__subtitle">Şirket listesi · bütün şantiyelerde ve katalogda ortak</p>
         {canWrite && <Button onClick={onAdd}>+ Yeni disiplin</Button>}
@@ -110,7 +121,7 @@ export function DisciplineListModal({
           <span>{canWrite ? "Sil yalnız kullanılmayan disiplinde açıktır" : "Değişiklik için tam yetki gerekir"}</span>
         </div>
       </div>
-    </Modal>
+    </>
   );
 }
 

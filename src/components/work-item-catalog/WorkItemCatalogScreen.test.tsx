@@ -177,21 +177,13 @@ describe("liste (KIK:128-147)", () => {
 });
 
 describe("sekmeler, Excel, çipler, arama (KIK:72-125)", () => {
-  it("yalnız İş Kalemleri etkin; diğer üçü devre-dışı 'Yakında' + title; sayaçlar ÜS-9", async () => {
+  it("NAV-F2: üst sekme şeridi YOK (İş Kalemleri / Disiplinler / Birimler / İçe aktarım geçmişi)", async () => {
     renderScreen();
     await screen.findByText("Beton döküm");
-    const active = screen.getByRole("button", { name: /^İş Kalemleri/ });
-    expect(active).toBeEnabled();
-    expect(active).toHaveTextContent("3");
-    for (const name of [/^Disiplinler/, /^Birimler/, /^İçe aktarım geçmişi/]) {
-      const tab = screen.getByRole("button", { name });
-      expect(tab).toBeDisabled();
-      expect(tab).toHaveTextContent("Yakında");
-      expect(tab).toHaveAttribute("title");
+    expect(screen.queryByRole("group", { name: "Katalog sekmeleri" })).not.toBeInTheDocument();
+    for (const name of [/^İş Kalemleri/, /^Disiplinler/, /^Birimler/, /^İçe aktarım geçmişi/]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
-    expect(screen.getByRole("button", { name: /^Disiplinler/ })).toHaveTextContent("2");
-    expect(screen.getByRole("button", { name: /^Birimler/ })).toHaveTextContent("3");
-    expect(screen.getByRole("button", { name: /^İçe aktarım geçmişi/ })).not.toHaveTextContent(/\d/);
   });
 
   it("'Excel İndir' etkin; 'Excel'den İçe Aktar' 'Yakında' kalır (devre-dışı + title)", async () => {
@@ -689,7 +681,7 @@ describe("F1.3.1-4 · disiplinler yüklenmeden '+ Kalem Ekle' pasif; disiplin ha
 });
 
 describe("F1.3.1-12 · yeni satır listenin PARÇASIDIR (KIK:244, :277-279)", () => {
-  it("sayaçlar yeni satırı sayar: 'N kalem', çip, 'Tüm', sekme", async () => {
+  it("sayaçlar yeni satırı sayar: 'N kalem', çip, 'Tüm'", async () => {
     const user = userEvent.setup();
     renderScreen();
     await screen.findByText("Beton döküm");
@@ -698,10 +690,9 @@ describe("F1.3.1-12 · yeni satır listenin PARÇASIDIR (KIK:244, :277-279)", ()
     expect(screen.getByRole("button", { name: /Tüm disiplinler/ })).toHaveTextContent("4");
     expect(screen.getByRole("button", { name: /Kaba İnşaat/ })).toHaveTextContent("3");
     expect(screen.getByRole("button", { name: /Duvar & Sıva/ })).toHaveTextContent("1");
-    expect(screen.getByRole("button", { name: /^İş Kalemleri/ })).toHaveTextContent("4");
     await user.click(within(screen.getByTestId("wik-edit-new-1")).getByRole("button", { name: "Vazgeç" }));
     expect(screen.getByTestId("wik-count")).toHaveTextContent("3 kalem");
-    expect(screen.getByRole("button", { name: /^İş Kalemleri/ })).toHaveTextContent("3");
+    expect(screen.getByRole("button", { name: /Tüm disiplinler/ })).toHaveTextContent("3");
   });
 
   it("çip süzgeci yeni satıra da uygulanır: KAB'a açılan satır DUV çipinde görünmez, 1 kalem", async () => {
@@ -752,7 +743,7 @@ describe("F1.3.1-12 · yeni satır listenin PARÇASIDIR (KIK:244, :277-279)", ()
     await user.type(row.getByLabelText("A-s / birim"), "1");
     await user.click(row.getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(screen.getByTestId("wik-count")).toHaveTextContent("4 kalem"));
-    expect(screen.getByRole("button", { name: /^İş Kalemleri/ })).toHaveTextContent("4");
+    expect(screen.getByRole("button", { name: /Tüm disiplinler/ })).toHaveTextContent("4");
     expect(screen.queryByTestId("wik-edit-new-1")).not.toBeInTheDocument();
   });
 });
