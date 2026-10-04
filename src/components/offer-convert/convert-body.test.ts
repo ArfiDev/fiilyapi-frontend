@@ -13,6 +13,7 @@ import {
   toggleIncluded,
 } from "./convert-model";
 import type { OfferConvertBody } from "@/lib/api/hooks/useOfferMutations";
+import { makeGroup, makeItem } from "@/components/offers/offer-item-fixtures";
 import { ConvertBuildError, buildConvertRequest } from "./convert-body";
 import type { ConvertDraft, ConvertForm, ConvertRequest } from "./convert-types";
 
@@ -82,6 +83,18 @@ describe("🔴 para ve koşullar GÖNDERİLMEZ (ÜS-F5-12/13)", () => {
       }
     }
   });
+  it("KAT-F2.2: Bakanlık kodu (teklif kalemi ve katalogdan eklenen) gövdeye GİRMEZ — backend teklif kaleminden kendisi kopyalar", () => {
+    const coded = makeWonRevision({
+      groups: [makeGroup("g-a", "KABA", 0, [makeItem({ id: "it-1", source_code: "15.150.1003" })])],
+    });
+    const draft = addFromCatalog(rowsFromRevision(coded, DISCIPLINE_BY_CATALOG), "g:g-a", [{ ...SIVA, source_code: "15.250.1011" }], new Map([[SIVA.id, { qtyRaw: "3", bfRaw: "50,00" }]]));
+    const items = flatItems(buildConvertRequest(makeForm(), draft, coded));
+    expect(items).toHaveLength(2);
+    expect(JSON.stringify(items)).not.toContain("15.150.1003");
+    expect(JSON.stringify(items)).not.toContain("15.250.1011");
+    expect(JSON.stringify(items)).not.toContain("source_code");
+  });
+
   it("gövdede adam-saat / kod alanı yok: kalem anahtarları sabit", () => {
     expect(Object.keys(flatItems(build(makeForm()))[0] ?? {}).sort()).toEqual(
       ["catalog_item_id", "code", "description", "offer_item_id", "quantity", "unit", "unit_price"],

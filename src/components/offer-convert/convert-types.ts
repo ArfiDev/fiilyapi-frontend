@@ -26,6 +26,8 @@ export interface ConvertRow {
   catalogItemId: string;
   /** Sözleşme kalem kodu (başlangıçta teklif `poz_no`); yalnız çakışmada düzenlenir. */
   code: string;
+  /** Bakanlık poz no'su (KAT-F2; salt okuma, gövdeye GİRMEZ — backend teklif kaleminden kopyalar); yok → null. */
+  sourceCode: string | null;
   description: string;
   unit: string;
   offer: ConvertRowOffer;

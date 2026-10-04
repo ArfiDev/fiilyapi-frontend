@@ -77,6 +77,8 @@ export interface ItemRec {
   sortOrder: number;
   catalogItemId: string;
   pozNo: string;
+  /** KAT-F2.2 · Bakanlık poz no'su anlığı (`OfferItemRead.source_code`); yok → null. */
+  sourceCode: string | null;
   description: string;
   unit: string;
   /** `null` = miktar girilmedi (SO-21). */
@@ -228,6 +230,8 @@ export interface OfferCatalogEntry {
 export interface ConvertedItemSpec {
   catalogItemId: string;
   code: string;
+  /** KAT-F2.2 · teklif kaleminin Bakanlık no'su KOPYALANIR (backend `convert_service`); katalogdan eklenen satırda null. */
+  sourceCode: string | null;
   description: string;
   unit: string;
   quantity: string;

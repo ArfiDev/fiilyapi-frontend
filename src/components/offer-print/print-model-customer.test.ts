@@ -162,3 +162,19 @@ describe("🔴 F4.2b işveren modeli — ara toplam boş küme + dipnot kesişim
     expect(model.footnote).toBe("* Fiyatı belirlenmemiş 1 kalem toplama dahil değildir.");
   });
 });
+
+describe("işveren modeli — Bakanlık poz no'su (KAT-F2.2)", () => {
+  it("kalem satırı sourceCode taşır; boş/boşluk/null → null (alt satır basılmaz)", () => {
+    const revision = {
+      groups: [
+        makeGroup("g1", "Kaba İnşaat", 0, [
+          { id: "a", groupId: "g1", poz: "A", unitPrice: PRICED_UNIT_PRICE, sourceCode: " 15.150.1003 " },
+          { id: "b", groupId: "g1", poz: "B", unitPrice: PRICED_UNIT_PRICE, sourceCode: "  " },
+          { id: "c", groupId: "g1", poz: "C", unitPrice: PRICED_UNIT_PRICE },
+        ]),
+      ],
+    };
+    const items = flatRows(build(revision)).filter((row) => row.kind === "item");
+    expect(items.map((row) => row.sourceCode)).toEqual(["15.150.1003", null, null]);
+  });
+});

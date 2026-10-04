@@ -355,7 +355,16 @@ export function handleConvert(
     const warnings = warningsOf(request, port, rates, new Map(items.map((item) => [item.id, item.unitMhr])));
     const groups: ConvertedGroupSpec[] = request.groups.map((group) => ({
       name: group.name,
-      items: group.items.map(({ catalogItemId, code, description, unit, quantity, unitPrice }) => ({ catalogItemId, code, description, unit, quantity, unitPrice })),
+      items: group.items.map(({ catalogItemId, offerItemId, code, description, unit, quantity, unitPrice }) => ({
+        catalogItemId,
+        code,
+        // backend `convert_service`: Bakanlık no'su gövdeden DEĞİL teklif kaleminden kopyalanır (katalogdan eklenen satırda yok → null).
+        sourceCode: offerItemId === null ? null : (items.find((item) => item.id === offerItemId)?.sourceCode ?? null),
+        description,
+        unit,
+        quantity,
+        unitPrice,
+      })),
     }));
     const { contract } = request;
     const created = convert.createConvertedProject({

@@ -2,6 +2,7 @@
  * TKL-F5.2 · Teklif → Proje dönüştürme SAF modeli (plan §3). React'sız; her işlem YENİ durum döndürür (mutasyon YOK).
  * Para türevleri `convert-money`, satır/özet türevleri `convert-derive`, doğrulama `convert-validate`, gövde `convert-body`.
  */
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 import { trPriceInputValue, trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import type { OfferItemRead, OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 import type { WorkItemRead } from "@/lib/api/models";
@@ -27,6 +28,7 @@ function rowFromOfferItem(item: OfferItemRead, groupKey: string, disciplines?: D
     offerItemId: item.id,
     catalogItemId: item.catalog_item_id,
     code: item.poz_no,
+    sourceCode: sourceCodeLabel(item),
     description: item.description,
     unit: item.unit,
     offer: {
@@ -116,6 +118,7 @@ function rowFromCatalog(entry: WorkItemRead, groupKey: string, seq: number, valu
     offerItemId: null,
     catalogItemId: entry.id,
     code: entry.poz_no,
+    sourceCode: sourceCodeLabel(entry),
     description: entry.name,
     unit: entry.uom,
     offer: { qty: null, unitPrice: null, amount: ZERO_MONEY },

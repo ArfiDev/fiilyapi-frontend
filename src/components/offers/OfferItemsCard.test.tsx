@@ -669,3 +669,31 @@ describe("TKL-F3.6.1 madde 16 — '↺ kat.' teklif a-s sınırını aşıyorsa 
     expect(calls("PATCH", ITEM_PATH)).toHaveLength(0);
   });
 });
+
+describe("KAT-F2.2 · Bakanlık poz no'su poz hücresinin altında", () => {
+  it("kod varken poz no'nun altında ekran alt satırı (title tam kod); null'da alt satır YOK", async () => {
+    revision = makeRevisionWithItems([
+      makeGroup("g-a", "A", 0, [
+        makeItem({ id: "it-1", source_code: "15.150.1003" }),
+        makeItem({ id: "it-2", catalog_item_id: DEMIR.id, poz_no: DEMIR.poz_no, sort_order: 1, source_code: null }),
+      ]),
+    ]);
+    await renderCard();
+    const sub = within(rowOf("it-1")).getByTestId("oit-source-code-it-1");
+    expect(sub).toHaveTextContent("15.150.1003");
+    expect(sub).toHaveAttribute("title", "15.150.1003");
+    expect(sub).toHaveClass("source-code-sub");
+    expect(sub).not.toHaveClass("source-code-sub--print");
+    expect(sub.closest("td")).toHaveClass("oit-poz");
+    expect(within(rowOf("it-2")).queryByTestId("oit-source-code-it-2")).toBeNull();
+  });
+
+  it("kalem düzenleme gövdesine source_code GİRMEZ (yalnız değişen alan)", async () => {
+    revision = makeRevisionWithItems([makeGroup("g-a", "A", 0, [makeItem({ id: "it-1", source_code: "15.150.1003" })])]);
+    await renderCard();
+    await typeAndBlur(cell("it-1", "miktar"), "4");
+    await waitFor(() => expect(calls("PATCH", ITEM_PATH)).toHaveLength(1));
+    expect(bodyOf(calls("PATCH", ITEM_PATH)[0])).toEqual({ quantity: "4" });
+    expect(JSON.stringify(calls("PATCH", ITEM_PATH)[0])).not.toContain("source_code");
+  });
+});

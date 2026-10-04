@@ -766,3 +766,36 @@ describe("🔴 dönüştürülmüş teklifin okuması: proje künyesi, dönüşt
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────── KAT-F2.2 · Bakanlık poz no'su
+
+describe("KAT-F2.2 · Bakanlık poz no'su: teklif kaleminden sözleşme kalemine KOPYALANIR", () => {
+  const CODE = "35.140.3195-D";
+  const withCode = (seeded: Seeded, index: number) => {
+    state.items = state.items.map((item) => (item.id === seeded.items[index]?.id ? { ...item, sourceCode: CODE } : item));
+  };
+
+  it("teklif okuması source_code'u taşır; yazılan sözleşme kalemi teklif kaleminin kodunu alır, katalogdan eklenen satır null", async () => {
+    const seeded = await offer();
+    withCode(seeded, 0);
+    const read = (await api("GET", `/offers/${seeded.id}/revisions/0`)).json;
+    expect(read.groups[0].items.map((item: any) => item.source_code)).toEqual([CODE, null]);
+
+    const request = body(seeded, {
+      groups: [
+        {
+          name: "Kaba",
+          items: [
+            line(CAT_A, "A-1", "10", "100.00", { offer_item_id: seeded.items[0]?.id }),
+            line(CAT_B, "B-1", "2.5", "40.00", { offer_item_id: seeded.items[1]?.id }),
+            line(CAT_B, "N-1", "1", "10.00"),
+          ],
+        },
+      ],
+    });
+    expect(JSON.stringify(request)).not.toContain("source_code");
+    expect((await convert(seeded.id, request)).status).toBe(200);
+    const spec = written[written.length - 1] as ConvertedProjectSpec;
+    expect(spec.groups[0]?.items.map((item) => item.sourceCode)).toEqual([CODE, null, null]);
+  });
+});

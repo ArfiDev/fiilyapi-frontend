@@ -1,5 +1,7 @@
 "use client";
 
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 import { trPriceInputValue } from "@/components/contracts/employer-item-inline";
 import { WarningTriangleIcon, XIcon, inlineSymbolProps } from "@/components/ui/icons";
 import { formatPrice } from "@/components/work-item-catalog/work-item-model";
@@ -66,7 +68,10 @@ export function OfferItemRow({ ctx, catalogItem, isQuantityMissing, editor, canE
       data-testid={`oit-row-${item.id}`}
       aria-busy={editor.isRowBusy(item.id) || undefined}
     >
-      <td className="oit-poz">{item.poz_no}</td>
+      <td className="oit-poz">
+        {item.poz_no}
+        <SourceCodeSub code={sourceCodeLabel(item)} data-testid={`oit-source-code-${item.id}`} />
+      </td>
       <td className="oit-desc">
         <span className="oit-desc__text">{item.description}</span>
         {isQuantityMissing && (

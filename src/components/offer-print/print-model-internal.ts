@@ -5,6 +5,7 @@
  *
  * 🔴 İŞVEREN ÇIKTISI BU DOSYAYI ASLA İTHAL ETMEZ (`offer-print-leak-guard.test.ts`). Ters yön serbesttir.
  */
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 import { sumDecimalStrings } from "@/lib/decimal";
 import { formatDecimal, formatQuantity } from "@/lib/format";
 
@@ -30,6 +31,8 @@ const UNIT_MHR_DIGITS = 2;
 export interface InternalSourceItem {
   id: string;
   poz_no: string;
+  /** Bakanlık poz no'su (KAT-F2; kimlik alanı, maliyet DEĞİL); yok → null. */
+  source_code: string | null;
   description: string;
   unit: string;
   quantity: string | null;
@@ -75,6 +78,8 @@ export interface InternalPrintRow {
   /** Grup adı (group) · "{grup} ara toplamı" (subtotal) · boş (item). */
   name: string;
   poz: string;
+  /** Poz no altındaki Bakanlık kodu (boş/yok → null: alt satır basılmaz). */
+  sourceCode: string | null;
   description: string;
   unit: string;
   quantity: string;
@@ -98,6 +103,7 @@ export interface InternalPrintModel {
 const BLANK_ROW = {
   name: "",
   poz: "",
+  sourceCode: null,
   description: "",
   unit: "",
   quantity: "",
@@ -130,6 +136,7 @@ function itemRow(group: InternalSourceGroup, item: InternalSourceItem, revision:
     groupId: group.id,
     groupName: group.name,
     poz: item.poz_no,
+    sourceCode: sourceCodeLabel(item),
     description: item.description,
     unit: item.unit,
     quantity: formatQuantity(item.quantity),

@@ -26,6 +26,8 @@ interface SeedItem {
   overheadPct?: string;
   profitPct?: string;
   offerUnitPrice?: string;
+  /** KAT-F2.2 · Bakanlık poz no'su (birkaç kalemde; kalanı null). */
+  sourceCode?: string;
 }
 
 interface SeedRevision {
@@ -66,8 +68,8 @@ const SEED: readonly SeedOffer[] = [
         lostReason: "Fiyat yüksek bulundu",
         winningAmount: "10450000.00",
         items: [
-          { catalogName: "Kalıp", group: "Kaba İnşaat", quantity: "4800", cost: "190.00" },
-          { catalogName: "Demir", group: "Kaba İnşaat", quantity: "520", cost: "29100.00" },
+          { catalogName: "Kalıp", group: "Kaba İnşaat", quantity: "4800", cost: "190.00", sourceCode: "15.100.1001" },
+          { catalogName: "Demir", group: "Kaba İnşaat", quantity: "520", cost: "29100.00", sourceCode: "15.150.1003" },
         ],
       },
       {
@@ -75,8 +77,8 @@ const SEED: readonly SeedOffer[] = [
         offerDate: "2026-04-10",
         stamps: { sent: "2026-04-11T09:00:00.000Z", won: "2026-04-25T16:45:00.000Z" },
         items: [
-          { catalogName: "Kalıp", group: "Kaba İnşaat", quantity: "4800", cost: "185.00" },
-          { catalogName: "Demir", group: "Kaba İnşaat", quantity: "520", cost: "28500.00", profitPct: "12" },
+          { catalogName: "Kalıp", group: "Kaba İnşaat", quantity: "4800", cost: "185.00", sourceCode: "15.100.1001" },
+          { catalogName: "Demir", group: "Kaba İnşaat", quantity: "520", cost: "28500.00", profitPct: "12", sourceCode: "15.150.1003" },
           { catalogName: "Beton döküm", group: "Kaba İnşaat", quantity: "3100", cost: null },
         ],
       },
@@ -113,7 +115,7 @@ const SEED: readonly SeedOffer[] = [
         validityDays: 30, // 31.08.2026'da doldu → "süresi geçti"
         stamps: { sent: "2026-08-02T08:00:00.000Z" },
         items: [
-          { catalogName: "Pis su borusu", group: "Tesisat", quantity: "1850", cost: "96.75" },
+          { catalogName: "Pis su borusu", group: "Tesisat", quantity: "1850", cost: "96.75", sourceCode: "35.140.3195-D" },
           { catalogName: "Temiz su borusu", group: "Tesisat", quantity: "2200", cost: null },
         ],
       },
@@ -131,7 +133,7 @@ const SEED: readonly SeedOffer[] = [
         offerDate: "2026-09-28",
         groups: ["Elektrik", "Topraklama"],
         items: [
-          { catalogName: "Kablo çekimi", group: "Elektrik", quantity: "18500", cost: "42.00" },
+          { catalogName: "Kablo çekimi", group: "Elektrik", quantity: "18500", cost: "42.00", sourceCode: "15.250.1011" },
           { catalogName: "Buat/priz montajı", group: "Elektrik", quantity: "960", cost: null },
           { catalogName: "Topraklama", group: "Topraklama", quantity: "1200", cost: "64.00", offerUnitPrice: "90.00" },
         ],
@@ -246,6 +248,7 @@ function seedRevision(
       sortOrder,
       catalogItemId: entry.id,
       pozNo: entry.pozNo,
+      sourceCode: item.sourceCode ?? null,
       description: entry.name,
       unit: entry.uom,
       quantity: item.quantity === null ? null : quantizeDecimal(item.quantity, 3),
