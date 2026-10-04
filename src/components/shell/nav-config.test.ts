@@ -9,15 +9,17 @@ describe("NAV_GROUPS", () => {
   // yerini alır, `İK` hemen ardına girer).
   // PLN-F1 · K21 — `Planlama` grubu mockup'taki yerine (Saha & İK ile
   // Stok & Satınalma arası → kodda İK ile Stok arası) girer: 5 → 6.
-  it("6 grup icerir (canon + PLN-F1 Planlama)", () => {
-    expect(NAV_GROUPS).toHaveLength(6);
+  // NAV-F1 · KARARLAR.md b1974d8 — Planlama'nın altına "Teklif ve Sözleşmeler"; eski grup "Mali": 6 → 7.
+  it("7 grup icerir (canon + PLN-F1 Planlama + NAV-F1 Teklif ve Sözleşmeler)", () => {
+    expect(NAV_GROUPS).toHaveLength(7);
     expect(NAV_GROUPS.map((g) => g.heading)).toEqual([
       "Genel",
       "Saha",
       "İK",
       "Planlama",
+      "Teklif ve Sözleşmeler",
       "Stok & Satınalma",
-      "Sözleşme & Mali",
+      "Mali",
     ]);
   });
 
@@ -25,7 +27,7 @@ describe("NAV_GROUPS", () => {
   // öğe konmaz). PLN-F3.6b'de Panel · Günlük İlerleme Raporu · Haftalık QURR
   // eklendi — K21 sırasında (Panel · Bütçe · Günlük Rapor · QURR · Katalog),
   // beşi de artık GERÇEK ekranlara düşer.
-  it("Planlama grubu ALTI ogeyi K21 sirasinda tasir (PLN-F3.6b + TKL-F1.3)", () => {
+  it("Planlama grubu BES ogeyi K21 sirasinda tasir (PLN-F3.6b; İş Kalemi Kataloğu NAV-F1 ile taşındı)", () => {
     const planning = NAV_GROUPS.find((g) => g.heading === "Planlama");
     expect(planning!.items.map((i) => i.label)).toEqual([
       "Planlama Paneli",
@@ -33,7 +35,6 @@ describe("NAV_GROUPS", () => {
       "Günlük İlerleme Raporu",
       "Haftalık QURR",
       "Birim Oran Kataloğu",
-      "İş Kalemi Kataloğu",
     ]);
     const tree = buildRouteTree();
     for (const item of planning!.items) {
@@ -103,24 +104,41 @@ describe("NAV_GROUPS", () => {
   // Tablolar). Sıra kayarsa ekran hâlâ erişilebilir olur ama mockup'ın
   // çizdiği yerde durmaz.
   it("cek-odeme kalemi hazine ile hakedisler arasindadir (mockup sirasi)", () => {
-    const mali = NAV_GROUPS.find((g) => g.heading === "Sözleşme & Mali");
+    const mali = NAV_GROUPS.find((g) => g.heading === "Mali");
     const labels = mali!.items.map((i) => i.label);
     expect(labels.indexOf("Çek & Ödeme")).toBe(labels.indexOf("Hazine") + 1);
   });
 
-  // 🔴 TKL-F3.3 · T31 — "Teklif Hazırlama" grubun İLK öğesidir (Sözleşmeler'in ÜSTÜNDE) ve
-  // GERÇEK rotaya düşer. Sıra kayarsa tüm ekranların sidebar'ı oynar (nav kayması turu).
-  it("Teklif Hazirlama 'Sözleşme & Mali' grubunun basindadir ve gercek rotaya duser", () => {
-    const mali = NAV_GROUPS.find((g) => g.heading === "Sözleşme & Mali");
-    const labels = mali!.items.map((i) => i.label);
-    expect(labels[0]).toBe("Teklif Hazırlama");
-    expect(labels.indexOf("Sözleşmeler")).toBe(1);
-    expect(mali!.items[0].href).toBe("/teklif-hazirlama");
-    expect(resolveHrefIn(buildRouteTree(), mali!.items[0].href, false)).toEqual({ kind: "static" });
+  // 🔴 NAV-F1 (KARARLAR.md b1974d8) — "Teklif ve Sözleşmeler" = Teklif Hazırlama · Sözleşmeler ·
+  // İş Kalemi Kataloğu (bu sırayla); adresler DEĞİŞMEDİ, hepsi GERÇEK rotaya düşer.
+  it("'Teklif ve Sözleşmeler' grubu uc ogeyi karar sirasinda tasir, adresler degismez", () => {
+    const group = NAV_GROUPS.find((g) => g.heading === "Teklif ve Sözleşmeler");
+    expect(group!.items.map((i) => i.label)).toEqual(["Teklif Hazırlama", "Sözleşmeler", "İş Kalemi Kataloğu"]);
+    expect(group!.items[0].href).toBe("/teklif-hazirlama");
+    expect(group!.items[2].href).toBe("/planlama/is-kalemi-katalogu");
+    for (const item of group!.items) {
+      expect(resolveHrefIn(buildRouteTree(), item.href, false), item.href).toEqual({ kind: "static" });
+    }
+  });
+
+  it("'Mali' grubu kalan ogeleri ayni sirada tasir (NAV-F1)", () => {
+    const mali = NAV_GROUPS.find((g) => g.heading === "Mali");
+    expect(mali!.items.map((i) => i.label)).toEqual([
+      "Satış Yönetimi",
+      "Muhasebe",
+      "Fatura Yönetimi",
+      "Hazine",
+      "Çek & Ödeme",
+      "Hakedişler",
+      "Mali Tablolar",
+      "Bordro",
+      "Şirket Varlıkları",
+      "Belge Arşivi",
+    ]);
   });
 
   it("sirket varliklari kalemi bordro ile belge arsivi arasindadir", () => {
-    const mali = NAV_GROUPS.find((g) => g.heading === "Sözleşme & Mali");
+    const mali = NAV_GROUPS.find((g) => g.heading === "Mali");
     const labels = mali!.items.map((i) => i.label);
     expect(labels.indexOf("Şirket Varlıkları")).toBe(labels.indexOf("Bordro") + 1);
     expect(labels.indexOf("Belge Arşivi")).toBe(labels.indexOf("Şirket Varlıkları") + 1);

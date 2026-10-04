@@ -13,7 +13,7 @@ import {
 
 describe("Mali Tablolar segment yapılandırması — BL:24-31 kaynaklı", () => {
   it("grup başlığı BL:25'in metnidir", () => {
-    expect(FINANCIAL_NAV_HEADING).toBe("Sözleşme & Mali");
+    expect(FINANCIAL_NAV_HEADING).toBe("Mali");
   });
 
   it("alt sekmeler mockup'ın SIRASIYLA üç tanedir (BL:28-30)", () => {

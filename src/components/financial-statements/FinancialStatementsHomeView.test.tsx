@@ -113,7 +113,7 @@ beforeEach(() => {
 describe("E11 · `/mali-tablolar` kök ekranı — başlık şeridi", () => {
   it("E11:62 üst etiketi ve E11:64 başlığı basılır", () => {
     render(<FinancialStatementsHomeView />);
-    expect(screen.getByTestId("mt-eyebrow")).toHaveTextContent("Sözleşme & Mali");
+    expect(screen.getByTestId("mt-eyebrow")).toHaveTextContent("Mali");
     expect(
       screen.getByRole("heading", { name: "Mali Tablolar", level: 1 }),
     ).toBeInTheDocument();

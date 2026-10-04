@@ -96,7 +96,7 @@ beforeEach(() => {
 describe("TreasuryView — E9 başlık şeridi", () => {
   it("E9:62/64 üstyazı ve başlığı basar", () => {
     render(<TreasuryView />);
-    expect(screen.getByText("Sözleşme & Mali")).toBeInTheDocument();
+    expect(screen.getByText("Mali")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Hazine" })).toBeInTheDocument();
   });
 

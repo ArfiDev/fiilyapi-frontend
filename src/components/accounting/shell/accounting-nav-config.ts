@@ -1,4 +1,5 @@
 import { isActivePath } from "@/lib/shell/isActive";
+import { navGroupHeadingFor } from "@/components/shell/nav-config";
 import { routes } from "@/lib/routes";
 
 /**
@@ -23,7 +24,8 @@ import { routes } from "@/lib/routes";
  */
 
 /** MP:101 — sayfa üstündeki breadcrumb metni. */
-export const ACCOUNTING_NAV_HEADING = "Sözleşme & Mali";
+// NAV-F1: kabuk nav grubundan türetilir (KARARLAR.md b1974d8 — grup adı "Mali"); elle yazılırsa kayar.
+export const ACCOUNTING_NAV_HEADING = navGroupHeadingFor(routes.accounting.root()) ?? "Mali";
 
 /** MP:103 — modül başlığı. */
 export const ACCOUNTING_NAV_PARENT = "Muhasebe";

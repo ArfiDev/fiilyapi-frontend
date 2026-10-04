@@ -202,7 +202,7 @@ export function AccountingView() {
   return (
     <div className="mu">
       {/* MP:101 — kabuktaki breadcrumb'ın metin karşılığı */}
-      <p className="mu__eyebrow">Sözleşme &amp; Mali</p>
+      <p className="mu__eyebrow">Mali</p>
 
       <div className="mu__head">
         {/* MP:103 */}

@@ -137,7 +137,7 @@ export function InvoicesView() {
   return (
     <div className="fat">
       {/* 19 — kabuktaki breadcrumb'ın metin karşılığı */}
-      <p className="fat__eyebrow">Sözleşme &amp; Mali</p>
+      <p className="fat__eyebrow">Mali</p>
 
       <div className="fat__head">
         <div className="fat__title-row">

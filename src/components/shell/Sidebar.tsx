@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLayoutEffect, useRef } from "react";
 import { cx } from "@/lib/cx";
 import { initials } from "@/lib/shell/initials";
 import { useLogout } from "@/lib/shell/useLogout";
@@ -54,10 +55,12 @@ export default function Sidebar() {
   // `/hazine/cek-senet` yolunda `/hazine` de eşleşir ve iki öğe birden yanardı
   // (bkz. `activeNavHref` notu).
   const currentHref = activeNavHref(pathname);
+  const navRef = useRef<HTMLElement>(null);
+  useActiveItemInView(navRef, currentHref);
 
   return (
     <aside className="sidebar">
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" ref={navRef}>
         {/* GLS-F1 GEÇİCİ — Geliştirme sayfası silinince kaldır. Yalnız system_admin;
             değilse DOM'a HİÇBİR şey eklenmez. NAV_GROUPS dışındadır (bekçiler etkilenmez). */}
         {canSeeGelistirme(me) && (
@@ -127,3 +130,25 @@ export default function Sidebar() {
     </aside>
   );
 }
+
+/** Kaydırma sonrası aktif öğenin nav kenarından uzaklığı (px). */
+const ACTIVE_ITEM_MARGIN = 8;
+
+/**
+ * NAV-F1 (kullanıcı onaylı) — açık sayfanın menü öğesi `.sidebar-nav`ın görünür alanında değilse
+ * YALNIZ nav'ın kendi `scrollTop`u en az kaydırmayla ayarlanır: `scrollIntoView` YOK (pencereyi
+ * oynatır), animasyon YOK, öğe zaten görünüyorsa dokunulmaz. Yalnız `currentHref` değişince çalışır;
+ * görsel karelerdeki `prepareFrame` sıfırlaması sonradan geldiği için kareler etkilenmez.
+ */
+function useActiveItemInView(navRef: React.RefObject<HTMLElement | null>, currentHref: string | undefined): void {
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const item = nav?.querySelector<HTMLElement>('a[aria-current="page"]');
+    if (!nav || !item) return;
+    const navBox = nav.getBoundingClientRect();
+    const itemBox = item.getBoundingClientRect();
+    if (itemBox.top < navBox.top) nav.scrollTop -= navBox.top - itemBox.top + ACTIVE_ITEM_MARGIN;
+    else if (itemBox.bottom > navBox.bottom) nav.scrollTop += itemBox.bottom - navBox.bottom + ACTIVE_ITEM_MARGIN;
+  }, [navRef, currentHref]);
+}
+
