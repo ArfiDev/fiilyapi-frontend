@@ -143,11 +143,12 @@ export function DiaryEntryScreen({
   const permission = useModulePermission("site_diary");
   // IZN-F2.x · günlük aç/düzenle/satır/Gönder = günlük kayıt Düzenler (VEYA); Yeniden Aç = YALNIZ kök
   // saha.gunluk_kayit Onaylar (73/88 ikizleri B3'e kadar işlevsiz).
-  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite });
+  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
   const canReopen = useButtonGate({
     pages: DIARY_REOPEN_APPROVE,
     need: "approve",
     fallback: hasAtLeast(permission.level, "admin"),
+    projectId: projectKey,
   });
 
   // PLN-F3.0 · Hangi GÜNÜN kaydı düzenleniyor. İlk değer `?tarih=`den (geçersiz/
@@ -222,7 +223,12 @@ export function DiaryEntryScreen({
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
   const paymentsPermission = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur bağlantısı = hakediş sayfaları Düzenler (VEYA).
-  const canCreatePayment = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: paymentsPermission.canWrite });
+  const canCreatePayment = useButtonGate({
+    pages: PROGRESS_PAYMENTS_EDIT,
+    need: "edit",
+    fallback: paymentsPermission.canWrite,
+    projectId: projectKey,
+  });
 
   // PLN-F2.2 — firma adları taşeron listesinden (satır yanıtı ad taşımaz).
   // Pasif firmalar da okunur: kayıttaki eski firma satırı adsız kalmasın.

@@ -1,7 +1,9 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UsersScreen } from "./UsersScreen";
+import { AHMET, AYSE, KADIR, createUsersBackend, type FakeBackendOptions } from "./users-fake-backend.testkit";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -9,9 +11,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => "/ayarlar/kullanicilar",
 }));
-
-const ROLE = { id: "r1", key: "patron", name: "Patron", emoji: "👑", description: "Üst yönetim", is_system: true };
-const MODULES = [{ id: "m1", key: "gosterge", name: "Gösterge Paneli", group: "GENEL", sort_order: 1 }];
 
 function renderScreen() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -22,136 +21,81 @@ function renderScreen() {
   );
 }
 
+/** Sahte backend'i global fetch'e bağlar; çağrı kayıtlarını döndürür. */
+function install(options?: FakeBackendOptions) {
+  const fake = createUsersBackend(options);
+  vi.stubGlobal("fetch", vi.fn(fake.fetch));
+  return fake;
+}
+
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
 });
 
-describe("UsersScreen", () => {
-  it("kullanıcıları avatar, rol ve durum ile zengin tabloda listeler", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.includes("/api/backend/roles/") && url.includes("/permissions")) {
-          return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/api/backend/roles")) {
-          return new Response(JSON.stringify([ROLE]), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/api/backend/modules")) {
-          return new Response(JSON.stringify(MODULES), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/api/backend/projects")) {
-          return new Response(
-            JSON.stringify({
-              counts: { all: 1, taahhut: 1, kendi_yatirim: 0, kat_karsiligi: 0, completed: 0 },
-              items: [{ id: "p1", code: "PRJ-1", name: "Kule A", status: "active", budget: "0", progress_pct: "0" }],
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-        if (url.includes("/earned-value/disciplines")) {
-          return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/disciplines")) {
-          return new Response(JSON.stringify({ discipline_ids: [], disciplines: [] }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          });
-        }
-        if (url.includes("/project-access")) {
-          return new Response(JSON.stringify({ all_projects: true, project_ids: [] }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          });
-        }
-        return new Response(
-          JSON.stringify({
-            items: [{ id: "u1", email: "a@b.com", full_name: "Ali Veli", title: "Mühendis", role_id: "r1", status: "active" }],
-            total: 8,
-            limit: 20,
-            offset: 0,
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }),
-    );
-
+describe("UsersScreen · liste", () => {
+  it("sütunlar: ad + unvan, e-posta, ana rol rozeti, 'N proje' / 'Tüm projeler' rozeti, durum", async () => {
+    install({ users: [AHMET, AYSE, KADIR] });
     renderScreen();
 
-    expect(await screen.findByRole("cell", { name: /Ali Veli/ })).toBeInTheDocument();
-    expect(screen.getByText("8 kullanıcı")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "+ Kullanıcı Ekle" })).toBeInTheDocument();
-    expect(screen.getAllByText("Patron").length).toBeGreaterThan(0);
-    expect(screen.getByText("Aktif")).toBeInTheDocument();
-    expect(await screen.findByText("Tüm Projeler")).toBeInTheDocument();
+    const ahmet = (await screen.findByRole("cell", { name: /Ahmet Yılmaz/ })).closest("tr") as HTMLElement;
+    expect(within(ahmet).getByText("Şantiye Şefi", { selector: ".users-cell-user__sub" })).toBeInTheDocument();
+    expect(within(ahmet).getByText("ahmet.yilmaz@fiilinsaat.com")).toBeInTheDocument();
+    expect(within(ahmet).getByText("Şantiye Şefi", { selector: ".role-pill" })).toBeInTheDocument();
+    expect(within(ahmet).getByText("2 proje")).toBeInTheDocument();
+    expect(within(ahmet).getByText("Aktif")).toBeInTheDocument();
+    expect(within(ahmet).getByRole("button", { name: "Düzenle" })).toBeInTheDocument();
+
+    const ayse = screen.getByRole("cell", { name: /Ayşe Demir/ }).closest("tr") as HTMLElement;
+    expect(within(ayse).getByText("Tüm projeler")).toBeInTheDocument();
+    expect(within(ayse).queryByText(/proje$/)).not.toBeInTheDocument();
   });
 
-  // 🔴 KAYIT 68/138: arama kutusu DOM'da vardı ama `value`/`onChange` YOKTU —
-  // yazılan hiçbir şey listeyi süzmüyordu (tamamen dekoratif). Backend `GET
-  // /users`da arama parametresi olmadığı için en küçük onarım İSTEMCİ
-  // TARAFI süzgeçtir (mevcut sayfa üzerinde ad/e-posta ile filtre).
-  it("arama kutusuna yazınca liste ada/e-postaya göre İSTEMCİDE süzülür", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.includes("/api/backend/roles/") && url.includes("/permissions")) {
-          return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/api/backend/roles")) {
-          return new Response(JSON.stringify([ROLE]), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/api/backend/modules")) {
-          return new Response(JSON.stringify(MODULES), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/api/backend/projects")) {
-          return new Response(
-            JSON.stringify({
-              counts: { all: 1, taahhut: 1, kendi_yatirim: 0, kat_karsiligi: 0, completed: 0 },
-              items: [{ id: "p1", code: "PRJ-1", name: "Kule A", status: "active", budget: "0", progress_pct: "0" }],
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-        if (url.includes("/earned-value/disciplines")) {
-          return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
-        }
-        if (url.includes("/disciplines")) {
-          return new Response(JSON.stringify({ discipline_ids: [], disciplines: [] }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          });
-        }
-        if (url.includes("/project-access")) {
-          return new Response(JSON.stringify({ all_projects: true, project_ids: [] }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          });
-        }
-        return new Response(
-          JSON.stringify({
-            items: [
-              { id: "u1", email: "ali@b.com", full_name: "Ali Veli", title: "Mühendis", role_id: "r1", status: "active" },
-              { id: "u2", email: "zeynep@b.com", full_name: "Zeynep Kaya", title: "Muhasebe", role_id: "r1", status: "active" },
-            ],
-            total: 2,
-            limit: 20,
-            offset: 0,
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }),
-    );
-
+  it("İzinli durumu rozeti korunur", async () => {
+    install({ users: [KADIR] });
     renderScreen();
+    const kadir = (await screen.findByRole("cell", { name: /Kadir Arslan/ })).closest("tr") as HTMLElement;
+    expect(within(kadir).getByText("İzinli")).toBeInTheDocument();
+  });
 
-    expect(await screen.findByRole("cell", { name: /Ali Veli/ })).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: /Zeynep Kaya/ })).toBeInTheDocument();
+  it("eski sütunlar/düğmeler yok: Disiplin, Proje Erişimi, satırda Parola/Sil", async () => {
+    install();
+    renderScreen();
+    await screen.findByRole("cell", { name: /Ahmet Yılmaz/ });
+    expect(screen.queryByRole("columnheader", { name: /Disiplin/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /Proje Erişimi/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Parola" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sil" })).not.toBeInTheDocument();
+  });
 
-    fireEvent.change(screen.getByLabelText("Kullanıcı ara"), { target: { value: "zeynep" } });
+  it("arama SUNUCUDA yapılır: GET /users?q= (debounce sonrası), önceki sonuç ekranı boşaltmaz", async () => {
+    const backend = install({ users: [AHMET, AYSE] });
+    renderScreen();
+    await screen.findByRole("cell", { name: /Ahmet Yılmaz/ });
+    expect(backend.callsTo("GET", /^\/users$/)[0].query.has("q")).toBe(false);
 
-    expect(screen.queryByText("Ali Veli")).not.toBeInTheDocument();
-    expect(screen.getByText("Zeynep Kaya")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Kullanıcı ara"), "ayşe");
+
+    await waitFor(() => expect(backend.callsTo("GET", /^\/users$/).some((call) => call.query.get("q") === "ayşe")).toBe(true));
+    // Debounce: her tuş vuruşu için ayrı istek ATILMAZ.
+    expect(backend.callsTo("GET", /^\/users$/).filter((call) => call.query.get("q") !== null).length).toBe(1);
+    await waitFor(() => expect(screen.queryByRole("cell", { name: /Ahmet Yılmaz/ })).not.toBeInTheDocument());
+    expect(screen.getByRole("cell", { name: /Ayşe Demir/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Kullanıcı ara")).toHaveValue("ayşe");
+  });
+
+  it("sonuç yoksa boş durum metni", async () => {
+    install({ users: [AHMET] });
+    renderScreen();
+    await screen.findByRole("cell", { name: /Ahmet Yılmaz/ });
+    await userEvent.type(screen.getByLabelText("Kullanıcı ara"), "yokboyle");
+    expect(await screen.findByText("Aramanıza uyan kullanıcı yok.")).toBeInTheDocument();
+  });
+
+  it("'+ Kullanıcı Ekle' ve 'Düzenle' modalı açar", async () => {
+    install();
+    renderScreen();
+    await userEvent.click(await screen.findByRole("button", { name: "+ Kullanıcı Ekle" }));
+    expect(screen.getByRole("dialog", { name: "Yeni kullanıcı" })).toBeInTheDocument();
   });
 });

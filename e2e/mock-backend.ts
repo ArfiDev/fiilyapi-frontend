@@ -549,6 +549,10 @@ const ME = {
   is_system_admin: false,
   pages: {},
   hidden_fields: [],
+  // IZN-B3: proje ekibi yok → proje bağlamlı izin ana role düşer (mevcut kareler DEĞİŞMEZ).
+  all_projects: false,
+  projects: [],
+  role_pages: {},
 } satisfies components["schemas"]["MeResponse"];
 
 // NOT: Gercek backend semasi (bkz. src/lib/api/schema.d.ts) tip-basi metrikleri duz
@@ -1098,6 +1102,11 @@ interface MockProgressPayment {
   hiddenFromLists?: boolean;
 }
 
+interface MockUserAccess {
+  all_projects: boolean;
+  projects: Array<{ project_id: string; role_id: string; discipline_ids: string[] }>;
+}
+
 interface MockState {
   users: Array<{ id: string; email: string; full_name: string; title: string; role_id: string; status: string }>;
   roles: Array<{ id: string; key: string; name: string; emoji: string; description: string; is_system: boolean }>;
@@ -1231,7 +1240,8 @@ interface MockState {
   // F-BLG T3 — işveren sözleşmesine elle eklenen poz sayacı.
   contractItemSeq: number;
   permissions: Record<string, Record<string, { access_level: string; scope: string }>>;
-  projectAccess: Record<string, { all_projects: boolean; project_ids: string[] }>;
+  /** IZN-B3: kullanıcı başına ana-rol dışı erişim (`all_projects` + proje ekibi). Ana rol `users[].role_id`dedir. */
+  userAccess: Record<string, MockUserAccess>;
   company: {
     id: string;
     name: string | null;
@@ -3672,12 +3682,19 @@ function seedState(): MockState {
     personnelDocumentSeq: 0,
     contractItemSeq: 0,
     permissions,
-    projectAccess: {
-      "u-1": { all_projects: true, project_ids: [] },
-      "u-2": { all_projects: false, project_ids: ["p-1"] },
-      "u-3": { all_projects: true, project_ids: [] },
-      "u-4": { all_projects: false, project_ids: ["p-1", "p-2"] },
-      "u-5": { all_projects: true, project_ids: [] },
+    // Disiplin atamasız tohum: `evState.userDisciplines` BOŞ kalır (disiplin `user_count` kareleri değişmez).
+    userAccess: {
+      "u-1": { all_projects: true, projects: [] },
+      "u-2": { all_projects: false, projects: [{ project_id: "p-1", role_id: "role-saha", discipline_ids: [] }] },
+      "u-3": { all_projects: true, projects: [] },
+      "u-4": {
+        all_projects: false,
+        projects: [
+          { project_id: "p-1", role_id: "role-saha", discipline_ids: [] },
+          { project_id: "p-2", role_id: "role-pm", discipline_ids: [] },
+        ],
+      },
+      "u-5": { all_projects: true, projects: [] },
     },
     company: {
       id: "company-1",
@@ -9091,6 +9108,82 @@ const AI_CONVERSATION_FIXTURES = [
   },
 ] as const;
 
+// ── IZN-B3 · kullanıcı erişimi (ana rol + proje ekibi) yardımcıları ─────────────────────────────────────
+type MockUserRow = MockState["users"][number];
+
+const trLower = (value: string) => value.toLocaleLowerCase("tr");
+
+/** `RoleResponse.user_count`: ana rolü bu olanlar ∪ herhangi bir projede bu role sahip olanlar (kişi bir kez sayılır). */
+function mockRoleUserCount(state: MockState, roleId: string): number {
+  return state.users.filter(
+    (user) =>
+      user.role_id === roleId ||
+      (state.userAccess[user.id]?.projects ?? []).some((member) => member.role_id === roleId),
+  ).length;
+}
+
+/** `GET /users?q=`: ad · e-posta · ana rol adı; Türkçe/büyük-küçük harf duyarsız. Boş q = süzgeç yok. */
+function mockUserMatchesQuery(state: MockState, user: MockUserRow, q: string | null): boolean {
+  const needle = trLower((q ?? "").trim());
+  if (needle === "") return true;
+  const roleName = state.roles.find((role) => role.id === user.role_id)?.name ?? "";
+  return [user.full_name, user.email, roleName].some((text) => trLower(text).includes(needle));
+}
+
+/** `UserResponse`: kullanıcı satırı + `all_projects` + `project_count` (ekip satırı sayısı). */
+function mockUserOut(state: MockState, user: MockUserRow): components["schemas"]["UserResponse"] {
+  const access = state.userAccess[user.id] ?? { all_projects: false, projects: [] };
+  return {
+    ...user,
+    status: user.status as components["schemas"]["UserStatus"],
+    all_projects: access.all_projects,
+    project_count: access.projects.length,
+  };
+}
+
+/** `UserAccessResponse`: `projects` proje adına göre sıralı, her satırda `DisciplineRef[]`. */
+function mockUserAccessOut(
+  state: MockState,
+  evState: EvState,
+  user: MockUserRow,
+): components["schemas"]["UserAccessResponse"] {
+  const access = state.userAccess[user.id] ?? { all_projects: false, projects: [] };
+  const projects = access.projects
+    .map((member) => ({
+      project_id: member.project_id,
+      project_name: state.projects.find((project) => project.id === member.project_id)?.name ?? "",
+      role_id: member.role_id,
+      disciplines: evDisciplineRefs(evState, member.discipline_ids),
+    }))
+    .sort((a, b) => a.project_name.localeCompare(b.project_name, "tr"));
+  return { role_id: user.role_id, all_projects: access.all_projects, projects };
+}
+
+/** Backend `PUT /users/{id}/access` 422 kuralları (detail metni olduğu gibi gösterilir). `null` = geçerli. */
+function mockUserAccessViolation(state: MockState, evState: EvState, body: Record<string, unknown>): string | null {
+  const roleOf = (id: unknown) => state.roles.find((role) => role.id === id);
+  if (typeof body.role_id !== "string" || !roleOf(body.role_id)) return "Ana rol bulunamadı";
+  const projects = Array.isArray(body.projects) ? (body.projects as Array<Record<string, unknown>>) : [];
+  if (body.all_projects === true && projects.length > 0) {
+    return "Tüm projelere erişen kişinin proje ekibi boş olmalıdır";
+  }
+  const seen = new Set<string>();
+  for (const member of projects) {
+    const projectId = String(member.project_id);
+    if (!state.projects.some((project) => project.id === projectId)) return `Proje bulunamadı: ${projectId}`;
+    if (seen.has(projectId)) return `Aynı proje iki kez eklenemez: ${projectId}`;
+    seen.add(projectId);
+    const role = roleOf(member.role_id);
+    if (!role) return `Proje rolü bulunamadı: ${String(member.role_id)}`;
+    if (role.key === "system_admin") return "Sistem Yöneticisi proje rolü olarak atanamaz";
+    const missing = ((member.discipline_ids as string[] | undefined) ?? []).filter(
+      (id) => !evState.disciplines.some((discipline) => discipline.id === id),
+    );
+    if (missing.length > 0) return `Disiplin bulunamadı: ${missing.join(", ")}`;
+  }
+  return null;
+}
+
 export function startMockBackend(port: number): { server: Server; close: () => Promise<void> } {
   const state = seedState();
   // PLN-F1.7a · Planlama (EV) durumu — ayrı tohum, dosya sonundaki blok.
@@ -9495,7 +9588,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     if (method === "GET" && path === "/roles") {
       return send(
         200,
-        state.roles.map((role) => mockRoleResponse(role, state.users.filter((user) => user.role_id === role.id).length)),
+        state.roles.map((role) => mockRoleResponse(role, mockRoleUserCount(state, role.id))),
       );
     }
     // IZN-F2: 100 sayfalık katalog. `/auth/me` `pages: {}` olduğundan menü ikiz kuralı hiçbir öğeyi gizlemez.
@@ -13676,12 +13769,13 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       return send(200, { items: rows.slice(offset, offset + limit), total: rows.length, limit, offset });
     }
 
-    // /users list + create
+    // /users list + create — IZN-B3: `q` sunucuda (ad · e-posta · ana rol adı), `all_projects`/`project_count` türetilir.
     if (method === "GET" && path === "/users") {
       const limit = Number(parsed.searchParams.get("limit") ?? "20");
       const offset = Number(parsed.searchParams.get("offset") ?? "0");
-      const items = state.users.slice(offset, offset + limit);
-      return send(200, { items, total: state.users.length, limit, offset });
+      const matches = state.users.filter((user) => mockUserMatchesQuery(state, user, parsed.searchParams.get("q")));
+      const items = matches.slice(offset, offset + limit).map((user) => mockUserOut(state, user));
+      return send(200, { items, total: matches.length, limit, offset });
     }
     if (method === "POST" && path === "/users") {
       return withBody((body) => {
@@ -13694,56 +13788,48 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           status: String(body.status ?? "active"),
         };
         state.users.push(user);
-        return send(201, user);
+        return send(201, mockUserOut(state, user));
       });
     }
 
-    // ⚠️ user-disciplines durumu (`evState.userDisciplines`) SUNUCU ÖMRÜ boyunca kalır:
-    // u-1'e (ME'nin kullanıcı satırı) PUT yapan bir spec ME'yi KISITLI yapar → sonraki
-    // spec'ler etkilenir. Böyle bir spec yazılırsa kendi temizliğini yapmalı (boş listeyle PUT).
-    // /users/{id}/disciplines (DSC-B0) — durum `evState.userDisciplines`te (user_count/me türetir)
-    const discMatch = path.match(/^\/users\/([^/]+)\/disciplines$/);
-    if (discMatch && (method === "GET" || method === "PUT")) {
-      const userId = discMatch[1];
-      if (!state.users.some((u) => u.id === userId)) return send(404, { detail: "Kullanıcı bulunamadı" });
-      if (method === "GET") return send(200, evUserDisciplinesRead(evState, evState.userDisciplines.get(userId) ?? []));
+    // ESKİ uçlar (IZN-B3): `/users/{id}/disciplines` ve `/users/{id}/project-access` → 410 (deprecated).
+    // Hiçbir ekran artık çağırmaz; çağıran olursa kırmızı olsun diye sahte sunucu da 410 döner.
+    if (/^\/users\/[^/]+\/(disciplines|project-access)$/.test(path)) {
+      return send(410, { detail: "Bu uç kaldırıldı: /users/{id}/access kullanın." });
+    }
+
+    // /users/{id}/access (IZN-B3) — ana rol + proje ekibi, TAM DEĞİŞTİRME (ATOMİK: 422'de hiçbir şey değişmez).
+    // ⚠️ Disiplin atamaları `evState.userDisciplines`e (birleşim) yansır: ME'nin satırı (u-1) disiplinle yazan bir
+    // spec sunucu ömrü boyunca ME'yi KISITLI yapar → temizliğini kendisi yapmalı.
+    const accessMatch = path.match(/^\/users\/([^/]+)\/access$/);
+    if (accessMatch && (method === "GET" || method === "PUT")) {
+      const user = state.users.find((u) => u.id === accessMatch[1]);
+      if (!user) return send(404, { detail: "Kullanıcı bulunamadı" });
+      if (method === "GET") return send(200, mockUserAccessOut(state, evState, user));
       return withBody((body) => {
-        const ids = body.discipline_ids;
-        if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
-          return send(422, { detail: [{ loc: ["body", "discipline_ids"], msg: "Field required", type: "missing" }] });
-        }
-        const wanted = [...new Set(ids as string[])];
-        const missing = wanted.filter((id) => !evState.disciplines.some((d) => d.id === id)).sort();
-        if (missing.length > 0) return send(404, { detail: `${EV_MSG.disciplineMissing}: ${missing.join(", ")}` });
-        const sorted = wanted.sort(); // backend: id'ye göre sıralı
+        const problem = mockUserAccessViolation(state, evState, body);
+        if (problem) return send(422, { detail: problem });
+        const projects = (body.projects as Array<{ project_id: string; role_id: string; discipline_ids?: string[] }>) ?? [];
+        user.role_id = String(body.role_id);
+        state.userAccess[user.id] = {
+          all_projects: Boolean(body.all_projects),
+          projects: projects.map((member) => ({
+            project_id: member.project_id,
+            role_id: member.role_id,
+            discipline_ids: [...new Set(member.discipline_ids ?? [])].sort(),
+          })),
+        };
+        const union = [...new Set(state.userAccess[user.id].projects.flatMap((member) => member.discipline_ids))].sort();
         evState.userDisciplines = new Map(evState.userDisciplines);
-        if (sorted.length === 0) evState.userDisciplines.delete(userId);
-        else evState.userDisciplines.set(userId, sorted);
-        return send(200, evUserDisciplinesRead(evState, sorted));
+        if (union.length === 0) evState.userDisciplines.delete(user.id);
+        else evState.userDisciplines.set(user.id, union);
+        return send(200, mockUserAccessOut(state, evState, user));
       });
     }
 
     // /users/{id}/password
     const pwMatch = path.match(/^\/users\/([^/]+)\/password$/);
     if (method === "PATCH" && pwMatch) return withBody(() => send(204));
-
-    // /users/{id}/project-access
-    const paMatch = path.match(/^\/users\/([^/]+)\/project-access$/);
-    if (paMatch && method === "GET") {
-      const userId = paMatch[1];
-      return send(200, state.projectAccess[userId] ?? { all_projects: false, project_ids: [] });
-    }
-    if (paMatch && method === "PUT") {
-      const userId = paMatch[1];
-      return withBody((body) => {
-        const access = {
-          all_projects: Boolean(body.all_projects),
-          project_ids: Array.isArray(body.project_ids) ? (body.project_ids as string[]) : [],
-        };
-        state.projectAccess[userId] = access;
-        return send(200, access);
-      });
-    }
 
     // /users/{id} PATCH/DELETE
     const userIdMatch = path.match(/^\/users\/([^/]+)$/);
@@ -13756,7 +13842,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         if (body.title !== undefined) user.title = String(body.title);
         if (body.role_id !== undefined) user.role_id = String(body.role_id);
         if (body.status !== undefined) user.status = String(body.status);
-        return send(200, user);
+        return send(200, mockUserOut(state, user));
       });
     }
     if (userIdMatch && method === "DELETE") {
@@ -21777,7 +21863,7 @@ function evDisciplineUsage(state: EvState, disciplineId: string): EvDisciplineUs
   };
 }
 
-/** B0b: `DisciplineRef[]` — id'ye göre sıralı, EV durumundaki disiplinlerden (`/auth/me` + `/users/{id}/disciplines`). */
+/** B0b: `DisciplineRef[]` — id'ye göre sıralı, EV durumundaki disiplinlerden (`/auth/me` + `/users/{id}/access`). */
 function evDisciplineRefs(state: EvState, ids: readonly string[]): EvSchemas["DisciplineRef"][] {
   return [...ids]
     .sort()
@@ -21785,10 +21871,6 @@ function evDisciplineRefs(state: EvState, ids: readonly string[]): EvSchemas["Di
       const d = state.disciplines.find((x) => x.id === id);
       return d ? [{ id: d.id, code: d.code, name: d.name, color: d.color }] : [];
     });
-}
-
-function evUserDisciplinesRead(state: EvState, ids: readonly string[]): EvSchemas["UserDisciplinesRead"] {
-  return { discipline_ids: [...ids].sort(), disciplines: evDisciplineRefs(state, ids) };
 }
 
 function evDisciplineReadOut(state: EvState, record: EvDisciplineRecord): EvSchemas["DisciplineRead"] {

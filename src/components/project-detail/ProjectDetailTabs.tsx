@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { cx } from "@/lib/cx";
 import type { ProjectType } from "@/lib/api/hooks/useProjects";
 import { employerContractTabHref } from "../contracts/employer-contract-tabs";
 import { routes } from "@/lib/routes";
+import type { PageKey } from "@/lib/api/models";
+import { useProjectPageVisibility } from "@/lib/auth/usePagePermission";
 
 /**
  * URL-3 · Sekme şeridinin İKİ ayrı proje anahtarına ihtiyacı vardır ve bunları
@@ -42,6 +46,11 @@ export interface ProjectDetailTabsProps extends ProjectTabKeys {
 
 interface TabDef {
   label: string;
+  /**
+   * IZN-F3.2 · Sekmenin sayfa-izni anahtarı. Proje rolünde (ya da ana rolde) bu anahtarın grant'ı
+   * "none" ise sekme GİZLENİR; grant yoksa görünür (IZN-F1 menü kuralı).
+   */
+  pageKey: PageKey;
   /**
    * Bu sekmenin GÖRÜNDÜĞÜ proje türleri. Tanımsızsa sekme HER türde görünür
    * (bugünkü beş sekmenin hepsi böyledir) — yani alan eklemek mevcut
@@ -124,6 +133,7 @@ export const projectAllocationHref = (projectId: string) =>
 const TABS: TabDef[] = [
   {
     label: "Şantiyeler",
+    pageKey: "proje.santiyeler",
     // YOL sekmesi — adresteki anahtar taşınır (aktif sekme eşleşmesi).
     hrefFor: ({ projectKey }) => routes.projects.detail({ projectId: projectKey }),
   },
@@ -135,6 +145,7 @@ const TABS: TabDef[] = [
   // taahhütte `None`).
   {
     label: "Proje Özeti",
+    pageKey: "proje.ozet",
     types: ["kendi_yatirim", "kat_karsiligi"],
     hrefFor: ({ projectKey }) => projectSummaryHref(projectKey),
   },
@@ -144,6 +155,7 @@ const TABS: TabDef[] = [
   // seferinde açıklanamayan bir boş ekrana giderdi.
   {
     label: "Paylaşım Tablosu",
+    pageKey: "proje.paylasim_tablosu",
     types: ["kat_karsiligi"],
     hrefFor: ({ projectKey }) => projectAllocationHref(projectKey),
   },
@@ -153,20 +165,24 @@ const TABS: TabDef[] = [
   // gerekçeyle `projectSummaryHref`/`projectAllocationHref` de tek yerde durur.
   {
     label: "İş Kalemleri",
+    pageKey: "proje.is_kalemleri",
     // SORGU kuran hedef — kanonik UUID (bkz. `ProjectTabKeys`).
     hrefFor: ({ projectId }) => employerContractTabHref(projectId, "items"),
     title: WORK_ITEMS_TAB_TITLE,
   },
   {
     label: "İşveren Hakediş",
+    pageKey: "proje.isveren_hakedis",
     hrefFor: ({ projectId }) => routes.progressPayments.list({ projectId }),
   },
   {
     label: "Taşeron Hakediş",
+    pageKey: "proje.taseron_hakedis",
     hrefFor: ({ projectId }) => routes.progressPayments.subcontractor.list({ projectId }),
   },
   {
     label: "Belgeler",
+    pageKey: "proje.belgeler",
     hrefFor: ({ projectId }) => routes.documents({ projectId }),
   },
 ];
@@ -177,7 +193,10 @@ export function ProjectDetailTabs({
   activePath,
   projectType,
 }: ProjectDetailTabsProps) {
-  const visibleTabs = TABS.filter((tab) => !tab.types || tab.types.includes(projectType));
+  const isPageVisible = useProjectPageVisibility(projectId);
+  const visibleTabs = TABS.filter(
+    (tab) => (!tab.types || tab.types.includes(projectType)) && isPageVisible(tab.pageKey),
+  );
 
   // 🔴 Final inceleme F-4 (a11y) — `ProgressPaymentsTabs`in kanonu burada da
   // uygulanır: `role="tablist"`/`role="tab"`/`aria-selected` KALDIRILDI. Bu

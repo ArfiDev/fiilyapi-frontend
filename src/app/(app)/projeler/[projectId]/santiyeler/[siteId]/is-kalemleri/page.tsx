@@ -41,8 +41,8 @@ export default function BoqPage() {
   // `canDelete` AYRI kapidir: silme uclari `admin` seviyesindedir (§7.5.6).
   const { canWrite: moduleCanWrite, canDelete: moduleCanDelete } = useModulePermission("boq");
   // IZN-F2.x · kalem/grup yaz = santiye.is_kalemleri/bolum_dagilimi Düzenler (VEYA); kalem SİLME = yalnız SA.
-  const canWrite = useButtonGate({ pages: BOQ_EDIT, need: "edit", fallback: moduleCanWrite });
-  const canDelete = useButtonGate({ pages: BOQ_EDIT, need: "sa", fallback: moduleCanDelete });
+  const canWrite = useButtonGate({ pages: BOQ_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
+  const canDelete = useButtonGate({ pages: BOQ_EDIT, need: "sa", fallback: moduleCanDelete, projectId: projectKey });
   // Tek modal, iki kip (spec §7.1): `null` = kapali.
   const [formMode, setFormMode] = useState<BoqItemFormMode | null>(null);
   // Excel indirme durumu (spec §8.3). Sunucu hatasi sayfada gorunur kalir;

@@ -66,7 +66,7 @@ export function SectionForm(props: SectionFormProps) {
   const router = useRouter();
   const { canWrite: moduleCanWrite } = useModulePermission("sites");
   // IZN-F2.x · bölüm ekle/düzenle = santiye.bolumler/bolum.detay Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: moduleCanWrite, projectId: props.projectKey });
   const isEdit = props.mode === "edit";
 
   const siteQuery = useSite(props.siteKey, { project: props.projectKey });

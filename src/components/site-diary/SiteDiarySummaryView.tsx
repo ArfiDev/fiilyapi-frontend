@@ -54,7 +54,12 @@ export function SiteDiarySummaryView() {
   const permission = useModulePermission("site_diary");
   const paymentsPermission = useModulePermission("progress_payments");
   // IZN-F2.x · Hakediş Oluştur = hakediş sayfaları Düzenler (VEYA).
-  const canCreatePayment = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: paymentsPermission.canWrite });
+  const canCreatePayment = useButtonGate({
+    pages: PROGRESS_PAYMENTS_EDIT,
+    need: "edit",
+    fallback: paymentsPermission.canWrite,
+    projectId: projectKey,
+  });
   const siteQuery = useSite(siteKey, { project: projectKey });
   // 🔴 SLUG -> KANONIK KIMLIK GECIS NOKTASI (bkz. `routes.ts` YOL/SORGU kurali).
   const siteId = siteQuery.data?.id ?? "";

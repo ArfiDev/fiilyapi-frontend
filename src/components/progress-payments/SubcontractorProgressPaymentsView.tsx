@@ -47,7 +47,12 @@ export function SubcontractorProgressPaymentsView() {
   const summaryQuery = useSubcontractorProgressPaymentSummary(listFilter);
   const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = useButtonGate({
+    pages: PROGRESS_PAYMENTS_EDIT,
+    need: "edit",
+    fallback: moduleCanWrite,
+    projectId: filters.projectId,
+  });
 
   if (isForbidden(paymentsQuery.error)) return <AccessDenied />;
 

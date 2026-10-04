@@ -76,9 +76,10 @@ export function SiteTimesheetView() {
     pages: PERSONNEL_EDIT,
     need: "edit",
     fallback: hasAtLeast(personnelPermission.level, "full"),
+    projectId: projectKey,
   });
   // IZN-F2.x · puantaj kaydet = saha/santiye.puantaj Düzenler; personel ekle = ik.* Düzenler.
-  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
 
   const week = parseIsoWeek(searchParams.get("iso_year"), searchParams.get("iso_week"));
   const sectionParam = searchParams.get("section") ?? ALL_SECTIONS;
