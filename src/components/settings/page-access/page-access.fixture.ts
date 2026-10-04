@@ -75,6 +75,7 @@ export function buildRolePagesFixture(
     is_locked: overrides.is_locked ?? false,
     pages,
     hidden_fields: overrides.hidden_fields ?? ["maas_kisisel"],
+    hidden_fields_effective: false,
     ...overrides.extra,
   };
 }

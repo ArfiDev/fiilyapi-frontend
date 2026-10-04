@@ -426,9 +426,9 @@ export interface paths {
         };
         /**
          * Me
-         * @description Matris mantigi YENIDEN YAZILMAZ: `roles.repository.get_role_matrix`
-         *     aynen kullanilir — `/roles/{id}/permissions` ucuyla ayni kaynak, tek fark
-         *     rol kimliginin aktörün kendi rolü olmasi ve ek yetki aranmamasi.
+         * @description `permissions` (IZN-B2): SAYFA HÜCRELERİNDEN türetilmiş salt-okur modül düzeyi
+         *     (`roles.repository.derived_role_matrix`; `/roles/{id}/permissions` ucuyla ayni kaynak).
+         *     Frontend B6/F5'e kadar onu okur; kapılar `pages` hücrelerinden karar verir.
          */
         get: operations["me_auth_me_get"];
         put?: never;
@@ -5885,7 +5885,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Role Permissions Endpoint */
+        /**
+         * Get Role Permissions Endpoint
+         * @description KALDIRILACAK (B6): modül düzeyi SAYFA HÜCRELERİNDEN türetilmiş salt-okur görünümdür.
+         */
         get: operations["get_role_permissions_endpoint_roles__role_id__permissions_get"];
         put?: never;
         post?: never;
@@ -19958,6 +19961,8 @@ export interface components {
         RolePagesResponse: {
             /** Hidden Fields */
             hidden_fields: components["schemas"]["HiddenCategory"][];
+            /** Hidden Fields Effective */
+            hidden_fields_effective: boolean;
             /** Is Locked */
             is_locked: boolean;
             /** Pages */

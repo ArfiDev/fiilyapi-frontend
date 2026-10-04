@@ -186,6 +186,8 @@ export function mockRolePages(role: MockRoleRow): RolePagesResponse {
     is_locked: isLocked,
     pages,
     hidden_fields: isLocked ? [] : [...(HIDDEN_BY_ROLE[role.key] ?? [])],
+    // Maske henüz uygulanmıyor (B4) → "sonraki güncellemede devreye girer" notu karelerde görünür.
+    hidden_fields_effective: false,
   };
 }
 

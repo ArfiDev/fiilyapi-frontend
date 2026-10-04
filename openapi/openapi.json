@@ -31473,6 +31473,10 @@
             "title": "Hidden Fields",
             "type": "array"
           },
+          "hidden_fields_effective": {
+            "title": "Hidden Fields Effective",
+            "type": "boolean"
+          },
           "is_locked": {
             "title": "Is Locked",
             "type": "boolean"
@@ -31497,7 +31501,8 @@
           "role_id",
           "is_locked",
           "pages",
-          "hidden_fields"
+          "hidden_fields",
+          "hidden_fields_effective"
         ],
         "title": "RolePagesResponse",
         "type": "object"
@@ -50208,7 +50213,7 @@
     },
     "/auth/me": {
       "get": {
-        "description": "Matris mantigi YENIDEN YAZILMAZ: `roles.repository.get_role_matrix`\naynen kullanilir — `/roles/{id}/permissions` ucuyla ayni kaynak, tek fark\nrol kimliginin aktörün kendi rolü olmasi ve ek yetki aranmamasi.",
+        "description": "`permissions` (IZN-B2): SAYFA HÜCRELERİNDEN türetilmiş salt-okur modül düzeyi\n(`roles.repository.derived_role_matrix`; `/roles/{id}/permissions` ucuyla ayni kaynak).\nFrontend B6/F5'e kadar onu okur; kapılar `pages` hücrelerinden karar verir.",
         "operationId": "me_auth_me_get",
         "responses": {
           "200": {
@@ -68485,6 +68490,7 @@
     },
     "/roles/{role_id}/permissions": {
       "get": {
+        "description": "KALDIRILACAK (B6): modül düzeyi SAYFA HÜCRELERİNDEN türetilmiş salt-okur görünümdür.",
         "operationId": "get_role_permissions_endpoint_roles__role_id__permissions_get",
         "parameters": [
           {
