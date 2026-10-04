@@ -45,6 +45,7 @@ import {
 import { formatTrQuantityText, parsePaymentCoefficient, sanitizeTrDecimalInput } from "./tr-quantity";
 import "./progress-payment-form.css";
 import "./subcontractor-progress-payment-form.css";
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
 import { routes } from "@/lib/routes";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -649,7 +650,10 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
                       </tr>
                     )}
                     <tr className="thf-table__row">
-                      <td className="thf-table__td thf-table__td--mono">{row.code}</td>
+                      <td className="thf-table__td thf-table__td--mono">
+                        {row.code}
+                        <SourceCodeSub code={row.sourceCode} data-testid="thf-source-code" />
+                      </td>
                       <td className="thf-table__td">
                         <div className="thf-table__item-name">{row.description}</div>
                         {isDiaryRow ? (

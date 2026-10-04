@@ -82,3 +82,20 @@ describe("OfferCustomerPrint — işveren teklifi (A4 dikey)", () => {
     }
   });
 });
+
+describe("KAT-F2.2 · Bakanlık poz no'su (yazdırma kipi)", () => {
+  const coded = { id: "g1-kod", groupId: "g1", poz: "G1.KOD", unitPrice: "128.80", sourceCode: "35.140.3195-D" };
+  const plain = { id: "g1-yok", groupId: "g1", poz: "G1.YOK", unitPrice: "128.80" };
+  const withCodes = () => ({ groups: [makeGroup("g1", "Kaba İnşaat", 0, [coded, plain])] });
+
+  it("kod varsa poz no hücresinde ALT satır: print sınıfı, title YOK; null'da hiçbir şey basılmaz", () => {
+    renderPrint(withCodes());
+    const sub = screen.getByTestId("offer-print-source-code");
+    expect(sub).toHaveTextContent("35.140.3195-D");
+    expect(sub).toHaveClass("source-code-sub--print");
+    expect(sub).not.toHaveAttribute("title");
+    const row = sub.closest("tr")!;
+    expect(within(row).getAllByRole("cell")[0]).toHaveTextContent("G1.KOD35.140.3195-D");
+    expect(screen.getAllByTestId("offer-print-source-code")).toHaveLength(1);
+  });
+});

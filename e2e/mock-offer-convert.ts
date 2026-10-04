@@ -339,6 +339,7 @@ export function handleConvert(
       throw new Failure(422, { detail: errors.map(issueDetail).join("; "), errors: errors.map(({ loc, message }) => ({ loc: [...loc], message })) });
     }
     const rates = new Map(port.catalog().map((entry) => [entry.id.toLowerCase(), entry.standardUnitMhr]));
+    const catalogSourceCodes = new Map(port.catalog().map((entry) => [entry.id.toLowerCase(), entry.sourceCode] as const));
     const known = new Set(rates.keys());
     if (request.groups.some((group) => group.items.some((item) => !known.has(item.catalogItemId)))) {
       throw fail(404, CONVERT_MESSAGES.catalogMissing);
@@ -355,7 +356,20 @@ export function handleConvert(
     const warnings = warningsOf(request, port, rates, new Map(items.map((item) => [item.id, item.unitMhr])));
     const groups: ConvertedGroupSpec[] = request.groups.map((group) => ({
       name: group.name,
-      items: group.items.map(({ catalogItemId, code, description, unit, quantity, unitPrice }) => ({ catalogItemId, code, description, unit, quantity, unitPrice })),
+      items: group.items.map(({ catalogItemId, offerItemId, code, description, unit, quantity, unitPrice }) => ({
+        catalogItemId,
+        code,
+        // backend `convert_service._source_code`: Bakanlık no'su gövdeden DEĞİL kopyalanır — teklif kalemi varsa ONDAN,
+        // yoksa (katalogdan eklenen satır) KATALOG kaleminden.
+        sourceCode:
+          offerItemId === null
+            ? (catalogSourceCodes.get(catalogItemId.toLowerCase()) ?? null)
+            : (items.find((item) => item.id === offerItemId)?.sourceCode ?? null),
+        description,
+        unit,
+        quantity,
+        unitPrice,
+      })),
     }));
     const { contract } = request;
     const created = convert.createConvertedProject({

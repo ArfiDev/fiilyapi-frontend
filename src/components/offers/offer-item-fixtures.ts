@@ -25,6 +25,7 @@ export function makeItem(over: Partial<OfferItemRead> & Pick<OfferItemRead, "id"
     quantified: over.quantity === undefined ? true : over.quantity !== null,
     quantity: "10.000",
     sort_order: 0,
+    source_code: null,
     unit: BETON.uom,
     unit_mhr: "1.8000",
     ...over,

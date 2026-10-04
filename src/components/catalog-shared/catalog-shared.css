@@ -24,3 +24,24 @@
 }
 .ev-cat-own--own { color: var(--color-primary); background: var(--color-nav-active-bg); }
 .ev-cat-own--subcon { color: var(--color-text-secondary); background: var(--color-surface-muted); }
+
+/* KAT-F2 — kalem adının altındaki Bakanlık poz no'su (ekran: tek satır + üç nokta) */
+.source-code-sub {
+  display: block;
+  /* 14ch: "35.140.3195-D" (13 kr) tam görünür; daha uzunu üç nokta (+ title). Sınırsız bırakınca otomatik
+     yerleşimli tablolarda min-content tam kod olur ve sütun koda göre büyür. */
+  max-width: 14ch;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* yazdırma: kırpma YOK, uzun kod satır sonunda kırılır (anywhere DEĞİL) */
+.source-code-sub--print {
+  max-width: none;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: break-word;
+}

@@ -36,6 +36,8 @@ import {
 import { employerContractDistributionHref } from "./employer-contract-tabs";
 import { isRemainingSettled } from "./distribution-derive";
 import "./employer-contract-detail.css";
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 
 /**
  * E14 92 · "İş Kalemleri" sekmesi.
@@ -549,6 +551,11 @@ function GroupRows({
                 value={draft.code ?? item.code}
                 onChange={(event) => onDraft(item.id, { code: event.target.value })}
                 onBlur={() => onCommitCell(item, "code")}
+              />
+              {/* KAT-F2.3 · T47: Bakanlık poz no'su salt okuma alt satır (anlık görüntü) */}
+              <SourceCodeSub
+                code={sourceCodeLabel(item)}
+                data-testid={`ecd-source-code-${item.id}`}
               />
             </td>
             <td className="ecd-items__td ecd-items__td--text-input">

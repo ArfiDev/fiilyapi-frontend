@@ -1,7 +1,24 @@
 import { sumDecimalStrings } from "@/lib/decimal";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import type { SubcontractorProgressPaymentLineRead } from "@/lib/api/hooks/useSubcontractorProgressPayments";
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 import "./subcontractor-progress-payment-detail.css";
+
+/**
+ * Poz kodu; Bakanlık poz no'su (KAT-F2.4 · Q4) VARSA kodun HEMEN ALTINDA küçük mono — kod + alt satır dikey bir
+ * sarmalayıcıda, açıklama yanında kalır. Kod yoksa eski düzen (yalnız kod span'ı) AYNEN korunur.
+ */
+function PaymentLineCode({ code, sourceCode }: { code: string; sourceCode: string | null }) {
+  const codeSpan = <span className="thd-line-table__code">{code}</span>;
+  if (sourceCode === null) return codeSpan;
+  return (
+    <span className="thd-line-table__code-stack">
+      {codeSpan}
+      <SourceCodeSub code={sourceCode} data-testid="thd-source-code" />
+    </span>
+  );
+}
 
 export interface SubcontractorPaymentLineTableProps {
   lines: SubcontractorProgressPaymentLineRead[];
@@ -67,7 +84,7 @@ export function SubcontractorPaymentLineTable({ lines }: SubcontractorPaymentLin
             rows.push(
               <tr key={line.id} className="pp-table__row">
                 <td className="pp-table__cell pp-table__col--item">
-                  <span className="thd-line-table__code">{line.code}</span> {line.description}
+                  <PaymentLineCode code={line.code} sourceCode={sourceCodeLabel(line)} /> {line.description}
                 </td>
                 <td className="pp-table__cell pp-table__col--amount">
                   {formatAmount(line.contract_unit_price)}

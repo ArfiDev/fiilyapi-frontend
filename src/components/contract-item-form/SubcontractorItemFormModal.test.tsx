@@ -23,6 +23,7 @@ const ITEMS: SubcontractorContractItemResponse[] = [
     contract_id: CONTRACT_ID,
     source_contract_item_id: null,
     code: "03.011",
+    source_code: null,
     description: "Grobeton",
     unit: "m³",
     quantity: "100.000",

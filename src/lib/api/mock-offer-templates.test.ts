@@ -570,3 +570,14 @@ describe("🔴 mock-backend entegrasyonu: şablon tohumu + tek giriş noktası",
     expect((await call("GET", "/offers/templates")).json.items[0].usage_count).toBe(2);
   });
 });
+
+describe("KAT-F2.4 · şablondan teklif: kalem Bakanlık no'sunu katalogdan KOPYALAR", () => {
+  it("şablonlu teklifin kalemleri katalog source_code'unu taşır", async () => {
+    const t = await newTemplate({ name: "Kod kopyası" });
+    await putContent(t, [grp("Kaba", CAT_A, CAT_B)]);
+    const created = (await api("POST", "/offers", { employer_id: EMP_1, title: "Kodlu", template_id: t.id })).json;
+    const revision = (await api("GET", `/offers/${created.id}/revisions/0`)).json;
+    const codes = revision.groups.flatMap((g: any) => g.items.map((item: any) => item.source_code));
+    expect(codes).toEqual(["15.100.1001", "15.150.1003"]);
+  });
+});

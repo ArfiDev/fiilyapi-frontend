@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
 import { cx } from "@/lib/cx";
 
 import type { ClosingPartId, LabelValue, PrintFrame, TotalRow } from "./print-model";
@@ -10,6 +11,11 @@ import "./offer-print.css";
  * toplamlar, imza kutuları. 🔴 İşveren çıktısının ithal kapanışındadır (`offer-print-leak-guard`):
  * iç alan/etiket İÇERMEZ — yalnız aldığı `PrintFrame`/`TotalRow` verisini basar.
  */
+
+/** Poz no altındaki Bakanlık kodu (yazdırma kipi: title YOK, kırpma YOK). */
+export function PrintSourceCode({ code }: { code: string | null }) {
+  return <SourceCodeSub code={code} variant="print" data-testid="offer-print-source-code" />;
+}
 
 export function PrintHeader({ frame }: { frame: PrintFrame }) {
   const { company } = frame;

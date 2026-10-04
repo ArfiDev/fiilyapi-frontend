@@ -77,6 +77,8 @@ export interface ItemRec {
   sortOrder: number;
   catalogItemId: string;
   pozNo: string;
+  /** KAT-F2.2 · Bakanlık poz no'su anlığı (`OfferItemRead.source_code`); yok → null. */
+  sourceCode: string | null;
   description: string;
   unit: string;
   /** `null` = miktar girilmedi (SO-21). */
@@ -216,6 +218,8 @@ export function addDays(isoDate: string, days: number): string {
 export interface OfferCatalogEntry {
   id: string;
   pozNo: string;
+  /** KAT-F2.4 · katalog kaleminin Bakanlık poz no'su (teklif kalemi katalogdan KOPYALAR); yoksa null. */
+  sourceCode: string | null;
   name: string;
   uom: string;
   standardUnitMhr: string;
@@ -228,6 +232,8 @@ export interface OfferCatalogEntry {
 export interface ConvertedItemSpec {
   catalogItemId: string;
   code: string;
+  /** KAT-F2.2 · teklif kaleminin Bakanlık no'su KOPYALANIR; teklif kalemi yoksa (katalogdan eklenen satır) KATALOGDAN (backend `convert_service._source_code`). */
+  sourceCode: string | null;
   description: string;
   unit: string;
   quantity: string;

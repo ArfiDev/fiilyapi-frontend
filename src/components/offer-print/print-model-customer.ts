@@ -8,6 +8,7 @@
  * artık hiçbir yerde YOKTUR (çıktı modeli seri hâle getirilince sentinel testi bunu doğrular).
  * Bu dosya `offer-print-leak-guard.test.ts` kapsamındadır: iç alan adı anılamaz, iç modül ithal edilemez.
  */
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 import { sumDecimalStrings } from "@/lib/decimal";
 import { formatQuantity } from "@/lib/format";
 
@@ -31,6 +32,8 @@ import {
 export interface CustomerSourceItem {
   id: string;
   poz_no: string;
+  /** Bakanlık poz no'su (KAT-F2; kimlik alanı, maliyet DEĞİL); yok → null. */
+  source_code: string | null;
   description: string;
   unit: string;
   quantity: string | null;
@@ -62,6 +65,8 @@ export interface CustomerPrintRow {
   /** Grup adı (group) · "{grup} ara toplamı" (subtotal) · boş (item). */
   name: string;
   poz: string;
+  /** Poz no altındaki Bakanlık kodu (boş/yok → null: alt satır basılmaz). */
+  sourceCode: string | null;
   description: string;
   unit: string;
   quantity: string;
@@ -83,6 +88,7 @@ const ZERO_AMOUNT = "0";
 const BLANK_ROW = {
   name: "",
   poz: "",
+  sourceCode: null,
   description: "",
   unit: "",
   quantity: "",
@@ -104,6 +110,7 @@ function itemRow(group: CustomerSourceGroup, item: CustomerSourceItem): Customer
     groupId: group.id,
     groupName: group.name,
     poz: item.poz_no,
+    sourceCode: sourceCodeLabel(item),
     description: item.description,
     unit: item.unit,
     quantity: formatQuantity(item.quantity),

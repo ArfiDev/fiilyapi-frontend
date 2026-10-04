@@ -152,6 +152,7 @@ function itemsRead(template: Json, record: ConvertedRecord): Json {
         id: `ci-e2e-${result.projectId}-${groupIndex + 1}-${itemIndex + 1}`,
         group_id: `cg-e2e-${groupIndex + 1}`,
         code: item.code,
+        source_code: item.sourceCode,
         description: item.description,
         unit: item.unit,
         quantity: item.quantity,

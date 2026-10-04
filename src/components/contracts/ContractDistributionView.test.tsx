@@ -55,6 +55,7 @@ const DISTRIBUTION: ContractDistributionResponse = {
         {
           id: "ci-1",
           code: "03.001",
+          source_code: null,
           description: "Kat Döşemesi Betonu C25/30",
           unit: "m³",
           quantity: "3200.000",
@@ -68,6 +69,7 @@ const DISTRIBUTION: ContractDistributionResponse = {
         {
           id: "ci-3",
           code: "03.003",
+          source_code: null,
           description: "Nervürlü Demir Ø12–Ø20",
           unit: "Ton",
           quantity: "200.000",
@@ -88,6 +90,7 @@ const DISTRIBUTION: ContractDistributionResponse = {
         {
           id: "ci-5",
           code: "05.001",
+          source_code: null,
           description: "İnce Sıva (Alçı)",
           unit: "m²",
           quantity: "18400.000",
@@ -661,4 +664,24 @@ describe("POZ dağılımı — Kalanı buraya dağıt (KDG K7)", () => {
     expect(cell("P.499", "Blok-4").value).toBe("850");
     // jsdom'da 2000 girdi çizimi yavaştır; süre sınırı yalnız takılmayı yakalar.
   }, 60_000);
+});
+
+describe("KAT-F2.3 · POZ dağılımı · Bakanlık poz no alt satırı (T47)", () => {
+  it("kodu olan kalemde poz no'nun altında kod + title; null'da yok; şantiye hücreleri aynı satırda", () => {
+    const first = DISTRIBUTION.groups[0];
+    mockHooks({
+      ...DISTRIBUTION,
+      groups: [
+        { ...first, items: [{ ...first.items[0], source_code: "15.150.1003" }, first.items[1]] },
+        DISTRIBUTION.groups[1],
+      ],
+    });
+    render(<ContractDistributionView projectId="p-1" />);
+
+    const sub = screen.getByTestId("cdist-source-code-ci-1");
+    expect(sub).toHaveTextContent("15.150.1003");
+    expect(sub).toHaveAttribute("title", "15.150.1003");
+    expect(screen.queryByTestId("cdist-source-code-ci-3")).not.toBeInTheDocument();
+    expect(sub.closest("tr")).toBe(cell("03.001", "A-Blok").closest("tr"));
+  });
 });

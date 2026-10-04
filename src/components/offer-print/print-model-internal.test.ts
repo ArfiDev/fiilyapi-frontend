@@ -97,3 +97,19 @@ describe("🔴 F4.2b iç döküm — yalnız miktarsız kalemli grup: boş küme
     ).toMatchObject({ amount: "—" });
   });
 });
+
+describe("iç döküm modeli — Bakanlık poz no'su (KAT-F2.2)", () => {
+  it("kalem satırı sourceCode taşır; yoksa null", () => {
+    const revision = makePrintRevision({
+      groups: [
+        makeGroup("g1", "Kaba İnşaat", 0, [
+          { id: "a", groupId: "g1", poz: "A", unitPrice: PRICED_UNIT_PRICE, sourceCode: "15.250.1011" },
+          { id: "c", groupId: "g1", poz: "C", unitPrice: PRICED_UNIT_PRICE },
+        ]),
+      ],
+    });
+    const built = buildInternalPrintModel({ offer: makePrintOffer(), revision, company: makeCompany() });
+    const items = built.pages.flatMap((page) => page.parts.flatMap((part) => part.rows)).filter((row) => row.kind === "item");
+    expect(items.map((row) => row.sourceCode)).toEqual(["15.250.1011", null]);
+  });
+});

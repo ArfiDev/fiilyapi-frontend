@@ -5016,6 +5016,17 @@
             ],
             "title": "Remaining Quantity"
           },
+          "source_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code"
+          },
           "unit": {
             "title": "Unit",
             "type": "string"
@@ -5036,6 +5047,7 @@
         "required": [
           "id",
           "code",
+          "source_code",
           "description",
           "unit",
           "quantity",
@@ -8274,6 +8286,17 @@
             "title": "Sort Order",
             "type": "integer"
           },
+          "source_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code"
+          },
           "unit": {
             "title": "Unit",
             "type": "string"
@@ -8301,6 +8324,7 @@
           "unit_price",
           "sort_order",
           "catalog_item_id",
+          "source_code",
           "distributed_quantity",
           "remaining_quantity"
         ],
@@ -18930,6 +18954,17 @@
             "title": "Sort Order",
             "type": "integer"
           },
+          "source_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code"
+          },
           "unit": {
             "title": "Unit",
             "type": "string"
@@ -18946,6 +18981,7 @@
           "sort_order",
           "catalog_item_id",
           "poz_no",
+          "source_code",
           "description",
           "unit",
           "quantity",
@@ -24844,6 +24880,18 @@
             "title": "Sort Order",
             "type": "integer"
           },
+          "source_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code"
+          },
           "unit": {
             "maxLength": 50,
             "title": "Unit",
@@ -24855,6 +24903,7 @@
           "contract_item_id",
           "site_id",
           "code",
+          "source_code",
           "description",
           "unit",
           "contract_unit_price",
@@ -39132,6 +39181,17 @@
             "title": "Sort Order",
             "type": "integer"
           },
+          "source_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code"
+          },
           "source_contract_item_id": {
             "anyOf": [
               {
@@ -39171,6 +39231,7 @@
           "quantity",
           "unit_price",
           "sort_order",
+          "source_code",
           "line_total"
         ],
         "title": "SubcontractorContractItemResponse",
@@ -40577,6 +40638,18 @@
             "title": "Sort Order",
             "type": "integer"
           },
+          "source_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code"
+          },
           "unit": {
             "maxLength": 50,
             "title": "Unit",
@@ -40587,6 +40660,7 @@
           "id",
           "contract_item_id",
           "code",
+          "source_code",
           "description",
           "unit",
           "contract_unit_price",

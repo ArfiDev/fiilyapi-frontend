@@ -16,6 +16,7 @@ function item(
     contract_id: "sc-1",
     source_contract_item_id: null,
     code: "03.001",
+    source_code: null,
     description: "Poz",
     unit: "m³",
     quantity: "100.000",
@@ -33,6 +34,7 @@ function line(
   return {
     contract_item_id: null,
     code: "03.001",
+    source_code: null,
     description: "Poz",
     unit: "m³",
     contract_unit_price: "1200.00",

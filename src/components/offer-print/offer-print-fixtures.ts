@@ -38,6 +38,8 @@ interface ItemSpec {
   unitPrice: string | null;
   /** `null` → miktarı girilmemiş kalem (SO-21): tutar/maliyet/GG/kâr/a-s null, B.F. dolu (`calc.py`). */
   quantity?: string | null;
+  /** Bakanlık poz no'su (KAT-F2); yoksa null. */
+  sourceCode?: string | null;
 }
 
 export function makeItem(spec: ItemSpec): OfferItemRead {
@@ -50,6 +52,7 @@ export function makeItem(spec: ItemSpec): OfferItemRead {
     sort_order: 0,
     catalog_item_id: `cat-${spec.id}`,
     poz_no: spec.poz,
+    source_code: spec.sourceCode ?? null,
     description: spec.description ?? `Tarif ${spec.poz}`,
     unit: "m3",
     quantity,

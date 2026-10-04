@@ -28,7 +28,13 @@ import { describe, expect, it } from "vitest";
 const SRC_DIR = fileURLToPath(new URL("..", import.meta.url));
 const ENTRY = "components/offer-print/OfferCustomerPrint.tsx";
 /** İçeriği taranan klasörler (kapanışın bunlara düşen dosyaları). */
-const SCANNED_PREFIXES = ["components/offer-print/", "components/print-sheet/"];
+const SCANNED_PREFIXES = [
+  "components/offer-print/",
+  "components/print-sheet/",
+  // KAT-F2.2 · Bakanlık poz no'su: beyaz listeye DEĞİL taranan kapsama alınır (tam yol); yarın bir şey ithal ederse kapanışa girer ve taranır.
+  "components/catalog-shared/SourceCodeSub.tsx",
+  "components/catalog-shared/source-code.ts",
+];
 /** Kapanışın dışarıdan ithal edebileceği TEK modüller (iç alan taşımayan saf yardımcılar). */
 const SAFE_EXTERNAL = [/^react$/, /^@\/lib\/format$/, /^@\/lib\/decimal$/, /^@\/lib\/cx$/, /^@\/lib\/contract-labels$/];
 /** İç alan adları + iç etiketler (kod belirteçlerinde, büyük/küçük harf duyarsız). */

@@ -12,6 +12,7 @@ const ITEMS: SubcontractorContractItemResponse[] = [
     contract_id: "sc-1",
     source_contract_item_id: "eci-1",
     code: "03.001",
+    source_code: null,
     description: "Kat Döşemesi Betonu C25/30",
     unit: "m³",
     quantity: "1200.000",
@@ -25,6 +26,7 @@ const ITEMS: SubcontractorContractItemResponse[] = [
     contract_id: "sc-1",
     source_contract_item_id: "eci-2",
     code: "03.002",
+    source_code: null,
     description: "Kolon Betonu C30/37",
     unit: "m³",
     quantity: "340.000",
@@ -271,5 +273,17 @@ describe("elle poz ekleme — mockup FORMU yok", () => {
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute("title", ADD_ITEM_PENDING_REASON);
     }
+  });
+});
+
+describe("KAT-F2.3 · Bakanlık poz no alt satırı (T47)", () => {
+  it("kodu olan kalemde poz no hücresinin altında kod + title; null'da yok", () => {
+    setup({ items: [{ ...ITEMS[0], source_code: "35.140.3195-D" }, ITEMS[1]] });
+
+    const sub = screen.getByTestId("fso-source-code-sci-1");
+    expect(sub).toHaveTextContent("35.140.3195-D");
+    expect(sub).toHaveAttribute("title", "35.140.3195-D");
+    expect(sub.closest("td")).toHaveClass("fso-items__td--code");
+    expect(screen.queryByTestId("fso-source-code-sci-2")).not.toBeInTheDocument();
   });
 });

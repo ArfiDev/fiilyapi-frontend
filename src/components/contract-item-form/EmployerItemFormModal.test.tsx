@@ -47,6 +47,7 @@ const GROUPS: EmployerContractItemsResponse["groups"] = [
         id: "iiiiiiii-0000-0000-0000-000000000001",
         group_id: GROUP_ID,
         code: "03.011",
+        source_code: null,
         description: "Grobeton",
         unit: "m³",
         quantity: "100.000",

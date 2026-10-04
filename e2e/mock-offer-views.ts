@@ -89,6 +89,7 @@ function buildItemRead(item: ItemRec, result: ItemResult): S["OfferItemRead"] {
     sort_order: item.sortOrder,
     catalog_item_id: item.catalogItemId,
     poz_no: item.pozNo,
+    source_code: item.sourceCode,
     description: item.description,
     unit: item.unit,
     quantity: item.quantity,

@@ -7,7 +7,8 @@ import { AlertIcon } from "@/components/ui/icons";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 
 import { LastPriceCell } from "./LastPriceCell";
-import { refPriceDateLabel, sourceCodeLabel } from "./work-item-model";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
+import { refPriceDateLabel } from "./work-item-model";
 import type { WorkItemDraft } from "./work-item-drafts";
 import {
   firstWorkItemError,

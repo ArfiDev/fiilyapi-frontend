@@ -100,6 +100,7 @@ const DETAIL: SubcontractorContractDetail = {
       contract_id: CONTRACT_ID,
       source_contract_item_id: null,
       code: "03.001",
+      source_code: null,
       description: "Kat Döşemesi Betonu C25/30",
       unit: "m³",
       quantity: "1200.000",
@@ -113,6 +114,7 @@ const DETAIL: SubcontractorContractDetail = {
       contract_id: CONTRACT_ID,
       source_contract_item_id: null,
       code: "03.002",
+      source_code: null,
       description: "Kolon Betonu C30/37",
       unit: "m³",
       quantity: "340.000",
@@ -540,5 +542,22 @@ describe("TSD — devre-dışı yüzeyler SİLİNMEZ", () => {
     expect(add).toBeEnabled();
     fireEvent.click(add);
     expect(screen.getByRole("dialog", { name: "Taşeron Sözleşmesine Poz Ekle" })).toBeInTheDocument();
+  });
+});
+
+describe("KAT-F2.3 · TSD poz tablosu · Bakanlık poz no alt satırı (T47)", () => {
+  it("kodu olan kalemde poz no hücresinin altında kod + title; null'da yok", () => {
+    setup({
+      detail: {
+        ...DETAIL,
+        items: [{ ...DETAIL.items[0], source_code: "15.250.1011" }, DETAIL.items[1]],
+      },
+    });
+
+    const sub = screen.getByTestId("ecd-source-code-sci-1");
+    expect(sub).toHaveTextContent("15.250.1011");
+    expect(sub).toHaveAttribute("title", "15.250.1011");
+    expect(sub.closest("td")).toHaveClass("ecd-items__td--code");
+    expect(screen.queryByTestId("ecd-source-code-sci-2")).not.toBeInTheDocument();
   });
 });

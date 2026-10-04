@@ -1,6 +1,6 @@
 import { PrintSheet } from "@/components/print-sheet/PrintSheet";
 
-import { PrintClosing, PrintHeader, PrintKunye, PrintRunningHead, PrintSpanRow } from "./OfferPrintParts";
+import { PrintClosing, PrintHeader, PrintKunye, PrintRunningHead, PrintSourceCode, PrintSpanRow } from "./OfferPrintParts";
 import type { InternalPrintModel, InternalPrintRow } from "./print-model-internal";
 import { useMeasuredPages } from "./use-measured-pages";
 import "./offer-print.css";
@@ -38,7 +38,10 @@ function RowView({ row }: { row: InternalPrintRow }) {
   }
   return (
     <tr className={row.isUnpriced ? "offer-print__row offer-print__row--unpriced" : "offer-print__row"} data-print-row={row.key}>
-      <td className="offer-print__poz">{row.poz}</td>
+      <td className="offer-print__poz">
+        {row.poz}
+        <PrintSourceCode code={row.sourceCode} />
+      </td>
       <td>
         <span className="offer-print__description">{row.description}</span>
       </td>
@@ -56,7 +59,7 @@ function RowView({ row }: { row: InternalPrintRow }) {
 }
 
 const HEADERS: readonly { label: string; numeric: boolean; width?: string }[] = [
-  { label: "Poz No", numeric: false, width: "9%" },
+  { label: "Poz No", numeric: false, width: "10%" },
   { label: "Tarif", numeric: false },
   { label: "Birim", numeric: false, width: "5%" },
   { label: "Miktar", numeric: true, width: "7%" },

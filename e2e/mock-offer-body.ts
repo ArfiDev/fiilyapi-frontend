@@ -257,7 +257,7 @@ export function offerNullRejected(body: Record<string, unknown>, fields: readonl
 
 /** Kalem PATCH'inde katalogdan gelen alanların değiştirilmesi (`model_validator(mode="before")`). */
 export function offerImmutableItemFields(body: Record<string, unknown>): BodyViolation | null {
-  const bad = ["catalog_item_id", "poz_no", "description", "unit"].filter((name) => Object.hasOwn(body, name));
+  const bad = ["catalog_item_id", "poz_no", "source_code", "description", "unit"].filter((name) => Object.hasOwn(body, name));
   if (bad.length === 0) return null;
   return violation(
     "value_error",

@@ -112,6 +112,7 @@ const baseDetail: SubcontractorProgressPaymentDetail = {
       id: "l-1",
       contract_item_id: "ci-1",
       code: "A-01",
+      source_code: null,
       description: "Kablo tesisatı",
       unit: "m",
       contract_unit_price: "100.00",
@@ -299,5 +300,29 @@ describe("SubcontractorProgressPaymentDetailView — düşürülen kalem uyarıs
     expect(screen.getByTestId("th-detail-orphan-alert")).toHaveTextContent(
       "Sözleşmeden kaldırılan 2 kalem bu hakedişten düşürüldü.",
     );
+  });
+});
+
+// KAT-F2.4 · Q4: taşeron hakediş detayında poz KODUNUN HEMEN ALTINDA Bakanlık poz no'su (satırın snapshot'ı).
+describe("SubcontractorProgressPaymentDetailView — Bakanlık poz no'su", () => {
+  it("kod doluysa poz kodunun altında basılır; null satırda HİÇBİR ŞEY", () => {
+    mockSession();
+    const [first] = baseDetail.lines;
+    mockDetailQuery({
+      data: {
+        ...baseDetail,
+        lines: [
+          { ...first, source_code: "15.250.1011" },
+          { ...first, id: "l-2", code: "A-02", source_code: null, sort_order: 2 },
+        ],
+      },
+    });
+    renderDetail();
+    const subs = screen.getAllByTestId("thd-source-code");
+    expect(subs).toHaveLength(1);
+    expect(subs[0]).toHaveTextContent("15.250.1011");
+    const codeCell = screen.getByText("A-01").closest("td");
+    expect(codeCell).toContainElement(subs[0]);
+    expect(screen.getByText("A-01").parentElement).toContainElement(subs[0]);
   });
 });

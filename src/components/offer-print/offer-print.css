@@ -170,6 +170,12 @@
   white-space: nowrap;
 }
 
+/* KAT-F2.2 · poz no altındaki Bakanlık kodu: ortak bileşenin 12px'i bu tabloda büyük; 9px mono ("35.140.3195-D" 13 karakter × 0.6em = 70px) işveren Poz sütununa (%14 → 103 − 12 = 91px) ve iç döküm %10 sütununa (106 − 12 = 94px) TEK satırda sığar. Daha uzun kod break-word ile ikinci satıra iner (kırpma yok); satır yüksekliğini sayfalama ölçer. */
+.offer-print__table .source-code-sub--print {
+  font-size: 9px;
+  line-height: 1.2;
+}
+
 .offer-print__description {
   display: block;
   line-height: 1.2;

@@ -22,9 +22,9 @@ export const STALE = "Şablon başka biri tarafından değiştirildi; sayfayı y
 export const TEMPLATE_MISSING = "Teklif şablonu bulunamadı";
 
 export const CATALOG: OfferCatalogEntry[] = [
-  { id: CAT_A, pozNo: "KAB-0001", name: "Kalıp", uom: "m²", standardUnitMhr: "0.85", refPrice: "100.00" },
-  { id: CAT_B, pozNo: "KAB-0002", name: "Demir", uom: "ton", standardUnitMhr: "11.5", refPrice: null },
-  { id: CAT_C, pozNo: "DUV-0001", name: "Tuğla duvar", uom: "m²", standardUnitMhr: "0.55", refPrice: "10.00" },
+  { id: CAT_A, pozNo: "KAB-0001", sourceCode: "15.100.1001", name: "Kalıp", uom: "m²", standardUnitMhr: "0.85", refPrice: "100.00" },
+  { id: CAT_B, pozNo: "KAB-0002", sourceCode: "15.150.1003", name: "Demir", uom: "ton", standardUnitMhr: "11.5", refPrice: null },
+  { id: CAT_C, pozNo: "DUV-0001", sourceCode: null, name: "Tuğla duvar", uom: "m²", standardUnitMhr: "0.55", refPrice: "10.00" },
 ];
 export const EMPLOYERS = [
   { id: EMP_1, name: "Güneşkent Gayrimenkul A.Ş." },

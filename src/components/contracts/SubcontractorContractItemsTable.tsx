@@ -17,6 +17,8 @@ import { contractProgressWidth } from "./contract-progress";
 import { tsdProgressTone } from "./subcontractor-item-progress";
 import "./employer-contract-detail.css";
 import "./subcontractor-contract-detail.css";
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 
 /**
  * TSD 88-182 · "Poz Listesi & Taşeron Fiyatları" tablosu.
@@ -264,7 +266,13 @@ function ItemGroup({
         const pct = progressPctByItemId?.get(item.id);
         return (
           <tr className="ecd-items__row" key={item.id}>
-            <td className="ecd-items__td ecd-items__td--code">{item.code}</td>
+            <td className="ecd-items__td ecd-items__td--code">
+              {item.code}
+              <SourceCodeSub
+                code={sourceCodeLabel(item)}
+                data-testid={`ecd-source-code-${item.id}`}
+              />
+            </td>
             <td className="ecd-items__td ecd-items__td--name">{item.description}</td>
             <td className="ecd-items__td ecd-items__td--center">{item.unit}</td>
             {/* 114 · SALT-OKUNUR (mockup'ta düz metin) */}

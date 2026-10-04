@@ -1074,3 +1074,41 @@ describe("SubcontractorProgressPaymentForm — günlük etiketi Türkçe metni d
     expect(container.textContent).toContain(`Günlük kayıttan: ${shown} ${ITEM_MANUAL.unit} hesaplandı`);
   });
 });
+
+// KAT-F2.4 · Q2: poz no hücresinde, kodun altında Bakanlık poz no'su (kayıtlı satır snapshot'ı kalemi ÖRTER).
+describe("SubcontractorProgressPaymentForm — Bakanlık poz no'su alt satırı", () => {
+  it("kayıtlı satır yokken kalemin kodu basılır; kodsuz kalemde HİÇBİR ŞEY", async () => {
+    vi.mocked(useSubcontractorContract).mockReturnValue(
+      queryResult({ data: contractFixture({ items: [{ ...ITEM_MANUAL, source_code: "15.250.1011" }, { ...ITEM_DIARY, source_code: null }] }) }),
+    );
+    renderForm({ mode: "create", contractId: CONTRACT_ID });
+    const subs = await screen.findAllByTestId("thf-source-code");
+    expect(subs).toHaveLength(1);
+    expect(subs[0]).toHaveTextContent("15.250.1011");
+    expect(screen.getByText("03.010").closest("td")).toContainElement(subs[0]);
+  });
+
+  it("kayıtlı satırın snapshot'ı kalemden FARKLIYSA SATIRINKİ görünür", async () => {
+    vi.mocked(useSubcontractorContract).mockReturnValue(
+      queryResult({ data: contractFixture({ items: [{ ...ITEM_MANUAL, source_code: "15.250.1011" }, ITEM_DIARY] }) }),
+    );
+    vi.mocked(useSubcontractorProgressPayment).mockReturnValue(
+      queryResult({
+        data: detailFixture({
+          lines: [
+            {
+              id: "line-1", contract_item_id: ITEM_MANUAL.id, code: ITEM_MANUAL.code, source_code: "35.140.3195-D",
+              description: ITEM_MANUAL.description, unit: ITEM_MANUAL.unit, contract_unit_price: "95.00", coefficient: "1",
+              quantity: "10", group_name: "B — Kalıp İşleri", sort_order: 0, quantity_source: "manual",
+              adjusted_unit_price: "95.00", line_total: "950.00",
+            },
+          ],
+        }),
+      }),
+    );
+    renderForm({ mode: "edit", paymentId: PAYMENT_ID });
+    const sub = await screen.findByTestId("thf-source-code");
+    expect(sub).toHaveTextContent("35.140.3195-D");
+    expect(screen.queryByText("15.250.1011")).not.toBeInTheDocument();
+  });
+});

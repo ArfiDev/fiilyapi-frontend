@@ -17,6 +17,7 @@ const SITE_B = { id: "site-b", name: "B-Blok" };
 const ITEM_1 = {
   id: "item-1",
   code: "03.001",
+  source_code: null,
   description: "Kat Döşemesi C25/30",
   unit: "m³",
   quantity: "1500.000",
@@ -32,6 +33,7 @@ const ITEM_1 = {
 const ITEM_2 = {
   id: "item-2",
   code: "03.002",
+  source_code: null,
   description: "Kolon Betonu C30/37",
   unit: "m³",
   quantity: "300.000",
@@ -53,6 +55,7 @@ function line(overrides: Partial<ProgressPaymentLineDetail>): ProgressPaymentLin
     contract_item_id: ITEM_1.id,
     site_id: SITE_A.id,
     code: ITEM_1.code,
+    source_code: null,
     description: ITEM_1.description,
     unit: ITEM_1.unit,
     contract_unit_price: ITEM_1.unit_price,
@@ -320,5 +323,42 @@ describe("normalizePivotRowsForSave — kaydetmeden önce Türkçe okuma (TKL-F8
     const body = buildLinesSaveBody(normalizePivotRowsForSave(blank).rows);
     expect(body.every((l) => l.quantity === "0")).toBe(true);
     expect(body).toHaveLength(3);
+  });
+});
+
+// KAT-F2.4 · Q2: satırın Bakanlık poz no'su — kayıtlı satır VARSA satırın anlık görüntüsü, yoksa kalemin kodu.
+describe("buildPivotRows — sourceCode (Q2)", () => {
+  const withCode = (code: string | null) => ({
+    ...DISTRIBUTION,
+    groups: [{ ...DISTRIBUTION.groups[0], items: [{ ...ITEM_1, source_code: code }, ITEM_2] }],
+  });
+
+  it("kayıtlı satır yok → kalemin source_code'u", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"));
+    expect(rows[0].sourceCode).toBe("15.150.1003");
+    expect(rows[1].sourceCode).toBeNull();
+  });
+
+  it("kayıtlı satır VAR ve snapshot'ı kalemden FARKLI → SATIRIN snapshot'ı", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"), [line({ source_code: "35.140.3195-D" })]);
+    expect(rows[0].sourceCode).toBe("35.140.3195-D");
+  });
+
+  it("kayıtlı satırın snapshot'ı null ise kalemin kodu ÖRTÜLMEZ: null", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"), [line({ source_code: null })]);
+    expect(rows[0].sourceCode).toBeNull();
+  });
+
+  it("aynı kalemin birden çok şantiye satırı farklı snapshot taşırsa İLK kayıtlı satır kazanır", () => {
+    const rows = buildPivotRows(withCode(null), [
+      line({ id: "l-a", site_id: SITE_A.id, source_code: "11.111" }),
+      line({ id: "l-b", site_id: SITE_B.id, source_code: "22.222" }),
+    ]);
+    expect(rows[0].sourceCode).toBe("11.111");
+  });
+
+  it("gövde (PUT lines) source_code TAŞIMAZ", () => {
+    const rows = buildPivotRows(withCode("15.150.1003"), [line({ source_code: "35.140.3195-D" })]);
+    for (const entry of buildLinesSaveBody(rows)) expect(entry).not.toHaveProperty("source_code");
   });
 });

@@ -5,6 +5,7 @@ import type {
 import type { SubcontractorProgressPaymentLineInput } from "@/lib/api/hooks/useSubcontractorProgressPaymentMutations";
 
 import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 
 import { DEFAULT_QUANTITY_SOURCE, type QuantitySource } from "./quantity-source";
 import { parsePaymentQuantity } from "./tr-quantity";
@@ -24,6 +25,8 @@ export type SubcontractorContractItem = SubcontractorContractDetail["items"][num
 export interface SubcontractorLineRow {
   itemId: string;
   code: string;
+  /** Bakanlık poz no'su (KAT-F2.4 · Q2): kayıtlı satır varsa SATIRIN anlık görüntüsü (null dahil), yoksa kalemin kodu. Gövdeye girmez. */
+  sourceCode: string | null;
   description: string;
   unit: string;
   /** `null` = grupsuz kalem — mockup'ta grup başlığı basılmaz. */
@@ -72,6 +75,7 @@ export function buildSubcontractorLineRows(
       return {
         itemId: item.id,
         code: item.code,
+        sourceCode: sourceCodeLabel(existing ?? item),
         description: item.description,
         unit: item.unit,
         groupName: item.group?.name ?? null,

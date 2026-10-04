@@ -1,5 +1,6 @@
 "use client";
 
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
 import { trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 import { Checkbox, Input } from "@/components/ui";
 import { cx } from "@/lib/cx";
@@ -122,7 +123,15 @@ interface CodeCellProps {
 }
 
 function CodeCell({ row, error, isEditable, onCode }: CodeCellProps) {
-  if (!isEditable) return <span className="convert-code convert-row__text">{row.code}</span>;
+  const sub = <SourceCodeSub code={row.sourceCode} data-testid={`convert-source-code-${row.key}`} />;
+  if (!isEditable) {
+    return (
+      <>
+        <span className="convert-code convert-row__text">{row.code}</span>
+        {sub}
+      </>
+    );
+  }
   return (
     <div className="convert-cell">
       <Input
@@ -134,6 +143,7 @@ function CodeCell({ row, error, isEditable, onCode }: CodeCellProps) {
         onChange={(e) => onCode(row.key, e.target.value)}
       />
       {error && <span className="convert-error-text">{error}</span>}
+      {sub}
     </div>
   );
 }

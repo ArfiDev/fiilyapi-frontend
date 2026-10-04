@@ -13,6 +13,7 @@ function item(
     contract_id: "sc-1",
     source_contract_item_id: null,
     code: id,
+    source_code: null,
     description: id,
     unit: "m³",
     quantity: "1.000",

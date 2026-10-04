@@ -58,6 +58,7 @@ describe("rowsFromRevision", () => {
       offerItemId: "it-1",
       catalogItemId: BETON.id,
       code: BETON.poz_no,
+      sourceCode: null,
       description: BETON.name,
       unit: BETON.uom,
       offer: { qty: "10.000", unitPrice: "128.80", amount: "1288.00" },
@@ -163,7 +164,7 @@ describe("addFromCatalog", () => {
   });
 
   it("yeni satır: offer_item_id YOK · not · miktar BOŞ · B.F. son fiyat → referans → boş (ÜS-F5-15)", () => {
-    const last = { ...BETON, id: "c-last", poz_no: "K-9", last_price: { price: "3410.00", at: "x", source: "SZL", doc_no: "d", doc_id: null } };
+    const last = { ...BETON, id: "c-last", poz_no: "K-9", source_code: "15.100.1001", last_price: { price: "3410.00", at: "x", source: "SZL", doc_no: "d", doc_id: null } };
     const noPrice = { ...BETON, id: "c-none", poz_no: "K-8", ref_price: null, last_price: null };
     const draft = addFromCatalog(baseDraft(), "g:g-ince", [last, DEMIR, noPrice]);
     const [a, b, c] = draft.rows.filter((r) => r.isNew);
@@ -173,6 +174,7 @@ describe("addFromCatalog", () => {
       offerItemId: null,
       catalogItemId: "c-last",
       code: "K-9",
+      sourceCode: "15.100.1001",
       description: BETON.name,
       unit: BETON.uom,
       offer: { qty: null, unitPrice: null, amount: "0.00" },
