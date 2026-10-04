@@ -15,6 +15,8 @@ import { useBoq, type BoqItem, type BoqListResponse } from "@/lib/api/hooks/useB
 import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { BOQ_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import "@/components/boq/boq.css";
 import { routes } from "@/lib/routes";
 
@@ -37,7 +39,10 @@ export default function BoqPage() {
   // Yazma yuzeyleri kapisi (spec §2.5). Yetki zorlamasi HER ZAMAN backend'de;
   // bu kapi yalniz salt-okunur role calismayan buton gostermemek icin.
   // `canDelete` AYRI kapidir: silme uclari `admin` seviyesindedir (§7.5.6).
-  const { canWrite, canDelete } = useModulePermission("boq");
+  const { canWrite: moduleCanWrite, canDelete: moduleCanDelete } = useModulePermission("boq");
+  // IZN-F2.x · kalem/grup yaz = santiye.is_kalemleri/bolum_dagilimi Düzenler (VEYA); kalem SİLME = yalnız SA.
+  const canWrite = useButtonGate({ pages: BOQ_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canDelete = useButtonGate({ pages: BOQ_EDIT, need: "sa", fallback: moduleCanDelete });
   // Tek modal, iki kip (spec §7.1): `null` = kapali.
   const [formMode, setFormMode] = useState<BoqItemFormMode | null>(null);
   // Excel indirme durumu (spec §8.3). Sunucu hatasi sayfada gorunur kalir;

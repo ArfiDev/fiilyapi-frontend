@@ -13,6 +13,8 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import {
   buildPersonnelCreateBody,
@@ -111,6 +113,8 @@ export function PersonnelForm(props: PersonnelFormProps) {
   const returnTo = safeReturnTo(searchParams.get(RETURN_PARAM));
 
   const permission = useModulePermission("personnel");
+  // IZN-F2.x · personel ekle/düzenle = ik.* Düzenler (VEYA).
+  const canEdit = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
   const createPersonnel = useCreatePersonnel();
   const updatePersonnel = useUpdatePersonnel(isEdit ? props.personnelId : "");
   const subcontractorsQuery = useSubcontractors();
@@ -277,7 +281,7 @@ export function PersonnelForm(props: PersonnelFormProps) {
 
   // Yazma yetkisi olmayan kullanıcı bu rotayı hiç görmemeli (giriş noktaları
   // zaten gizli); doğrudan URL ile gelen için kapı burada.
-  if (!hasAtLeast(permission.level, "full")) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
   if (isEdit && isForbidden(detailQuery.error)) return <AccessDenied />;
   if (isEdit && detailQuery.isError) {
     return <p className="pf-message">Personel yüklenemedi</p>;

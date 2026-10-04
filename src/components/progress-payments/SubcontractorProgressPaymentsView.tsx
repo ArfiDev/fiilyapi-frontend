@@ -10,6 +10,8 @@ import {
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { ProgressPaymentsTabs } from "./shared/ProgressPaymentsTabs";
@@ -43,7 +45,9 @@ export function SubcontractorProgressPaymentsView() {
 
   const paymentsQuery = useSubcontractorProgressPayments(listFilter);
   const summaryQuery = useSubcontractorProgressPaymentSummary(listFilter);
-  const { canWrite } = useModulePermission("progress_payments");
+  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
+  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
+  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
 
   if (isForbidden(paymentsQuery.error)) return <AccessDenied />;
 

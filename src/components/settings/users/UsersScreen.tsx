@@ -18,6 +18,8 @@ import { ProjectAccessModal } from "@/components/settings/ProjectAccessModal";
 import { DisciplineAssignmentModal } from "@/components/settings/DisciplineAssignmentModal";
 import { DisciplineCell } from "./DisciplineCell";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { USERS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { backendErrorMessage } from "@/lib/api/error-message";
@@ -85,7 +87,12 @@ export function UsersScreen() {
   const projectsQuery = useProjects(); // proje adı çözümü (ref §C.1)
   const deleteUser = useDeleteUser();
   // Yazma kapısı: backend PUT `user_management` `full` ister (user_discipline_router.py).
-  const canEditDisciplines = useModulePermission("user_management").canWrite;
+  const moduleCanWrite = useModulePermission("user_management").canWrite;
+  // IZN-F2.x · ekle/düzenle/proje erişimi/disiplin = ayarlar.kullanicilar Düzenler; parola sıfırla + kullanıcı sil =
+  // yalnız sistem yöneticisi. Disiplin dışındakiler bugün KAPISIZ → grant yoksa görünür (fallback true).
+  const canEditDisciplines = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: true });
+  const isSystemAdminOnly = useButtonGate({ pages: USERS_EDIT, need: "sa", fallback: true });
 
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -163,9 +170,11 @@ export function UsersScreen() {
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
             </span>
-            <Button variant="primary" size="sm" onClick={() => setModal({ type: "create" })}>
-              + Kullanıcı Ekle
-            </Button>
+            {canEditUsers && (
+              <Button variant="primary" size="sm" onClick={() => setModal({ type: "create" })}>
+                + Kullanıcı Ekle
+              </Button>
+            )}
           </>
         }
       >
@@ -216,15 +225,21 @@ export function UsersScreen() {
                   </td>
                   <td>
                     <div className="settings-row-actions">
-                      <button className="users-edit" onClick={() => setModal({ type: "edit", user })}>
-                        Düzenle
-                      </button>
-                      <Button variant="ghost" size="sm" onClick={() => setModal({ type: "password", user })}>
-                        Parola
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setModal({ type: "project", user })}>
-                        Projeler
-                      </Button>
+                      {canEditUsers && (
+                        <button className="users-edit" onClick={() => setModal({ type: "edit", user })}>
+                          Düzenle
+                        </button>
+                      )}
+                      {isSystemAdminOnly && (
+                        <Button variant="ghost" size="sm" onClick={() => setModal({ type: "password", user })}>
+                          Parola
+                        </Button>
+                      )}
+                      {canEditUsers && (
+                        <Button variant="ghost" size="sm" onClick={() => setModal({ type: "project", user })}>
+                          Projeler
+                        </Button>
+                      )}
                       {canEditDisciplines && (
                         <Button
                           variant="ghost"
@@ -235,9 +250,11 @@ export function UsersScreen() {
                           Disiplin
                         </Button>
                       )}
-                      <Button variant="danger" size="sm" onClick={() => setModal({ type: "delete", user })}>
-                        Sil
-                      </Button>
+                      {isSystemAdminOnly && (
+                        <Button variant="danger" size="sm" onClick={() => setModal({ type: "delete", user })}>
+                          Sil
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

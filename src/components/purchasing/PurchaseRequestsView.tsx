@@ -11,6 +11,8 @@ import { usePurchaseRequests } from "@/lib/api/hooks/usePurchaseRequests";
 import { usePurchasingSummary } from "@/lib/api/hooks/usePurchasingSummary";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PURCHASE_REQUEST_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
@@ -51,6 +53,8 @@ export function PurchaseRequestsView() {
   const searchParams = useSearchParams();
 
   const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
+  // IZN-F2.x · talep oluştur = stok.satinalma_talepleri Düzenler.
+  const canCreateRequest = useButtonGate({ pages: PURCHASE_REQUEST_EDIT, need: "edit", fallback: permission.canWrite });
 
   const status = parsePurchaseRequestStatus(searchParams.get(STATUS_PARAM));
   const projectId = searchParams.get(PROJECT_PARAM) ?? "";
@@ -105,7 +109,7 @@ export function PurchaseRequestsView() {
         <h1 className="sat__title">Satınalma &amp; Teklif</h1>
         <div className="sat__actions">
           {/* 65 — talep formu T3'ün rotası (spec K1) */}
-          {permission.canWrite && (
+          {canCreateRequest && (
             <Link href={NEW_PURCHASE_REQUEST_HREF} className="btn btn--primary btn--md">
               + Satın Alma Talebi
             </Link>

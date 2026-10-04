@@ -24,6 +24,8 @@ import type { SaleType } from "@/lib/api/hooks/useSales";
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { SALES_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import {
   AUTO_INVOICE_LABEL,
@@ -77,6 +79,8 @@ export function SaleCreateView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const permission = useModulePermission("sales");
+  // IZN-F2.x · satış kaydı yazma kapısı = mali.satis Düzenler.
+  const canEdit = useButtonGate({ pages: SALES_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [values, setValues] = useState<SaleFormValues>(() => emptySaleFormValues());
   const [errors, setErrors] = useState<SaleFormErrors>({});
@@ -176,7 +180,7 @@ export function SaleCreateView() {
     return null;
   }, [unitsQuery.data, values.unitId]);
 
-  if (!permission.canWrite) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
 
   const locked = createdSaleId !== null;
   const isSaving =

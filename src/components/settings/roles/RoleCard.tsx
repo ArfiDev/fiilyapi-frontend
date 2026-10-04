@@ -4,6 +4,8 @@ import { cx } from "@/lib/cx";
 import type { RoleResponse } from "@/lib/api/models";
 import { routes } from "@/lib/routes";
 import { NEW_ROLE_KEYS } from "@/components/settings/page-access/page-access-labels";
+import { ROLES_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 interface RoleCardProps {
   role: RoleResponse;
@@ -18,6 +20,10 @@ export function canDeleteRole(role: Pick<RoleResponse, "user_count" | "is_locked
 
 export function RoleCard({ role, onCopy, onDelete }: RoleCardProps) {
   const isLocked = role.is_locked;
+  // IZN-F2.x · rol sil = yalnız sistem yöneticisi; Kopyala = ayarlar.rol_yonetimi Düzenler. İkisi de bugün
+  // KAPISIZ/durum kuralıdır → grant yoksa eski davranış (fallback true).
+  const isSystemAdminOnly = useButtonGate({ pages: ROLES_EDIT, need: "sa", fallback: true });
+  const canCopyRole = useButtonGate({ pages: ROLES_EDIT, need: "edit", fallback: true });
   return (
     <article className={cx("role-card", isLocked && "role-card--locked")} aria-label={role.name}>
       <div className="role-card__head">
@@ -48,7 +54,7 @@ export function RoleCard({ role, onCopy, onDelete }: RoleCardProps) {
           </Link>
         )}
         <div className="role-card__actions">
-          {canDeleteRole(role) && (
+          {canDeleteRole(role) && isSystemAdminOnly && (
             <button
               type="button"
               className="role-card__delete"
@@ -58,9 +64,11 @@ export function RoleCard({ role, onCopy, onDelete }: RoleCardProps) {
               Sil
             </button>
           )}
-          <button type="button" className="role-card__copy" onClick={() => onCopy(role)}>
-            Kopyala
-          </button>
+          {canCopyRole && (
+            <button type="button" className="role-card__copy" onClick={() => onCopy(role)}>
+              Kopyala
+            </button>
+          )}
         </div>
       </div>
     </article>

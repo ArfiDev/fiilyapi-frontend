@@ -14,6 +14,8 @@ import {
 import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
 import { formatCurrencyPrecise, formatPeriod } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -56,7 +58,9 @@ export function SubcontractorProgressPaymentDetailView({
   // (T3) ile AYNI iki basamaklı okuma (sözleşme → şantiye).
   const contractQuery = useSubcontractorContract(detail?.contract_id ?? "");
   const siteQuery = useSite(contractQuery.data?.site_id ?? "");
-  const { canWrite } = useModulePermission("progress_payments");
+  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
+  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
+  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
 
   if (isForbidden(detailQuery.error)) return <AccessDenied />;
   if (detailQuery.isError) return <p className="pp-detail__message">Hakediş yüklenemedi</p>;

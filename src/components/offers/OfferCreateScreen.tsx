@@ -17,6 +17,8 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { CONTRACTS_EDIT, PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -56,12 +58,24 @@ export function OfferCreateScreen({ initialTemplateId }: { initialTemplateId?: s
   const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
 
-  const canWrite = hasAtLeast(level, WRITE_LEVEL) && !scope.isRestricted && level !== "none";
+  // IZN-F2.x · teklif oluştur = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; işveren ekle =
+  // genel.projeler Düzenler.
+  const canEditOffers = useButtonGate({
+    pages: CONTRACTS_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(level, WRITE_LEVEL) && level !== "none",
+  });
+  const canAddEmployer = useButtonGate({
+    pages: PROJECT_CREATE_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL),
+  });
+  const canWrite = canEditOffers && !scope.isRestricted;
   // Yetkisiz kullanıcı için HİÇBİR uç çağrılmaz: ayar sorgusu bu kapının ALTINDAKİ bileşendedir.
   if (!canWrite) return <AccessDenied />;
   return (
     <OfferCreateSettingsGate
-      canAddEmployer={hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL)}
+      canAddEmployer={canAddEmployer}
       initialTemplateId={initialTemplateId}
     />
   );

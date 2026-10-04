@@ -23,6 +23,8 @@ import {
   type CellContext,
 } from "./offer-item-cells";
 import { ROW_ERROR_FIELD, type OfferItemEditor } from "./useOfferItemEditor";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 export interface OfferItemRowProps {
   ctx: CellContext;
@@ -61,6 +63,8 @@ export function OfferItemRow({ ctx, catalogItem, isQuantityMissing, editor, canE
   const profitOverridden = cellTone("profitPct", ctx) === "override";
   const offerEnabled = isOfferPriceEnabled(item);
   const disabled = !canEdit;
+  // IZN-F2.x · kalem silme = yalnız sistem yöneticisi (SIL-B1; grant yoksa bugünkü `canEdit`).
+  const canRemove = useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: canEdit });
   const catalogMhr = ctx.catalogUnitMhr;
   return (
     <tr
@@ -157,7 +161,7 @@ export function OfferItemRow({ ctx, catalogItem, isQuantityMissing, editor, canE
           className="oit-icon-btn"
           title={DELETE_TITLE}
           aria-label={`${item.poz_no} kalemi sil`}
-          disabled={disabled}
+          disabled={!canRemove}
           onClick={() => editor.removeItem(item.id)}
         >
           <XIcon width={14} height={14} aria-hidden="true" />

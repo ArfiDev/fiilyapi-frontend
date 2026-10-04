@@ -24,6 +24,8 @@ import {
 import { downloadPayrollExport } from "@/lib/api/payroll-client";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PAYROLL_APPROVE, PAYROLL_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatDateLong, formatPeriod } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -103,6 +105,10 @@ import "./payroll.css";
  */
 export function PayrollMonthlyView() {
   const permission = useModulePermission(PAYROLL_PERMISSION_MODULE);
+  // IZN-F2.x · dönem aç/hesapla/satır düzelt = mali.bordro/sgk_bildirimi Düzenler (VEYA); dönemi/satırı onayla,
+  // Öde = mali.bordro Onaylar.
+  const canEditPayroll = useButtonGate({ pages: PAYROLL_EDIT, need: "edit", fallback: permission.canWrite });
+  const canApprovePayroll = useButtonGate({ pages: PAYROLL_APPROVE, need: "approve", fallback: permission.canWrite });
   const periodsQuery = usePayrollPeriods();
 
   // `null` = kullanıcı henüz seçim yapmadı ⇒ varsayılan (en yeni dönem).
@@ -141,7 +147,7 @@ export function PayrollMonthlyView() {
   const computeReason =
     detail === undefined
       ? "Önce bir bordro dönemi seçin."
-      : computeDisabledReason(detail.status, permission.canWrite);
+      : computeDisabledReason(detail.status, canEditPayroll);
   const truncation = buildListTruncation(rows.length, periodsQuery.data?.total);
 
   // 🔴 K7 TEK UÇUŞ: `isPending` doğrudan mutasyondan okunur; ayrı bir local
@@ -333,7 +339,7 @@ export function PayrollMonthlyView() {
           <Button
             variant="secondary"
             onClick={() => setIsOpenPeriodFormVisible(true)}
-            disabled={!permission.canWrite}
+            disabled={!canEditPayroll}
             data-testid="bordro-open-period"
           >
             {OPEN_PERIOD_LABEL}
@@ -381,7 +387,7 @@ export function PayrollMonthlyView() {
           <Button
             variant="success"
             onClick={handlePay}
-            disabled={!payEnabled(detail, permission.canWrite) || isPayPending}
+            disabled={!payEnabled(detail, canApprovePayroll) || isPayPending}
             data-testid="bordro-pay"
           >
             {PAY_LABEL}
@@ -456,7 +462,8 @@ export function PayrollMonthlyView() {
           detail={detail}
           activeSource={activeSource}
           onSelectSource={setActiveSource}
-          canWrite={permission.canWrite}
+          canWrite={canEditPayroll}
+          canApprove={canApprovePayroll}
           onApproveAll={handleApproveAll}
           isApprovePending={isApprovePending}
         />
@@ -556,6 +563,8 @@ interface PayrollPeriodBodyProps {
   activeSource: WorkerSource | null;
   onSelectSource: (source: WorkerSource | null) => void;
   canWrite: boolean;
+  /** IZN-F2.x: dönem onayı = mali.bordro Onaylar (`canWrite` satır düzeltme için E kararıdır). */
+  canApprove: boolean;
   onApproveAll: () => void;
   isApprovePending: boolean;
 }
@@ -570,13 +579,14 @@ function PayrollPeriodBody({
   activeSource,
   onSelectSource,
   canWrite,
+  canApprove,
   onApproveAll,
   isApprovePending,
 }: PayrollPeriodBodyProps) {
   const summary = detail.summary;
   const ordered = orderedSections(detail.sections);
   const shown = visibleSections(detail.sections, activeSource);
-  const approveReason = approveDisabledReason(detail, canWrite);
+  const approveReason = approveDisabledReason(detail, canApprove);
 
   return (
     <>

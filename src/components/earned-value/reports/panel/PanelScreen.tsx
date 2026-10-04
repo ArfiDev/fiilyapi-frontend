@@ -11,6 +11,8 @@ import { TreeTable } from "../../common/tree-table/TreeTable";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EV_BUDGET_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { usePanel, type ContractorFilter, type PanelRange } from "@/lib/api/hooks/useEvReports";
 import { isForbidden } from "@/lib/api/unwrap";
 import { bandsFromReport, DEFAULT_PF_BANDS } from "@/lib/earned-value";
@@ -79,7 +81,9 @@ export function PanelScreen({ siteId, siteCompleted, links, picker }: ReportScre
 
   const ownerValue: OwnerValue = url.contractorType ?? "all";
   const scope = useDisciplineScope();
-  const canDistribute = permission.canWrite && !siteCompleted;
+  // IZN-F2.x · saat dağıtımı bağlantısı = adam-saat bütçesi/ayarlar.planlama Düzenler (VEYA).
+  const canWriteAllocation = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit", fallback: permission.canWrite });
+  const canDistribute = canWriteAllocation && !siteCompleted;
   // Küm./hafta PF (KPI 2/3 + uyarılar kartı) AYNI eşik kümesini paylaşır —
   // `bandsFromReport` API'nin `cumulative` alanını kod tarafının `weekly`
   // anahtarına eşler (bkz. `bands-adapter.ts`); tek kaynaktan hesaplanır.

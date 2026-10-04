@@ -11,6 +11,8 @@ import { stockErrorMessage } from "@/lib/api/stock-error";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { INVENTORY_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { WarehouseModal } from "@/components/warehouse-form/WarehouseModal";
@@ -51,7 +53,12 @@ export function StockView() {
   const searchParams = useSearchParams();
 
   const permission = useModulePermission("inventory");
-  const canWrite = hasAtLeast(permission.level, "full");
+  // IZN-F2.x · kalem/depo/hareket yaz = stok.stok_depo/santiye.stok Düzenler (VEYA).
+  const canWrite = useButtonGate({
+    pages: INVENTORY_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(permission.level, "full"),
+  });
 
   const status = parseStockStatus(searchParams.get(STATUS_PARAM));
   const category = parseStockCategory(searchParams.get(CATEGORY_PARAM));

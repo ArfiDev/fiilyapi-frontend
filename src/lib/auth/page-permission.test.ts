@@ -1,0 +1,132 @@
+import { describe, expect, it } from "vitest";
+
+import type { PageKey } from "@/lib/api/models";
+
+import { decideGate, decidePagePermission, type PagePermissionMe } from "./page-permission";
+import { pageGrant } from "./page-grants.testkit";
+
+const PUANTAJ: PageKey = "saha.puantaj";
+const SANTIYE_PUANTAJ: PageKey = "santiye.puantaj";
+const BOLUM_PUANTAJ: PageKey = "bolum.puantaj";
+
+function me(pages: PagePermissionMe["pages"], isSystemAdmin = false): PagePermissionMe {
+  return { is_system_admin: isSystemAdmin, pages };
+}
+
+describe("decidePagePermission · V / E / A", () => {
+  it("none: ne görür ne düzenler ne onaylar", () => {
+    const result = decidePagePermission(me({ [PUANTAJ]: pageGrant("none") }), [PUANTAJ]);
+    expect(result).toMatchObject({ canView: false, canEdit: false, canApprove: false, hasGrant: true });
+  });
+
+  it("view: yalnız görür", () => {
+    const result = decidePagePermission(me({ [PUANTAJ]: pageGrant("view") }), [PUANTAJ]);
+    expect(result).toMatchObject({ canView: true, canEdit: false, canApprove: false });
+  });
+
+  it("edit: görür ve düzenler, onaylamaz", () => {
+    const result = decidePagePermission(me({ [PUANTAJ]: pageGrant("edit") }), [PUANTAJ]);
+    expect(result).toMatchObject({ canView: true, canEdit: true, canApprove: false });
+  });
+
+  it("approve bayrağı düzeyden bağımsızdır: view + approve onaylar ama düzenlemez", () => {
+    const result = decidePagePermission(me({ [PUANTAJ]: pageGrant("view", true) }), [PUANTAJ]);
+    expect(result).toMatchObject({ canView: true, canEdit: false, canApprove: true });
+  });
+});
+
+describe("decidePagePermission · VEYA kuralı (ikiz sayfalar)", () => {
+  const keys = [PUANTAJ, SANTIYE_PUANTAJ, BOLUM_PUANTAJ];
+
+  it("ikizlerden BİRİ edit ise düzenler", () => {
+    const result = decidePagePermission(
+      me({ [PUANTAJ]: pageGrant("none"), [SANTIYE_PUANTAJ]: pageGrant("edit"), [BOLUM_PUANTAJ]: pageGrant("view") }),
+      keys,
+    );
+    expect(result.canEdit).toBe(true);
+    expect(result.canApprove).toBe(false);
+  });
+
+  it("ikizlerden biri approve ise onaylar", () => {
+    const result = decidePagePermission(
+      me({ [PUANTAJ]: pageGrant("view"), [BOLUM_PUANTAJ]: pageGrant("view", true) }),
+      keys,
+    );
+    expect(result.canApprove).toBe(true);
+  });
+
+  it("hiçbiri edit değilse düzenlemez", () => {
+    const result = decidePagePermission(
+      me({ [PUANTAJ]: pageGrant("view"), [SANTIYE_PUANTAJ]: pageGrant("none") }),
+      keys,
+    );
+    expect(result.canEdit).toBe(false);
+  });
+
+  it("grant'ı olmayan anahtar yok sayılır, grant'lı olan karar verir", () => {
+    const result = decidePagePermission(me({ [SANTIYE_PUANTAJ]: pageGrant("edit") }), keys);
+    expect(result).toMatchObject({ canEdit: true, hasGrant: true });
+  });
+});
+
+describe("decidePagePermission · hasGrant ve sistem yöneticisi", () => {
+  it("me yok (yükleniyor) → hasGrant false", () => {
+    expect(decidePagePermission(null, [PUANTAJ]).hasGrant).toBe(false);
+  });
+
+  it("pages boş → hasGrant false", () => {
+    expect(decidePagePermission(me({}), [PUANTAJ]).hasGrant).toBe(false);
+  });
+
+  it("istenen anahtarların hiçbirinin grant'ı yok → hasGrant false (başka sayfanın grant'ı sayılmaz)", () => {
+    expect(decidePagePermission(me({ "ik.personel": pageGrant("edit") }), [PUANTAJ]).hasGrant).toBe(false);
+  });
+
+  it("anahtar verilmediyse hasGrant = pages boş değil", () => {
+    expect(decidePagePermission(me({ "ik.personel": pageGrant("view") }), []).hasGrant).toBe(true);
+    expect(decidePagePermission(me({}), []).hasGrant).toBe(false);
+  });
+
+  it("sistem yöneticisi: grant'lar none olsa da her şey true", () => {
+    const result = decidePagePermission(me({ [PUANTAJ]: pageGrant("none") }, true), [PUANTAJ]);
+    expect(result).toMatchObject({ isSystemAdmin: true, canView: true, canEdit: true, canApprove: true });
+  });
+});
+
+describe("decideGate · geri uyum düşüşü ve eşikler", () => {
+  const withGrant = (level: "none" | "view" | "edit", approve = false) =>
+    decidePagePermission(me({ [PUANTAJ]: pageGrant(level, approve) }), [PUANTAJ]);
+  const withoutGrant = decidePagePermission(me({}), [PUANTAJ]);
+
+  it("grant yoksa her eşikte fallback döner (true da false da)", () => {
+    for (const need of ["view", "edit", "approve", "sa"] as const) {
+      expect(decideGate(withoutGrant, need, true)).toBe(true);
+      expect(decideGate(withoutGrant, need, false)).toBe(false);
+    }
+  });
+
+  it("grant varsa fallback YOK SAYILIR", () => {
+    expect(decideGate(withGrant("view"), "edit", true)).toBe(false);
+    expect(decideGate(withGrant("edit"), "edit", false)).toBe(true);
+  });
+
+  it("view / edit / approve eşikleri kendi bayrağına bakar", () => {
+    expect(decideGate(withGrant("view"), "view", false)).toBe(true);
+    expect(decideGate(withGrant("view"), "edit", false)).toBe(false);
+    expect(decideGate(withGrant("edit"), "approve", false)).toBe(false);
+    expect(decideGate(withGrant("view", true), "approve", false)).toBe(true);
+    expect(decideGate(withGrant("none"), "view", true)).toBe(false);
+  });
+
+  it("sa eşiği: grant varken yalnız sistem yöneticisi geçer (edit + approve yetmez)", () => {
+    expect(decideGate(withGrant("edit", true), "sa", true)).toBe(false);
+    const admin = decidePagePermission(me({ [PUANTAJ]: pageGrant("none") }, true), [PUANTAJ]);
+    expect(decideGate(admin, "sa", false)).toBe(true);
+  });
+
+  it("sistem yöneticisi grant olmasa da fallback false iken geçer", () => {
+    const admin = decidePagePermission(me({}, true), [PUANTAJ]);
+    expect(decideGate(admin, "edit", false)).toBe(true);
+    expect(decideGate(admin, "sa", false)).toBe(true);
+  });
+});

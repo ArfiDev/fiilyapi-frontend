@@ -14,6 +14,8 @@ import {
 } from "@/lib/api/hooks/useLeaves";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { LEAVE_APPROVE, PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import {
   APPROVE_ERROR_FALLBACK,
@@ -69,6 +71,9 @@ export interface LeavesViewProps {
  */
 export function LeavesView({ currentYear = new Date().getFullYear() }: LeavesViewProps = {}) {
   const permission = useModulePermission("personnel");
+  // IZN-F2.x · bugün KAPISIZ düğmeler (fallback true): talep = ik.* Düzenler; Onayla/Reddet = ik.izin_yonetimi Onaylar.
+  const canRequestLeave = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit", fallback: true });
+  const canDecideLeave = useButtonGate({ pages: LEAVE_APPROVE, need: "approve", fallback: true });
   const [year, setYear] = useState(currentYear);
   const summaryQuery = useHrLeavesSummary(year);
   /**
@@ -123,14 +128,16 @@ export function LeavesView({ currentYear = new Date().getFullYear() }: LeavesVie
           Talebi", `Form - Izin Talebi.dc.html:71`) ve DEĞİŞMEDİ. */}
       <div className="iz__title-row">
         <h1 className="iz__title">{LEAVES_PAGE_TITLE}</h1>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setRequestFormOpen(true)}
-          data-testid="iz-new-request"
-        >
-          {NEW_REQUEST_ACTION_LABEL}
-        </Button>
+        {canRequestLeave && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setRequestFormOpen(true)}
+            data-testid="iz-new-request"
+          >
+            {NEW_REQUEST_ACTION_LABEL}
+          </Button>
+        )}
       </div>
 
       {/* `/personel` ile ORTAK sekme şeridi. F-IZN T5: "İzin Yönetimi" artık
@@ -154,6 +161,7 @@ export function LeavesView({ currentYear = new Date().getFullYear() }: LeavesVie
         // onay yolunda da kurulur; yoksa iki hızlı tıklama iki POST üretir ve
         // ikincisinin 409'u başarılı onayı başarısız gibi gösterir.
         isApprovePending={approveRequest.isPending}
+        canDecide={canDecideLeave}
         onApproveRequest={handleApprove}
         onRejectRequest={setRejectTarget}
       />

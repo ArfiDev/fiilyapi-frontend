@@ -26,11 +26,16 @@ export type RentalActionKind = "approve" | "pay" | "reject";
 /** Yazma uçlarının backend eşiği — tek yerde. */
 export const RENTAL_WRITE_LEVEL: AccessLevel = "full";
 
+/**
+ * IZN-F2.x: `canAct` verilirse (saha.makine_kira ONAYLAR kararı, `useButtonGate`) seviye
+ * eşiğinin YERİNE geçer; verilmezse bugünkü `full` eşiği uygulanır.
+ */
 export function permittedRentalActions(
   status: RentalInvoiceStatus,
   level: AccessLevel | undefined,
+  canAct?: boolean,
 ): RentalActionKind[] {
-  if (!hasAtLeast(level, RENTAL_WRITE_LEVEL)) return [];
+  if (!(canAct ?? hasAtLeast(level, RENTAL_WRITE_LEVEL))) return [];
 
   switch (status) {
     case "draft":

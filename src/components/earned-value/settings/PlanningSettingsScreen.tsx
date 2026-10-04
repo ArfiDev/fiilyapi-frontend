@@ -11,6 +11,8 @@ import { isLoaded } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EV_BUDGET_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { PlanningSettingsForm } from "./PlanningSettingsForm";
 import { SiteSelect } from "./SiteSelect";
@@ -47,6 +49,8 @@ export function PlanningSettingsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const permission = useModulePermission("earned_value");
+  // IZN-F2.x · planlama ayarı kaydet = ayarlar.planlama/adam-saat bütçesi Düzenler (VEYA).
+  const canEditSettings = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "draft") });
   const siteOptions = useEvSiteOptions();
 
   // Seçili şantiye URL'den; yoksa (ya da tanınmıyorsa) ilk DEVAM EDEN şantiye —
@@ -132,7 +136,7 @@ export function PlanningSettingsScreen() {
         siteGroups={siteOptions.groups}
         siteOptions={siteOptions.options}
         settings={settingsQuery.data}
-        canEdit={hasAtLeast(permission.level, "draft")}
+        canEdit={canEditSettings}
         onSiteChange={pushSite}
       />
     );

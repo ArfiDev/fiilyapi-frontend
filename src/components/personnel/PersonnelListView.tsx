@@ -11,6 +11,8 @@ import { downloadPersonnelExport } from "@/lib/api/personnel-export-client";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { PERSONNEL_MAX_LIMIT, usePersonnel } from "@/lib/api/hooks/usePersonnel";
 import { useHrDocumentsSummary } from "@/lib/api/hooks/useHrDocuments";
@@ -67,7 +69,12 @@ export function PersonnelListView() {
   const searchParams = useSearchParams();
 
   const permission = useModulePermission("personnel");
-  const canWrite = hasAtLeast(permission.level, "full");
+  // IZN-F2.x · personel ekle = ik.* Düzenler (VEYA).
+  const canWrite = useButtonGate({
+    pages: PERSONNEL_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(permission.level, "full"),
+  });
 
   const query = searchParams.get(QUERY_PARAM) ?? "";
   const projectId = searchParams.get(PROJECT_PARAM) ?? undefined;

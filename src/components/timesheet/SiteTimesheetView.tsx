@@ -9,6 +9,8 @@ import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PERSONNEL_EDIT, TIMESHEET_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
 import { AddPersonnelLink } from "./AddPersonnelLink";
@@ -70,7 +72,13 @@ export function SiteTimesheetView() {
 
   const permission = useModulePermission("timesheet");
   const personnelPermission = useModulePermission("personnel");
-  const canAddPersonnel = hasAtLeast(personnelPermission.level, "full");
+  const canAddPersonnel = useButtonGate({
+    pages: PERSONNEL_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(personnelPermission.level, "full"),
+  });
+  // IZN-F2.x · puantaj kaydet = saha/santiye.puantaj Düzenler; personel ekle = ik.* Düzenler.
+  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite });
 
   const week = parseIsoWeek(searchParams.get("iso_year"), searchParams.get("iso_week"));
   const sectionParam = searchParams.get("section") ?? ALL_SECTIONS;
@@ -116,7 +124,7 @@ export function SiteTimesheetView() {
       siteId={siteId}
       week={week}
       sectionId={sectionId}
-      canWrite={permission.canWrite}
+      canWrite={canEditTimesheet}
       canAddPersonnel={canAddPersonnel}
       returnTo={returnTo}
       onShiftWeek={(delta) => pushParams({ week: shiftIsoWeek(week, delta) })}

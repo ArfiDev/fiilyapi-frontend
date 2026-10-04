@@ -22,6 +22,8 @@ export interface ApproveGate {
 
 export interface ApproveGateInput {
   level: AccessLevel | undefined;
+  /** IZN-F2.x: günlük rapor Onaylar kararı (`useButtonGate`); verilirse `level` eşiğinin YERİNE geçer. */
+  canApprove?: boolean;
   siteCompleted: boolean;
   status: EvDailyReport["status"];
   /** `draft_diary_dates` — taslak (gönderilmemiş) günlükle üretilmiş günler. */
@@ -39,7 +41,7 @@ export interface ApproveGateInput {
  * bilgisine göre "bugün mü" kontrolü YOKTUR.
  */
 export function approveGate(input: ApproveGateInput): ApproveGate {
-  const canApprove = hasAtLeast(input.level, "approve") && !input.siteCompleted;
+  const canApprove = (input.canApprove ?? hasAtLeast(input.level, "approve")) && !input.siteCompleted;
   if (!canApprove || input.status !== "draft") {
     return { visible: false, disabled: false, reason: null };
   }

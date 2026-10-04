@@ -34,6 +34,8 @@ import { backendErrorMessage, submitBlockedReasons } from "@/lib/api/error-messa
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { DIARY_REOPEN_APPROVE, PROGRESS_PAYMENTS_EDIT, SITE_DIARY_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { formatMonthName } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -139,6 +141,14 @@ export function DiaryEntryScreen({
   const projectId = siteQuery.data?.project.id ?? "";
   const boqQuery = useBoq(siteId);
   const permission = useModulePermission("site_diary");
+  // IZN-F2.x · günlük aç/düzenle/satır/Gönder = günlük kayıt Düzenler (VEYA); Yeniden Aç = YALNIZ kök
+  // saha.gunluk_kayit Onaylar (73/88 ikizleri B3'e kadar işlevsiz).
+  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite });
+  const canReopen = useButtonGate({
+    pages: DIARY_REOPEN_APPROVE,
+    need: "approve",
+    fallback: hasAtLeast(permission.level, "admin"),
+  });
 
   // PLN-F3.0 · Hangi GÜNÜN kaydı düzenleniyor. İlk değer `?tarih=`den (geçersiz/
   // eksik → BUGÜN — mockup'taki sabit tarih KOPYALANMAZ, tarih artefaktı
@@ -211,6 +221,8 @@ export function DiaryEntryScreen({
   const employerPaymentsQuery = useProgressPayments({ project_id: projectId });
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
   const paymentsPermission = useModulePermission("progress_payments");
+  // IZN-F2.x · hakediş oluştur bağlantısı = hakediş sayfaları Düzenler (VEYA).
+  const canCreatePayment = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: paymentsPermission.canWrite });
 
   // PLN-F2.2 — firma adları taşeron listesinden (satır yanıtı ad taşımaz).
   // Pasif firmalar da okunur: kayıttaki eski firma satırı adsız kalmasın.
@@ -408,7 +420,7 @@ export function DiaryEntryScreen({
   const coreLock = diaryCoreLock(entry, preview.skeleton);
   const isLocked = hasExtensionLock || coreLock.isLocked;
   // Salt-okunur görünüm: yazma izni yok, kayıt gönderilmiş ya da gün kilitli.
-  const isReadOnly = !permission.canWrite || isSubmitted || isLocked;
+  const isReadOnly = !canWriteDiary || isSubmitted || isLocked;
   const transitions = useDiaryPreviewTransitions({
     siteId,
     activeDate,
@@ -456,7 +468,6 @@ export function DiaryEntryScreen({
     );
   }
 
-  const canReopen = hasAtLeast(permission.level, "admin");
   // Kayıtlı günde `isEntryFormDirty`; kayıtsız günde `noEntryBaseline` kirliliği (GKS-F1.5).
   const isDirty = registryDirty;
   // Uzantı yuvası `submitGate`: `canSubmit === false` → Gönder pasif + gerekçeler EKRANDA.
@@ -472,7 +483,7 @@ export function DiaryEntryScreen({
    * başlık düğmesi de, `fullWidthBlock`a verilen `canSubmit` de BUNU okur.
    */
   const canSubmit =
-    permission.canWrite && !isSubmitted && entry !== undefined && !isLocked && !isGateClosed && !isSaving && !isDateInvalid;
+    canWriteDiary && !isSubmitted && entry !== undefined && !isLocked && !isGateClosed && !isSaving && !isDateInvalid;
   // Kayıt yokken Taslak Kaydet önizleme GÜNCELken açılır: bayat önizlemenin
   // satırları yeni başlığın iskeletine eklenirdi (POST birleştirir, silmez).
   const isCreateBlocked = entry === undefined && (matchedId !== "" || !preview.isCurrent);
@@ -722,7 +733,7 @@ export function DiaryEntryScreen({
               siteId: siteKey,
             })}
           />
-          {permission.canWrite && !isSubmitted && (
+          {canWriteDiary && !isSubmitted && (
             <>
               {/* E7 66 — kilitli günde yazma yok (İ:121 düğme pasif). */}
               <Button variant="secondary" disabled={isSaving || isLocked || isCreateBlocked || isDateInvalid} onClick={handleSaveDraft}>
@@ -763,7 +774,7 @@ export function DiaryEntryScreen({
             {canReopen ? " Düzenlemek için “Yeniden Aç” deyin." : ""}
           </span>
         )}
-        {!permission.canWrite && (
+        {!canWriteDiary && (
           <span className="diary__status-note">
             Bu modülde yalnız görüntüleme yetkiniz var — form salt-okunur.
           </span>
@@ -868,7 +879,7 @@ export function DiaryEntryScreen({
             disabled={isReadOnly}
             isLocked={isLocked}
             // G10: satır ekle/kaldır `site_diary` yazma iznidir (formen dahil).
-            canEditRows={permission.canWrite}
+            canEditRows={canWriteDiary}
             isBoqUnavailable={boqQuery.isError}
             isDirty={isDirty}
             // Kök ikizde proje çözülmediyse bağlantı kurulmaz (çift slaşlı yol olmasın).
@@ -919,7 +930,7 @@ export function DiaryEntryScreen({
             monthLabel={formatMonthName(period.month)}
             paymentsHref={routes.projects.sites.progressPayments({ projectId: projectKey, siteId: siteKey })}
             createHref={
-              paymentsPermission.canWrite ? routes.progressPayments.new({ projectId }) : null
+              canCreatePayment ? routes.progressPayments.new({ projectId }) : null
             }
           />
           <DiaryWorkerCountsCard

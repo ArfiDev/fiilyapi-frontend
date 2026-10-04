@@ -19,7 +19,10 @@ import {
   type SubcontractorProgressPaymentDetail,
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
+import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROGRESS_PAYMENTS_EDIT, SUBCONTRACTOR_PAYMENT_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "@/components/settings/settings.css";
 import "./progress-payment-detail.css";
@@ -45,6 +48,11 @@ export function SubcontractorProgressPaymentStatusActions({
   detail,
 }: SubcontractorProgressPaymentStatusActionsProps) {
   const { level } = useModulePermission("progress_payments");
+  // IZN-F2.x · Gönder = hakediş sayfaları Düzenler; Onayla/Reddet/Ödendi = hakediş Onaylar; Onayı Geri Al = yalnız SA.
+  // Grant yoksa bugünkü seviye eşikleri (`permittedPaymentActions` varsayılanı).
+  const canSubmit = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: hasAtLeast(level, "draft") });
+  const canApprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "approve", fallback: hasAtLeast(level, "approve") });
+  const canUnapprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "sa", fallback: hasAtLeast(level, "admin") });
   const queryClient = useQueryClient();
 
   const submit = useSubmitSubcontractorProgressPayment();
@@ -125,7 +133,7 @@ export function SubcontractorProgressPaymentStatusActions({
     });
   }
 
-  const actions = permittedPaymentActions(detail.status, level);
+  const actions = permittedPaymentActions(detail.status, level, { canSubmit, canApprove, canUnapprove });
 
   return (
     <div className="pp-detail__actions" data-testid="th-detail-actions">

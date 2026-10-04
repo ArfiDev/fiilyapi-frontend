@@ -9,6 +9,8 @@ import { useFileDownload } from "@/lib/use-file-download";
 
 import { rowMenuRules } from "./offer-list-model";
 import type { OfferListItem } from "./offer-types";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 interface OfferRowMenuProps {
   item: OfferListItem;
@@ -25,6 +27,9 @@ interface OfferRowMenuProps {
 /** TL:158-165, 251 — ⋯ menüsü: Aç · Kopyala (yeni rev) · PDF indir · Excel indir (+ Taslağı sil, ÜS-F3-12). */
 export function OfferRowMenu({ item, canWrite, isOpen, isBusy, onToggle, onClose, onNewRevision, onDelete }: OfferRowMenuProps) {
   const rules = rowMenuRules(item, canWrite);
+  // IZN-F2.x · taslak teklif silme = yalnız sistem yöneticisi (SIL-B1 `require_system_admin`; durum kuralı korunur).
+  const canDeleteOffer =
+    useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: rules.canDelete }) && rowMenuRules(item, true).canDelete;
   const download = useFileDownload();
   // Başarıda menü kapanır (dosya tarayıcıya indi); hata menüde kalır (aşağıda).
   useEffect(() => {
@@ -82,7 +87,7 @@ export function OfferRowMenu({ item, canWrite, isOpen, isBusy, onToggle, onClose
             Excel indir
           </button>
           {download.error !== null && <span className="offers-menu__reason">{download.error}</span>}
-          {rules.canDelete && (
+          {canDeleteOffer && (
             <button
               type="button"
               className="offers-menu__item offers-menu__item--danger"

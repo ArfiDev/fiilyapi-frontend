@@ -12,6 +12,8 @@ import { useSiteDiarySummary } from "@/lib/api/hooks/useSiteDiary";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatPeriod } from "@/lib/format";
 
 import { DiaryModeSwitch } from "./DiaryModeSwitch";
@@ -51,6 +53,8 @@ export function SiteDiarySummaryView() {
 
   const permission = useModulePermission("site_diary");
   const paymentsPermission = useModulePermission("progress_payments");
+  // IZN-F2.x · Hakediş Oluştur = hakediş sayfaları Düzenler (VEYA).
+  const canCreatePayment = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: paymentsPermission.canWrite });
   const siteQuery = useSite(siteKey, { project: projectKey });
   // 🔴 SLUG -> KANONIK KIMLIK GECIS NOKTASI (bkz. `routes.ts` YOL/SORGU kurali).
   const siteId = siteQuery.data?.id ?? "";
@@ -133,7 +137,7 @@ export function SiteDiarySummaryView() {
         <div className="diary__head-actions">
           <DiaryMonthNav year={period.year} month={period.month} onShift={handleShiftMonth} />
           {/* HÖ94 — yazma izni yoksa öğe SİLİNMEZ, gerekçesiyle devre dışı basılır */}
-          {paymentsPermission.canWrite ? (
+          {canCreatePayment ? (
             <Link className="diary-summary__cta" href={routes.progressPayments.new({ projectId })}>
               Hakediş Oluştur →
             </Link>

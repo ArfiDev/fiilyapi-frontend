@@ -8,6 +8,8 @@ import { useSiteDiaryEntry } from "@/lib/api/hooks/useSiteDiary";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { SITE_DIARY_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
 import { detailWorkerSummary, isPaymentHidden } from "./cards-derive";
@@ -60,6 +62,8 @@ export function SiteDiaryDetailView({ extension, onExtensionContext }: DiaryDeta
   const sectionResolved = section !== undefined || sectionQuery.isError;
   const entryQuery = useSiteDiaryEntry(entryId, { sectionId: section?.id, enabled: sectionResolved });
   const permission = useModulePermission("site_diary");
+  // IZN-F2.x · "Günlük kayıtta aç" = günlük kayıt Düzenler (VEYA).
+  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite });
 
   const entry = entryQuery.data;
   // Adresteki şantiyeye ait olmayan kayıt (kimlik elle değiştirilmiş) —
@@ -67,7 +71,7 @@ export function SiteDiaryDetailView({ extension, onExtensionContext }: DiaryDeta
   const isForeignEntry = entry !== undefined && siteQuery.data !== undefined && entry.site_id !== siteQuery.data.id;
   // S8 — "Günlük kayıtta aç" YALNIZ yazabilen + kilitsiz günde.
   const openHref =
-    entry !== undefined && permission.canWrite && !entry.locked
+    entry !== undefined && canWriteDiary && !entry.locked
       ? routes.projects.sites.diary({ projectId: projectKey, siteId: siteKey })
       : undefined;
 

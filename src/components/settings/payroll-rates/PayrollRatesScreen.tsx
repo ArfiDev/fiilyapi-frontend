@@ -21,6 +21,8 @@ import {
 import { usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PAYROLL_EDIT, TAX_BRACKETS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
 import { normalizeDecimalInput, sumDecimalStrings } from "@/lib/decimal";
 import { formatDecimal } from "@/lib/format";
@@ -87,8 +89,18 @@ export function PayrollRatesScreen() {
   const { level } = useModulePermission("payroll");
   // 🔴 İKİ AYRI KAPI — ölçüldü, varsayılmadı: oran `full`, tarife `admin`.
   // Bilinmezlik kuralı (seviye yoksa `true`) korunur.
-  const canEditRates = hasAtLeast(level, "full");
-  const canEditBrackets = hasAtLeast(level, "admin");
+  // IZN-F2.x · KOD kazanır: `PUT /payroll/rates` = payroll:full → mali.bordro VEYA mali.sgk_bildirimi Düzenler
+  // (ayarlar.bordro_oranlari bu kapıdan ÇIKTI); vergi dilimi = yalnız ayarlar.bordro_oranlari Düzenler.
+  const canEditRates = useButtonGate({
+    pages: PAYROLL_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(level, "full"),
+  });
+  const canEditBrackets = useButtonGate({
+    pages: TAX_BRACKETS_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(level, "admin"),
+  });
 
   const [yearOverride, setYearOverride] = useState<number | null>(null);
   const [source, setSource] = useState<WorkerSource>(PAYROLL_TYPE_SOURCES[0]!);

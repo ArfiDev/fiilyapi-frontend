@@ -51,6 +51,7 @@ export const OFFER_ACTION_REASONS = {
   unquantified: "Miktarı girilmemiş kalem var",
   /** TKL-F5.5 · ÜS-F5-3: dönüştürme `projects:admin` ister (seed'de yalnız system_admin). */
   convertNeedsProjectsAdmin: "Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)",
+  convertNeedsApprove: "Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir",
 } as const;
 
 const R = OFFER_ACTION_REASONS;
@@ -184,6 +185,11 @@ export interface OfferConvertInput {
   canWrite: boolean;
   /** `projects ≥ admin` (SO-42). */
   canAdminProjects: boolean;
+  /**
+   * IZN-F2.x · sayfa izni kararı (teklif.teklif_hazirlama Onaylar; disiplin kısıtsız). VERİLİRSE `canWrite` +
+   * `canAdminProjects` kapılarının YERİNE geçer; grant yoksa `undefined` (bugünkü kural).
+   */
+  canConvert?: boolean;
   /** Görüntülenen revizyon SON revizyon mu (T41: eski revizyonda eksen GİZLİ). */
   isLatest: boolean;
 }
@@ -196,6 +202,11 @@ export interface OfferConvertInput {
 export function offerConvertGate(input: OfferConvertInput): OfferConvertVerdict {
   if (!input.isLatest) return { visible: false };
   if (input.status !== "won" || input.conversionState !== "won_not_converted") return { visible: false };
+  if (input.canConvert !== undefined) {
+    return input.canConvert
+      ? { visible: true, enabled: true }
+      : { visible: true, enabled: false, reason: R.convertNeedsApprove };
+  }
   if (!input.canWrite) return { visible: true, enabled: false, reason: R.readOnlyUser };
   if (!input.canAdminProjects) return { visible: true, enabled: false, reason: R.convertNeedsProjectsAdmin };
   return { visible: true, enabled: true };

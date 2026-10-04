@@ -25,6 +25,8 @@ import { useVatReturn } from "@/lib/api/hooks/useVatReturn";
 import { LEDGER_MAX_LIMIT, useLedger } from "@/lib/api/hooks/useLedger";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatCurrency } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -72,6 +74,8 @@ export type JournalEntryDialogState =
  */
 export function AccountingView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  // IZN-F2.x · fiş oluştur/düzenle/Ters Kayıt = mali.yevmiye/hesap_plani/donem_kapanisi Düzenler (VEYA).
+  const canEditAccounting = useButtonGate({ pages: ACCOUNTING_EDIT, need: "edit", fallback: permission.canWrite });
 
   // 📅 Dönem penceresinin TEK referansı; mount başına bir kez üretilir
   // (`InvoicesView` deseni) — alt bileşenler `new Date()` çağırmaz, testler
@@ -216,7 +220,7 @@ export function AccountingView() {
           {/* MP:104 — `JournalEntryFormModal`ı açar (T4). */}
           <Button
             variant="primary"
-            disabled={!permission.canWrite}
+            disabled={!canEditAccounting}
             data-testid="mu-create-entry"
             onClick={() => setEntryDialog({ mode: "create" })}
           >
@@ -228,7 +232,7 @@ export function AccountingView() {
       {/* MP:105-112 — modül sekmeleri; drill-in sidebar'ın YERİNE (KK-10). */}
       <AccountingTabs />
 
-      {!permission.canWrite && (
+      {!canEditAccounting && (
         <p className="mu-notice" data-testid="mu-write-notice">
           {ACCOUNTING_REASONS.write}
         </p>
@@ -382,7 +386,7 @@ export function AccountingView() {
             ? backendErrorMessage(draftsQuery.error, "Dönem fişleri yüklenemedi.")
             : undefined
         }
-        canWrite={permission.canWrite}
+        canWrite={canEditAccounting}
         writeDisabledReason={ACCOUNTING_REASONS.write}
         busyEntryId={busyEntryId}
         onEdit={(entryId) => setEntryDialog({ mode: "edit", entryId })}

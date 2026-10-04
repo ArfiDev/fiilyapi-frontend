@@ -14,6 +14,8 @@ import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useFileDownload } from "@/lib/use-file-download";
 
 import { WorkItemDisciplineChips } from "./WorkItemDisciplineChips";
@@ -56,7 +58,9 @@ export function WorkItemCatalogScreen() {
 
 function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
   const scope = useDisciplineScope();
-  const canWrite = hasAtLeast(level, WRITE_LEVEL) && !scope.isRestricted;
+  // IZN-F2.x · katalog kalemi ekle/düzenle = teklif.is_kalemi_katalogu/sözleşme sayfaları Düzenler (VEYA) ∧ kısıtsız.
+  const canEditCatalog = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canWrite = canEditCatalog && !scope.isRestricted;
 
   const exportDownload = useFileDownload();
   const catalog = useCatalogItems();

@@ -11,6 +11,8 @@ import type { PayrollSgkSummaryResponse } from "@/lib/api/hooks/usePayrollSgk";
 import { usePayrollSgkSummary, useSubmitPayrollSgk } from "@/lib/api/hooks/usePayrollSgk";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { SGK_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrencyTight, formatDateLong, formatPeriod } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -77,6 +79,8 @@ import "./payroll-sgk.css";
  */
 export function PayrollSgkView() {
   const permission = useModulePermission(PAYROLL_PERMISSION_MODULE);
+  // IZN-F2.x · SGK'ya Gönder = mali.sgk_bildirimi Onaylar.
+  const canSubmitSgk = useButtonGate({ pages: SGK_APPROVE, need: "approve", fallback: permission.canWrite });
   const periodsQuery = usePayrollPeriods();
 
   // `null` = kullanıcı henüz seçim yapmadı ⇒ varsayılan (en yeni dönem).
@@ -236,7 +240,7 @@ export function PayrollSgkView() {
         <SgkBody
           summary={summary}
           periodLabel={periodLabel}
-          canWrite={permission.canWrite}
+          canWrite={canSubmitSgk}
           onSubmit={handleSubmit}
           isSubmitPending={isSubmitPending}
           submitError={submitError}

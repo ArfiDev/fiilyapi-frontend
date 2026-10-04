@@ -18,6 +18,8 @@ import { isLoaded } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { equipmentCategoryIcon } from "./category-icon";
@@ -64,7 +66,12 @@ export function EquipmentView() {
   // F-BLG T2b · "Belge Ekle" diyaloğu (`Form - Ekipman Belgesi.dc.html`).
   // Yazma yüzeyi `full` ister; izinsiz kullanıcıda tetikleyici BASILMAZ.
   const [documentTarget, setDocumentTarget] = useState<EquipmentResponse | null>(null);
-  const canWrite = hasAtLeast(permission.level, "full");
+  // IZN-F2.x · ekipman belgesi ekle = saha.makine_* Düzenler (VEYA).
+  const canWrite = useButtonGate({
+    pages: EQUIPMENT_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(permission.level, "full"),
+  });
 
   if (!permission.canView || isForbidden(equipmentQuery.error)) return <AccessDenied />;
 

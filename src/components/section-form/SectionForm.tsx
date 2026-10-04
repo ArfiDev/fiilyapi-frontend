@@ -16,6 +16,8 @@ import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { SITES_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 import { isUserListUnavailable } from "@/components/site-form/user-picker";
 
@@ -62,7 +64,9 @@ function InfoIcon() {
  */
 export function SectionForm(props: SectionFormProps) {
   const router = useRouter();
-  const { canWrite } = useModulePermission("sites");
+  const { canWrite: moduleCanWrite } = useModulePermission("sites");
+  // IZN-F2.x · bölüm ekle/düzenle = santiye.bolumler/bolum.detay Düzenler (VEYA).
+  const canWrite = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: moduleCanWrite });
   const isEdit = props.mode === "edit";
 
   const siteQuery = useSite(props.siteKey, { project: props.projectKey });

@@ -8,6 +8,8 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROCUREMENT_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { PurchasingTabs } from "./PurchasingTabs";
@@ -31,6 +33,8 @@ import "./purchasing.css";
  */
 export function SuppliersView() {
   const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
+  // IZN-F2.x · tedarikçi ekle/düzenle = stok.tedarikciler Düzenler (VEYA siparişler/teklif karşılaştırma).
+  const canEditSuppliers = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit", fallback: permission.canWrite });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Kırpılma korkuluğu (ARCHITECTURE §5): tavan AÇIKÇA gönderilir.
@@ -54,7 +58,7 @@ export function SuppliersView() {
         <h1 className="sat__title">Tedarikçiler</h1>
         <div className="sat__actions">
           {/* 36 — türetilmiş minimal diyalog (spec K5) */}
-          {permission.canWrite && (
+          {canEditSuppliers && (
             <Button variant="primary" onClick={() => setIsDialogOpen(true)}>
               + Tedarikçi Ekle
             </Button>
@@ -85,7 +89,7 @@ export function SuppliersView() {
 
         {/* 124-128 · kesikli "Yeni Tedarikçi Ekle" kartı — başlıktaki düğmeyle
             AYNI diyaloğu açar (mockup ikisini de çizer) */}
-        {permission.canWrite && (
+        {canEditSuppliers && (
           <button
             type="button"
             className="ted-add"

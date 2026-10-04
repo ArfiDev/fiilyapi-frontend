@@ -14,6 +14,8 @@ import { useQuotes } from "@/lib/api/hooks/useQuotes";
 import { downloadQuoteComparisonExport } from "@/lib/api/purchase-quote-client";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROCUREMENT_EDIT, QUOTE_ORDER_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatDateDots, formatQuantity } from "@/lib/format";
 
 import { QuoteComparisonCard } from "./QuoteComparisonCard";
@@ -59,6 +61,9 @@ export interface QuoteComparisonViewProps {
 
 export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
   const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
+  // IZN-F2.x · teklif ekle = stok.teklif_karsilastirma Düzenler; Seç ve Sipariş Ver = stok.teklif_karsilastirma Onaylar.
+  const canAddQuote = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit", fallback: permission.canWrite });
+  const canOrder = useButtonGate({ pages: QUOTE_ORDER_APPROVE, need: "approve", fallback: permission.canWrite });
 
   const requestQuery = usePurchaseRequest(requestId);
   const quotesQuery = useQuotes(requestId);
@@ -89,7 +94,7 @@ export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
     : undefined;
 
   const isClosed = request !== undefined && CLOSED_STATUSES.has(request.status);
-  const selectDisabledReason = !permission.canWrite
+  const selectDisabledReason = !canOrder
     ? MESSAGES.noWritePermission
     : isClosed
       ? MESSAGES.alreadyOrdered
@@ -151,7 +156,7 @@ export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
         <div className="sat__actions">
           {/* K5 ONAYLI SAPMA: teklif giriş yüzeyi mockup'ta yoktur ama
               teklifler bir yerden girilmelidir (türetilmiş minimal diyalog). */}
-          {permission.canWrite && !isClosed && (
+          {canAddQuote && !isClosed && (
             <Button
               variant="secondary"
               onClick={() => setIsQuoteDialogOpen(true)}

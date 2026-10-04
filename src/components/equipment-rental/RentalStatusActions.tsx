@@ -7,7 +7,10 @@ import { Alert, Button } from "@/components/ui";
 import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { BackendError } from "@/lib/api/unwrap";
+import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { RENTAL_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import {
   EQUIPMENT_RENTAL_INVOICE_QUERY_KEY,
   type RentalInvoiceDetailResponse,
@@ -20,6 +23,7 @@ import {
 
 import {
   RENTAL_ACTION_LABEL,
+  RENTAL_WRITE_LEVEL,
   permittedRentalActions,
   rentalForwardActionLabel,
 } from "./rental-actions";
@@ -58,6 +62,12 @@ export interface RentalStatusActionsProps {
  */
 export function RentalStatusActions({ detail }: RentalStatusActionsProps) {
   const { level } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  // IZN-F2.x · Onayla / Ödendi / Onayı Geri Al = saha.makine_kira ONAYLAR (grant yoksa eski `full` eşiği).
+  const canAct = useButtonGate({
+    pages: RENTAL_APPROVE,
+    need: "approve",
+    fallback: hasAtLeast(level, RENTAL_WRITE_LEVEL),
+  });
   const queryClient = useQueryClient();
 
   const approve = useApproveRentalInvoice();
@@ -69,7 +79,7 @@ export function RentalStatusActions({ detail }: RentalStatusActionsProps) {
   const [rejectOpen, setRejectOpen] = useState(false);
 
   const anyPending = approve.isPending || pay.isPending || reject.isPending;
-  const actions = permittedRentalActions(detail.status, level);
+  const actions = permittedRentalActions(detail.status, level, canAct);
   const forwardLabel = rentalForwardActionLabel(detail.status);
 
   function handleError(err: unknown, fallback: string) {

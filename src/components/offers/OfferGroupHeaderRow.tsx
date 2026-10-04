@@ -9,6 +9,8 @@ import { EMPTY_CELL } from "@/lib/format";
 
 import type { OfferItem } from "./offer-item-cells";
 import { groupTotals, type GroupTotals } from "./offer-items-model";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 export interface OfferGroupHeaderRowProps {
   code: string;
@@ -32,6 +34,8 @@ function manHoursText(totals: GroupTotals): string {
 /** TD:238-245 — grup başlığı: kod harfi · ad (tıkla-düzenle, ÜS-F3-11) · n kalem · Σ a-s · maliyet · Σ tutar. */
 export function OfferGroupHeaderRow({ code, groupId, name, items, canEdit, onRename, onDelete }: OfferGroupHeaderRowProps) {
   const totals = groupTotals(items);
+  // IZN-F2.x · boş grubu silme = yalnız sistem yöneticisi (SIL-B1; grant yoksa bugünkü `canEdit`).
+  const canRemoveGroup = useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: canEdit });
   const [draft, setDraft] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // Escape girişi kaldırır; tarayıcı kaldırılan odaklı girişte `blur` atabilir → iptal bayrağı yazımı korur.
@@ -85,7 +89,7 @@ export function OfferGroupHeaderRow({ code, groupId, name, items, canEdit, onRen
           <span className="oit-group__name">{name}</span>
         )}
         <span className="oit-group__count">{`${totals.count} kalem`}</span>
-        {canEdit && totals.count === 0 && (
+        {canRemoveGroup && totals.count === 0 && (
           <button
             type="button"
             className="oit-icon-btn"

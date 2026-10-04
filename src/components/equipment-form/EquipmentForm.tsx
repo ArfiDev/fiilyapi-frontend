@@ -20,6 +20,8 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import {
   buildEquipmentCreateBody,
@@ -79,6 +81,8 @@ export function EquipmentForm(props: EquipmentFormProps) {
   const router = useRouter();
 
   const permission = useModulePermission("equipment");
+  // IZN-F2.x · ekipman ekle/düzenle = saha.makine_* Düzenler (VEYA).
+  const canEdit = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
   const createEquipment = useCreateEquipment();
   const updateEquipment = useUpdateEquipment(isEdit ? props.equipmentId : "");
   const detailQuery = useEquipmentDetail(isEdit ? props.equipmentId : "");
@@ -190,7 +194,7 @@ export function EquipmentForm(props: EquipmentFormProps) {
 
   // Yazma yetkisi olmayan kullanıcı bu rotayı hiç görmemeli (giriş noktaları
   // zaten gizli); doğrudan URL ile gelen için kapı burada.
-  if (!hasAtLeast(permission.level, "full")) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
   if (isEdit && isForbidden(detailQuery.error)) return <AccessDenied />;
   if (isEdit && detailQuery.isError) {
     return <p className="pf-message">Ekipman yüklenemedi</p>;

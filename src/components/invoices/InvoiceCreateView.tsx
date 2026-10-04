@@ -19,6 +19,8 @@ import {
   type InvoiceCreateRequest,
 } from "@/lib/api/hooks/useInvoiceMutations";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { INVOICING_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatPeriod } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -121,6 +123,8 @@ function vatLabel(rates: readonly string[]): string {
 export function InvoiceCreateView() {
   const router = useRouter();
   const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
+  // IZN-F2.x · fatura oluştur/düzenle = mali.fatura Düzenler.
+  const canEditInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [today] = useState(() => new Date());
   const [source, setSource] = useState<SourceKind>("manual");
@@ -313,7 +317,7 @@ export function InvoiceCreateView() {
     });
   }
 
-  const canWrite = permission.canWrite;
+  const canWrite = canEditInvoice;
 
   return (
     <div className="fat">

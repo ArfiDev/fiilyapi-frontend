@@ -7,6 +7,8 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { parseEmployerFilters } from "./employer-filters";
 import { ProgressPaymentsFilters } from "./ProgressPaymentsFilters";
@@ -52,7 +54,9 @@ export function ProgressPaymentsView() {
   });
   // Yazma yüzeyi kapısı (spec §2.5): "Yeni Hakediş" yalnız `draft` ve üstü
   // seviyede görünür. Yetki zorlaması HER ZAMAN backend'dedir.
-  const { canWrite } = useModulePermission("progress_payments");
+  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
+  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
+  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
 
   if (isForbidden(paymentsQuery.error)) return <AccessDenied />;
 

@@ -10,6 +10,8 @@ import { PageGroupSection } from "./PageGroupSection";
 import { buildSections } from "./page-access-derive";
 import { isHiddenFieldsEffective, type AccessDraft } from "./page-access-draft";
 import type { PageAccessEditor } from "./usePageAccessDraft";
+import { PAGE_ACCESS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 interface RolePanelProps {
   role: RoleResponse;
@@ -29,7 +31,10 @@ function changesLabel(count: number): string {
 export function RolePanel({ role, access, catalog, editor, isSaving, saveError, onSave }: RolePanelProps) {
   const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(new Set());
   const sections = buildSections(catalog);
-  const isReadOnly = access.is_locked || role.is_locked;
+  const isLockedRole = access.is_locked || role.is_locked;
+  // IZN-F2.x · Kaydet = ayarlar.sayfa_izinleri Düzenler (bugün KAPISIZ → grant yoksa serbest).
+  const canEditPages = useButtonGate({ pages: PAGE_ACCESS_EDIT, need: "edit", fallback: true });
+  const isReadOnly = isLockedRole || !canEditPages;
 
   function toggleGroup(group: string) {
     setOpenGroups((previous) => {
@@ -56,7 +61,7 @@ export function RolePanel({ role, access, catalog, editor, isSaving, saveError, 
         <div className="role-panel__actions">
           {isReadOnly ? (
             <span className="role-panel__locked">
-              <LockIcon /> Sistem rolü · değiştirilemez
+              <LockIcon /> {isLockedRole ? "Sistem rolü · değiştirilemez" : "Salt okunur · düzenleme yetkiniz yok"}
             </span>
           ) : (
             <>

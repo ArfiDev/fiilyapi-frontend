@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button/Button";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useContractDistribution, useEmployerContract } from "@/lib/api/hooks/useContract";
 import { useSaveContractDistribution } from "@/lib/api/hooks/useContractMutations";
 import { useProject } from "@/lib/api/hooks/useProjects";
@@ -57,6 +59,8 @@ export interface ContractDistributionViewProps {
 
 export function ContractDistributionView({ projectId }: ContractDistributionViewProps) {
   const permission = useModulePermission("contracts");
+  // IZN-F2.x · poz dağılımı kaydet = sözleşme sayfaları Düzenler (VEYA).
+  const canEditContracts = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: permission.canWrite });
   const distributionQuery = useContractDistribution(projectId);
   const contractQuery = useEmployerContract(projectId);
   const projectQuery = useProject(projectId);
@@ -76,7 +80,7 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
 
   const data = distributionQuery.data;
   const isMetrajHidden = data !== undefined && isDistributionMetrajHidden(data.groups);
-  const distributeBlockReason = !permission.canWrite
+  const distributeBlockReason = !canEditContracts
     ? "Kalanı dağıtma kapalı: yazma izniniz yok."
     : isMetrajHidden
       ? "Kalanı dağıtma kapalı: metraj bu rol için gizli."
@@ -201,7 +205,7 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
               kural); değişiklik yokken de devre dışıdır (boş gövde göndermek
               anlamsız istek olurdu). */}
           <Button
-            disabled={!permission.canWrite || edits.size === 0 || saveMutation.isPending}
+            disabled={!canEditContracts || edits.size === 0 || saveMutation.isPending}
             onClick={() => void handleSave()}
             data-testid="cdist-save"
           >
@@ -248,7 +252,7 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
             </p>
           )}
 
-          {!permission.canWrite && (
+          {!canEditContracts && (
             <p className="cdist__message" data-testid="cdist-readonly-notice">
               Sözleşme modülünde yazma izniniz yok — kotalar salt okunur.
             </p>
@@ -273,7 +277,7 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
             sites={data.sites}
             groups={data.groups}
             edits={new Map([...edits].map(([key, edit]) => [key, edit.value]))}
-            canWrite={permission.canWrite}
+            canWrite={canEditContracts}
             onCellChange={handleCellChange}
             onDistributeRemaining={handleDistributeRemaining}
             isDistributeDisabled={distributeBlockReason !== null}

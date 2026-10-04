@@ -12,6 +12,8 @@ import { useSales } from "@/lib/api/hooks/useSales";
 import { useSalesSummary } from "@/lib/api/hooks/useSalesSummary";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROJECT_UNITS_EDIT, SALES_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { BLOCK_FORM_HREF, UNIT_FORM_HREF } from "@/components/unit-shell/routes";
 
 import { BlockOccupancyMap } from "./BlockOccupancyMap";
@@ -57,6 +59,9 @@ export function SalesView() {
   // kapıyı kullanıyor (`BlockCreateView`/`UnitCreateView`). Yalnız `sales`
   // yetkisi olan kullanıcı bu iki girişi GÖRMEZ; gördüğü an form 403 verirdi.
   const unitPermission = useModulePermission("projects");
+  // IZN-F2.x · satış kaydı = mali.satis Düzenler; blok/ünite girişi = mali.satis_* Düzenler (VEYA).
+  const canCreateSale = useButtonGate({ pages: SALES_EDIT, need: "edit", fallback: permission.canWrite });
+  const canCreateUnits = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: unitPermission.canWrite });
 
   const projectsQuery = useProjects();
   const projects = projectsQuery.data?.items ?? [];
@@ -149,7 +154,7 @@ export function SalesView() {
               Kaydı` link-düğme). İkincil seçilmesinin nedeni hiyerarşidir —
               mockup bu şeritte TEK birincil eylem çizer, üç mavi düğme onu
               siler. Sıra iş akışıdır: blok → ünite → satış. */}
-          {unitPermission.canWrite && (
+          {canCreateUnits && (
             <>
               <Link href={formHref(BLOCK_FORM_HREF)} className="btn btn--secondary btn--md">
                 + Blok Ekle
@@ -160,7 +165,7 @@ export function SalesView() {
             </>
           )}
           {/* 25 · satış formu (spec K1) */}
-          {permission.canWrite && (
+          {canCreateSale && (
             <Link href={formHref(NEW_SALE_HREF)} className="btn btn--primary btn--md">
               + Satış Kaydı
             </Link>

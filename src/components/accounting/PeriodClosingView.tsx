@@ -16,6 +16,8 @@ import { useJournalEntries } from "@/lib/api/hooks/useJournalEntries";
 import { isForbidden } from "@/lib/api/unwrap";
 import { canDelete, hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_EDIT, PERIOD_REOPEN_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrency } from "@/lib/format";
 
 import {
@@ -62,6 +64,9 @@ import "./accounting.css";
  */
 export function PeriodClosingView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const closeGate = useButtonGate({ pages: ACCOUNTING_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
+  // DELETE_LEVELS = ["admin"] — K1'in `_ADMIN`i (grant yoksa eski kural).
+  const reopenGate = useButtonGate({ pages: PERIOD_REOPEN_APPROVE, need: "approve", fallback: canDelete(permission.level) });
   const [year, setYear] = useState(() => currentPeriod(new Date()).year);
   const [confirmRow, setConfirmRow] = useState<PeriodRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -77,8 +82,10 @@ export function PeriodClosingView() {
 
   // K1 — sunucudaki üç eşik istemcide AYNEN kurulur; tek gerçek kapı yine de
   // sunucudur (K6), burası yalnız düğme görünürlüğüdür.
-  const canClose = hasAtLeast(permission.level, "full");
-  const canReopen = canDelete(permission.level); // DELETE_LEVELS = ["admin"] — K1'in `_ADMIN`i.
+  // IZN-F2.x · Dönemi Kapat = mali.donem_kapanisi/yevmiye/hesap_plani Düzenler (VEYA); Dönemi Yeniden Aç =
+  // mali.donem_kapanisi Onaylar. Grant yoksa bugünkü seviye kararı.
+  const canClose = closeGate;
+  const canReopen = reopenGate;
 
   const items = periodsQuery.data;
   const rows = items !== undefined ? buildPeriodRows(year, items) : undefined;

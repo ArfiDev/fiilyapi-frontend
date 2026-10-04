@@ -23,6 +23,8 @@ import { useProject } from "@/lib/api/hooks/useProjects";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 import { PERIOD_MONTHS, formatAmount, formatPercent } from "@/lib/format";
 
@@ -85,7 +87,9 @@ const PENDING_SEQUENCE_HINT = "Sıra numarası ilk kayıtta backend tarafından 
  */
 export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPaymentFormProps) {
   const router = useRouter();
-  const { canWrite } = useModulePermission("progress_payments");
+  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
+  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
+  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
 
   const isEdit = props.mode === "edit";
   const detailQuery = useSubcontractorProgressPayment(isEdit ? props.paymentId : "");
