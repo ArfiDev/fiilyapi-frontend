@@ -232,11 +232,13 @@
   overflow-x: auto;
 }
 .wik-table {
-  min-width: 960px;
+  min-width: 992px; /* 9 kolon: 200 (tarif min) + 792 sabit */
 }
 .wik-grid {
   display: grid;
-  grid-template-columns: 112px minmax(200px, 1fr) 56px 116px 160px 76px 92px 92px 64px;
+  grid-template-columns: 112px minmax(200px, 1fr) 56px 116px 160px 76px 92px 92px 88px;
+  /* KAT-F1.5b · MOCKUP SAPMASI: işlem sütunu 64px → 88px. Mockup'ta 69px'lik "Düzenle" düğmesi 48px içeriğe sığmayıp
+     kart kenarından taşıyordu; düğme + 2×8px dolgu = 85px. Fark esnek Tarif sütunundan (minmax 1fr) alınır. */
 }
 .wik-head {
   font-size: var(--text-table-head);
@@ -319,7 +321,7 @@
 }
 .wik-cell--action {
   /* KIK:146 — mockup'ta hücre `text-align:right` BLOK: 64px'e sığmayan "Düzenle" düğmesi SAĞA taşar.
-     `flex-end` onu SOLA taşırıp "Fiyat güncelleme" tarihinin üstüne bindiriyordu. */
+     `flex-end` onu SOLA taşırıp "Fiyat güncelleme" tarihinin üstüne bindiriyordu. Sütun artık 88px: düğme sığar. */
   justify-content: flex-start;
   padding: 6px var(--space-2);
 }

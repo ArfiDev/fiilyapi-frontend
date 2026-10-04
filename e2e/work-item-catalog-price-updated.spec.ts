@@ -38,3 +38,30 @@ test("fiyat guncelleme tarihi hucrede tam gorunur", async ({ page }) => {
     expect(m.textRight, `${m.label} "Düzenle" düğmesinin altında kalıyor`).toBeLessThanOrEqual(m.buttonLeft);
   }
 });
+
+// KAT-F1.5b · "Düzenle" düğmesi kartın/kaydırma kabının DIŞINA TAŞMAZ (mockup 64px sütunda 69px düğmeyle taşıyordu).
+test("duzenle dugmesi kaydirma kabindan tasmaz", async ({ page }) => {
+  await loginForCatalog(page);
+  await openWorkItemCatalog(page);
+
+  const buttons = page.locator(".wik-row .wik-cell--action button");
+  const count = await buttons.count();
+  expect(count).toBeGreaterThan(0);
+
+  const scroll = await page.locator(".wik-scroll").evaluate((el) => ({
+    right: el.getBoundingClientRect().right,
+    clientWidth: el.clientWidth,
+    scrollWidth: el.scrollWidth,
+  }));
+  expect(scroll.scrollWidth, "kaydırma kabında yatay taşma var").toBeLessThanOrEqual(scroll.clientWidth);
+
+  for (let index = 0; index < count; index += 1) {
+    const m = await buttons.nth(index).evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const cell = el.parentElement?.getBoundingClientRect();
+      return { left: box.left, right: box.right, cellRight: cell?.right ?? box.right };
+    });
+    expect(m.right, `satır ${index}: Düzenle kaydırma kabının sağını aşıyor`).toBeLessThanOrEqual(scroll.right);
+    expect(m.right, `satır ${index}: Düzenle kendi hücresini aşıyor`).toBeLessThanOrEqual(m.cellRight);
+  }
+});

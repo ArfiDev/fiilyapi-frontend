@@ -54,3 +54,16 @@ describe("Düzenle hücresi mockup gibi sağa taşar (KIK:146)", () => {
     expect(body).not.toMatch(/justify-content:\s*flex-end/);
   });
 });
+
+describe("işlem sütunu Düzenle düğmesini tam sığdırır (KAT-F1.5b, mockup sapması)", () => {
+  it("son sütun ≥ 85px (69px düğme + 2×8px dolgu) ve tablo min-width'i toplamla uyumlu", () => {
+    const grid = /\.wik-grid\s*\{[^}]*grid-template-columns:\s*([^;]+);/.exec(screenCss)?.[1] ?? "";
+    const tracks = grid.trim().split(/\s+(?![^()]*\))/);
+    const last = Number.parseInt(tracks[tracks.length - 1] ?? "0", 10);
+    expect(last).toBeGreaterThanOrEqual(85);
+    const fixed = tracks.reduce((sum, t) => (/^\d+px$/.test(t) ? sum + Number.parseInt(t, 10) : sum), 0);
+    const flexMin = Number(/minmax\((\d+)px/.exec(grid)?.[1] ?? 0);
+    const tableMin = Number(/\.wik-table\s*\{[^}]*min-width:\s*(\d+)px/.exec(screenCss)?.[1] ?? 0);
+    expect(tableMin).toBe(fixed + flexMin);
+  });
+});
