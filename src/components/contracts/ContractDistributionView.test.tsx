@@ -665,3 +665,23 @@ describe("POZ dağılımı — Kalanı buraya dağıt (KDG K7)", () => {
     // jsdom'da 2000 girdi çizimi yavaştır; süre sınırı yalnız takılmayı yakalar.
   }, 60_000);
 });
+
+describe("KAT-F2.3 · POZ dağılımı · Bakanlık poz no alt satırı (T47)", () => {
+  it("kodu olan kalemde poz no'nun altında kod + title; null'da yok; şantiye hücreleri aynı satırda", () => {
+    const first = DISTRIBUTION.groups[0];
+    mockHooks({
+      ...DISTRIBUTION,
+      groups: [
+        { ...first, items: [{ ...first.items[0], source_code: "15.150.1003" }, first.items[1]] },
+        DISTRIBUTION.groups[1],
+      ],
+    });
+    render(<ContractDistributionView projectId="p-1" />);
+
+    const sub = screen.getByTestId("cdist-source-code-ci-1");
+    expect(sub).toHaveTextContent("15.150.1003");
+    expect(sub).toHaveAttribute("title", "15.150.1003");
+    expect(screen.queryByTestId("cdist-source-code-ci-3")).not.toBeInTheDocument();
+    expect(sub.closest("tr")).toBe(cell("03.001", "A-Blok").closest("tr"));
+  });
+});

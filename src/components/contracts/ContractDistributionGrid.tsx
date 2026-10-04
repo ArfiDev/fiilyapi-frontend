@@ -21,6 +21,8 @@ import {
 } from "./distribution-derive";
 import "./employer-contract-detail.css";
 import "./contract-distribution.css";
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 
 /**
  * POZ 69-165 · "Poz Listesi & Şantiye Dağılımı" tablosu.
@@ -198,7 +200,13 @@ function ItemRow({ item, sites, edits, canWrite, onCellChange }: ItemRowProps) {
       )}
       data-testid={isUndistributed ? "cdist-undistributed-row" : undefined}
     >
-      <td className="ecd-items__td ecd-items__td--code">{item.code}</td>
+      <td className="ecd-items__td ecd-items__td--code">
+        {item.code}
+        <SourceCodeSub
+          code={sourceCodeLabel(item)}
+          data-testid={`cdist-source-code-${item.id}`}
+        />
+      </td>
       <td className="ecd-items__td ecd-items__td--name">
         {item.description}
         {isUndistributed && (

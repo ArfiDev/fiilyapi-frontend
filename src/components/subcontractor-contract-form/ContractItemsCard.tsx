@@ -16,6 +16,8 @@ import {
 import { trPriceInputValue, trQuantityInputValue } from "@/components/contracts/employer-item-inline";
 
 import { groupContractItems } from "./item-rows";
+import { SourceCodeSub } from "@/components/catalog-shared/SourceCodeSub";
+import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
 
 /**
  * FSO 112-187 · "⭐ Poz Listesi & Taşeron Fiyatları" kartı.
@@ -363,7 +365,13 @@ function ItemGroup({
         const hasPrice = item.unit_price !== null;
         return (
           <tr className="fso-items__row" key={item.id}>
-            <td className="fso-items__td fso-items__td--code">{item.code}</td>
+            <td className="fso-items__td fso-items__td--code">
+              {item.code}
+              <SourceCodeSub
+                code={sourceCodeLabel(item)}
+                data-testid={`fso-source-code-${item.id}`}
+              />
+            </td>
             <td className="fso-items__td fso-items__td--name">{item.description}</td>
             <td className="fso-items__td fso-items__td--center">{item.unit}</td>
             <td className="fso-items__td fso-items__td--input">

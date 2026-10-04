@@ -275,3 +275,15 @@ describe("elle poz ekleme — mockup FORMU yok", () => {
     }
   });
 });
+
+describe("KAT-F2.3 · Bakanlık poz no alt satırı (T47)", () => {
+  it("kodu olan kalemde poz no hücresinin altında kod + title; null'da yok", () => {
+    setup({ items: [{ ...ITEMS[0], source_code: "35.140.3195-D" }, ITEMS[1]] });
+
+    const sub = screen.getByTestId("fso-source-code-sci-1");
+    expect(sub).toHaveTextContent("35.140.3195-D");
+    expect(sub).toHaveAttribute("title", "35.140.3195-D");
+    expect(sub.closest("td")).toHaveClass("fso-items__td--code");
+    expect(screen.queryByTestId("fso-source-code-sci-2")).not.toBeInTheDocument();
+  });
+});

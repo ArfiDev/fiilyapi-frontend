@@ -1524,3 +1524,77 @@ describe("EmployerContractDetailView · E14 işveren sözleşme detayı", () => 
     });
   });
 });
+
+describe("KAT-F2.3 · İş Kalemleri · Bakanlık poz no alt satırı (T47/T49)", () => {
+  const WITH_CODE: EmployerContractItemsResponse = {
+    groups: [
+      {
+        ...ITEMS.groups[0],
+        items: [
+          { ...ITEMS.groups[0].items[0], source_code: "15.150.1003" },
+          ITEMS.groups[0].items[1], // source_code: null
+        ],
+      },
+    ],
+  };
+
+  function renderWithCodes() {
+    searchParams = new URLSearchParams("tab=items");
+    mockAll({ items: WITH_CODE });
+    return render(<EmployerContractDetailView projectId="p-1" />);
+  }
+
+  it("kodu olan kalemin poz no'su altında kod + title basılır, null'da HİÇBİR ŞEY yok", () => {
+    renderWithCodes();
+
+    const sub = screen.getByTestId("ecd-source-code-ci-1");
+    expect(sub).toHaveTextContent("15.150.1003");
+    expect(sub).toHaveAttribute("title", "15.150.1003");
+    expect(screen.queryByTestId("ecd-source-code-ci-2")).not.toBeInTheDocument();
+  });
+
+  it("alt satır salt okunurdur (input DEĞİL) ve poz no input'unun aynı hücresindedir", () => {
+    renderWithCodes();
+
+    const sub = screen.getByTestId("ecd-source-code-ci-1");
+    const codeInput = screen.getByLabelText("03.001 poz no");
+    expect(sub.tagName).not.toBe("INPUT");
+    expect(sub.closest("td")).toBe(codeInput.closest("td"));
+  });
+
+  it("poz no PATCH gövdesinde `source_code` YOKTUR (anlık görüntü değişmez)", async () => {
+    renderWithCodes();
+
+    const input = screen.getByLabelText("03.001 poz no");
+    fireEvent.change(input, { target: { value: "03.001-X" } });
+    fireEvent.blur(input);
+
+    expect(updateItemMutate).toHaveBeenCalledTimes(1);
+    const call = updateItemMutate.mock.calls[0][0] as { body: Record<string, unknown> };
+    expect(call.body).toEqual({ code: "03.001-X" });
+    expect(call.body).not.toHaveProperty("source_code");
+    await act(async () => {});
+  });
+
+  it("elle yeni satırda alt satır YOK ve POST gövdesinde `source_code` YOK (T49)", async () => {
+    searchParams = new URLSearchParams("tab=items");
+    mockAll({ items: WITH_CODE });
+    render(<EmployerContractDetailView projectId="p-1" />);
+    fireEvent.click(screen.getByTestId("ecd-add-row-cg-1"));
+
+    const draftRow = screen.getByTestId("ecd-new-row");
+    expect(draftRow.querySelector(".source-code-sub")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Yeni poz no"), { target: { value: "03.009" } });
+    fireEvent.change(screen.getByLabelText("Yeni poz adı"), { target: { value: "Elle poz" } });
+    fireEvent.change(screen.getByLabelText("Yeni poz birimi"), { target: { value: "m³" } });
+    fireEvent.change(screen.getByLabelText("Yeni poz birim fiyatı"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Yeni poz miktarı"), { target: { value: "1" } });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("ecd-new-row-submit"));
+    });
+
+    expect(createItemMutateAsync).toHaveBeenCalledTimes(1);
+    expect(createItemMutateAsync.mock.calls[0][0]).not.toHaveProperty("source_code");
+  });
+});

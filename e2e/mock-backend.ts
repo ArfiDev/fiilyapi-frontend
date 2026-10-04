@@ -854,6 +854,12 @@ interface MockContractItem {
    */
   projectId?: string;
   code: string;
+  /**
+   * KAT-F2.3 · T47/T49 — Bakanlık poz no'su ANLIK GÖRÜNTÜSÜ (`source_code`). Yoksa/`null` = elle
+   * girilmiş kalem (alt satır yok). YALNIZ katalogdan toplu oluşturmada katalog kaleminden
+   * kopyalanır; PATCH ve elle tekli oluşturma ASLA değiştirmez/yazmaz.
+   */
+  sourceCode?: string | null;
   description: string;
   unit: string;
   quantity: string;
@@ -966,6 +972,8 @@ interface MockSubcontractorPaymentCalculation {
 interface MockSubcontractorContractItem {
   id: string;
   code: string;
+  /** KAT-F2.3 · işveren kaleminden KOPYALANAN Bakanlık poz no'su (yoksa/`null` = alt satır yok). */
+  sourceCode?: string | null;
   description: string;
   unit: string;
   // F-P5 T1: `null` = "birim fiyat girilmedi" (`items_missing_price` sayacı).
@@ -1504,6 +1512,24 @@ const BOQ_FIXTURE: MockBoqGroup[] = [
 // ("Kule A"), şantiyeler s-1 ("A-Blok Şantiyesi") / s-2 ("B-Blok Şantiyesi").
 // Proje/şantiye İSİMLERİ mockup'takiyle (Güneşkent Konut / A-Blok) AYNI
 // DEĞİL — brief kimlikleri bağlamayı istiyor, ismi değil.
+/**
+ * KAT-F2.3 · `source_code` OKUMA alanıdır (T47/T49): sözleşme kalemi YAZMA gövdelerinde (oluşturma
+ * tekli/toplu, PATCH; işveren + taşeron) anahtar VARSA (değeri `null` olsa da) backend pydantic
+ * `extra_forbidden` ile 422 döner — şema doğrulaması işleyiciden (404/409) ÖNCE çalışır.
+ * `loc` gövde içi konumu taşır (`["body","source_code"]`, toplu: `["body","items",i,"source_code"]`).
+ */
+function sourceCodeBodyViolation(
+  record: Record<string, unknown>,
+  loc: ReadonlyArray<string | number>,
+): { detail: Array<Record<string, unknown>> } | null {
+  if (!("source_code" in record)) return null;
+  return {
+    detail: [
+      { type: "extra_forbidden", loc: [...loc, "source_code"], msg: "Extra inputs are not permitted", input: record.source_code },
+    ],
+  };
+}
+
 function money2(n: number): string {
   return n.toFixed(2);
 }
@@ -1519,7 +1545,7 @@ function qty3(n: number): string {
 // tamamı dağıtılmış (`remaining_quantity` sıfır) sayılır.
 const CONTRACT_ITEMS_P1: MockContractItem[] = [
   {
-    id: "ci-1", code: "03.001", description: "Kat Döşemesi C25/30", unit: "m³",
+    id: "ci-1", code: "03.001", sourceCode: "15.150.1003", description: "Kat Döşemesi C25/30", unit: "m³",
     quantity: "3200.000", unit_price: "1850.00", groupName: "Betonarme İşleri", groupSortOrder: 10,
     allocations: [
       { site_id: "s-1", quantity: "1800.000" },
@@ -1535,7 +1561,7 @@ const CONTRACT_ITEMS_P1: MockContractItem[] = [
     ],
   },
   {
-    id: "ci-3", code: "03.003", description: "Nervürlü Demir Ø12–Ø20", unit: "Ton",
+    id: "ci-3", code: "03.003", sourceCode: "35.140.3195-D", description: "Nervürlü Demir Ø12–Ø20", unit: "Ton",
     quantity: "180.000", unit_price: "21500.00", groupName: "Betonarme İşleri", groupSortOrder: 10,
     allocations: [
       { site_id: "s-1", quantity: "120.000" },
@@ -1543,7 +1569,7 @@ const CONTRACT_ITEMS_P1: MockContractItem[] = [
     ],
   },
   {
-    id: "ci-4", code: "03.010", description: "Döşeme Kalıbı", unit: "m²",
+    id: "ci-4", code: "03.010", sourceCode: "15.250.1011", description: "Döşeme Kalıbı", unit: "m²",
     quantity: "5200.000", unit_price: "185.00", groupName: "Kalıp İşleri", groupSortOrder: 20,
     allocations: [
       { site_id: "s-1", quantity: "3200.000" },
@@ -2027,7 +2053,7 @@ function buildContractDistributionResponse(state: MockState, projectId: string):
     name,
     sort_order: contractItems.find((i) => i.groupName === name)?.groupSortOrder ?? 0,
     items: contractItems.filter((i) => i.groupName === name).map((item) => ({
-      id: item.id, code: item.code, source_code: null, description: item.description, unit: item.unit,
+      id: item.id, code: item.code, source_code: item.sourceCode ?? null, description: item.description, unit: item.unit,
       quantity: item.quantity, unit_price: item.unit_price,
       allocations: item.allocations.map((a) => ({ site_id: a.site_id, quantity: a.quantity, boq_item_id: item.id })),
       remaining_quantity: money2(
@@ -2300,7 +2326,7 @@ function buildEmployerContractItemsResponse(
             id: item.id,
             group_id: id,
             code: item.code,
-            source_code: null,
+            source_code: item.sourceCode ?? null,
             description: item.description,
             unit: item.unit,
             quantity: item.quantity,
@@ -2773,12 +2799,12 @@ function buildPaymentListItem(state: MockState, payment: MockProgressPayment): c
 // `useSubcontractorContractOptions` distinct türetmesinin >1 sonuç
 // döndüğünü doğrulamak için gerekli (T1 §2.1 kullanıcı kararı).
 const SUBCONTRACTOR_CONTRACT_ITEMS_SC1: MockSubcontractorContractItem[] = [
-  { id: "sci-1", code: "E.01", description: "Kaba Elektrik Tesisatı", unit: "m", contractUnitPrice: "45.00", contractQuantity: "5200.000", groupName: "Elektrik İşleri" },
+  { id: "sci-1", code: "E.01", sourceCode: "15.250.1011", description: "Kaba Elektrik Tesisatı", unit: "m", contractUnitPrice: "45.00", contractQuantity: "5200.000", groupName: "Elektrik İşleri" },
   { id: "sci-2", code: "E.02", description: "Priz/Anahtar Montajı", unit: "Adet", contractUnitPrice: "120.00", contractQuantity: "620.000", groupName: "Elektrik İşleri" },
-  { id: "sci-3", code: "E.03", description: "Pano Montajı", unit: "Adet", contractUnitPrice: "3500.00", contractQuantity: "18.000", groupName: "Elektrik İşleri" },
+  { id: "sci-3", code: "E.03", sourceCode: "35.140.3195-D", description: "Pano Montajı", unit: "Adet", contractUnitPrice: "3500.00", contractQuantity: "18.000", groupName: "Elektrik İşleri" },
 ];
 const SUBCONTRACTOR_CONTRACT_ITEMS_SC2: MockSubcontractorContractItem[] = [
-  { id: "sci-4", code: "M.01", description: "Duvar Örgü İşleri", unit: "m²", contractUnitPrice: "280.00", contractQuantity: "4800.000", groupName: "Duvar İşleri" },
+  { id: "sci-4", code: "M.01", sourceCode: "15.150.1003", description: "Duvar Örgü İşleri", unit: "m²", contractUnitPrice: "280.00", contractQuantity: "4800.000", groupName: "Duvar İşleri" },
   { id: "sci-5", code: "M.02", description: "Sıva İşleri", unit: "m²", contractUnitPrice: "145.00", contractQuantity: "9200.000", groupName: "Duvar İşleri" },
 ];
 
@@ -3230,7 +3256,7 @@ function buildSubcontractorContractDetailResponse(contract: MockSubcontractorCon
     contract_id: contract.id,
     source_contract_item_id: null,
     code: item.code,
-    source_code: null,
+    source_code: item.sourceCode ?? null,
     description: item.description,
     unit: item.unit,
     quantity: item.contractQuantity,
@@ -10237,6 +10263,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         return send(404, { detail: "bu proje icin sozlesme yok" });
       }
       return withBody((body) => {
+        const extra = sourceCodeBodyViolation(body, ["body"]);
+        if (extra !== null) return send(422, extra);
         const groups = buildEmployerContractItemsResponse(state, projectId).groups;
         const group = groups.find((g) => g.id === String(body.group_id ?? ""));
         if (!group) return send(404, { detail: "Poz grubu bulunamadı." });
@@ -10273,6 +10301,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           id: `ci-new-${state.contractItemSeq}`,
           projectId,
           code,
+          sourceCode: null, // T49: elle girilen kalemde Bakanlık poz no'su yok
           description: String(body.description ?? ""),
           unit: String(body.unit ?? ""),
           quantity,
@@ -10305,6 +10334,11 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       return withBody((body) => {
         const violation = employerItemsBulkViolation(body);
         if (violation !== null) return send(422, violation);
+        const bulkRows = Array.isArray(body.items) ? (body.items as Array<Record<string, unknown>>) : [];
+        for (const [index, row] of bulkRows.entries()) {
+          const extra = sourceCodeBodyViolation(row, ["body", "items", index]);
+          if (extra !== null) return send(422, extra);
+        }
         const hasContract =
           state.projects.some((p) => p.id === projectId) &&
           hasEmployerContract(state, projectId);
@@ -10343,6 +10377,12 @@ export function startMockBackend(port: number): { server: Server; close: () => P
             id: `ci-new-${state.contractItemSeq + index + 1}`,
             projectId,
             code: String(entry.code),
+            // KAT-F2.3 · T47: katalogdan gelen kalem Bakanlık poz no'sunu katalog kaleminden KOPYALAR
+            // (anlık görüntü); katalogsuz satır → null. Gövdedeki `source_code` OKUNMAZ.
+            sourceCode:
+              entry.catalog_item_id === undefined || entry.catalog_item_id === null
+                ? null
+                : (evState.catalog.find((c) => c.id === String(entry.catalog_item_id))?.sourceCode ?? null),
             description: String(entry.description),
             unit: String(entry.unit),
             // Kolon ölçeği (backend `Numeric(14,3)` / `Numeric(18,2)`): kayıpsız kanonlama.
@@ -10396,6 +10436,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
             ],
           });
         }
+        const extra = sourceCodeBodyViolation(body, ["body"]);
+        if (extra !== null) return send(422, extra);
         const existing = state.contractItems.find((item) => item.id === itemId);
         if (!existing) return send(404, { detail: "Poz bulunamadı." });
         const projectId = existing.projectId ?? "p-1";
@@ -10964,12 +11006,16 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       const projectId = createSubcontractorContractMatch[1];
       if (!state.projects.some((p) => p.id === projectId)) return send(404, { detail: "proje yok" });
       return withBody((body) => {
-        state.subcontractorContractSeq += 1;
-        const seq = state.subcontractorContractSeq;
-        const subcontractorId = (body.subcontractor_id as string | null) ?? null;
         const rawItems = Array.isArray(body.items)
           ? (body.items as Array<Record<string, unknown>>)
           : [];
+        for (const [index, row] of rawItems.entries()) {
+          const extra = sourceCodeBodyViolation(row, ["body", "items", index]);
+          if (extra !== null) return send(422, extra);
+        }
+        state.subcontractorContractSeq += 1;
+        const seq = state.subcontractorContractSeq;
+        const subcontractorId = (body.subcontractor_id as string | null) ?? null;
         const created: MockSubcontractorContract = {
           id: `sc-new-${seq}`,
           project_id: projectId,
@@ -11034,6 +11080,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           {
             id: `sci-loaded-${contract.id}-${item.id}`,
             code: item.code,
+            // KAT-F2.3 · işveren kaleminden türeyen taşeron kalemi source_code'u KOPYALAR
+            sourceCode: item.sourceCode ?? null,
             description: item.description,
             unit: item.unit,
             // İşveren biriminden gelen kalemin TAŞERON birim fiyatı YOKTUR.
@@ -11054,6 +11102,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       );
       if (!contract) return send(404, { detail: "sozlesme yok" });
       return withBody((body) => {
+        const extra = sourceCodeBodyViolation(body, ["body"]);
+        if (extra !== null) return send(422, extra);
         const created = {
           id: `sci-manual-${contract.id}-${contract.items.length + 1}`,
           code: String(body.code ?? ""),
@@ -11088,6 +11138,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         return send(204);
       }
       return withBody((body) => {
+        const extra = sourceCodeBodyViolation(body, ["body"]);
+        if (extra !== null) return send(422, extra);
         const item = contract.items.find((i) => i.id === itemId);
         if (!item) return send(404, { detail: "kalem yok" });
         if (body.code !== undefined && body.code !== null) item.code = String(body.code);
