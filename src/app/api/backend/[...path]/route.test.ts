@@ -1024,6 +1024,22 @@ describe("BFF /api/backend/[...path]", () => {
       }
     });
 
+    // IZN-F1.2 — Sayfa katalogu (`GET /pages`) YENI kok acar: `pages`. Kok eklenmezse
+    // menu ikiz kurali YALNIZ CANLIDA 404 alir; jsdom BFF'yi gormez.
+    it("pages koku (IZN-F1.2) allow-list'te GERCEK girdi olarak tanimlidir ve forward edilir", async () => {
+      const entries = [...readAllowedRoots()];
+      expect(entries).toContain("pages");
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const res = await GET(req("/api/backend/pages", "GET", { [ACCESS_COOKIE]: "acc" }), ctx(["pages"]));
+
+      expect(res.status).toBe(200);
+      expect(String(fetchMock.mock.calls[0][0])).toContain("/pages");
+    });
+
     // F-MU1 ek gorev — MU-2 (donem kapanisi + mizan + KDV) UC kokU.
     // 🔴 BU BEKCININ VARLIK SEBEBI: yukaridaki "cagrilan her kok
     // ALLOWED_ROOTS'ta tanimlidir" bekcisi `cagrilan ⊆ izinli` yonunu

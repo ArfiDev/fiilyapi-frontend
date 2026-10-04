@@ -48,7 +48,9 @@ export function PermissionMatrix() {
   const modulesQuery = useModules();
   const rolesQuery = useRoles();
 
-  const roles = rolesQuery.data ?? [];
+  // IZN-F1.2 — atanamaz roller (yeni sayfa-izin rolleri) eski matriste sütun olmaz;
+  // yalnız `is_assignable` okunur, rol anahtarı elle kodlanmaz.
+  const roles = (rolesQuery.data ?? []).filter((role) => role.is_assignable !== false);
   const roleIds = roles.map((role) => role.id);
   const permQueries = useAllRolePermissions(roleIds);
   const mutation = usePermissionMutation();

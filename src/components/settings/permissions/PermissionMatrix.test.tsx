@@ -172,3 +172,34 @@ describe("PermissionMatrix", () => {
     });
   });
 });
+
+// IZN-F1.2 — atanamaz roller (`is_assignable: false`) eski matriste sütun olmaz.
+describe("PermissionMatrix — atanamaz roller", () => {
+  it("is_assignable=false rolün sütunu YOK ve izinleri istenmez; atanabilir rol sütunu var", async () => {
+    const json = (body: unknown) =>
+      new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/backend/modules")) {
+        return json([{ id: "m1", key: "raporlar", name: "Raporlar", group: "GENEL", sort_order: 1 }]);
+      }
+      if (url.includes("/permissions")) return json([{ module_key: "raporlar", access_level: "view", scope: "all" }]);
+      if (url.includes("/api/backend/roles")) {
+        return json([
+          { id: "r1", key: "saha", name: "Saha", emoji: "", description: "", is_system: false, is_assignable: true },
+          { id: "r2", key: "sayfa_rolu", name: "Sayfa Rolü", emoji: "", description: "", is_system: true, is_assignable: false },
+        ]);
+      }
+      return json([]);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderMatrix();
+
+    expect(await screen.findByRole("columnheader", { name: /Saha/ })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /Sayfa Rolü/ })).not.toBeInTheDocument();
+    const requested = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(requested.some((url) => url.includes("/roles/r1/permissions"))).toBe(true);
+    expect(requested.some((url) => url.includes("/roles/r2/permissions"))).toBe(false);
+  });
+});

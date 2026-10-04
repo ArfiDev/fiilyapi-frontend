@@ -8,6 +8,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => currentPath,
 }));
+// IZN-F1.2: Sidebar `GET /pages` okur; bu dosya katalogdan bağımsızdır.
+vi.mock("@/lib/api/hooks/usePages", () => ({ usePages: () => ({ data: undefined }) }));
 let role = "patron";
 vi.mock("@/components/shell/SessionProvider", () => ({
   useSession: () => ({ me: { full_name: "A B", role_key: role, title: "T" }, isLoading: false }),
