@@ -27,7 +27,8 @@ describe("NAV_GROUPS", () => {
   // öğe konmaz). PLN-F3.6b'de Panel · Günlük İlerleme Raporu · Haftalık QURR
   // eklendi — K21 sırasında (Panel · Bütçe · Günlük Rapor · QURR · Katalog),
   // beşi de artık GERÇEK ekranlara düşer.
-  it("Planlama grubu BES ogeyi K21 sirasinda tasir (PLN-F3.6b; İş Kalemi Kataloğu NAV-F1 ile taşındı)", () => {
+  // NAV-F2: K21 beşlisinin ardına "Disiplin Yönetimi" (gerçek `/planlama/disiplin-yonetimi` sayfası).
+  it("Planlama grubu K21 besligi + Disiplin Yonetimi'ni tasir (NAV-F2; İş Kalemi Kataloğu NAV-F1 ile taşındı)", () => {
     const planning = NAV_GROUPS.find((g) => g.heading === "Planlama");
     expect(planning!.items.map((i) => i.label)).toEqual([
       "Planlama Paneli",
@@ -35,7 +36,9 @@ describe("NAV_GROUPS", () => {
       "Günlük İlerleme Raporu",
       "Haftalık QURR",
       "Birim Oran Kataloğu",
+      "Disiplin Yönetimi",
     ]);
+    expect(planning!.items[5].href).toBe("/planlama/disiplin-yonetimi");
     const tree = buildRouteTree();
     for (const item of planning!.items) {
       expect(resolveHrefIn(tree, item.href, false), item.href).toEqual({ kind: "static" });
@@ -111,11 +114,18 @@ describe("NAV_GROUPS", () => {
 
   // 🔴 NAV-F1 (KARARLAR.md b1974d8) — "Teklif ve Sözleşmeler" = Teklif Hazırlama · Sözleşmeler ·
   // İş Kalemi Kataloğu (bu sırayla); adresler DEĞİŞMEDİ, hepsi GERÇEK rotaya düşer.
-  it("'Teklif ve Sözleşmeler' grubu uc ogeyi karar sirasinda tasir, adresler degismez", () => {
+  // NAV-F2: Teklif Hazırlama'nın HEMEN ALTINA "Teklif Şablonları" (sekme şeridinden menüye taşındı).
+  it("'Teklif ve Sözleşmeler' grubu dort ogeyi karar sirasinda tasir, adresler degismez", () => {
     const group = NAV_GROUPS.find((g) => g.heading === "Teklif ve Sözleşmeler");
-    expect(group!.items.map((i) => i.label)).toEqual(["Teklif Hazırlama", "Sözleşmeler", "İş Kalemi Kataloğu"]);
+    expect(group!.items.map((i) => i.label)).toEqual([
+      "Teklif Hazırlama",
+      "Teklif Şablonları",
+      "Sözleşmeler",
+      "İş Kalemi Kataloğu",
+    ]);
     expect(group!.items[0].href).toBe("/teklif-hazirlama");
-    expect(group!.items[2].href).toBe("/planlama/is-kalemi-katalogu");
+    expect(group!.items[1].href).toBe("/teklif-hazirlama/sablonlar");
+    expect(group!.items[3].href).toBe("/planlama/is-kalemi-katalogu");
     for (const item of group!.items) {
       expect(resolveHrefIn(buildRouteTree(), item.href, false), item.href).toEqual({ kind: "static" });
     }
@@ -364,6 +374,11 @@ describe("NAV_GROUPS — href geçerliliği (kırık link koruması)", () => {
 describe("activeNavHref — en uzun eşleşme kazanır", () => {
   it("/hazine/cek-senet yolunda YALNIZ alt öğe aktiftir (üst öğe DEĞİL)", () => {
     expect(activeNavHref("/hazine/cek-senet")).toBe("/hazine/cek-senet");
+  });
+
+  it("NAV-F2: /teklif-hazirlama/sablonlar yolunda YALNIZ Teklif Şablonları aktiftir; teklif detayı Teklif Hazırlama'da kalır", () => {
+    expect(activeNavHref("/teklif-hazirlama/sablonlar")).toBe("/teklif-hazirlama/sablonlar");
+    expect(activeNavHref("/teklif-hazirlama/o-1")).toBe("/teklif-hazirlama");
   });
 
   it("/hazine kökünde üst öğe aktiftir", () => {

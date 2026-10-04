@@ -398,6 +398,8 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
         panel: { label: "Planlama Paneli", href: () => routes.planning.panel() },
         "gunluk-rapor": { label: "Günlük İlerleme Raporu", href: () => routes.planning.dailyReport() },
         "haftalik-qurr": { label: "Haftalık QURR", href: () => routes.planning.weeklyReport() },
+        // NAV-F2 · Disiplin Yönetimi (M6 liste sayfası); etiket kabuk nav'ıyla BİREBİR.
+        "disiplin-yonetimi": { label: "Disiplin Yönetimi", href: () => routes.planning.disciplineManagement() },
       },
     },
 

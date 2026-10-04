@@ -63,16 +63,6 @@ beforeEach(() => {
   scope.value = { isRestricted: false, names: [] };
 });
 
-describe("sekme sayacı (TKL-F4.5)", () => {
-  it("'Teklif Şablonları N' = şablon listesi toplamı", async () => {
-    mockGets(makeResponse([OFFER_DRAFT]));
-    renderScreen();
-    const tab = await screen.findByRole("link", { name: /Teklif Şablonları/ });
-    await waitFor(() => expect(tab).toHaveTextContent("3"));
-    expect(tab).toHaveAttribute("href", "/teklif-hazirlama/sablonlar");
-  });
-});
-
 describe("erişim (T25: contracts:view okur, full + kısıtsız yazar)", () => {
   it("contracts:none → AccessDenied ve teklif ucu HİÇ çağrılmaz", async () => {
     perm.level = "none";

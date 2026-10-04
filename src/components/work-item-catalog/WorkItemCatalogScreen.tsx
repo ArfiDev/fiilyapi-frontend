@@ -16,14 +16,13 @@ import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { useFileDownload } from "@/lib/use-file-download";
 
-import { WorkItemCatalogTabs } from "./WorkItemCatalogTabs";
 import { WorkItemDisciplineChips } from "./WorkItemDisciplineChips";
 import { WorkItemLegend } from "./WorkItemLegend";
 import { WorkItemSearchBar } from "./WorkItemSearchBar";
 import { WorkItemTable, type WorkItemTableProps } from "./WorkItemTable";
 import { useWorkItemDrafts } from "./useWorkItemDrafts";
 import { filterNewDrafts, isNewDraft, type WorkItemDraft } from "./work-item-drafts";
-import { countByDiscipline, filterWorkItems, sortByPozNo, tabCounts } from "./work-item-model";
+import { countByDiscipline, filterWorkItems, sortByPozNo } from "./work-item-model";
 import "./work-item-catalog.css";
 
 /** T25: katalog YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
@@ -94,7 +93,7 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
     () => new Map(drafts.drafts.filter((draft) => !isNewDraft(draft)).map((draft) => [draft.key, draft])),
     [drafts.drafts],
   );
-  // KIK:244, :277-279 — yeni satırlar listenin parçası: süzgece, "N kalem"e, çip ve sekme sayaçlarına girer.
+  // KIK:244, :277-279 — yeni satırlar listenin parçası: süzgece, "N kalem"e ve çip sayaçlarına girer.
   const visibleNew = useMemo(
     () => filterNewDrafts(allNewDrafts, { query: deferredQuery, disciplineId: activeId }),
     [allNewDrafts, deferredQuery, activeId],
@@ -108,10 +107,6 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
     [items, deferredQuery, activeId],
   );
   const catalogUnits = useMemo(() => Array.from(new Set(items.map((item) => item.uom))), [items]);
-  const tabCountValues = useMemo(
-    () => (catalog.data ? tabCounts(items, disciplines, allNewDrafts.length) : null),
-    [catalog.data, items, disciplines, allNewDrafts.length],
-  );
   // `now` veri tazelendiğinde yenilenir; her render'da yeni `Date` satır memo'sunu kırardı.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const now = useMemo(() => new Date(), [catalog.dataUpdatedAt]);
@@ -134,8 +129,6 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
 
   return (
     <div className="wik">
-      <WorkItemCatalogTabs counts={tabCountValues} />
-
       <header className="wik__head">
         <div className="wik__titles">
           <h1 className="wik__title">İş Kalemi Kataloğu</h1>

@@ -488,14 +488,15 @@ describe("izin (T25: view okur, full + kısıtsız yazar)", () => {
 });
 
 describe("sekme şeridi + başlık", () => {
-  it("'Teklif Şablonları N' etkin (N = liste toplamı); 'Teklifler' listeye bağlantı; 'İşverenler' Yakında", async () => {
+  it("NAV-F2: şeritte yalnız 'Teklifler' listeye dönüş bağlantısı (etkin değil); başka sekme YOK", async () => {
     renderScreen();
     await loaded();
     const tabs = await screen.findByRole("group", { name: "Teklif sekmeleri" });
-    await waitFor(() => expect(within(tabs).getByRole("link", { name: /Teklif Şablonları/ })).toHaveTextContent("2"));
-    expect(within(tabs).getByRole("link", { name: /Teklif Şablonları/ })).toHaveAttribute("aria-current", "page");
-    expect(within(tabs).getByRole("link", { name: /^Teklifler/ })).toHaveAttribute("href", "/teklif-hazirlama");
-    expect(within(tabs).getByRole("button", { name: /İşverenler/ })).toBeDisabled();
+    const back = within(tabs).getByRole("link", { name: "Teklifler" });
+    expect(back).toHaveAttribute("href", "/teklif-hazirlama");
+    expect(back).not.toHaveClass("offers-tab--active");
+    expect(within(tabs).getAllByRole("link")).toHaveLength(1);
+    expect(within(tabs).queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByRole("heading", { level: 1, name: "Teklif Şablonları" })).toBeInTheDocument();
     expect(screen.getByText("Tekrarlayan iş tipleri için hazır kalem setleri · yeni teklif şablondan başlatılabilir")).toBeInTheDocument();
   });

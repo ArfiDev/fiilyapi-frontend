@@ -758,10 +758,10 @@ describe("parseRevParam (?rev= URL durumu)", () => {
 });
 
 describe("sekme şeridi", () => {
-  it("'Teklifler' sekmesi listeye bağlanır; poz kütüphanesi kataloğa", async () => {
+  it("'Teklifler' sekmesi listeye bağlanır; NAV-F2: Poz Kütüphanesi sekmesi YOK", async () => {
     renderScreen();
     await loaded();
     expect(screen.getByRole("link", { name: "Teklifler" })).toHaveAttribute("href", "/teklif-hazirlama");
-    expect(screen.getByRole("link", { name: "Poz Kütüphanesi" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Poz Kütüphanesi" })).not.toBeInTheDocument();
   });
 });

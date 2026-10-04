@@ -44,7 +44,6 @@ function renderView(overrides: Partial<OffersListViewProps> = {}, wonNotConverte
     onSearchTextChange: vi.fn(),
     onClear: vi.fn(),
     employers: [],
-    catalogCount: null,
     canWrite: true,
     readOnlyText: "",
     now: NOW,

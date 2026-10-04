@@ -475,6 +475,8 @@ export const routes = {
     catalog: () => "/planlama/birim-oran-katalogu",
     /** TKL-F1.3 · fiyatlı İş Kalemi Kataloğu (`contracts` kapısı; KAT fiyatsızdır). */
     workItemCatalog: () => "/planlama/is-kalemi-katalogu",
+    /** NAV-F2 · şirket disiplin listesi (M6) sayfa olarak; `earned_value` kapısı. */
+    disciplineManagement: () => "/planlama/disiplin-yonetimi",
     /** Panel/GİR/QURR'un KÖK İKİZLERİ (`budget` deseni). */
     panel: (params: GeneralPlanningParams = {}) => `/planlama/panel${qs({ site: params.site })}`,
     dailyReport: (params: GeneralEvDailyReportRootParams = {}) =>

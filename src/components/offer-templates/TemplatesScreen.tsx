@@ -130,13 +130,7 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
   const readOnlyText = readOnlyMessage(level, scope.isRestricted);
   return (
     <div className="offers">
-      <OfferTabs
-        active="templates"
-        offerCount={null}
-        catalogCount={catalog.data ? catalog.data.length : null}
-        templateCount={list.data ? list.data.total : null}
-        listHref={routes.offers.list()}
-      />
+      <OfferTabs offerCount={null} listHref={routes.offers.list()} isActive={false} />
       <header className="offers__head">
         <div className="offers__titles">
           <h1 className="offers__title">Teklif Şablonları</h1>

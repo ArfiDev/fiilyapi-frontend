@@ -6,7 +6,7 @@
 import { toDecimalString } from "@/lib/decimal";
 import { EMPTY_CELL, formatDateDots, formatFixedDecimal, toIstanbulDateOnly } from "@/lib/format";
 import { sourceCodeLabel } from "@/components/catalog-shared/source-code";
-import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
+import type { WorkItemRead } from "@/lib/api/models";
 
 /** KIK:240 — fiyat bu günden eskiyse (`> 182`) tarih turuncu. */
 export const PRICE_STALE_DAYS = 182;
@@ -124,24 +124,4 @@ export function formatStandardRate(value: string): string {
 /** KIK:255 — "Fiyat güncelleme" GG.AA.YYYY; NULL → EMPTY_CELL. */
 export function formatPriceUpdated(priceUpdatedAt: string | null): string {
   return priceUpdatedAt === null ? EMPTY_CELL : formatDateDots(toIstanbulDateOnly(priceUpdatedAt));
-}
-
-export interface TabCounts {
-  items: number;
-  disciplines: number;
-  /** Katalogdaki FARKLI birim sayısı (S-K4 türevi). */
-  units: number;
-}
-
-/** ÜS-9 — sekme sayaçları; "İçe aktarım geçmişi" sayaçsızdır. `newRowCount`: kaydedilmemiş yeni satırlar (KIK:279). */
-export function tabCounts(
-  items: readonly WorkItemRead[],
-  disciplines: readonly WorkDisciplineRead[],
-  newRowCount = 0,
-): TabCounts {
-  return {
-    items: items.length + newRowCount,
-    disciplines: disciplines.length,
-    units: new Set(items.map((item) => item.uom)).size,
-  };
 }

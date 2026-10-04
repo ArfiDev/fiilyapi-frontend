@@ -19,6 +19,8 @@ import {
   SparkleIcon,
   CalculatorIcon,
   BooksIcon,
+  SettingsIcon,
+  DocumentDashedIcon,
 } from "@/components/ui/icons";
 import { isActivePath } from "@/lib/shell/isActive";
 import { routes } from "@/lib/routes";
@@ -114,6 +116,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Günlük İlerleme Raporu", href: routes.planning.dailyReport(), Icon: FileTextIcon },
       { label: "Haftalık QURR", href: routes.planning.weeklyReport(), Icon: BarChartIcon },
       { label: "Birim Oran Kataloğu", href: routes.planning.catalog(), Icon: BooksIcon },
+      // NAV-F2 · KULLANICI İSTEĞİ: disiplin buradan oluşturulur/yönetilir (M6 bileşenleri, yeni tasarım yok).
+      // Birim Oran Kataloğu'ndaki "Disiplinler" modalı yerinde kalır. Simge settedeki `SettingsIcon` (yönetim).
+      { label: "Disiplin Yönetimi", href: routes.planning.disciplineManagement(), Icon: SettingsIcon },
     ],
   },
   // NAV-F1 · KULLANICI KARARI (KARARLAR.md b1974d8) — kabuk kanonundan onaylı sapma:
@@ -126,6 +131,10 @@ export const NAV_GROUPS: NavGroup[] = [
       // TKL-F3.3 · T31: Rozet YOK, izinle SÜZÜLMEZ (F1 ÜS-14): `contracts:none` kullanıcı
       // öğeyi görür, ekran AccessDenied basar. Simge Sözleşmeler ile paylaşılır.
       { label: "Teklif Hazırlama", href: routes.offers.list(), Icon: FileTextIcon },
+      // NAV-F2 · KULLANICI İSTEĞİ: Teklif Hazırlama'nın sekmesi kalktı, şablonlar menüden açılır.
+      // `/teklif-hazirlama/sablonlar` Teklif Hazırlama'nın altıdır → `activeNavHref` EN UZUN eşleşmeyi seçer.
+      // Simge settedeki `DocumentDashedIcon` (şablon = kesik çizgili belge).
+      { label: "Teklif Şablonları", href: routes.offers.templates(), Icon: DocumentDashedIcon },
       { label: "Sözleşmeler", href: routes.contracts.list(), Icon: FileTextIcon },
       // TKL-F1.3 · ÜS-14: rozet YOK, izinle süzülmez; simge settedeki `ListIcon` (Bordro ile paylaşılır).
       { label: "İş Kalemi Kataloğu", href: routes.planning.workItemCatalog(), Icon: ListIcon },
