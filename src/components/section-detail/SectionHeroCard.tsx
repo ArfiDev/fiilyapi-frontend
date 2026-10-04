@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButton";
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
 import {
@@ -248,6 +249,13 @@ export function SectionHeroCard({
           >
             Hakediş Oluştur
           </Link>
+          {/* SIL-F1.2 — yalnız Sistem Yöneticisi görür; silince şantiyeye döner. */}
+          <DeleteRecordButton
+            kind="section"
+            recordId={section.id}
+            redirectTo={routes.projects.sites.detail({ projectId: projectKey, siteId: siteKey })}
+            className="section-hero__btn section-hero__btn--danger"
+          />
         </div>
       </div>
       <div className="section-hero__kpis">

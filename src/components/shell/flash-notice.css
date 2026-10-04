@@ -1,0 +1,17 @@
+/* SIL-F1.2 — başarı bildirimi. Sürüm bandıyla (`stale-build-banner.css`) aynı
+   yapışma kuralı: üst çubuğun (52px) hemen altı, onun ALTINDA (z-index 100). */
+.flash-notice {
+  position: sticky;
+  top: 52px;
+  z-index: 50;
+  margin-bottom: var(--space-4);
+}
+.flash-notice .alert-body {
+  flex: 1;
+}
+.flash-notice__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

@@ -1040,6 +1040,25 @@ describe("BFF /api/backend/[...path]", () => {
       expect(String(fetchMock.mock.calls[0][0])).toContain("/pages");
     });
 
+    // SIL-F1.2 — Ortak silme uclari (`/admin/silme/{kind}/{id}[/onizleme]`) YENI kok
+    // acar: `admin`. Kok eklenmezse silme penceresi YALNIZ CANLIDA 404 alir;
+    // jsdom BFF'yi gormez.
+    it("admin koku (SIL-F1.2) allow-list'te GERCEK girdi olarak tanimlidir ve forward edilir", async () => {
+      expect(readAllowedRoots()).toContain("admin");
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ groups: [] }), { status: 200, headers: { "content-type": "application/json" } }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const res = await GET(
+        req("/api/backend/admin/silme/site/abc/onizleme", "GET", { [ACCESS_COOKIE]: "acc" }),
+        ctx(["admin", "silme", "site", "abc", "onizleme"]),
+      );
+
+      expect(res.status).toBe(200);
+      expect(String(fetchMock.mock.calls[0][0])).toContain("/admin/silme/site/abc/onizleme");
+    });
+
     // F-MU1 ek gorev — MU-2 (donem kapanisi + mizan + KDV) UC kokU.
     // 🔴 BU BEKCININ VARLIK SEBEBI: yukaridaki "cagrilan her kok
     // ALLOWED_ROOTS'ta tanimlidir" bekcisi `cagrilan ⊆ izinli` yonunu

@@ -9156,6 +9156,58 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       return send(200, { ...ME, disciplines: evDisciplineRefs(evState, meUser ? (evState.userDisciplines.get(meUser.id) ?? []) : []) });
     }
 
+    // SIL-F1.2 — ortak silme ucları (`/admin/silme/{kind}/{id}`). YAZAN akış sahte
+    // sunucuda: DELETE paylaşılan durumu DEĞİŞTİRMEZ (diğer kareler/testler aynı
+    // şantiyeyi görmeye devam eder); yalnız token sözleşmesini taklit eder:
+    // token yok → 428 `preview_required`, uyuşmazsa → 409 `preview_stale`.
+    const deleteKinds = new Set(["site", "section", "block", "unit"]);
+    const deletePreviewMatch = path.match(/^\/admin\/silme\/([^/]+)\/([^/]+)\/onizleme$/);
+    if (method === "GET" && deletePreviewMatch && deleteKinds.has(deletePreviewMatch[1])) {
+      const kind = deletePreviewMatch[1] as components["schemas"]["DeleteKind"];
+      const recordId = deletePreviewMatch[2];
+      const site = kind === "site" ? resolveByIdOrSlug(state.sites, recordId) : null;
+      const kindLabels = { site: "Şantiye", section: "Bölüm", block: "Blok", unit: "Ünite" } as const;
+      return send(200, {
+        kind,
+        id: site?.id ?? recordId,
+        kind_label: kindLabels[kind],
+        label: site?.name ?? kindLabels[kind],
+        dependent_count: 14,
+        groups: [
+          {
+            table: "site_diary_entries",
+            label: "Günlük kaydı",
+            count: 9,
+            relation: "cascade",
+            is_financial: false,
+            samples: ["1 Mayıs 2026", "2 Mayıs 2026", "3 Mayıs 2026", "4 Mayıs 2026", "5 Mayıs 2026"],
+          },
+          {
+            table: "progress_payments",
+            label: "Hakediş",
+            count: 2,
+            relation: "cascade",
+            is_financial: true,
+            samples: ["Hakediş No 1", "Hakediş No 2"],
+          },
+          { table: "sections", label: "Bölüm", count: 3, relation: "cascade", is_financial: false, samples: [] },
+        ],
+        detached: [{ table: "personnel", label: "Personel", count: 4 }],
+        preview_token: "mock-preview-token",
+      } satisfies components["schemas"]["DeletePreviewResponse"]);
+    }
+    const deleteMatch = path.match(/^\/admin\/silme\/([^/]+)\/([^/]+)$/);
+    if (method === "DELETE" && deleteMatch && deleteKinds.has(deleteMatch[1])) {
+      const token = parsed.searchParams.get("preview_token");
+      if (token === null) {
+        return send(428, { code: "preview_required", detail: "Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın" });
+      }
+      if (token !== "mock-preview-token") {
+        return send(409, { code: "preview_stale", detail: "Silinecek kayıtlar değişti; önizlemeyi yenileyin" });
+      }
+      return send(204);
+    }
+
     // 🔴 SÖZLEŞME KAPISI — sorgu kısıtları TEK yerde uygulanır (yukarıdaki
     // blok). Kimlik kontrolünden SONRA gelir: gerçek FastAPI'de de 401,
     // gövde/parametre doğrulamasından önce döner.

@@ -90,6 +90,7 @@ const EXEMPT: Record<string, string> = {
   "components/work-item-catalog/WorkItemEditRow.tsx":
     "saf çizim: taslak ve kirli kayıt ekran düzeyindeki useWorkItemDrafts'ta (useUnsavedChanges orada)",
   "components/earned-value/reports/daily/DailyApproveModal.tsx": "yalnız onay eylemi, düzenlenebilir alan yok",
+  "components/delete-confirm/DeleteConfirmDialog.tsx": "yalnız silme onayı, düzenlenebilir alan yok (DisciplineDeleteDialog emsali)",
 };
 
 function isCandidate(code: string): boolean {

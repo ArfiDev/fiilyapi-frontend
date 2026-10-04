@@ -95,6 +95,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/silme/{kind}/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Kaydı bağlı kayıtlarıyla birlikte sil
+         * @description Yalnız Sistem Yöneticisi, HER KOŞULDA. Kök kaydı ve bağlı ağacını TEK işlemde siler.
+         *
+         *     Kök `FOR UPDATE` kilitlenir, ağaç yeniden hesaplanır; karması `preview_token`la
+         *     uyuşmazsa HİÇBİR ŞEY silinmez ve 409 `preview_stale` döner. Denetim günlüğüne tek satır
+         *     yazılır (kim, ne, kaç bağlı kayıt).
+         */
+        delete: operations["delete_with_dependents_endpoint_admin_silme__kind___record_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/silme/{kind}/{record_id}/onizleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Silme önizlemesi: kayıtla birlikte silinecek bağlı kayıtlar
+         * @description Yalnız Sistem Yöneticisi. SİLMEZ; yazma yapmaz.
+         *
+         *     Önizleme ile `DELETE` AYNI çözücüyü kullanır: burada sayılan ağaç, silinecek ağaçtır.
+         *     `groups` boşsa kaydın bağlı kaydı yoktur (yine de onay istenir).
+         */
+        get: operations["preview_delete_endpoint_admin_silme__kind___record_id__onizleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/chat": {
         parameters: {
             query?: never;
@@ -181,11 +228,11 @@ export interface paths {
         post?: never;
         /**
          * Delete Ai Conversation Endpoint
-         * @description Kendi sohbetini siler. Mesajlar FK CASCADE ile gider.
+         * @description Sohbeti siler (kimin olursa olsun). YALNIZ Sistem Yoneticisi; mesajlar FK CASCADE ile gider.
          *
-         *     🔴 Bu uç bir **KVKK gereğidir**, süs değil: kullanıcı kendi sorularını
-         *     silebilmelidir. `ai_tool_calls` izi SİLİNMEZ — o tablo atfedilebilirlik
-         *     için değişmezdir ve içinde araç sonuç gövdesi yoktur.
+         *     Sistem Yoneticisi baskasinin sohbetini de siler. Sohbetin sahibi Sistem Yoneticisi degilse
+         *     kendi sohbetini SILEMEZ (403). `ai_tool_calls` izi SILINMEZ (atfedilebilirlik icin degismezdir,
+         *     arac sonuc govdesi icermez).
          */
         delete: operations["delete_ai_conversation_endpoint_ai_conversations__conversation_id__delete"];
         options?: never;
@@ -551,11 +598,9 @@ export interface paths {
         post?: never;
         /**
          * Delete Bank Account Endpoint
-         * @description **YALNIZ `admin`** → 204; ödemesi olan hesap **409**.
+         * @description Banka hesabını siler. YALNIZ Sistem Yöneticisi.
          *
-         *     `full` seviyesi (muhasebe) 403 alır — gerekçe modül docstring'indedir.
-         *     409 SERVİSTEN gelir: ham FK ihlalinin 500'ü ya da ayrımsız "Veri bütünlüğü
-         *     hatası" kullanıcıya SIZMAZ. Yanıt gövdesizdir.
+         *     Ödemesi olan hesap **409** (iş kuralı). Yanıt gövdesizdir.
          */
         delete: operations["delete_bank_account_endpoint_bank_accounts__account_id__delete"];
         options?: never;
@@ -583,13 +628,12 @@ export interface paths {
         post?: never;
         /**
          * Delete Block Endpoint
-         * @description Spec §7.9. CASCADE YOK: unitesi olan blok 409 ile reddedilir — 24 daireyi
-         *     tek istekte silmek geri alinamaz veri kaybidir.
+         * @description Blogu uniteleri ve onlarin bagli kayitlariyla birlikte siler. YALNIZ Sistem Yoneticisi;
+         *     ONIZLEME ZORUNLU.
          *
-         *     KULLANICI KARARI 2026-07-30: kapi `_ADMIN`'dir (bkz. `delete_unit_endpoint`
-         *     gerekcesi) — `app/core/access.py`: "full silmeyi KAPSAMAZ". Yetki kapisi
-         *     409 korkulugundan ONCE calisir: yetkisiz aktor 403 alir, blogun unite
-         *     tasiyip tasimadigini OGRENEMEZ.
+         *     Once `GET /admin/silme/block/{id}/onizleme`, onay, sonra bu uc `preview_token` ile: eksikse 428
+         *     `preview_required`; agac degistiyse 409 `preview_stale`; mali kayit varsa 409
+         *     `financial_pending`. Yetki kapisi her seyden ONCE calisir.
          */
         delete: operations["delete_block_endpoint_blocks__block_id__delete"];
         options?: never;
@@ -614,11 +658,9 @@ export interface paths {
         post?: never;
         /**
          * Delete Boq Group Endpoint
-         * @description TB3-C: YALNIZ BOS grup silinir; kalemi olan grup 409 doner.
+         * @description İş kalemi grubunu siler. YALNIZ Sistem Yöneticisi.
          *
-         *     Kapi `_ADMIN`'dir — `delete_boq_item_endpoint` ile BIREBIR ayni gerekce
-         *     (`full` silmeyi KAPSAMAZ). F-SD smoke'unda canlida bos test grubu 405
-         *     aldigi icin acildi.
+         *     Yalnız BOŞ grup silinir; kalemi olan grup **409** (iş kuralı).
          */
         delete: operations["delete_boq_group_endpoint_boq_groups__group_id__delete"];
         options?: never;
@@ -639,16 +681,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Boq Item Endpoint
-         * @description Frontend F13 (kalem silme) bu uca baglidir.
+         * @description İş kalemini (poz) siler. YALNIZ Sistem Yöneticisi.
          *
-         *     KULLANICI KARARI 2026-07-30: kapi `_ADMIN`'dir, PATCH'ten (`_FULL`) BIR
-         *     SEVIYE YUKARI. Gerekce `app/core/access.py`'deki kuraldir: "full silmeyi
-         *     KAPSAMAZ — silme yalnizca admin seviyesindedir". Boylece uc, mevcut
-         *     `users`/`roles`/sirket logosu DELETE uclariyla tutarli hâle gelir.
-         *
-         *     BILINEN SONUC (kabul edildi): seed matrisinde `boq:admin` yalniz
-         *     `system_admin`'dedir; proje muduru dahil kimse kalem SILEMEZ, silme talebi
-         *     sistem yoneticisine gider. Bu BEKLENEN davranistir, hata degil.
+         *     Kaleme yazılmış günlük satırı varsa **409** (iş kuralı, Sistem Yöneticisi'ni de durdurur).
+         *     Frontend F13 (kalem silme) bu uca bağlıdır.
          */
         delete: operations["delete_boq_item_endpoint_boq_items__item_id__delete"];
         options?: never;
@@ -950,11 +986,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Chart Account Endpoint
-         * @description **YALNIZ `admin`** → 204; fiş satırı ya da alt hesabı olan hesap **409**.
+         * @description Hesabı siler. YALNIZ Sistem Yöneticisi.
          *
-         *     `full` seviyesi (muhasebe) 403 alır — gerekçe modül docstring'indedir.
-         *     409 SERVİSTEN gelir: ham FK ihlalinin 500'ü ya da ayrımsız "Veri bütünlüğü
-         *     hatası" kullanıcıya SIZMAZ. Yanıt gövdesizdir.
+         *     Fiş satırı (`journal_lines`) ya da alt hesabı olan hesap silinmez: **409** (iş kuralı,
+         *     Sistem Yöneticisi'ni de durdurur). Yanıt gövdesizdir.
          */
         delete: operations["delete_chart_account_endpoint_chart_of_accounts__account_id__delete"];
         options?: never;
@@ -1002,7 +1037,10 @@ export interface paths {
         put?: never;
         /** Upload Logo Endpoint */
         post: operations["upload_logo_endpoint_company_logo_post"];
-        /** Delete Logo Endpoint */
+        /**
+         * Delete Logo Endpoint
+         * @description Şirket logosunu kaldırır. YALNIZ Sistem Yöneticisi.
+         */
         delete: operations["delete_logo_endpoint_company_logo_delete"];
         options?: never;
         head?: never;
@@ -1038,9 +1076,9 @@ export interface paths {
         post?: never;
         /**
          * Delete Employer Contract Group Endpoint
-         * @description Spec §7. 409 `GROUP_HAS_ITEMS`: grupta poz varsa silinmez. Kapı `_ADMIN`
+         * @description İşveren sözleşme grubunu siler. YALNIZ Sistem Yöneticisi.
          *
-         *     (`boq/router.py.delete_boq_item_endpoint` deseninin birebiri).
+         *     Pozu olan grup **409** (iş kuralı).
          */
         delete: operations["delete_employer_contract_group_endpoint_contracts_employer_groups__group_id__delete"];
         options?: never;
@@ -1061,10 +1099,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Employer Contract Item Endpoint
-         * @description Spec §7. Engel YOK: bağlı `boq_items.contract_item_id` DB'de `ON DELETE
+         * @description İşveren sözleşme kalemini (poz) siler. YALNIZ Sistem Yöneticisi.
          *
-         *     SET NULL` ile serbest kalır, satır SİLİNMEZ. Kapı `_ADMIN`
-         *     (`boq/router.py.delete_boq_item_endpoint` deseninin birebiri).
+         *     Engel yok: bağlı `boq_items.contract_item_id` DB'de `ON DELETE SET NULL` ile serbest kalır,
+         *     satır SİLİNMEZ.
          */
         delete: operations["delete_employer_contract_item_endpoint_contracts_employer_items__item_id__delete"];
         options?: never;
@@ -1146,10 +1184,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Site Diary Entry Endpoint
-         * @description Kapı `_FULL`dur, `_ADMIN` DEĞİL (taşeron silme ucunun aynı gerekçesi):
-         *     admin kapısı olsaydı taslağı üreten şef/saha rollerinin KENDİ taslağını
-         *     silme istisnası (`can_delete`) ölü kural olurdu. Kesin karar
-         *     `service.delete_entry`tedir.
+         * @description Günlük kaydı siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Gönderilmiş kayıt ve kilitli gündeki kayıt **409** (iş kuralı, Sistem Yöneticisi'ni de
+         *     durdurur). Taslağı açan kişi kendi taslağını da silemez. Disiplin kısıtı DELETE'te uygulanmaz.
          */
         delete: operations["delete_site_diary_entry_endpoint_diary__entry_id__delete"];
         options?: never;
@@ -1250,12 +1288,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Document Folder Endpoint
-         * @description YALNIZ BOŞ klasör silinir; belge ya da alt klasör varsa 409.
+         * @description Belge klasörünü siler. YALNIZ Sistem Yöneticisi.
          *
-         *     Yetki kapısı korkuluktan ÖNCE koşar: yetkisiz aktör 403 alır ve klasörün
-         *     dolu olup olmadığını ÖĞRENEMEZ. Görünmeyen klasör 404 döner.
-         *
-         *     Yanıt `204 No Content`, gövdesizdir.
+         *     YALNIZ BOŞ klasör silinir; belge ya da alt klasör varsa **409** (iş kuralı). Yanıt
+         *     `204 No Content`, gövdesizdir.
          */
         delete: operations["delete_document_folder_endpoint_document_folders__folder_id__delete"];
         options?: never;
@@ -1350,12 +1386,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Document Endpoint
-         * @description Künye + baytlar silinir (`admin`; `full` silmeyi KAPSAMAZ).
+         * @description Belgeyi (künye + baytlar) siler. YALNIZ Sistem Yöneticisi.
          *
-         *     ⚠️ BU UÇ EKRANDA BASILMAZ (modül docstring'i): mockup'ta belge silme
-         *     aksiyonu yoktur; uç yalnız yanlış yüklenen dosyayı temizlemek içindir.
-         *
-         *     Yanıt `204 No Content`, gövdesizdir.
+         *     ⚠️ BU UÇ EKRANDA BASILMAZ (modül docstring'i): mockup'ta belge silme aksiyonu yoktur; uç yalnız
+         *     yanlış yüklenen dosyayı temizlemek içindir. Yanıt `204 No Content`, gövdesizdir.
          */
         delete: operations["delete_document_endpoint_documents__document_id__delete"];
         options?: never;
@@ -1510,7 +1544,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Discipline Endpoint
-         * @description Disiplini siler — yalniz HICBIR EV kaydinda kullanilmiyorsa (B1-9), yoksa 409.
+         * @description Disiplini siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Hiçbir EV kaydında kullanılmıyorsa ve kullanıcıya atanmamışsa silinir; aksi hâlde **409**
+         *     (iş kuralı). Disiplin atanmış Sistem Yöneticisi de siler (disiplin kısıtı DELETE'te yok).
          */
         delete: operations["delete_discipline_endpoint_earned_value_disciplines__discipline_id__delete"];
         options?: never;
@@ -1703,7 +1740,8 @@ export interface paths {
         post?: never;
         /**
          * Delete Fuel Log Endpoint
-         * @description 🔴 Yakıt kaydı MALİ İZ DEĞİLDİR (maliyet ondan türev) — silinebilir.
+         * @description Ekipman yakıt kaydını siler. YALNIZ Sistem Yöneticisi. Yakıt kaydı MALİ İZ DEĞİLDİR
+         *     (maliyet ondan türev) — silinebilir.
          */
         delete: operations["delete_fuel_log_endpoint_equipment_fuel_logs__log_id__delete"];
         options?: never;
@@ -1750,8 +1788,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Rental Invoice Line Endpoint
-         * @description YALNIZ `draft` (spec §4): doğrulama aşamasında bir satırın yok olması,
-         *     firmanın faturasıyla karşılaştırılan kümeyi sessizce küçültürdü.
+         * @description Kira hakedişi satırını siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     YALNIZ `draft` hakedişte (spec §4): doğrulama aşamasında bir satırın yok olması, firmanın
+         *     faturasıyla karşılaştırılan kümeyi sessizce küçültürdü; aksi hâlde **409**.
          */
         delete: operations["delete_rental_invoice_line_endpoint_equipment_rental_invoice_lines__line_id__delete"];
         options?: never;
@@ -1980,9 +2020,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Work Log Endpoint
-         * @description 🔴 Çalışma kaydı MALİ İZ DEĞİLDİR (maliyet ondan türev) — silinebilir.
+         * @description Ekipman çalışma kaydını siler. YALNIZ Sistem Yöneticisi.
          *
-         *     Ekipmanın KENDİSİ silinemez: orada iz `RESTRICT`lidir ve DELETE ucu yoktur.
+         *     Çalışma kaydı MALİ İZ DEĞİLDİR (maliyet ondan türev) — silinebilir. Ekipmanın KENDİSİ silinemez:
+         *     orada iz `RESTRICT`lidir ve DELETE ucu yoktur.
          */
         delete: operations["delete_work_log_endpoint_equipment_work_logs__log_id__delete"];
         options?: never;
@@ -2225,10 +2266,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Financial Instrument Endpoint
-         * @description **YALNIZ `admin`** (modul docstring'i) → 204; terminal durumda **409**.
+         * @description Çek/senet kaydını siler. YALNIZ Sistem Yöneticisi.
          *
-         *     `full` seviyesi (muhasebe) 403 alir: silme mali izi yok eder ve tahsil
-         *     edilmis bir cekin kaydi hicbir seviyede silinemez.
+         *     Yalnız portföydeki kayıt silinir; terminal durumdaki ya da bağlı ödemesi olan evrak **409**
+         *     (iş kuralı). Tahsil edilmiş bir çekin kaydı hiçbir koşulda silinemez.
          */
         delete: operations["delete_financial_instrument_endpoint_financial_instruments__instrument_id__delete"];
         options?: never;
@@ -2497,10 +2538,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Invoice Endpoint
-         * @description **YALNIZ `admin` + yalnız `draft`** → 204; başka durum **409**.
+         * @description Faturayı siler. YALNIZ Sistem Yöneticisi.
          *
-         *     `full` seviyesi (muhasebe) 403 alır — gerekçe modül docstring'indedir.
-         *     Kalemler birlikte gider. Yanıt gövdesizdir.
+         *     Yalnız `draft` fatura silinir; başka durum **409** (iş kuralı). Kalemler birlikte gider.
+         *     Yanıt gövdesizdir.
          */
         delete: operations["delete_invoice_endpoint_invoices__invoice_id__delete"];
         options?: never;
@@ -2822,13 +2863,11 @@ export interface paths {
         post?: never;
         /**
          * Delete Journal Entry Endpoint
-         * @description **YALNIZ `admin`** → 204; `posted`/`reversed` fiş **409**.
+         * @description Yevmiye fişini siler. YALNIZ Sistem Yöneticisi.
          *
-         *     `full` seviyesi (muhasebe) 403 alır — gerekçe modül docstring'indedir.
-         *     Bacaklar açıkça silinir (DB'de CASCADE de vardır). Yanıt gövdesizdir.
-         *
-         *     🔴 Kapalı dönemde **409** (MU-2 T3): `admin` bile silemez, çünkü engel YETKİ
-         *     değil DÖNEMDİR. Silinebilseydi kapalı dönemin mizanı geçmişe dönük değişirdi.
+         *     Yalnız `draft` fiş silinir; `posted`/`reversed` fiş **409**. Kapalı muhasebe döneminde de
+         *     **409** (engel yetki değil DÖNEMDİR: silinebilseydi kapalı dönemin mizanı geçmişe dönük
+         *     değişirdi). Bacaklar fişle birlikte silinir. Yanıt gövdesizdir.
          */
         delete: operations["delete_journal_entry_endpoint_journal_entries__entry_id__delete"];
         options?: never;
@@ -3101,10 +3140,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Leave Request Endpoint
-         * @description Bekleyen talebi siler. Kapı BİLİNÇLİ olarak `_VIEW`dir: gerçek kural İKİ
-         *     yoldan açılır (`admin` seviyesi YA DA talebin SAHİBİ olmak, spec §3) ve tek
-         *     seviyeli bir router kapısı bunu ifade edemez — karar serviste verilir, yetkisiz
-         *     aktör 403 alır. `procurement` (`personnel=none`) zaten bu kapıda durur.
+         * @description Bekleyen izin talebini siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Karara bağlanmış (onaylı/reddedilmiş) talep **409** (iş kuralı). Talebi açan kişi talebi
+         *     SİLEMEZ; vazgeçmenin yolu silme değil GERİ ÇEKMEdir (`POST /leave-requests/{id}/withdraw`).
          */
         delete: operations["delete_leave_request_endpoint_leave_requests__request_id__delete"];
         options?: never;
@@ -3365,7 +3404,8 @@ export interface paths {
         post?: never;
         /**
          * Delete Template Endpoint
-         * @description Sil; bagli teklifler korunur (`template_id` NULL olur).
+         * @description Teklif şablonunu siler. YALNIZ Sistem Yöneticisi. Bağlı teklifler korunur (`template_id` NULL
+         *     olur).
          */
         delete: operations["delete_template_endpoint_offers_templates__template_id__delete"];
         options?: never;
@@ -3455,7 +3495,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Offer Endpoint
-         * @description Yalniz tek revizyonlu ve taslak teklif. Numara geri kullanilmaz.
+         * @description Teklifi siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Yalnız tek revizyonlu ve taslak teklif silinir; aksi hâlde **409** (iş kuralı). Numara geri
+         *     kullanılmaz.
          */
         delete: operations["delete_offer_endpoint_offers__offer_id__delete"];
         options?: never;
@@ -3580,7 +3623,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Group Endpoint
-         * @description Bos grubu siler (yalniz taslak); icinde kalem varsa 409 (TKL-B4.5). Denetim satiri YOK.
+         * @description Teklif grubunu siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Yalnız taslak revizyondaki BOŞ grup silinir; revizyon taslak değilse ya da grupta kalem varsa
+         *     **409** (iş kuralı). Denetim satırı yazılmaz.
          */
         delete: operations["delete_group_endpoint_offers__offer_id__revisions__rev_no__groups__group_id__delete"];
         options?: never;
@@ -3769,14 +3815,11 @@ export interface paths {
         post?: never;
         /**
          * Delete Payment Endpoint
-         * @description **YALNIZ `admin`** → 204: yanlış tahsilat geri alınabilmelidir.
+         * @description Ödeme/tahsilat kaydını siler. YALNIZ Sistem Yöneticisi.
          *
-         *     `full` seviyesi (muhasebe) 403 alır — `full` silmeyi KAPSAMAZ (repo kanonu)
-         *     ve ödeme, bakiyeyi doğrudan oynatan mali bir kayıttır.
-         *
-         *     🔴 Silme AYNI kilidi alır (K7) ve fatura durumunu **YENİDEN TÜRETİR**:
-         *     `collected` → `sent`e düşebilir. Görünmeyen faturanın ödemesi de "yok"tur
-         *     (404). Yanıt gövdesizdir.
+         *     Yanlış tahsilat geri alınabilmelidir; ama bağlı çek/senet portföyden çıkmışsa ya da ödeme
+         *     ödenmiş hakedişe aitse **409** (iş kuralı). Silme AYNI kilidi alır (K7) ve fatura durumunu
+         *     YENİDEN TÜRETİR.
          */
         delete: operations["delete_payment_endpoint_payments__payment_id__delete"];
         options?: never;
@@ -4319,8 +4362,9 @@ export interface paths {
         post?: never;
         /**
          * Delete Personnel Document Endpoint
-         * @description İK takip kaydını siler (`admin`; `full` silmeyi KAPSAMAZ). SET NULL: bağlı
-         *     BC arşiv künyesi DURUR (dosya arşivde kalır). Yanıt 204, gövdesiz.
+         * @description İK takip kaydını (personel belgesi) siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     SET NULL: bağlı BC arşiv künyesi DURUR (dosya arşivde kalır). Yanıt 204, gövdesiz.
          */
         delete: operations["delete_personnel_document_endpoint_personnel_documents__document_id__delete"];
         options?: never;
@@ -4460,18 +4504,11 @@ export interface paths {
         post?: never;
         /**
          * Delete Progress Payment Endpoint
-         * @description K8 iki katmanlı kural (spec §7.1). Kapı `_DRAFT`dir — `_ADMIN` olsaydı
+         * @description İşveren hakedişini siler. YALNIZ Sistem Yöneticisi.
          *
-         *     taslağı üreten şef/saha rollerinin (draft seviyesi) KENDİ taslaklarını
-         *     silme istisnası ölü kural olurdu (`subcontracts.delete_subcontractor_
-         *     contract`in `_FULL` kapı kararının aynı gerekçesi, spec §7.1 girişi).
-         *     Kesin karar `service.delete_payment`'tadır: `approved`/`paid` ADMİN DAHİL
-         *     kimseye açık değildir; kalanında `can_delete` (admin koşulsuz, aksi hâlde
-         *     yalnız kaydı açan aktörün KENDİ taslağı).
-         *
-         *     H8'den devredilen not (plan H10, spec §11): `service.delete_payment`
-         *     kaydın özetini (`sequence_no`/durum/tutar) `session.delete`den ÖNCE
-         *     çıkarıp döner — kayıt gittiğinde bunlar bir daha okunamaz.
+         *     `approved`/`paid` hakediş **409** (iş kuralı, Sistem Yöneticisi'ni de durdurur): önce
+         *     `unapprove` ile geri çekilir. Taslağı açan kişi kendi taslağını da silemez. Satırlar birlikte
+         *     gider. Disiplin kısıtı DELETE'te uygulanmaz.
          */
         delete: operations["delete_progress_payment_endpoint_progress_payments__payment_id__delete"];
         options?: never;
@@ -5525,13 +5562,11 @@ export interface paths {
         post?: never;
         /**
          * Delete Purchase Request Endpoint
-         * @description **YALNIZ taslak** silinir (409 aksi hâlde) ve kararı `can_delete` verir
-         *     (403 aksi hâlde) — kapı gerekçesi modül docstring'indedir.
+         * @description Satınalma talebini siler. YALNIZ Sistem Yöneticisi.
          *
-         *     Yanıtın `can_delete` bayrağı ile bu uç AYNI fonksiyondan beslenir: ekran
-         *     düğmeyi gösterip sonra 403 yemez. Kalemler CASCADE ile gider.
-         *
-         *     Yanıt `204 No Content`, gövdesizdir.
+         *     YALNIZ taslak talep silinir; aksi hâlde **409** (iş kuralı, Sistem Yöneticisi'ni de durdurur).
+         *     Talebi açan kişi kendi taslağını da silemez. Yanıttaki `can_delete` bayrağı bu kuraldan
+         *     beslenir: yalnız Sistem Yöneticisi için `true`. Kalemler CASCADE ile gider.
          */
         delete: operations["delete_purchase_request_endpoint_purchase_requests__request_id__delete"];
         options?: never;
@@ -5644,11 +5679,9 @@ export interface paths {
         post?: never;
         /**
          * Delete Quote Endpoint
-         * @description Yanlış girilmiş bir teklif SİLİNİR (talep hâlâ `quote_wait` iken).
+         * @description Tedarikçi teklifini siler. YALNIZ Sistem Yöneticisi.
          *
-         *     `can_delete` taslak istisnası BURADA GEÇERSİZDİR: teklifin "sahibi" onu
-         *     giren kullanıcı değil TEDARİKÇİDİR ve kayıtta `created_by` kolonu yoktur.
-         *     Kapı bu yüzden düz `full`dur.
+         *     Yanlış girilmiş teklif, talep hâlâ `quote_wait` iken silinir; aksi hâlde **409** (iş kuralı).
          */
         delete: operations["delete_quote_endpoint_purchase_requests__request_id__quotes__quote_id__delete"];
         options?: never;
@@ -5819,7 +5852,13 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete Role Endpoint */
+        /**
+         * Delete Role Endpoint
+         * @description Rolü siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Sistem Yöneticisi rolü silinemez (**403**, `Sistem Yöneticisi rolü silinemez`); kullanıcısı olan
+         *     rol **409** (`Bu role atanmış kullanıcılar var; önce onları başka role taşıyın`).
+         */
         delete: operations["delete_role_endpoint_roles__role_id__delete"];
         options?: never;
         head?: never;
@@ -6010,12 +6049,11 @@ export interface paths {
         post?: never;
         /**
          * Delete Sale Endpoint
-         * @description Spec §4: YALNIZ `reservation` silinir; `active`/`deed_transferred` 409 ile
+         * @description Satış kaydını siler. YALNIZ Sistem Yöneticisi.
          *
-         *     reddedilir ve iptal edilerek (T5 `cancel`) kapatılır. Kapı `_ADMIN`dir —
-         *     `units`/`blocks` DELETE uçlarıyla tutarlı (kalıcı karar 2026-07-30). Yetki
-         *     kapısı durum korkuluğundan ÖNCE çalışır: yetkisiz aktör 403 alır ve kaydın
-         *     hangi durumda olduğunu ÖĞRENEMEZ.
+         *     YALNIZ `reservation` silinir; `active`/`deed_transferred` **409** ile reddedilir ve iptal
+         *     edilerek (T5 `cancel`) kapatılır (iş kuralı, Sistem Yöneticisi'ni de durdurur). Silinen
+         *     rezervasyon ünitenin `sales_status`unu `listed`e döndürür. Yanıt `204 No Content`, gövdesiz.
          */
         delete: operations["delete_sale_endpoint_sales__sale_id__delete"];
         options?: never;
@@ -6229,24 +6267,14 @@ export interface paths {
         post?: never;
         /**
          * Delete Section Endpoint
-         * @description Spec §7.1. 🔴 **BU CUMLE BAYATTI VE DUZELTILDI (BC-3, 2026-09-05).**
+         * @description Bolumu bagli kayitlariyla birlikte siler. YALNIZ Sistem Yoneticisi; ONIZLEME ZORUNLU.
          *
-         *     Eski metin *"`sections.id`'yi hedefleyen FK yok"* diyordu; `deletes.py`nin
-         *     servis docstring'i bunu zaten curutmustu ama router'daki kopya duruyordu.
-         *     ÖLÇÜLDÜ (`Base.metadata` uzerinden, kelime aramasiyla DEGIL): `sections.id`yi
-         *     **ON BIR** FK hedefliyor — ikisi CASCADE (`boq_item_section_allocations`,
-         *     `section_milestones` ve BC-3'un `section_documents`i), kalani SET NULL
-         *     (`personnel`, `purchase_requests`, `sections.depends_on_section_id`,
-         *     `site_diary_entries`, `site_plan_rows`, `stock_entry_lines`,
-         *     `subcontractor_progress_payments`, `timesheet_entries`).
-         *     Silme yine de kosulsuzdur cunku hicbiri RESTRICT DEGIL; kosulsuzlugun
-         *     gerekcesi "FK yok" DEGIL, "engelleyen FK yok"tur.
-         *
-         *     Kapi `_ADMIN`'dir — bolum santiyenin ic kirilimi oldugu icin `sites`
-         *     modulunun seviyeleri kullanilir, AYRI izin modulu acilmaz.
-         *
-         *     Yanit `204 No Content`, GOVDESIZ. Denetim metni servis icinde, satir yok
-         *     olmadan ONCE kurulur.
+         *     Kilometre tasi, dagitim, belge ve bolume yazilmis gunluk miktar satirlari birlikte silinir.
+         *     Bagi kopan kayitlar (personel, puantaj, satinalma talebi…) SILINMEZ, yalniz bolum bagi
+         *     kopar; onizlemede `detached` olarak gorunur. Once `GET /admin/silme/section/{id}/onizleme`,
+         *     sonra bu uc `preview_token` ile: eksikse 428 `preview_required`; agac degistiyse 409
+         *     `preview_stale`; mali kayit varsa 409 `financial_pending`. Kalan bolumlerin `sort_order`
+         *     degerleri yeniden numaralanmaz. Yanit `204 No Content`, govdesiz.
          */
         delete: operations["delete_section_endpoint_sections__section_id__delete"];
         options?: never;
@@ -6366,15 +6394,15 @@ export interface paths {
         post?: never;
         /**
          * Delete Site Endpoint
-         * @description Spec §7.1. CASCADE KORKULUGU servistedir — bolum/poz/blok varsa 409.
+         * @description Santiyeyi bagli kayitlariyla birlikte siler. YALNIZ Sistem Yoneticisi; ONIZLEME ZORUNLU.
          *
-         *     Yetki kapisi korkuluktan ONCE calisir: yetkisiz aktor 403 alir ve santiyenin
-         *     bagli kayit tasiyip tasimadigini OGRENEMEZ. Gorunmeyen santiye 404 doner ve
-         *     govdesi var olmayan UUID'ninkiyle BIREBIR AYNIDIR.
+         *     Bolum, poz, blok, unite, puantaj, gunluk, belge, plan, sozlesme ve diger bagli kayitlar
+         *     birlikte silinir. Once `GET /admin/silme/site/{id}/onizleme`, onay, sonra bu uc `preview_token`
+         *     ile cagrilir: eksikse 428 `preview_required`; agac degistiyse 409 `preview_stale`; agacta
+         *     mali kayit varsa 409 `financial_pending` (mali silme sonraki surumde acilacak).
          *
-         *     Yanit `204 No Content`, GOVDESIZ. Denetim metni servis icinde, satir yok
-         *     olmadan ONCE kurulur; engellenen silme (409) istisna attigi icin buraya hic
-         *     gelmez ve gunluge satir dusmez.
+         *     Gorunmeyen ve var olmayan santiye ayni yaniti verir. Yanit `204 No Content`, govdesiz. Denetim
+         *     satirina silinen ve bagi kopan kayitlarin tam dokumu yazilir.
          */
         delete: operations["delete_site_endpoint_sites__site_id__delete"];
         options?: never;
@@ -6846,7 +6874,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Budget Draft
-         * @description Yalniz TASLAK silinir (onay duzeyi); donmus revizyon 409.
+         * @description Bütçe taslağını siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Yalnız TASLAK revizyon silinir; dondurulmuş revizyon **409** (iş kuralı). Tamamlanmış
+         *     şantiyede de **409**.
          */
         delete: operations["delete_budget_draft_sites__site_id__earned_value_budget_revisions__revision_id__delete"];
         options?: never;
@@ -7665,10 +7696,7 @@ export interface paths {
         post?: never;
         /**
          * Delete Subcontract Item Endpoint
-         * @description Spec §7. Engel YOK. Kapı `_ADMIN` — `can_delete` istisnası burada YOK,
-         *
-         *     yalnız `DELETE /subcontractor-contracts/{contract_id}` ucunda geçerlidir
-         *     (task brief kararı).
+         * @description Taşeron sözleşme kalemini siler. YALNIZ Sistem Yöneticisi. Engel yok.
          */
         delete: operations["delete_subcontract_item_endpoint_subcontractor_contracts_items__item_id__delete"];
         options?: never;
@@ -7698,20 +7726,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Subcontractor Contract Endpoint
-         * @description Spec §7, §5.0. KAPI KARARI (task C12, belirsizlik notu): bu ucun dısındaki
+         * @description Taşeron sözleşmesini siler. YALNIZ Sistem Yöneticisi.
          *
-         *     DÖRT DELETE ucu (`subcontractors`, kalemler, işveren grup/kalem) `boq`/
-         *     `sites` deseninin BİREBİRİ — saf `_ADMIN` kapısı, servis katmanında ek
-         *     kontrol YOK. Bu uç TEK istisna: kapı `_FULL`'dir, kesin yetki kararını
-         *     `subcontracts.delete_subcontractor_contract` içindeki `can_delete`
-         *     (`app/core/access.py`, spec §5.0 taslak istisnası) verir. Gerekçe: `boq`/
-         *     `sites` DELETE uçlarının HİÇBİRİ `can_delete`'i KULLANMIYOR (kod taraması
-         *     doğrulandı) — saf `_ADMIN` kapısı proje müdürünün KENDİ taslağını silmesini
-         *     de engellerdi, bu da spec §5.0'ın taslak istisnasını uçta ANLAMSIZ
-         *     bırakırdı. En yakın emsal `projects/service.py.visible_projects`'in
-         *     `get_permission` ile aktörün gerçek erişim seviyesini SERVİSTE okuma
-         *     deseni — o da router kapısının (`_VIEW`) ötesinde ek bir servis içi karar
-         *     örneğidir.
+         *     Kalemleri ve hakedişleri CASCADE ile birlikte gider. Hakedişi faturaya bağlıysa DB kısıtı
+         *     nedeniyle **409** (`Veri bütünlüğü hatası`, `code` yok).
          */
         delete: operations["delete_subcontractor_contract_endpoint_subcontractor_contracts__contract_id__delete"];
         options?: never;
@@ -7893,9 +7911,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Subcontractor Progress Payment Endpoint
-         * @description Kapı `_DRAFT`tir (işveren silme ucunun aynı gerekçesi): `_ADMIN` olsaydı
-         *     taslağı üreten şef/saha rollerinin KENDİ taslağını silme istisnası ölü kural
-         *     olurdu. Kesin karar `service.delete_payment`tadır.
+         * @description Taşeron hakedişini siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     `approved`/`paid` hakediş **409** (iş kuralı, Sistem Yöneticisi'ni de durdurur). Taslağı açan
+         *     kişi kendi taslağını da silemez. Disiplin kısıtı DELETE'te uygulanmaz.
          */
         delete: operations["delete_subcontractor_progress_payment_endpoint_subcontractor_progress_payments__payment_id__delete"];
         options?: never;
@@ -8116,11 +8135,9 @@ export interface paths {
         post?: never;
         /**
          * Delete Subcontractor Endpoint
-         * @description Spec §7. 409 `SUBCONTRACTOR_HAS_CONTRACTS`: taşeronun sözleşmesi varsa
+         * @description Taşeron firmasını siler. YALNIZ Sistem Yöneticisi.
          *
-         *     silinmez. Kapı `_ADMIN` — `boq/router.py.delete_boq_item_endpoint`/
-         *     `sites/router.py.delete_site_endpoint` deseninin BİREBİRİ, `can_delete`
-         *     istisnası YOK (yalnız `subcontractor-contracts` silme ucunda geçerli).
+         *     Sözleşmesi (ya da günlük işçi sayısı kaydı) olan taşeron **409** (iş kuralı).
          */
         delete: operations["delete_subcontractor_endpoint_subcontractors__subcontractor_id__delete"];
         options?: never;
@@ -8372,20 +8389,12 @@ export interface paths {
         post?: never;
         /**
          * Delete Unit Endpoint
-         * @description Spec §7.9. Unite silme kosulsuzdur (P3'te uniteye bagli tablo yok, §1.3).
+         * @description Uniteyi bagli kayitlariyla (satis, taksit, belge…) birlikte siler. YALNIZ Sistem Yoneticisi;
+         *     ONIZLEME ZORUNLU.
          *
-         *     KULLANICI KARARI 2026-07-30: kapi `_ADMIN`'dir, PATCH'ten (`_FULL`) BIR
-         *     SEVIYE YUKARI — `app/core/access.py`: "full silmeyi KAPSAMAZ — silme
-         *     yalnizca admin seviyesindedir". `users`/`roles`/sirket logosu DELETE
-         *     uclariyla tutarlilik saglanir.
-         *
-         *     BILINEN SONUC (kabul edildi): seed matrisinde `projects:admin` yalniz
-         *     `system_admin`'dedir; proje muduru dahil kimse silemez.
-         *
-         *     Gorunurluk kurali DEGISMEDI (gorunmeyen projenin unitesi 404, 403 degil)
-         *     fakat `projects:admin` gorunurluk suzgecini zaten atladigindan (spec §5.2)
-         *     bu dalin HTTP uzerinden ULASILABILIR bir senaryosu kalmamistir; kural
-         *     `guards.visible_unit`'te ve PATCH ucunda (hâlâ `full`) yerinde durur.
+         *     Once `GET /admin/silme/unit/{id}/onizleme`, onay, sonra bu uc `preview_token` ile: eksikse 428
+         *     `preview_required`; agac degistiyse 409 `preview_stale`; mali kayit (kaporali rezervasyon,
+         *     tahsilatli taksit, sozlesmeli satis…) varsa 409 `financial_pending`.
          */
         delete: operations["delete_unit_endpoint_units__unit_id__delete"];
         options?: never;
@@ -8427,7 +8436,13 @@ export interface paths {
         get: operations["get_user_endpoint_users__user_id__get"];
         put?: never;
         post?: never;
-        /** Delete User Endpoint */
+        /**
+         * Delete User Endpoint
+         * @description Kullanıcıyı siler. YALNIZ Sistem Yöneticisi.
+         *
+         *     Son aktif Sistem Yöneticisi silinemez (**400**). İz bırakmış kullanıcı (12 tabloda RESTRICT) DB
+         *     kısıtı nedeniyle **409** `Veri bütünlüğü hatası` alır; anonimleştirme yolu SIL-B3'tedir.
+         */
         delete: operations["delete_user_endpoint_users__user_id__delete"];
         options?: never;
         head?: never;
@@ -8571,12 +8586,10 @@ export interface paths {
         post?: never;
         /**
          * Delete Warehouse Endpoint
-         * @description YALNIZ HAREKETSİZ depo silinir; hareketi varsa 409.
+         * @description Depoyu siler. YALNIZ Sistem Yöneticisi.
          *
-         *     Yetki kapısı korkuluktan ÖNCE koşar: yetkisiz aktör 403 alır ve deponun
-         *     hareketli olup olmadığını ÖĞRENEMEZ. Görünmeyen depo 404 döner.
-         *
-         *     Yanıt `204 No Content`, gövdesizdir.
+         *     YALNIZ HAREKETSİZ depo silinir; hareketi varsa **409** (iş kuralı). Yanıt `204 No Content`,
+         *     gövdesizdir.
          */
         delete: operations["delete_warehouse_endpoint_warehouses__warehouse_id__delete"];
         options?: never;
@@ -11401,6 +11414,115 @@ export interface components {
          * @enum {string}
          */
         DeedCondition: "full_payment" | "after_down_payment" | "at_contract";
+        /**
+         * DeleteDetachedGroup
+         * @description SilinMEYEN ama köke bağı KOPACAK kayıtların bir türü (SET NULL).
+         */
+        DeleteDetachedGroup: {
+            /** Count */
+            count: number;
+            /** Label */
+            label: string;
+            /** Table */
+            table: string;
+        };
+        /**
+         * DeleteErrorResponse
+         * @description 409 ve 428 gövdesi. `code` yalnız silme önkoşullarında dolar: 428 `preview_required`,
+         *     409 `preview_stale` (önizleme eskidi) ya da `financial_pending` (ağaçta mali kayıt var; mali
+         *     silme sonraki sürümde açılacak). Başka 409'lar (ör. beklenmeyen veri bütünlüğü hatası)
+         *     yalnız `detail` taşır, `code` boştur.
+         */
+        DeleteErrorResponse: {
+            /** Code */
+            code?: ("preview_required" | "preview_stale" | "financial_pending") | null;
+            /** Detail */
+            detail: string;
+        };
+        /**
+         * DeleteKind
+         * @description Önizleme/silme motorunun tanıdığı kayıt türleri. Her dilim yeni üye ekler (SIL-B2…).
+         *
+         *     Üye adı = URL parçası. Motorun kayıt defteri (`core/silme`) ile üye kümesi birebir eşit
+         *     olmak ZORUNDADIR; `tests/modules/silme/test_silme_tur_bekcisi.py` çakar.
+         * @enum {string}
+         */
+        DeleteKind: "site" | "section" | "block" | "unit";
+        /**
+         * DeletePreviewGroup
+         * @description Silinecek bağlı kayıtların bir türü.
+         */
+        DeletePreviewGroup: {
+            /** Count */
+            count: number;
+            /**
+             * Is Financial
+             * @description Mali kayıt (hakediş, fatura, ödeme, muhasebe fişi): onay penceresi vurgular.
+             */
+            is_financial: boolean;
+            /**
+             * Label
+             * @description Türkçe tür adı (ör. `Günlük kaydı`).
+             */
+            label: string;
+            relation: components["schemas"]["DeleteRelation"];
+            /**
+             * Samples
+             * @description İlk birkaç kaydın adı (en çok 5; adı olmayan türlerde boş). Sayı `count`tur.
+             */
+            samples: string[];
+            /**
+             * Table
+             * @description Teknik tablo anahtarı (ör. `site_diary_entries`); yalnız anahtar.
+             */
+            table: string;
+        };
+        /** DeletePreviewResponse */
+        DeletePreviewResponse: {
+            /**
+             * Dependent Count
+             * @description Kök HARİÇ, birlikte silinecek toplam kayıt sayısı (`groups` toplamı).
+             */
+            dependent_count: number;
+            /**
+             * Detached
+             * @description Silinmeyecek, yalnız bağı kopacak kayıtlar (ör. bölümü boşalan personel).
+             */
+            detached: components["schemas"]["DeleteDetachedGroup"][];
+            /**
+             * Groups
+             * @description Birlikte silinecek kayıtlar: `count` azalan, sonra `label`. Boş = bağlı yok.
+             */
+            groups: components["schemas"]["DeletePreviewGroup"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["DeleteKind"];
+            /**
+             * Kind Label
+             * @description Kök türün Türkçe adı (ör. `Şantiye`).
+             */
+            kind_label: string;
+            /**
+             * Label
+             * @description Kök kaydın görünen adı (ör. `Kule Şantiyesi`).
+             */
+            label: string;
+            /**
+             * Preview Token
+             * @description Bu ağacın karması. DELETE'e `preview_token` olarak AYNEN verilir; ağaç arada değişirse DELETE 409 `preview_stale` döner.
+             */
+            preview_token: string;
+        };
+        /**
+         * DeleteRelation
+         * @description Bağlı kaydın kökle ilişkisi. Bir tablo birden çok yoldan bağlıysa EN GÜÇLÜSÜ yazılır
+         *     (restrict > linked > cascade).
+         * @enum {string}
+         */
+        DeleteRelation: "cascade" | "restrict" | "linked";
         /**
          * DiaryStatus
          * @description Günlük kaydın durumu (spec §2). İKİ durum: hakediş evrakının dört durumlu
@@ -26651,6 +26773,117 @@ export interface operations {
             };
         };
     };
+    delete_with_dependents_endpoint_admin_silme__kind___record_id__delete: {
+        parameters: {
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
+            header?: never;
+            path: {
+                kind: components["schemas"]["DeleteKind"];
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı (ör. `Şantiye bulunamadı`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_delete_endpoint_admin_silme__kind___record_id__onizleme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["schemas"]["DeleteKind"];
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletePreviewResponse"];
+                };
+            };
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı (ör. `Şantiye bulunamadı`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ai_chat_endpoint_ai_chat_post: {
         parameters: {
             query?: never;
@@ -26848,7 +27081,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -27593,7 +27826,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -27607,7 +27840,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bu hesaba bağlı ödeme kayıtları var */
+            /** @description Hesaba bağlı ödeme kaydı var */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -27681,7 +27914,10 @@ export interface operations {
     };
     delete_block_endpoint_blocks__block_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 block_id: string;
@@ -27697,7 +27933,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -27711,6 +27947,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -27718,6 +27963,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -27789,7 +28043,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -27798,6 +28052,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Grupta iş kalemi var; önce kalemleri silin */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27881,7 +28142,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -27890,6 +28151,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kaleme yazılmış günlük kayıt satırı var; önce günlüklerden çıkarın */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28575,7 +28843,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -28589,7 +28857,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Hesaba bağlı yevmiye kaydı ya da alt hesap var */
+            /** @description Hesaba bağlı yevmiye satırı ya da alt hesap var */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -28844,7 +29112,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -28926,7 +29194,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -28935,6 +29203,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Grupta poz var; önce pozları silin */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29018,7 +29293,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -29377,7 +29652,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -29386,6 +29661,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Gönderilmiş günlük kayıt silinemez; kilitli gündeki kayıt da silinemez */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29608,7 +29890,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -29622,7 +29904,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Klasör boş değil */
+            /** @description Klasörde belge ya da alt klasör var */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -29860,7 +30142,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -30264,7 +30546,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -30273,6 +30555,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Disiplin kullanımda ya da kullanıcılara atanmış */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30614,7 +30903,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -30894,7 +31183,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -31033,7 +31322,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -31727,7 +32016,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -32326,7 +32615,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -32340,7 +32629,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yalnızca portföydeki kayıt silinebilir */
+            /** @description Yalnızca portföydeki ve ödemesiz çek/senet silinebilir */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -32824,7 +33113,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -33516,7 +33805,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -33530,7 +33819,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yalnızca taslak fiş silinebilir */
+            /** @description Yalnızca taslak fiş silinebilir; kapalı dönemdeki fiş de silinemez */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -34155,7 +34444,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -34164,6 +34453,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Yalnız bekleyen izin talebi silinebilir */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34811,7 +35107,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -35091,7 +35387,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -35100,6 +35396,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Teklif yalnız tek revizyonlu ve taslak iken silinebilir */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35483,7 +35786,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -35492,6 +35795,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Revizyon taslak değil ya da grupta kalem var */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35679,7 +35989,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -35688,6 +35998,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Revizyon taslak değil */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35995,7 +36312,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -36004,6 +36321,13 @@ export interface operations {
             };
             /** @description Ödeme kaydı bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Portföy dışı çek/senede ya da ödenmiş hakedişe bağlı ödeme silinemez */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37066,7 +37390,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -37489,7 +37813,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -37498,6 +37822,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Onaylanmış veya ödenmiş hakediş silinemez */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -39996,7 +40327,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yalnızca talebi açan kendi taslağını silebilir */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -40301,7 +40632,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -40693,7 +41024,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Yalnız Sistem Yöneticisi silebilir; Sistem Yöneticisi rolü silinemez */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -40702,6 +41033,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role atanmış kullanıcılar var */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -41023,7 +41361,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -41301,7 +41639,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -41310,6 +41648,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Yalnızca rezervasyon kaydı silinebilir; satış iptal edilmelidir */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -41761,7 +42106,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -41977,7 +42322,10 @@ export interface operations {
     };
     delete_section_endpoint_sections__section_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 section_id: string;
@@ -41993,7 +42341,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -42007,6 +42355,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -42014,6 +42371,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -42372,7 +42738,10 @@ export interface operations {
     };
     delete_site_endpoint_sites__site_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 site_id: string;
@@ -42388,7 +42757,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -42402,6 +42771,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -42409,6 +42787,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -43533,7 +43920,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -43542,6 +43929,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Yalnız taslak revizyon silinebilir (dondurulmuş revizyon silinemez) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -45397,7 +45791,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -45489,7 +45883,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -45626,7 +46020,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -45635,6 +46029,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Faturaya bağlı hakedişi olan sözleşme silinemez (veri bütünlüğü) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -46152,7 +46553,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -46161,6 +46562,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Onaylanmış veya ödenmiş hakediş silinemez */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -46660,7 +47068,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -46669,6 +47077,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Taşeronun sözleşmesi ya da günlük işçi kaydı var; önce onları silin */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -47127,7 +47542,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -47295,7 +47710,10 @@ export interface operations {
     };
     delete_unit_endpoint_units__unit_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 unit_id: string;
@@ -47311,7 +47729,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -47325,6 +47743,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -47332,6 +47759,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -47541,7 +47977,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Son aktif Sistem Yöneticisi silinemez */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -47550,6 +47993,13 @@ export interface operations {
             };
             /** @description Kayıt bulunamadı */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description İz bırakmış kullanıcı silinemez (veri bütünlüğü; `code` yok) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -48012,7 +48462,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yetkisiz işlem */
+            /** @description Bu işlemi yalnızca Sistem Yöneticisi yapabilir */
             403: {
                 headers: {
                     [name: string]: unknown;
