@@ -37,7 +37,7 @@ describe("Sidebar", () => {
   // düşerse test kırmızıya döner.
   it("bes grup basligini ve nav ogelerini gosterir", () => {
     render(<Sidebar />);
-    for (const heading of ["Genel", "Saha", "İK", "Stok & Satınalma", "Sözleşme & Mali"]) {
+    for (const heading of ["Genel", "Saha", "İK", "Teklif ve Sözleşmeler", "Stok & Satınalma", "Mali"]) {
       expect(screen.getByText(heading), `"${heading}" grup başlığı`).toBeInTheDocument();
     }
     // Ayrılan grupların öğeleri DOM'da gerçekten duruyor mu.
@@ -239,5 +239,34 @@ describe("Sidebar — SEKME-F1.4a nav düz tık çalışma sekmesi kuralıyla y�
     render(<Sidebar />);
     await userEvent.click(screen.getByRole("link", { name: /Gösterge Paneli/ }));
     expect(pushMock).not.toHaveBeenCalled();
+  });
+});
+
+// NAV-F1 (kullanıcı onaylı) — aktif öğe nav'ın görünür alanında değilse YALNIZ nav'ın scrollTop'u ayarlanır.
+describe("Sidebar · aktif öğe görünür alana alınır", () => {
+  function fakeBoxes(itemTop: number) {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.classList.contains("sidebar-nav")) return { top: 0, bottom: 500 } as DOMRect;
+      if (this.getAttribute("aria-current") === "page") return { top: itemTop, bottom: itemTop + 36 } as DOMRect;
+      return { top: 0, bottom: 0 } as DOMRect;
+    });
+  }
+
+  it("aşağıda kalan aktif öğe için nav scrollTop'u en az kaydırmayla ayarlanır, scrollIntoView çağrılmaz", () => {
+    currentPath = "/muhasebe";
+    fakeBoxes(800);
+    const intoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = intoView;
+    const { container } = render(<Sidebar />);
+    const nav = container.querySelector<HTMLElement>(".sidebar-nav")!;
+    expect(nav.scrollTop).toBe(800 + 36 - 500 + 8);
+    expect(intoView).not.toHaveBeenCalled();
+  });
+
+  it("aktif öğe zaten görünüyorsa nav kaydırılmaz", () => {
+    currentPath = "/muhasebe";
+    fakeBoxes(100);
+    const { container } = render(<Sidebar />);
+    expect(container.querySelector<HTMLElement>(".sidebar-nav")!.scrollTop).toBe(0);
   });
 });

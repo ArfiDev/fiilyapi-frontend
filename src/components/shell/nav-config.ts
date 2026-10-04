@@ -114,6 +114,19 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Günlük İlerleme Raporu", href: routes.planning.dailyReport(), Icon: FileTextIcon },
       { label: "Haftalık QURR", href: routes.planning.weeklyReport(), Icon: BarChartIcon },
       { label: "Birim Oran Kataloğu", href: routes.planning.catalog(), Icon: BooksIcon },
+    ],
+  },
+  // NAV-F1 · KULLANICI KARARI (KARARLAR.md b1974d8) — kabuk kanonundan onaylı sapma:
+  // Planlama'nın HEMEN ALTINDA "Teklif ve Sözleşmeler" grubu; İş Kalemi Kataloğu
+  // Planlama'dan buraya taşındı. Eski "Sözleşme & Mali" grubunun adı "Mali" oldu.
+  // Sayfa adları ve adresleri DEĞİŞMEDİ (katalog yine /planlama/is-kalemi-katalogu).
+  {
+    heading: "Teklif ve Sözleşmeler",
+    items: [
+      // TKL-F3.3 · T31: Rozet YOK, izinle SÜZÜLMEZ (F1 ÜS-14): `contracts:none` kullanıcı
+      // öğeyi görür, ekran AccessDenied basar. Simge Sözleşmeler ile paylaşılır.
+      { label: "Teklif Hazırlama", href: routes.offers.list(), Icon: FileTextIcon },
+      { label: "Sözleşmeler", href: routes.contracts.list(), Icon: FileTextIcon },
       // TKL-F1.3 · ÜS-14: rozet YOK, izinle süzülmez; simge settedeki `ListIcon` (Bordro ile paylaşılır).
       { label: "İş Kalemi Kataloğu", href: routes.planning.workItemCatalog(), Icon: ListIcon },
     ],
@@ -126,17 +139,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    heading: "Sözleşme & Mali",
+    heading: "Mali",
     items: [
-      // TKL-F3.3 · T31: "Teklif Hazırlama" grubun İLK öğesi (Sözleşmeler'in ÜSTÜ; mockup
-      // `Teklif - Liste.dc.html` 61-63). Rozet YOK, izinle SÜZÜLMEZ (F1 ÜS-14): `contracts:none`
-      // kullanıcı öğeyi görür, ekran AccessDenied basar. Simge Sözleşmeler ile paylaşılır.
-      { label: "Teklif Hazırlama", href: routes.offers.list(), Icon: FileTextIcon },
-      { label: "Sözleşmeler", href: routes.contracts.list(), Icon: FileTextIcon },
       // F-P8 T2: SY (`Satış Yönetimi.dc.html` 40) mockup'ın PROJE bloğunda
       // çizilir; kabuk canon'unda karşılığı YOKTU — ünite satışı/tahsilatı
-      // mali bir yüzey olduğu için "Sözleşme & Mali" grubuna, sözleşmelerin
-      // hemen ardına eklendi. Rota GERÇEKTİR (`/satis`), ComingSoon DEĞİL;
+      // mali bir yüzey olduğu için "Mali" grubunun başına eklendi. Rota GERÇEKTİR (`/satis`), ComingSoon DEĞİL;
       // nav href guard testi bunu ayrıca doğrular.
       { label: "Satış Yönetimi", href: routes.sales.root(), Icon: BuildingIcon },
       { label: "Muhasebe", href: routes.accounting.root(), Icon: BankIcon },

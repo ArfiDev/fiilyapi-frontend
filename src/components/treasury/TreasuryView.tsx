@@ -61,7 +61,7 @@ export function TreasuryView() {
   return (
     <div className="hazine">
       {/* 62 */}
-      <p className="hazine__eyebrow">Sözleşme &amp; Mali</p>
+      <p className="hazine__eyebrow">Mali</p>
       {/* 63-66 */}
       <div className="hazine__head">
         <h1 className="hazine__title">Hazine</h1>

@@ -367,7 +367,7 @@ afterEach(() => {
 describe("AccountingView — başlık ve eylemler (E8:62-67)", () => {
   it("breadcrumb, baslik ve iki dugme basilir", () => {
     render(<AccountingView />);
-    expect(screen.getByText("Sözleşme & Mali")).toBeInTheDocument();
+    expect(screen.getByText("Mali")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Muhasebe", level: 1 })).toBeInTheDocument();
     expect(screen.getByTestId("mu-export")).toBeInTheDocument();
     expect(screen.getByTestId("mu-create-entry")).toBeInTheDocument();
