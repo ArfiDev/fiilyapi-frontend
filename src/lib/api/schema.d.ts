@@ -228,11 +228,12 @@ export interface paths {
         post?: never;
         /**
          * Delete Ai Conversation Endpoint
-         * @description Kendi sohbetini siler. Mesajlar FK CASCADE ile gider.
+         * @description Sohbeti siler (kimin olursa olsun). Mesajlar FK CASCADE ile gider.
          *
-         *     🔴 Bu uç bir **KVKK gereğidir**, süs değil: kullanıcı kendi sorularını
-         *     silebilmelidir. `ai_tool_calls` izi SİLİNMEZ — o tablo atfedilebilirlik
-         *     için değişmezdir ve içinde araç sonuç gövdesi yoktur.
+         *     SIL-B1 (KARARLAR 7034741, kullanıcı kararı): silme YALNIZ Sistem Yöneticisi'nindir ve
+         *     başkasının sohbetini de kapsar; sahibi (Sistem Yöneticisi değilse) kendi sohbetini SİLEMEZ
+         *     (403). Eski "kendi sohbetini sahibi siler (KVKK)" kuralı kaldırıldı. `ai_tool_calls` izi
+         *     SİLİNMEZ — o tablo atfedilebilirlik için değişmezdir ve içinde araç sonuç gövdesi yoktur.
          */
         delete: operations["delete_ai_conversation_endpoint_ai_conversations__conversation_id__delete"];
         options?: never;
@@ -630,13 +631,13 @@ export interface paths {
         post?: never;
         /**
          * Delete Block Endpoint
-         * @description Spec §7.9. CASCADE YOK: unitesi olan blok 409 ile reddedilir — 24 daireyi
-         *     tek istekte silmek geri alinamaz veri kaybidir.
+         * @description Spec §7.9 (SIL-B1 ile degisti). YALNIZ Sistem Yoneticisi; ONIZLEME ZORUNLU.
          *
-         *     KULLANICI KARARI 2026-07-30: kapi `_ADMIN`'dir (bkz. `delete_unit_endpoint`
-         *     gerekcesi) — `app/core/access.py`: "full silmeyi KAPSAMAZ". Yetki kapisi
-         *     409 korkulugundan ONCE calisir: yetkisiz aktor 403 alir, blogun unite
-         *     tasiyip tasimadigini OGRENEMEZ.
+         *     Blok, UNITELERI ve onlarin bagli kayitlari ile BIRLIKTE silinir (eski "unitesi olan blok 409"
+         *     korkulugu Sistem Yoneticisi icin kalkti: uniteler once, blok sonra silinir). Once
+         *     `GET /admin/silme/block/{id}/onizleme`, onay, sonra bu uc `preview_token` ile cagrilir
+         *     (eksikse 428, agac degistiyse 409 `preview_stale`, mali bagli kayit varsa 409
+         *     `financial_pending`). Yetki kapisi her seyden ONCE calisir.
          */
         delete: operations["delete_block_endpoint_blocks__block_id__delete"];
         options?: never;
@@ -663,9 +664,8 @@ export interface paths {
          * Delete Boq Group Endpoint
          * @description TB3-C: YALNIZ BOS grup silinir; kalemi olan grup 409 doner.
          *
-         *     Kapi `_ADMIN`'dir — `delete_boq_item_endpoint` ile BIREBIR ayni gerekce
-         *     (`full` silmeyi KAPSAMAZ). F-SD smoke'unda canlida bos test grubu 405
-         *     aldigi icin acildi.
+         *     Kapi `require_system_admin`dir (SIL-B1; `delete_boq_item_endpoint` ile ayni). F-SD smoke'unda
+         *     canlida bos test grubu 405 aldigi icin acildi.
          */
         delete: operations["delete_boq_group_endpoint_boq_groups__group_id__delete"];
         options?: never;
@@ -1085,9 +1085,8 @@ export interface paths {
         post?: never;
         /**
          * Delete Employer Contract Group Endpoint
-         * @description Spec §7. 409 `GROUP_HAS_ITEMS`: grupta poz varsa silinmez. Kapı `_ADMIN`
-         *
-         *     (`boq/router.py.delete_boq_item_endpoint` deseninin birebiri).
+         * @description Spec §7. 409 `GROUP_HAS_ITEMS`: grupta poz varsa silinmez. Kapı: yalnız Sistem Yöneticisi
+         *     (SIL-B1; `require_system_admin`).
          */
         delete: operations["delete_employer_contract_group_endpoint_contracts_employer_groups__group_id__delete"];
         options?: never;
@@ -1110,8 +1109,7 @@ export interface paths {
          * Delete Employer Contract Item Endpoint
          * @description Spec §7. Engel YOK: bağlı `boq_items.contract_item_id` DB'de `ON DELETE
          *
-         *     SET NULL` ile serbest kalır, satır SİLİNMEZ. Kapı `_ADMIN`
-         *     (`boq/router.py.delete_boq_item_endpoint` deseninin birebiri).
+         *     SET NULL` ile serbest kalır, satır SİLİNMEZ. Kapı: yalnız Sistem Yöneticisi (SIL-B1).
          */
         delete: operations["delete_employer_contract_item_endpoint_contracts_employer_items__item_id__delete"];
         options?: never;
@@ -6276,24 +6274,16 @@ export interface paths {
         post?: never;
         /**
          * Delete Section Endpoint
-         * @description Spec §7.1. 🔴 **BU CUMLE BAYATTI VE DUZELTILDI (BC-3, 2026-09-05).**
+         * @description Spec §7.1 (SIL-B1 ile degisti). YALNIZ Sistem Yoneticisi; ONIZLEME ZORUNLU.
          *
-         *     Eski metin *"`sections.id`'yi hedefleyen FK yok"* diyordu; `deletes.py`nin
-         *     servis docstring'i bunu zaten curutmustu ama router'daki kopya duruyordu.
-         *     ÖLÇÜLDÜ (`Base.metadata` uzerinden, kelime aramasiyla DEGIL): `sections.id`yi
-         *     **ON BIR** FK hedefliyor — ikisi CASCADE (`boq_item_section_allocations`,
-         *     `section_milestones` ve BC-3'un `section_documents`i), kalani SET NULL
-         *     (`personnel`, `purchase_requests`, `sections.depends_on_section_id`,
-         *     `site_diary_entries`, `site_plan_rows`, `stock_entry_lines`,
-         *     `subcontractor_progress_payments`, `timesheet_entries`).
-         *     Silme yine de kosulsuzdur cunku hicbiri RESTRICT DEGIL; kosulsuzlugun
-         *     gerekcesi "FK yok" DEGIL, "engelleyen FK yok"tur.
+         *     Bolum, bagli kayitlariyla BIRLIKTE silinir: kilometre tasi, dagitim, belge ve bolume yazilmis
+         *     gunluk miktar satirlari (`site_diary_lines`, eski PLN-B2.10 409 korkulugu kalkti). Bagi kopan
+         *     kayitlar (personel, puantaj, satinalma talebi…) SILINMEZ, yalniz bolum bagi kopar; onizlemede
+         *     `detached` olarak gorunur. Once `GET /admin/silme/section/{id}/onizleme`, sonra bu uc
+         *     `preview_token` ile (eksikse 428, agac degistiyse 409 `preview_stale`, mali bagli kayit varsa
+         *     409 `financial_pending`). Kalan bolumlerin `sort_order` degerleri yeniden numaralanmaz.
          *
-         *     Kapi `_ADMIN`'dir — bolum santiyenin ic kirilimi oldugu icin `sites`
-         *     modulunun seviyeleri kullanilir, AYRI izin modulu acilmaz.
-         *
-         *     Yanit `204 No Content`, GOVDESIZ. Denetim metni servis icinde, satir yok
-         *     olmadan ONCE kurulur.
+         *     Yanit `204 No Content`, GOVDESIZ. Denetim satiri tam dokumle yazilir.
          */
         delete: operations["delete_section_endpoint_sections__section_id__delete"];
         options?: never;
@@ -6413,15 +6403,17 @@ export interface paths {
         post?: never;
         /**
          * Delete Site Endpoint
-         * @description Spec §7.1. CASCADE KORKULUGU servistedir — bolum/poz/blok varsa 409.
+         * @description Spec §7.1 (SIL-B1 ile degisti). YALNIZ Sistem Yoneticisi; ONIZLEME ZORUNLU.
          *
-         *     Yetki kapisi korkuluktan ONCE calisir: yetkisiz aktor 403 alir ve santiyenin
-         *     bagli kayit tasiyip tasimadigini OGRENEMEZ. Gorunmeyen santiye 404 doner ve
-         *     govdesi var olmayan UUID'ninkiyle BIREBIR AYNIDIR.
+         *     Santiye; bolum, poz, blok, unite, puantaj, gunluk, belge, plan, sozlesme ve diger bagli
+         *     kayitlariyla BIRLIKTE silinir (eski dokuz "bagli kayit var" 409 korkulugu Sistem Yoneticisi
+         *     icin kalkti). Once `GET /admin/silme/site/{id}/onizleme`, onay, sonra bu uc `preview_token`
+         *     ile cagrilir (eksikse 428, agac degistiyse 409 `preview_stale`, mali bagli kayit varsa 409
+         *     `financial_pending`: mali silme sonraki surumde acilacak).
          *
-         *     Yanit `204 No Content`, GOVDESIZ. Denetim metni servis icinde, satir yok
-         *     olmadan ONCE kurulur; engellenen silme (409) istisna attigi icin buraya hic
-         *     gelmez ve gunluge satir dusmez.
+         *     Yetki kapisi her seyden ONCE calisir: yetkisiz aktor 403 alir; gorunmeyen ve var olmayan
+         *     santiye ayni yaniti verir. Yanit `204 No Content`, GOVDESIZ. Denetim satirina silinen ve bagi
+         *     kopan kayitlarin tam dokumu yazilir; reddedilen silme gunluge satir dusurmez.
          */
         delete: operations["delete_site_endpoint_sites__site_id__delete"];
         options?: never;
@@ -7712,10 +7704,7 @@ export interface paths {
         post?: never;
         /**
          * Delete Subcontract Item Endpoint
-         * @description Spec §7. Engel YOK. Kapı `_ADMIN` — `can_delete` istisnası burada YOK,
-         *
-         *     yalnız `DELETE /subcontractor-contracts/{contract_id}` ucunda geçerlidir
-         *     (task brief kararı).
+         * @description Spec §7. Engel YOK. Kapı: yalnız Sistem Yöneticisi (SIL-B1).
          */
         delete: operations["delete_subcontract_item_endpoint_subcontractor_contracts_items__item_id__delete"];
         options?: never;
@@ -7745,20 +7734,8 @@ export interface paths {
         post?: never;
         /**
          * Delete Subcontractor Contract Endpoint
-         * @description Spec §7, §5.0. KAPI KARARI (task C12, belirsizlik notu): bu ucun dısındaki
-         *
-         *     DÖRT DELETE ucu (`subcontractors`, kalemler, işveren grup/kalem) `boq`/
-         *     `sites` deseninin BİREBİRİ — saf `_ADMIN` kapısı, servis katmanında ek
-         *     kontrol YOK. Bu uç TEK istisna: kapı `_FULL`'dir, kesin yetki kararını
-         *     `subcontracts.delete_subcontractor_contract` içindeki `can_delete`
-         *     (`app/core/access.py`, spec §5.0 taslak istisnası) verir. Gerekçe: `boq`/
-         *     `sites` DELETE uçlarının HİÇBİRİ `can_delete`'i KULLANMIYOR (kod taraması
-         *     doğrulandı) — saf `_ADMIN` kapısı proje müdürünün KENDİ taslağını silmesini
-         *     de engellerdi, bu da spec §5.0'ın taslak istisnasını uçta ANLAMSIZ
-         *     bırakırdı. En yakın emsal `projects/service.py.visible_projects`'in
-         *     `get_permission` ile aktörün gerçek erişim seviyesini SERVİSTE okuma
-         *     deseni — o da router kapısının (`_VIEW`) ötesinde ek bir servis içi karar
-         *     örneğidir.
+         * @description Spec §7. Taşeron sözleşmesini (kalemleri ve hakedişleri CASCADE) siler. Kapı: yalnız Sistem
+         *     Yöneticisi (SIL-B1, K4); eski "kendi taslağını sahibi siler" istisnası KALDIRILDI.
          */
         delete: operations["delete_subcontractor_contract_endpoint_subcontractor_contracts__contract_id__delete"];
         options?: never;
@@ -8165,9 +8142,7 @@ export interface paths {
          * Delete Subcontractor Endpoint
          * @description Spec §7. 409 `SUBCONTRACTOR_HAS_CONTRACTS`: taşeronun sözleşmesi varsa
          *
-         *     silinmez. Kapı `_ADMIN` — `boq/router.py.delete_boq_item_endpoint`/
-         *     `sites/router.py.delete_site_endpoint` deseninin BİREBİRİ, `can_delete`
-         *     istisnası YOK (yalnız `subcontractor-contracts` silme ucunda geçerli).
+         *     silinmez. Kapı: yalnız Sistem Yöneticisi (SIL-B1; `can_delete` istisnası hiçbir uçta yok).
          */
         delete: operations["delete_subcontractor_endpoint_subcontractors__subcontractor_id__delete"];
         options?: never;
@@ -8419,20 +8394,12 @@ export interface paths {
         post?: never;
         /**
          * Delete Unit Endpoint
-         * @description Spec §7.9. Unite silme kosulsuzdur (P3'te uniteye bagli tablo yok, §1.3).
+         * @description Spec §7.9 (SIL-B1 ile degisti). YALNIZ Sistem Yoneticisi; ONIZLEME ZORUNLU.
          *
-         *     KULLANICI KARARI 2026-07-30: kapi `_ADMIN`'dir, PATCH'ten (`_FULL`) BIR
-         *     SEVIYE YUKARI — `app/core/access.py`: "full silmeyi KAPSAMAZ — silme
-         *     yalnizca admin seviyesindedir". `users`/`roles`/sirket logosu DELETE
-         *     uclariyla tutarlilik saglanir.
-         *
-         *     BILINEN SONUC (kabul edildi): seed matrisinde `projects:admin` yalniz
-         *     `system_admin`'dedir; proje muduru dahil kimse silemez.
-         *
-         *     Gorunurluk kurali DEGISMEDI (gorunmeyen projenin unitesi 404, 403 degil)
-         *     fakat `projects:admin` gorunurluk suzgecini zaten atladigindan (spec §5.2)
-         *     bu dalin HTTP uzerinden ULASILABILIR bir senaryosu kalmamistir; kural
-         *     `guards.visible_unit`'te ve PATCH ucunda (hâlâ `full`) yerinde durur.
+         *     Unitenin bagli kayitlari (satis, taksit, belge…) ile BIRLIKTE silinir. Once
+         *     `GET /admin/silme/unit/{id}/onizleme`, onay, sonra bu uc `preview_token` ile cagrilir
+         *     (eksikse 428, ağac degistiyse 409 `preview_stale`, mali bagli kayit varsa 409
+         *     `financial_pending`). Denetim satirina silinen ve bagi kopan kayitlarin tam dokumu yazilir.
          */
         delete: operations["delete_unit_endpoint_units__unit_id__delete"];
         options?: never;
@@ -11463,12 +11430,13 @@ export interface components {
         /**
          * DeleteErrorResponse
          * @description 409 ve 428 gövdesi. `code` yalnız silme önkoşullarında dolar: 428 `preview_required`,
-         *     409 `preview_stale`. Başka 409'lar (ör. beklenmeyen veri bütünlüğü hatası) yalnız `detail`
-         *     taşır, `code` boştur.
+         *     409 `preview_stale` (önizleme eskidi) ya da `financial_pending` (ağaçta mali kayıt var; mali
+         *     silme sonraki sürümde açılacak). Başka 409'lar (ör. beklenmeyen veri bütünlüğü hatası)
+         *     yalnız `detail` taşır, `code` boştur.
          */
         DeleteErrorResponse: {
             /** Code */
-            code?: ("preview_required" | "preview_stale") | null;
+            code?: ("preview_required" | "preview_stale" | "financial_pending") | null;
             /** Detail */
             detail: string;
         };
@@ -26842,7 +26810,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -27980,7 +27948,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -42297,7 +42265,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -42713,7 +42681,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -47657,7 +47625,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
