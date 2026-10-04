@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-import { VISUAL_VIEWPORT, openApprovals, visualLogin } from "./onay-kutusu-helpers";
+import {
+  VISUAL_VIEWPORT,
+  openApprovals,
+  openApprovalsTab,
+  visualLogin,
+} from "./onay-kutusu-helpers";
 import { prepareFrame } from "./visual-scroll";
 
 // F-OK T5 · `/onay-kutusu` görsel kadrajları.
@@ -47,7 +52,7 @@ test("onay kutusu baslik ve rol akisi gorsel", async ({ page }) => {
     "₺500.000 altı için PM + Muhasebe yeterli",
   );
   await expect(page.getByTestId("ok-bulk-approve")).toBeDisabled();
-  await expect(page.getByTestId("ok-tab-tumu")).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByTestId("ok-tab-tumu")).toHaveAttribute("aria-selected", "false");
 
   await prepareFrame(page);
   await expect(page.getByTestId("ok-flow")).toHaveScreenshot("onay-kutusu-rol-akisi.png");
@@ -102,4 +107,40 @@ test("onay kutusu isveren hakedis karti gorsel", async ({ page }) => {
 
   await prepareFrame(page);
   await expect(card).toHaveScreenshot("onay-kutusu-kart-isveren.png");
+});
+
+// ---------------------------------------------------------------------------
+// 5) OKT-F1.2 · "Onay Verildi" sekmesi — onaylanmış kart: yeşil "Onaylandı"
+//    rozeti + "Karar: ad · tarih", Onayla/Reddet YOK. SABİT tohum (mock
+//    `APPROVAL_HISTORY_DECIDED`) — onay yazan spec'lerden bağımsızdır.
+//    Kadraj ELEMAN (`ok-list`): tek kartlı, yarışsız.
+// ---------------------------------------------------------------------------
+test("onay kutusu onay verildi sekmesi gorsel", async ({ page }) => {
+  await page.setViewportSize({ ...VISUAL_VIEWPORT });
+  await openApprovalsTab(page, "onaylanan");
+
+  const list = page.getByTestId("ok-list");
+  await expect(list.getByTestId("ok-card")).toHaveCount(1);
+  await expect(list.getByTestId("ok-card-decision-badge")).toHaveText("Onaylandı");
+  await expect(list.getByTestId("ok-card-approve")).toHaveCount(0);
+
+  await prepareFrame(page);
+  await expect(list).toHaveScreenshot("onay-kutusu-sekme-onaylanan.png");
+});
+
+// ---------------------------------------------------------------------------
+// 6) OKT-F1.2 · "Reddedildi" sekmesi — kırmızı rozet + karar satırı + Gerekçe.
+// ---------------------------------------------------------------------------
+test("onay kutusu reddedildi sekmesi gorsel", async ({ page }) => {
+  await page.setViewportSize({ ...VISUAL_VIEWPORT });
+  await openApprovalsTab(page, "reddedilen");
+
+  const list = page.getByTestId("ok-list");
+  await expect(list.getByTestId("ok-card")).toHaveCount(1);
+  await expect(list.getByTestId("ok-card-decision-badge")).toHaveText("Reddedildi");
+  await expect(list.getByTestId("ok-card-decision-reason")).toContainText("Gerekçe:");
+  await expect(list.getByTestId("ok-card-reject")).toHaveCount(0);
+
+  await prepareFrame(page);
+  await expect(list).toHaveScreenshot("onay-kutusu-sekme-reddedilen.png");
 });

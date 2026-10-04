@@ -5,7 +5,11 @@ import Link from "next/link";
 import { Badge, Button } from "@/components/ui";
 import { cx } from "@/lib/cx";
 import { formatDateLong, toIstanbulDateOnly } from "@/lib/format";
-import type { ApprovalInboxItem, ApprovalRole } from "@/lib/api/hooks/useApprovals";
+import type {
+  ApprovalHistoryItem,
+  ApprovalInboxItem,
+  ApprovalRole,
+} from "@/lib/api/hooks/useApprovals";
 
 import { ApprovalStepStrip } from "./ApprovalStepStrip";
 import {
@@ -14,22 +18,66 @@ import {
   APPROVAL_UNKNOWN_TYPE_REASON,
   UNKNOWN_VALUE,
   approvalAmountLabel,
+  approvalDecisionBadge,
+  approvalDecisionLine,
   approvalDetailTarget,
   approvalDocumentPresentation,
   approvalLinkChip,
   approvalNeedsPatron,
+  approvalReasonLine,
   approvalSubtitleLabel,
   approvalThresholdBadgeLabel,
   isKnownApprovalDocumentType,
 } from "./approval-labels";
 import "./approvals.css";
 
-export interface ApprovalCardProps {
-  item: ApprovalInboxItem;
+interface ApprovalCardBaseProps {
   myRoles: readonly ApprovalRole[];
+}
+
+/** Bekleyen kart (Benim Onayım) — Onayla/Reddet düğmeleri var. */
+interface PendingApprovalCardProps extends ApprovalCardBaseProps {
+  item: ApprovalInboxItem;
+  mode?: "pending";
   isPending: boolean;
   onApprove: (item: ApprovalInboxItem) => void;
   onReject: (item: ApprovalInboxItem) => void;
+}
+
+/**
+ * OKT-F1.2 · Geçmiş kartı — AYNI iskelet, Onayla/Reddet yerine karar rozeti
+ * (`decision` + `decided_by` + `decided_at` + ret `reason`). Kopya kart YOK.
+ */
+interface HistoryApprovalCardProps extends ApprovalCardBaseProps {
+  item: ApprovalHistoryItem;
+  mode: "history";
+}
+
+export type ApprovalCardProps = PendingApprovalCardProps | HistoryApprovalCardProps;
+
+/** Geçmiş kartının karar bloğu: rozet + `Karar: …` (+ ret ise `Gerekçe: …`). */
+function ApprovalDecisionNote({ item }: { item: ApprovalHistoryItem }) {
+  const badge = approvalDecisionBadge(item.decision, item.current_step_no);
+  const showsDecision = item.decision !== "pending";
+  const reasonLine = item.decision === "rejected" ? approvalReasonLine(item.reason) : null;
+
+  return (
+    <div className="ok-card__decision" data-testid="ok-card-decision">
+      <Badge variant={badge.variant} className="ok-badge" data-testid="ok-card-decision-badge">
+        {badge.label}
+      </Badge>
+      {showsDecision && (
+        <p className="ok-card__decision-line" data-testid="ok-card-decision-by">
+          {approvalDecisionLine(item.decided_by, item.decided_at)}
+        </p>
+      )}
+      {reasonLine !== null && (
+        <p className="ok-card__decision-line" data-testid="ok-card-decision-reason">
+          {reasonLine}
+        </p>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -56,13 +104,16 @@ export interface ApprovalCardProps {
  * dayanan göreli zaman kareyi HER GÜN oynatırdı (görsel kapı kalıcı kırmızı) →
  * MUTLAK tarih basılır (`formatDateLong`). Onaylı sapma, raporlanır.
  */
-export function ApprovalCard({ item, myRoles, isPending, onApprove, onReject }: ApprovalCardProps) {
+export function ApprovalCard(props: ApprovalCardProps) {
+  const { item, myRoles } = props;
   const presentation = approvalDocumentPresentation(item.document_type);
   const detail = approvalDetailTarget(item.document_type, item.document_id);
   const chip = approvalLinkChip(item.document_type, item.document_id);
   const needsPatron = approvalNeedsPatron(item.steps);
   const subtitle = approvalSubtitleLabel(item.subtitle);
-  const canDecide = isKnownApprovalDocumentType(item.document_type);
+  const isHistory = props.mode === "history";
+  // Bilinmeyen tip yalnız onay/ret düğmelerini kapatır; geçmişte karar zaten verilmiştir.
+  const canDecide = isHistory || isKnownApprovalDocumentType(item.document_type);
   const { Icon } = presentation;
 
   return (
@@ -145,26 +196,32 @@ export function ApprovalCard({ item, myRoles, isPending, onApprove, onReject }: 
 
         {/* :143-146 */}
         <div className="ok-card__actions">
-          <Button
-            variant={item.document_type === "subcontractor_progress_payment" ? "success" : "primary"}
-            className={cx("ok-btn", presentation.approveClassName)}
-            disabled={isPending || !canDecide}
-            title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
-            onClick={() => onApprove(item)}
-            data-testid="ok-card-approve"
-          >
-            {APPROVAL_APPROVE_LABEL}
-          </Button>
-          <Button
-            variant="secondary"
-            className="ok-btn ok-btn--reject"
-            disabled={isPending || !canDecide}
-            title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
-            onClick={() => onReject(item)}
-            data-testid="ok-card-reject"
-          >
-            {APPROVAL_REJECT_LABEL}
-          </Button>
+          {props.mode === "history" ? (
+            <ApprovalDecisionNote item={props.item} />
+          ) : (
+            <>
+              <Button
+                variant={item.document_type === "subcontractor_progress_payment" ? "success" : "primary"}
+                className={cx("ok-btn", presentation.approveClassName)}
+                disabled={props.isPending || !canDecide}
+                title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
+                onClick={() => props.onApprove(item)}
+                data-testid="ok-card-approve"
+              >
+                {APPROVAL_APPROVE_LABEL}
+              </Button>
+              <Button
+                variant="secondary"
+                className="ok-btn ok-btn--reject"
+                disabled={props.isPending || !canDecide}
+                title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
+                onClick={() => props.onReject(item)}
+                data-testid="ok-card-reject"
+              >
+                {APPROVAL_REJECT_LABEL}
+              </Button>
+            </>
+          )}
           {/* :145 · Detay — hedef rota `document_type`+`document_id`den kurulur.
               Rotası OLMAYAN (`purchase_request`) hedef SİLİNMEZ, devre-dışı +
               GÖRÜNÜR gerekçeyle basılır (F-TH kanonu). Düğme dili İCAT

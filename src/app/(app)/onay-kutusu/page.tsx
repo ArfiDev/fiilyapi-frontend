@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { ApprovalsView } from "@/components/approvals/ApprovalsView";
 
 // F-OK T5 · Onay Kutusu (`projedesign/Onay Kutusu.dc.html`) gerçek rotası.
@@ -5,11 +7,13 @@ import { ApprovalsView } from "@/components/approvals/ApprovalsView";
 // catch-all `[...slug]` ComingSoon'una DEĞİL bu statik segmente düşer;
 // `nav-config.test.ts`in "statik rotaya düşer" bekçisi bu klasörle yeşile döner.
 //
-// 🔴 `useSearchParams` KULLANILMIYOR: ekranın URL'de taşınan durumu YOKTUR —
-// çalışan tek sekme var (`Benim Onayım`), diğer üçü devre dışı. Bu yüzden
-// `<Suspense>` sarmalayıcısı da EKLENMEDİ; gereksiz sınır eklemek `/hazine/
-// cek-senet` deseninin gerekçesini (prerender patlaması) taklit ederdi ama
-// burada patlatacak bir çağrı yok.
+// OKT-F1.2: açık sekme URL'de taşınır (`?sekme=`) → görünüm `useSearchParams`
+// okur ve Next 15 kanonu gereği Suspense sınırında sarılır
+// (`hakedisler/page.tsx` ile aynı).
 export default function OnayKutusuPage() {
-  return <ApprovalsView />;
+  return (
+    <Suspense>
+      <ApprovalsView />
+    </Suspense>
+  );
 }

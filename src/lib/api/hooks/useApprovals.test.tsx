@@ -3,10 +3,15 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { useUpdateApprovalSettings, APPROVALS_QUERY_KEY, APPROVAL_SETTINGS_QUERY_KEY } from "./useApprovals";
+import {
+  useApprovalHistory,
+  useUpdateApprovalSettings,
+  APPROVALS_QUERY_KEY,
+  APPROVAL_SETTINGS_QUERY_KEY,
+} from "./useApprovals";
 import { backendClient } from "@/lib/api/client";
 
-vi.mock("@/lib/api/client", () => ({ backendClient: { PUT: vi.fn() } }));
+vi.mock("@/lib/api/client", () => ({ backendClient: { PUT: vi.fn(), GET: vi.fn() } }));
 
 const SETTINGS_RESPONSE = { approval_threshold_try: "1000.00" };
 
@@ -47,5 +52,55 @@ describe("useUpdateApprovalSettings", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [APPROVAL_SETTINGS_QUERY_KEY] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [APPROVALS_QUERY_KEY] });
+  });
+});
+
+describe("useApprovalHistory", () => {
+  let client: QueryClient;
+
+  function wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.mocked(backendClient.GET).mockResolvedValue({
+      data: { items: [], total: 0, limit: 200, offset: 0, my_approval_roles: [] },
+      error: undefined,
+      response: new Response(),
+    } as never);
+  });
+
+  it("decision ve limit'i GET /approvals/history'ye AYNEN iletir", async () => {
+    const { result } = renderHook(() => useApprovalHistory({ decision: "rejected", limit: 200 }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(backendClient.GET).toHaveBeenCalledWith("/approvals/history", {
+      params: { query: { decision: "rejected", limit: 200 } },
+    });
+  });
+
+  it("sorgu anahtarı ['approvals','history',decision,...] — kök önek mutasyon invalidation'ını kapsar", async () => {
+    const { result } = renderHook(() => useApprovalHistory({ decision: "approved", limit: 200 }), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(client.getQueryCache().find({ queryKey: [APPROVALS_QUERY_KEY, "history", "approved", 200, null] })).toBeDefined();
+
+    await client.invalidateQueries({ queryKey: [APPROVALS_QUERY_KEY] });
+    expect(backendClient.GET).toHaveBeenCalledTimes(2);
+  });
+
+  it("enabled=false iken İSTEK ATMAZ", async () => {
+    renderHook(() => useApprovalHistory({ decision: "all", limit: 200 }, { enabled: false }), { wrapper });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(backendClient.GET).not.toHaveBeenCalled();
   });
 });

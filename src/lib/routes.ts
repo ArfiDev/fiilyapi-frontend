@@ -95,6 +95,12 @@ export const PERSONNEL_RETURN_PARAM = "donus";
 export const SECTION_TAB_PARAM = "sekme";
 
 /**
+ * OKT-F1.2 — Onay Kutusu'nun açık sekmesinin sorgu anahtarı (`?sekme=`):
+ * `tumu | benim | onaylanan | reddedilen`; parametresiz = `benim`.
+ */
+export const APPROVAL_TAB_PARAM = "sekme";
+
+/**
  * Bölüm Detay sekme kimlikleri — `SectionDetailTabs`in `siteSlug`
  * değerleriyle BİREBİR aynıdır (şerit bu tipi kullanır; biri değişirse tip
  * denetimi kırılır). Varsayılan sekme ("is-kalemleri") URL'e yazılmaz.

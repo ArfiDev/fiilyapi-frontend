@@ -90,7 +90,7 @@ test("dönem alt başlıkta Türkçeleştirilir (backend `MM/YYYY` gömer)", asy
   ).toBeVisible();
 });
 
-test("ÜÇ sekme devre dışıdır, SAYI BASMAZ ve gerekçesi GÖRÜNÜR", async ({ page }) => {
+test("DÖRT sekme tıklanır; Benim Onayım seçili gelir ve yalnız onun sayacı basılır", async ({ page }) => {
   await login(page);
   await openApprovals(page);
 
@@ -99,15 +99,44 @@ test("ÜÇ sekme devre dışıdır, SAYI BASMAZ ve gerekçesi GÖRÜNÜR", async
   // `total === items.length`). Mutasyon testinin sırasından bağımsızdır.
   const renderedCards = await page.getByTestId("ok-card").count();
   await expect(page.getByTestId("ok-tab-benim")).toHaveText(`Benim Onayım (${renderedCards})`);
+  await expect(page.getByTestId("ok-tab-benim")).toHaveAttribute("aria-selected", "true");
   for (const key of ["tumu", "onaylanan", "reddedilen"]) {
     const tab = page.getByTestId(`ok-tab-${key}`);
-    await expect(tab).toHaveAttribute("aria-disabled", "true");
-    // 🔴 Mockup'ın `(7)`/`(12)`/`(2)` rakamları ÇİZİM VERİSİDİR.
+    await expect(tab).toBeEnabled();
+    await expect(tab).toHaveAttribute("aria-selected", "false");
+    // 🔴 Mockup'ın `(7)`/`(12)`/`(2)` rakamları ÇİZİM VERİSİDİR; yüklenmemiş sekme sayaçsızdır.
     await expect(tab).not.toContainText(/\d/);
   }
-  await expect(page.getByTestId("ok-tabs-reason")).toHaveText(
-    "Karar verilmiş ve başkasına düşen onaylar henüz listelenmiyor.",
+});
+
+test("Onay Verildi ve Reddedildi sekmeleri geçmişi rozetle basar, Onayla/Reddet BASMAZ", async ({
+  page,
+}) => {
+  await login(page);
+  await openApprovals(page);
+
+  await page.getByTestId("ok-tab-onaylanan").click();
+  await expect(page).toHaveURL(/\?sekme=onaylanan$/);
+  const approved = page.getByTestId("ok-card");
+  await expect(approved).toHaveCount(1);
+  await expect(approved.getByTestId("ok-card-decision-badge")).toHaveText("Onaylandı");
+  await expect(approved.getByTestId("ok-card-decision-by")).toHaveText(
+    "Karar: Elif Kaya · 13.06.2026 09:12",
   );
+  await expect(approved.getByTestId("ok-card-approve")).toHaveCount(0);
+  await expect(approved.getByTestId("ok-card-reject")).toHaveCount(0);
+  await expect(page.getByTestId("ok-tab-onaylanan")).toHaveText("Onay Verildi (1)");
+
+  await page.getByTestId("ok-tab-reddedilen").click();
+  await expect(page).toHaveURL(/\?sekme=reddedilen$/);
+  const rejected = page.getByTestId("ok-card");
+  await expect(rejected).toHaveCount(1);
+  await expect(rejected.getByTestId("ok-card-decision-badge")).toHaveText("Reddedildi");
+  await expect(rejected.getByTestId("ok-card-decision-reason")).toContainText("Gerekçe: Birim fiyat");
+
+  await page.getByTestId("ok-tab-benim").click();
+  await expect(page).toHaveURL(/\/onay-kutusu$/);
+  await expect(page.getByTestId("ok-card-approve").first()).toBeVisible();
 });
 
 test("'Tümünü Onayla' devre dışıdır ve gerekçesi GÖRÜNÜR", async ({ page }) => {
