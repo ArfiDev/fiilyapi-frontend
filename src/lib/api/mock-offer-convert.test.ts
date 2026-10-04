@@ -33,10 +33,10 @@ const MISSING_ID = "99999999-9999-4999-8999-999999999999";
 const NOON = "2026-10-02T09:00:00.000Z";
 
 const CATALOG: OfferCatalogEntry[] = [
-  { id: CAT_A, pozNo: "KAB-0001", name: "Kalıp", uom: "m²", standardUnitMhr: "0.85", refPrice: "100.00" },
-  { id: CAT_B, pozNo: "KAB-0002", name: "Demir", uom: "ton", standardUnitMhr: "11.5", refPrice: null },
-  { id: CAT_C, pozNo: "DUV-0001", name: "Tuğla duvar", uom: "m²", standardUnitMhr: "0.55", refPrice: "10.00" },
-  { id: CAT_Z, pozNo: "KAB-0003", name: "Yuvasız", uom: "adet", standardUnitMhr: "0", refPrice: null },
+  { id: CAT_A, pozNo: "KAB-0001", sourceCode: "15.100.1001", name: "Kalıp", uom: "m²", standardUnitMhr: "0.85", refPrice: "100.00" },
+  { id: CAT_B, pozNo: "KAB-0002", sourceCode: "15.150.1003", name: "Demir", uom: "ton", standardUnitMhr: "11.5", refPrice: null },
+  { id: CAT_C, pozNo: "DUV-0001", sourceCode: null, name: "Tuğla duvar", uom: "m²", standardUnitMhr: "0.55", refPrice: "10.00" },
+  { id: CAT_Z, pozNo: "KAB-0003", sourceCode: null, name: "Yuvasız", uom: "adet", standardUnitMhr: "0", refPrice: null },
 ];
 const DISCIPLINE_OF = new Map<string, string>([[CAT_A, D1], [CAT_B, D1], [CAT_C, D2], [CAT_Z, D1]]);
 const EMPLOYERS = [{ id: EMP_1, name: "Güneşkent Gayrimenkul A.Ş." }];
@@ -775,9 +775,11 @@ describe("KAT-F2.2 · Bakanlık poz no'su: teklif kaleminden sözleşme kalemine
     state.items = state.items.map((item) => (item.id === seeded.items[index]?.id ? { ...item, sourceCode: CODE } : item));
   };
 
-  it("teklif okuması source_code'u taşır; yazılan sözleşme kalemi teklif kaleminin kodunu alır, katalogdan eklenen satır null", async () => {
+  it("teklif okuması source_code'u taşır; yazılan sözleşme kalemi teklif kaleminin kodunu alır, katalogdan eklenen satır KATALOGDAN", async () => {
     const seeded = await offer();
     withCode(seeded, 0);
+    // 2. kalem: kodsuz teklif kalemi (eski veri) — teklif kalemi VARSA katalogla örtülmez → null kalır
+    state.items = state.items.map((item) => (item.id === seeded.items[1]?.id ? { ...item, sourceCode: null } : item));
     const read = (await api("GET", `/offers/${seeded.id}/revisions/0`)).json;
     expect(read.groups[0].items.map((item: any) => item.source_code)).toEqual([CODE, null]);
 
@@ -796,6 +798,6 @@ describe("KAT-F2.2 · Bakanlık poz no'su: teklif kaleminden sözleşme kalemine
     expect(JSON.stringify(request)).not.toContain("source_code");
     expect((await convert(seeded.id, request)).status).toBe(200);
     const spec = written[written.length - 1] as ConvertedProjectSpec;
-    expect(spec.groups[0]?.items.map((item) => item.sourceCode)).toEqual([CODE, null, null]);
+    expect(spec.groups[0]?.items.map((item) => item.sourceCode)).toEqual([CODE, null, "15.150.1003"]); // 3. satır: teklif kalemi yok → katalog kodu (backend `_source_code`)
   });
 });

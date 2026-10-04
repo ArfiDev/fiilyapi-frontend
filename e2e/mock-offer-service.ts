@@ -527,7 +527,7 @@ export function addItems(state: OffersState, port: OffersPort, offerId: string, 
       sortOrder,
       catalogItemId: entry.id,
       pozNo: entry.pozNo,
-      sourceCode: null,
+      sourceCode: entry.sourceCode,
       description: entry.name,
       unit: entry.uom,
       quantity: body.quantity === null || body.quantity === undefined ? null : quantizeDecimal(text(body.quantity), 3), // SO-21: yok/null = girilmedi

@@ -21,6 +21,16 @@ describe("catalog-shared.css — Bakanlık no alt satırı", () => {
     expect(body).toMatch(/overflow:\s*hidden/);
   });
 
+  // D1: otomatik yerleşimli tablolarda min-content = tam kod genişliği → sütun koda göre büyürdü; ellipsis ancak
+  // bir üst sınırla çalışır. 14ch = 13 karakterlik "35.140.3195-D" TAM sığar, daha uzunu ellipsis + title.
+  it("screen: max-width 14ch (ellipsis gerçekten çalışsın)", () => {
+    expect(rule(".source-code-sub")).toMatch(/max-width:\s*14ch/);
+  });
+
+  it("print: max-width YOK (none) — yazdırmada kırpma/sınır yok", () => {
+    expect(rule(".source-code-sub--print")).toMatch(/max-width:\s*none/);
+  });
+
   it("print: break-word var; anywhere ve nowrap YOK", () => {
     const body = rule(".source-code-sub--print");
     expect(body).toMatch(/overflow-wrap:\s*break-word/);

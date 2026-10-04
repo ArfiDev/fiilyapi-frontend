@@ -119,7 +119,7 @@ function seedFromTemplate(state: OffersState, port: OffersPort, template: Templa
         sortOrder: itemIndex,
         catalogItemId: entry.id,
         pozNo: entry.pozNo,
-        sourceCode: null,
+        sourceCode: entry.sourceCode,
         description: entry.name,
         unit: entry.uom,
         quantity: null, // SO-21: miktar boş gelir

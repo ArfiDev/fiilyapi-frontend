@@ -84,6 +84,7 @@ async function readCatalog(page: Page): Promise<CatalogRead> {
     return {
       id: String(item.id),
       pozNo: String(item.poz_no),
+      sourceCode: item.source_code === null || item.source_code === undefined ? null : String(item.source_code),
       name: String(item.name),
       uom: String(item.uom),
       standardUnitMhr: String(item.standard_unit_mhr),
