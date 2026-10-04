@@ -34,12 +34,52 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-03 11:40",
+  guncellendi: "2026-10-04 10:35",
   gorevler: [
+    {
+      kod: "KAT",
+      acilim: "Bakanlık Birim Fiyatları → İş Kalemi Kataloğu",
+      aciklama: "Çevre ve Şehircilik Bakanlığı 2026 listesinden 1.657 kalem 8 disiplinle katalogda; Bakanlık poz no ve fiyat tarihi görünür ve aranır, teklif/sözleşme/hakediş kalemlerine taşınır.",
+      durum: "devam",
+      spec: "KAT-PLAN.md",
+      dilimler: [
+        { kod: "D0", aciklama: "PDF'ten temiz veri + disiplin eşlemesi", durum: "bitti", hat: "backend" },
+        { kod: "B1", aciklama: "Bakanlık no + fiyat tarihi alanları, toplu ekleme", durum: "bitti", hat: "backend", pr: "backend #163" },
+        { kod: "IMP", aciklama: "Canlı aktarım: 8 disiplin + 1.657 kalem", durum: "bitti", hat: "backend" },
+        { kod: "F1", aciklama: "Katalogda alt satırlar, Bakanlık no ile arama, 1.700 kalemde hız, birim kanonu", durum: "bitti", hat: "frontend", pr: "frontend #171" },
+        { kod: "B2", aciklama: "Bakanlık no teklif, sözleşme (işveren/taşeron) ve hakediş kalemlerine", durum: "bitti", hat: "backend", pr: "backend #164 #165" },
+        { kod: "F1.5", aciklama: "Katalogda fiyat tarihi ve Düzenle düğmesi tam görünür", durum: "devam", hat: "frontend", pr: "frontend #172" },
+        { kod: "B3", aciklama: "Teklif Excel'inde ayrı Bakanlık No sütunu", durum: "devam", hat: "backend", pr: "backend #166" },
+        { kod: "F2", aciklama: "Teklif, PDF, sözleşme, dağılım ve hakediş ekranlarında Bakanlık no", durum: "devam", hat: "frontend" },
+      ],
+      kararlar: [
+        "Tüm 1.657 kalem; Bakanlık fiyatı = referans fiyat (KDV hariç, 01.01.2026).",
+        "Bizim poz no kalır, Bakanlık no ayrı alan; 8 disiplin: KAZ, INS, CLK, MIM, CPH, ALT, MEK, ELK.",
+        "Adam-saat yer tutucu 1; katlı birimler tek birime çevrildi (3 kalemde küçük yuvarlama kabul).",
+        "Katalogda işlem sütunu 88 px (onaylı mockup sapması).",
+      ],
+    },
+    {
+      kod: "KOP",
+      acilim: "Köprü Güçlendirme örnek projesi",
+      aciklama: "İBB Anadolu Yakası 2. Grup Köprü Güçlendirme hakediş dosyası deneme verisi olarak uygulamaya baştan sona işleniyor: teklif → proje → 4 şantiye → günlük/puantaj/planlama → 5 hakediş.",
+      durum: "devam",
+      spec: "KOP-PLAN.md",
+      dilimler: [
+        { kod: "B0", aciklama: "Excel analizi, mutabakat (6 hakedişte 0,00 fark)", durum: "bitti", hat: "backend" },
+        { kod: "B1", aciklama: "Yükleme betiği + yerel prova + çürütme", durum: "bitti", hat: "backend" },
+        { kod: "B1.2", aciklama: "Takvim 15 ay ileri, 1–5. hakediş onaylı, 30.09 günü kullanıcıya", durum: "devam", hat: "backend" },
+      ],
+      kararlar: [
+        "6. hakediş oluşturulmaz; 30.09.2026 günlüğünü kullanıcı girip hakedişi açar.",
+        "60 kişilik ÖRNEK ekip (yasal saat sınırları içinde), iş bitince pasifleştirilir.",
+        "Teklif B.F. = Excel teklif birim fiyatı; galvaniz Excel'deki gibi.",
+      ],
+    },
     {
       kod: "CLN",
       acilim: "Canlı Veri Sıfırlama",
-      aciklama: "Canlı yeni boş veritabanına (Postgres-v2) geçti; eski veritabanı pasif tutuluyor. Kullanıcılar yeniden açılacak.",
+      aciklama: "Canlı yeni boş veritabanına (Postgres-v2) geçti; eski veritabanı pasif tutuluyor. 4 kullanıcı (patron, muhasebe, proje müdürü, şantiye şefi) yeniden açıldı.",
       durum: "bitti",
       spec: "CANLI-YENI-DB-PLANI.md",
       dilimler: [
