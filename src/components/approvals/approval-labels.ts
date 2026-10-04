@@ -12,10 +12,12 @@ import {
 import { purchaseRequestQuotesHref } from "@/components/purchasing/purchasing-labels";
 import type {
   ApprovalDocumentType,
+  ApprovalHistoryDecision,
+  ApprovalHistoryFilter,
   ApprovalRole,
   ApprovalStepRead,
 } from "@/lib/api/hooks/useApprovals";
-import { formatCurrencyTight, formatPeriodLabel } from "@/lib/format";
+import { formatCurrencyTight, formatDateTimeDots, formatPeriodLabel } from "@/lib/format";
 import { routes } from "@/lib/routes";
 
 /**
@@ -345,40 +347,89 @@ export function approvalAmountLabel(amount: string | null): string {
 
 /* --- Sekme şeridi (`:71-76`) --------------------------------------------- */
 
+export type ApprovalTabKey = "tumu" | "benim" | "onaylanan" | "reddedilen";
+
 export interface ApprovalTabDef {
-  key: string;
+  key: ApprovalTabKey;
   label: string;
   /**
-   * Devre-dışı sekmenin GÖRÜNÜR gerekçesi. Not bu alandan TÜRETİLİR, sabit
-   * basılmaz (F-PRJTAB kanonu): sekme ileride canlanınca not KENDİLİĞİNDEN
-   * kalkar.
+   * Sekmenin veri kaynağı: `null` = bekleyen kutusu (`GET /approvals`), aksi
+   * hâlde `GET /approvals/history?decision=` süzgeci.
    */
-  disabledReason?: string;
+  historyFilter: ApprovalHistoryFilter | null;
+  /** Sekmeye özgü boş durum metni. */
+  emptyMessage: string;
 }
 
-export const APPROVAL_TABS_DISABLED_REASON =
-  "Karar verilmiş ve başkasına düşen onaylar henüz listelenmiyor.";
-
 /**
- * 🔴 Devre-dışı sekmelerde PARANTEZ İÇİ SAYI BASILMAZ: mockup'ın `(7)`/`(12)`/
- * `(2)` rakamları ÇİZİM VERİSİDİR ve kalıcı sahte sayı = veri uydurmadır.
- * Yalnız çalışan sekme kendi sayısını sunucunun `total`inden alır.
+ * OKT-F1.2 (KARARLAR 62ae58a, onaylı sapma): DÖRT sekmenin DÖRDÜ de çalışır.
+ * Mockup'taki `(7)`/`(12)`/`(2)` rakamları ÇİZİM VERİSİDİR — sayı yalnız o
+ * sekmenin sorgusu yüklendiyse sunucunun `total`inden basılır.
  *
  * Sıra mockup'tan (`:72-75`) korunur — "Tümü" başta durur.
  */
 export const APPROVAL_TABS: readonly ApprovalTabDef[] = [
-  { key: "tumu", label: "Tümü", disabledReason: APPROVAL_TABS_DISABLED_REASON },
-  { key: "benim", label: "Benim Onayım" },
-  { key: "onaylanan", label: "Onay Verildi", disabledReason: APPROVAL_TABS_DISABLED_REASON },
-  { key: "reddedilen", label: "Reddedildi", disabledReason: APPROVAL_TABS_DISABLED_REASON },
+  { key: "tumu", label: "Tümü", historyFilter: "all", emptyMessage: "Görünür onay zinciri yok" },
+  { key: "benim", label: "Benim Onayım", historyFilter: null, emptyMessage: "Onayınızı bekleyen kalem yok." },
+  {
+    key: "onaylanan",
+    label: "Onay Verildi",
+    historyFilter: "approved",
+    emptyMessage: "Onayladığınız evrak yok",
+  },
+  {
+    key: "reddedilen",
+    label: "Reddedildi",
+    historyFilter: "rejected",
+    emptyMessage: "Reddedilen evrak yok",
+  },
 ];
 
-/** Çalışan tek sekmenin anahtarı — `:73` `Benim Onayım (4)`. */
-export const APPROVAL_ACTIVE_TAB_KEY = "benim";
+/** Parametresiz (ya da tanınmayan) `?sekme=` bu sekmeye düşer — `:73`. */
+export const APPROVAL_DEFAULT_TAB_KEY: ApprovalTabKey = "benim";
+
+/** `?sekme=` değerini sekmeye çevirir; bilinmeyen/boş değer varsayılana düşer. */
+export function parseApprovalTab(value: string | null): ApprovalTabDef {
+  return (
+    APPROVAL_TABS.find((tab) => tab.key === value) ??
+    APPROVAL_TABS.find((tab) => tab.key === APPROVAL_DEFAULT_TAB_KEY)!
+  );
+}
 
 export function approvalTabLabel(tab: ApprovalTabDef, total: number | undefined): string {
-  if (tab.disabledReason !== undefined) return tab.label;
   return total === undefined ? tab.label : `${tab.label} (${total})`;
+}
+
+/* --- Geçmiş kartı rozeti ------------------------------------------------- */
+
+export interface ApprovalDecisionBadge {
+  variant: BadgeVariant;
+  label: string;
+}
+
+/** `decision` → rozet; `pending` (yalnız Tümü) nötr `Bekliyor · N. adım`. */
+export function approvalDecisionBadge(
+  decision: ApprovalHistoryDecision,
+  currentStepNo: number,
+): ApprovalDecisionBadge {
+  switch (decision) {
+    case "approved":
+      return { variant: "success", label: "Onaylandı" };
+    case "rejected":
+      return { variant: "danger", label: "Reddedildi" };
+    case "pending":
+      return { variant: "neutral", label: `Bekliyor · ${currentStepNo}. adım` };
+  }
+}
+
+/** `Karar: {ad} · gg.aa.yyyy ss:dd` — karar veren yoksa `Karar: —`. */
+export function approvalDecisionLine(decidedBy: string | null, decidedAt: string | null): string {
+  const who = decidedBy ?? UNKNOWN_VALUE;
+  return decidedAt === null ? `Karar: ${who}` : `Karar: ${who} · ${formatDateTimeDots(decidedAt)}`;
+}
+
+export function approvalReasonLine(reason: string | null): string | null {
+  return reason === null ? null : `Gerekçe: ${reason}`;
 }
 
 /* --- Rol akışı şeridi (`:42-68`) ----------------------------------------- */

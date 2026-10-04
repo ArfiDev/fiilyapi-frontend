@@ -5,20 +5,23 @@ import type { ApprovalRole, ApprovalStepRead } from "@/lib/api/hooks/useApproval
 import {
   APPROVAL_DOCUMENT_PRESENTATION,
   APPROVAL_TABS,
-  APPROVAL_TABS_DISABLED_REASON,
   UNKNOWN_VALUE,
   approvalAmountLabel,
+  approvalDecisionBadge,
+  approvalDecisionLine,
   approvalBelowThresholdLabel,
   approvalDetailTarget,
   approvalDocumentPresentation,
   approvalLinkChip,
   approvalNeedsPatron,
   approvalPatronDescription,
+  approvalReasonLine,
   approvalRoleLabel,
   approvalStepNote,
   approvalStepState,
   approvalSubtitleLabel,
   approvalTabLabel,
+  parseApprovalTab,
   approvalThresholdBadgeLabel,
   isApprovalRejectReasonReady,
   isKnownApprovalDocumentType,
@@ -234,27 +237,75 @@ describe("approvalSubtitleLabel — dönem Türkçeleştirmesi (:127 :220)", () 
 });
 
 describe("sekme şeridi (:71-76)", () => {
-  it("DÖRT sekme vardır ve yalnız BİRİ çalışır", () => {
-    expect(APPROVAL_TABS).toHaveLength(4);
-    expect(APPROVAL_TABS.filter((tab) => tab.disabledReason === undefined)).toHaveLength(1);
+  it("DÖRT sekme vardır, mockup sırası korunur ve HEPSİ çalışır", () => {
+    expect(APPROVAL_TABS.map((tab) => tab.key)).toEqual(["tumu", "benim", "onaylanan", "reddedilen"]);
+    expect(APPROVAL_TABS.map((tab) => tab.label)).toEqual([
+      "Tümü",
+      "Benim Onayım",
+      "Onay Verildi",
+      "Reddedildi",
+    ]);
   });
 
-  it("🔴 devre-dışı sekmede PARANTEZ İÇİ SAYI BASILMAZ (mockup rakamları çizim verisi)", () => {
-    const disabled = APPROVAL_TABS.find((tab) => tab.disabledReason !== undefined);
-    expect(disabled).toBeDefined();
-    expect(approvalTabLabel(disabled!, 7)).toBe(disabled!.label);
+  it("her sekme doğru kaynağa bağlanır: Benim Onayım = bekleyen kutusu, diğerleri geçmiş süzgeci", () => {
+    expect(APPROVAL_TABS.map((tab) => [tab.key, tab.historyFilter])).toEqual([
+      ["tumu", "all"],
+      ["benim", null],
+      ["onaylanan", "approved"],
+      ["reddedilen", "rejected"],
+    ]);
   });
 
-  it("çalışan sekme sayıyı SUNUCUNUN total'inden alır; total yoksa sayısız basar", () => {
-    const active = APPROVAL_TABS.find((tab) => tab.disabledReason === undefined);
-    expect(approvalTabLabel(active!, 4)).toBe("Benim Onayım (4)");
-    expect(approvalTabLabel(active!, undefined)).toBe("Benim Onayım");
+  it("boş durum metni sekmeye göredir", () => {
+    const empty = Object.fromEntries(APPROVAL_TABS.map((tab) => [tab.key, tab.emptyMessage]));
+    expect(empty).toEqual({
+      tumu: "Görünür onay zinciri yok",
+      benim: "Onayınızı bekleyen kalem yok.",
+      onaylanan: "Onayladığınız evrak yok",
+      reddedilen: "Reddedilen evrak yok",
+    });
   });
 
-  it("gerekçe metni tek kaynaktan gelir", () => {
-    expect(APPROVAL_TABS_DISABLED_REASON).toBe(
-      "Karar verilmiş ve başkasına düşen onaylar henüz listelenmiyor.",
+  it("?sekme= değeri sekmeye çevrilir; parametresiz ya da bilinmeyen değer Benim Onayım'a düşer", () => {
+    expect(parseApprovalTab("reddedilen").key).toBe("reddedilen");
+    expect(parseApprovalTab("onaylanan").key).toBe("onaylanan");
+    expect(parseApprovalTab("tumu").key).toBe("tumu");
+    expect(parseApprovalTab(null).key).toBe("benim");
+    expect(parseApprovalTab("yok-boyle-sekme").key).toBe("benim");
+  });
+
+  it("sayaç verildiyse parantez içinde basılır, verilmediyse (yüklenmemiş sekme) sayısız kalır", () => {
+    const tab = parseApprovalTab("benim");
+    expect(approvalTabLabel(tab, 4)).toBe("Benim Onayım (4)");
+    expect(approvalTabLabel(tab, undefined)).toBe("Benim Onayım");
+    expect(approvalTabLabel(parseApprovalTab("reddedilen"), 0)).toBe("Reddedildi (0)");
+  });
+});
+
+describe("geçmiş kartı karar rozeti", () => {
+  it("onaylanan yeşil, reddedilen kırmızı, bekleyen nötr 'Bekliyor · N. adım'", () => {
+    expect(approvalDecisionBadge("approved", 3)).toEqual({ variant: "success", label: "Onaylandı" });
+    expect(approvalDecisionBadge("rejected", 2)).toEqual({ variant: "danger", label: "Reddedildi" });
+    expect(approvalDecisionBadge("pending", 2)).toEqual({
+      variant: "neutral",
+      label: "Bekliyor · 2. adım",
+    });
+  });
+
+  it("karar satırı karar vereni ve İstanbul saatiyle gg.aa.yyyy ss:dd tarihini basar", () => {
+    // 2026-09-25T06:12Z = 09:12 İstanbul (UTC+3)
+    expect(approvalDecisionLine("Mehmet Kaya", "2026-09-25T06:12:00Z")).toBe(
+      "Karar: Mehmet Kaya · 25.09.2026 09:12",
     );
+  });
+
+  it("karar veren yoksa 'Karar: —' basılır (uydurma ad YOK)", () => {
+    expect(approvalDecisionLine(null, null)).toBe(`Karar: ${UNKNOWN_VALUE}`);
+  });
+
+  it("gerekçe satırı yalnız reason doluysa basılır", () => {
+    expect(approvalReasonLine("Metraj eksik")).toBe("Gerekçe: Metraj eksik");
+    expect(approvalReasonLine(null)).toBeNull();
   });
 });
 

@@ -24,6 +24,11 @@ export type ApprovalInboxItem = DeepScale<components["schemas"]["ApprovalInboxIt
 export type ApprovalStepRead = DeepScale<components["schemas"]["ApprovalStepRead"]>;
 export type ApprovalRole = components["schemas"]["ApprovalRole"];
 export type ApprovalDocumentType = components["schemas"]["ApprovalDocumentType"];
+export type ApprovalHistoryResponse = DeepScale<components["schemas"]["ApprovalHistoryResponse"]>;
+export type ApprovalHistoryItem = DeepScale<components["schemas"]["ApprovalHistoryItem"]>;
+export type ApprovalHistoryDecision = components["schemas"]["HistoryDecision"];
+/** `GET /approvals/history?decision=` süzgeci (`pending` süzgeç DEĞİL, yalnız kart durumudur). */
+export type ApprovalHistoryFilter = "approved" | "rejected" | "all";
 export type ApprovalSettingsRead = DeepScale<components["schemas"]["ApprovalSettingsRead"]>;
 
 export const APPROVALS_QUERY_KEY = "approvals";
@@ -72,6 +77,43 @@ export function useApprovalInbox(
             query: {
               ...(filter.limit !== undefined ? { limit: filter.limit } : {}),
               ...(filter.offset !== undefined ? { offset: filter.offset } : {}),
+            },
+          },
+        }),
+      ),
+  });
+}
+
+export interface ApprovalHistoryParams {
+  decision: ApprovalHistoryFilter;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * OKT-F1.2 · `GET /approvals/history` — Onay Kutusu'nun Tümü / Onay Verildi /
+ * Reddedildi sekmeleri. Sorgu anahtarı `["approvals", "history", ...]`: kök
+ * `["approvals"]` öneki sayesinde onay/ret mutasyonlarının mevcut
+ * invalidation'ı geçmişi de tazeler.
+ *
+ * `enabled`: yalnız AKTİF sekmenin sorgusu istek atar; ziyaret edilmiş sekmenin
+ * önbelleği sayaç için okunmaya devam eder (ekstra istek yok).
+ */
+export function useApprovalHistory(
+  { decision, limit, offset }: ApprovalHistoryParams,
+  options: { enabled?: boolean } = {},
+): UseQueryResult<ApprovalHistoryResponse, Error> {
+  return useQuery({
+    queryKey: [APPROVALS_QUERY_KEY, "history", decision, limit ?? null, offset ?? null],
+    enabled: options.enabled ?? true,
+    queryFn: async () =>
+      unwrap(
+        await backendClient.GET("/approvals/history", {
+          params: {
+            query: {
+              decision,
+              ...(limit !== undefined ? { limit } : {}),
+              ...(offset !== undefined ? { offset } : {}),
             },
           },
         }),

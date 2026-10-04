@@ -240,6 +240,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/approvals/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Approval History Endpoint
+         * @description Sonuclanmis zincirler: `decision=approved|rejected|all` (varsayilan `all`).
+         *
+         *     Ayri bir yetki kapisi YOKTUR (bekleyen kutusu gibi): gorunurluk "adimlarindan
+         *     birinin onay rolu bende + evragin projesini goruyorum" olgusuyla sinirlidir.
+         *     Ret kaydi zincir SILINMEDIGI icin vardir (OKT-B1); eski (silinmis) retler yoktur.
+         */
+        get: operations["list_approval_history_endpoint_approvals_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approvals/roles": {
         parameters: {
             query?: never;
@@ -4566,7 +4590,7 @@ export interface paths {
          *     izi denetim günlüğüdür (spec §11) ve K2 bunu değiştirmez: kullanıcı kararı
          *     gerekçenin ZORUNLULUĞUNU bağladı, DEPOLANDIĞI yeri değil.
          *
-         *     Ret zinciri de BİTİRİR: `approval_chains` satırı SİLİNİR (adımlar CASCADE)
+         *     Ret zinciri de BİTİRİR: `approval_chains` satırı DAMGALANIR, SİLİNMEZ (OKT-B1)
          *     ve yeniden gönderim ADIM 1'den, YENİ eşik snapshot'ıyla başlar.
          */
         post: operations["reject_progress_payment_endpoint_progress_payments__payment_id__reject_post"];
@@ -5681,7 +5705,7 @@ export interface paths {
          *     ihtiyaç sürüyorsa YENİ talep açılır.
          *
          *     🔴 **OK-1A T3:** ret onay zincirini de BİTİRİR (`approval_chains` satırı
-         *     SİLİNİR, adımlar CASCADE). Hakediş ikilisinden FARK: orada evrak `draft`a
+         *     DAMGALANIR, SİLİNMEZ — OKT-B1). Hakediş ikilisinden FARK: orada evrak `draft`a
          *     döner ve yeniden gönderilince YENİ bir zincir açılır; burada `rejected`
          *     TERMİNAL olduğu için ikinci bir zincir HİÇ açılmaz.
          */
@@ -8858,6 +8882,81 @@ export interface components {
          * @enum {string}
          */
         ApprovalDocumentType: "subcontractor_progress_payment" | "purchase_request" | "progress_payment";
+        /**
+         * ApprovalHistoryItem
+         * @description Onay GECMISI satiri (OKT-B1): bekleyen kartin AYNI alanlari + sonuc.
+         *
+         *     * `decision` (zincirin SON DURUMU): `approved` (tum adimlar onayli) |
+         *       `rejected` | `pending` (zincir suruyor; yalniz `decision=all` sorgusunda).
+         *     * `decided_by`: zincirin SON kararini veren: retse reddeden, onaysa SON
+         *       imzayi atan kullanicinin ad soyadi; kullanici silinmisse VE zincir
+         *       suruyorsa `null`.
+         *     * `decided_at`: ret ani ya da son imza ani; zincir suruyorsa `null`.
+         *     * `reason`: YALNIZ retse gerekce, aksi `null`.
+         *     * `current_step_no`: retse reddedilen adim, suren zincirde siradaki adim,
+         *       onaylanmissa son adim.
+         */
+        ApprovalHistoryItem: {
+            /** Amount Snapshot */
+            amount_snapshot: string | null;
+            /**
+             * Chain Id
+             * Format: uuid
+             */
+            chain_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name: string | null;
+            /** Current Step No */
+            current_step_no: number;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            decision: components["schemas"]["HistoryDecision"];
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            document_type: components["schemas"]["ApprovalDocumentType"];
+            /** Gross Amount */
+            gross_amount: string | null;
+            /** Net Amount */
+            net_amount: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Steps */
+            steps: components["schemas"]["ApprovalStepRead"][];
+            /** Subtitle */
+            subtitle: string | null;
+            /** Threshold Snapshot */
+            threshold_snapshot: string;
+            /** Title */
+            title: string | null;
+        };
+        /**
+         * ApprovalHistoryResponse
+         * @description Gecmis zarfi: bekleyen kutusunun zarfi ile ayni bicim. `total`, secilen
+         *     `decision` suzgecine gore suzulmus VE gorunur kapsamla sinirli toplamdir
+         *     (frontend sekme sayaci).
+         */
+        ApprovalHistoryResponse: {
+            /** Items */
+            items: components["schemas"]["ApprovalHistoryItem"][];
+            /** Limit */
+            limit: number;
+            /** My Approval Roles */
+            my_approval_roles: components["schemas"]["ApprovalRole"][];
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /**
          * ApprovalInboxItem
          * @description Onay kutusu satiri — mockup kartinin BES parcasi (`Onay Kutusu.dc.html`).
@@ -13063,6 +13162,24 @@ export interface components {
             /** Working Days */
             working_days: number;
         };
+        /**
+         * HistoryDecision
+         * @description Onay gecmisindeki bir zincirin SON DURUMU (OKT-B1, zincir duzeyinde).
+         *
+         *     `approved` = zincirin TUM adimlari karara baglanmis ve ret yok; `rejected` =
+         *     zincir reddedildi; `pending` = zincir SURUYOR (yalniz `decision=all`da doner).
+         * @enum {string}
+         */
+        HistoryDecision: "approved" | "rejected" | "pending";
+        /**
+         * HistoryFilter
+         * @description `GET /approvals/history?decision=` degerleri (varsayilan `all`).
+         *
+         *     `all` suzgec YOKTUR: gorunur TUM zincirler (suren dahil). `pending` bir
+         *     SUZGEC degeri DEGILDIR (sekme yoktur), yalnizca kart durumudur.
+         * @enum {string}
+         */
+        HistoryFilter: "approved" | "rejected" | "all";
         /**
          * HolidayInput
          * @description Elle tatil; tek gun icin `date_to` = `date_from`.
@@ -26585,6 +26702,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalInboxResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_approval_history_endpoint_approvals_history_get: {
+        parameters: {
+            query?: {
+                decision?: components["schemas"]["HistoryFilter"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalHistoryResponse"];
                 };
             };
             /** @description Yetkisiz işlem */

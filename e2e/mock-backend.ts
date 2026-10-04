@@ -15417,6 +15417,21 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       }
     }
 
+    // OKT-F1.2 · `GET /approvals/history` — `/approvals`tan ÖNCE denetlenir
+    // (literal alt yol). `decision` enum dışı ⇒ 422 (reddetmeyen mock bekçi değildir).
+    if (method === "GET" && path === "/approvals/history") {
+      const decision = parsed.searchParams.get("decision") ?? "all";
+      const limit = Number(parsed.searchParams.get("limit") ?? "50");
+      const offset = Number(parsed.searchParams.get("offset") ?? "0");
+      if (decision !== "all" && decision !== "approved" && decision !== "rejected") {
+        return send(422, { detail: "decision all|approved|rejected olmalidir" });
+      }
+      if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
+        return send(422, { detail: "limit 1-200 araliginda olmalidir" });
+      }
+      return send(200, approvalHistoryFixture(state, decision, limit, offset));
+    }
+
     if (method === "GET" && path === "/approvals") {
       // Sözleşme: `limit` varsayılan 50, tavan 200 (aşım 422 — sessiz kırpma
       // DEĞİL); `offset` varsayılan 0.
@@ -20144,6 +20159,93 @@ function approvalInboxFixture(state: MockState, limit: number, offset: number): 
     // `total` SÜZGEÇLENMİŞ kümenin boyutudur (sayfalamadan ÖNCE) — kırpma
     // bandının tek kaynağı budur.
     total: pending.length,
+    limit,
+    offset,
+    my_approval_roles: MY_APPROVAL_ROLES,
+  };
+}
+
+/**
+ * OKT-F1.2 · `GET /approvals/history` fikstürü.
+ *
+ * 🔒 SONUÇLANMIŞ kayıtlar (approved/rejected) SABİT tohumlardır ve evrak
+ * durumundan TÜRETİLMEZ: `onay-kutusu.spec.ts` `scpp-8`i gerçekten onaylar, ve
+ * `fullyParallel` altında "Onay Verildi" kadrajı o pencereye denk gelirse
+ * sessizce farklı bir kare üretirdi (yukarıdaki `dashboardPendingApprovalsCount`
+ * ile AYNI sınıf). Yalnız `pending` (Tümü) kartları kutunun süzgecinden türer.
+ * Bu mock'un bilinçli sadeleşmesidir; gerçek uçta onaylanan kalem geçmişe düşer.
+ */
+type MockApprovalHistoryItem = components["schemas"]["ApprovalHistoryItem"];
+
+const APPROVAL_HISTORY_DECIDED: readonly MockApprovalHistoryItem[] = [
+  {
+    chain_id: "chain-hist-approved-1",
+    document_type: "subcontractor_progress_payment",
+    document_id: "scpp-hist-1",
+    created_by_name: "Sercan Öztürk",
+    created_at: "2026-06-12T08:30:00Z",
+    threshold_snapshot: APPROVAL_THRESHOLD_TRY,
+    amount_snapshot: "310000.00",
+    current_step_no: 2,
+    steps: [
+      approvalStep(1, "site_chief", "2026-06-12T08:40:00Z", "Sercan Öztürk"),
+      approvalStep(2, "project_manager", "2026-06-13T09:12:00Z", "Elif Kaya"),
+    ],
+    title: "Demirci Ltd. — Hakediş #12 (Kalıp)",
+    subtitle: "Çelik OSB · 06/2026",
+    gross_amount: "310000.00",
+    net_amount: "254200.00",
+    decision: "approved",
+    decided_by: "Elif Kaya",
+    decided_at: "2026-06-13T06:12:00Z",
+    reason: null,
+  },
+  {
+    chain_id: "chain-hist-rejected-1",
+    document_type: "purchase_request",
+    document_id: "pr-hist-1",
+    created_by_name: "Yasemin Kaya",
+    created_at: "2026-06-20T09:00:00Z",
+    threshold_snapshot: APPROVAL_THRESHOLD_TRY,
+    amount_snapshot: "92000.00",
+    current_step_no: 2,
+    steps: [
+      approvalStep(1, "procurement", "2026-06-20T09:10:00Z", "Yasemin Kaya"),
+      approvalStep(2, "project_manager", null),
+    ],
+    title: "Ø16 Nervürlü İnşaat Demiri — 8 ton",
+    subtitle: "Güneşkent A-Blok · Kat 10 kolon",
+    gross_amount: "92000.00",
+    net_amount: null,
+    decision: "rejected",
+    decided_by: "Elif Kaya",
+    decided_at: "2026-06-21T07:45:00Z",
+    reason: "Birim fiyat anlaşmalı tedarikçi listesinin üzerinde; yeniden teklif alınmalı.",
+  },
+];
+
+function approvalHistoryFixture(
+  state: MockState,
+  decision: "all" | "approved" | "rejected",
+  limit: number,
+  offset: number,
+): components["schemas"]["ApprovalHistoryResponse"] {
+  const pending: MockApprovalHistoryItem[] = pendingApprovalSeeds(state).map((seed) => ({
+    ...seed,
+    threshold_snapshot: APPROVAL_THRESHOLD_TRY,
+    decision: "pending",
+    decided_by: null,
+    decided_at: null,
+    reason: null,
+  }));
+  const decided = APPROVAL_HISTORY_DECIDED.filter(
+    (entry) => decision === "all" || entry.decision === decision,
+  );
+  const matching = decision === "all" ? [...pending, ...decided] : decided;
+
+  return {
+    items: matching.slice(offset, offset + limit),
+    total: matching.length,
     limit,
     offset,
     my_approval_roles: MY_APPROVAL_ROLES,

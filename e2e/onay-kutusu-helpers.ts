@@ -43,6 +43,20 @@ export async function openApprovals(page: Page) {
   await expect(page.getByTestId("ok-loading")).toHaveCount(0);
 }
 
+/**
+ * Belirli bir sekmeyi `?sekme=` ile açar (OKT-F1.2). Liste "yüklendi" bayrağı
+ * AKTİF sekmenin verisine bağlıdır (`ok-loaded-list`); sekme seçili olduğu da
+ * ayrıca doğrulanır.
+ */
+export async function openApprovalsTab(page: Page, key: "tumu" | "onaylanan" | "reddedilen") {
+  await page.goto(`${APPROVALS_URL}?sekme=${key}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Onay Kutusu" })).toBeVisible();
+  await expect(page.getByTestId(`ok-tab-${key}`)).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("ok-loaded-list")).toBeAttached();
+  await expect(page.getByTestId("ok-loaded-settings")).toBeAttached();
+  await expect(page.getByTestId("ok-loading")).toHaveCount(0);
+}
+
 /** Görsel kadrajların girişi — pencereyi ORTAK ölçüye çeker, sonra girer. */
 export async function visualLogin(page: Page) {
   await page.setViewportSize({ ...VISUAL_VIEWPORT });
