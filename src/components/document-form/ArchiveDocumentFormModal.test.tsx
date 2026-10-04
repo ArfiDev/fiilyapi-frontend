@@ -237,7 +237,9 @@ describe("ArchiveDocumentFormModal — kaydedilmemiş değişiklik kaydı", () =
     expect(unsavedRegistry.hasUnsaved()).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: TEXT.submit }));
     await screen.findByTestId("adf-saved");
-    expect(unsavedRegistry.hasUnsaved()).toBe(false);
+    // Kayıt göstergesi, taban tazelemesini yapan effect'ten ÖNCE basılabilir (yük altında ölçüldü:
+    // 2026-10-04, load 26–46'da kırmızı, tek başına yeşil) → sonucu deterministik bekle.
+    await waitFor(() => expect(unsavedRegistry.hasUnsaved()).toBe(false));
   });
 
   it("keepOpen kapalıyken kayıt sonrası (onClose çağrılır, unmount) → temiz", async () => {
