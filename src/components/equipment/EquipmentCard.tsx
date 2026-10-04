@@ -36,6 +36,11 @@ export interface EquipmentCardProps {
    * yazma tetikleyicisi görünmemelidir.
    */
   onAddDocumentClick?: (equipment: EquipmentResponse) => void;
+  /**
+   * IZN-F2.y · "Düzenle" bağlantısı (PATCH /equipment/{id} = saha.makine_* Düzenler). Varsayılan
+   * `true` (bugünkü davranış); `false` ise bağlantı BASILMAZ.
+   */
+  canEdit?: boolean;
 }
 
 /**
@@ -54,6 +59,7 @@ export function EquipmentCard({
   siteLabel,
   operatorName,
   onAddDocumentClick,
+  canEdit = true,
 }: EquipmentCardProps) {
   const tone = equipmentCardTone(equipment.status);
   const showWarningBox = equipment.status === "broken" || equipment.status === "maintenance";
@@ -140,13 +146,15 @@ export function EquipmentCard({
 
       {/* K4 — detay sayfası yok; tek eylem düzenleme formuna gider (T3'te açılır). */}
       <div className="makine-card__actions">
-        <Link
-          href={routes.equipment.edit({ equipmentId: equipment.id })}
-          className="makine-card__edit"
-          data-testid="makine-card-edit-link"
-        >
-          Düzenle
-        </Link>
+        {canEdit && (
+          <Link
+            href={routes.equipment.edit({ equipmentId: equipment.id })}
+            className="makine-card__edit"
+            data-testid="makine-card-edit-link"
+          >
+            Düzenle
+          </Link>
+        )}
         {onAddDocumentClick && (
           <button
             type="button"

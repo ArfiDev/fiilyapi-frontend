@@ -27,6 +27,8 @@ import {
 } from "./sections-validate";
 import { emptySiteFormValues, type SiteFormValues } from "./form-state";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
+import { SITES_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { isUserListUnavailable } from "./user-picker";
 import {
   MESSAGES,
@@ -108,6 +110,9 @@ export function SiteCreateView() {
   // 🔴 URL-3 — rota parametresi ADRES anahtaridir (slug VEYA UUID).
   const { projectId: projectKey } = useParams<{ projectId: string }>();
   const projectQuery = useProject(projectKey);
+  // IZN-F2.y · POST /projects/{id}/sites = santiye.bolumler / bolum.detay Düzenler (VEYA; backend
+  // `sites:full`). Bugün kapı yok → sayfa izni hiç yoksa (fallback) form açık kalır.
+  const canCreate = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: true });
   // SLUG -> KANONIK KIMLIK: `POST /projects/{project_id}/sites` UUID BEKLER.
   const projectId = projectQuery.data?.id ?? "";
   const createSite = useCreateSite(projectId);
@@ -196,7 +201,7 @@ export function SiteCreateView() {
     });
   }
 
-  if (isForbidden(projectQuery.error)) return <AccessDenied />;
+  if (!canCreate || isForbidden(projectQuery.error)) return <AccessDenied />;
   if (isNotFound(projectQuery.error)) {
     return (
       <p className="site-form__message">

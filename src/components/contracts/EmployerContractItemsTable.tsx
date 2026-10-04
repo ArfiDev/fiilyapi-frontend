@@ -116,6 +116,11 @@ export interface EmployerContractItemsTableProps {
   saveError: string | null;
   /** TKL-F2.4 · toplu ekleme başarı bildirimi ("N poz eklendi"); başlıkta `role="status"`. */
   addedNotice?: string | null;
+  /**
+   * IZN-F2.y · yazma kapısı (sözleşme sayfaları Düzenler). Varsayılan `true` (bugünkü davranış);
+   * `false` ise "+ Poz Ekle" / "+ Satır Ekle" BASILMAZ ve hücre kontrolleri salt-okunur (disabled).
+   */
+  canWrite?: boolean;
 }
 
 const COLUMN_COUNT = 7;
@@ -209,6 +214,7 @@ export function EmployerContractItemsTable({
   isCreating,
   saveError,
   addedNotice = null,
+  canWrite = true,
 }: EmployerContractItemsTableProps) {
   const groups = data?.groups;
   // 🔴 Grup YOKLUĞU artık düğmeyi KAPATMAZ (F-POZGRUP): `group_id` hâlâ
@@ -390,14 +396,16 @@ export function EmployerContractItemsTable({
         >
           Poz Dağılımı →
         </Link>
-        <Button
-          variant="ghost"
-          className="ecd-items__add"
-          onClick={onAddItem}
-          data-testid="ecd-add-item"
-        >
-          {EMPLOYER_ITEM_TEXT.addItem}
-        </Button>
+        {canWrite && (
+          <Button
+            variant="ghost"
+            className="ecd-items__add"
+            onClick={onAddItem}
+            data-testid="ecd-add-item"
+          >
+            {EMPLOYER_ITEM_TEXT.addItem}
+          </Button>
+        )}
       </div>
 
       {!hasGroups && !isLoading && !isError && (
@@ -448,6 +456,7 @@ export function EmployerContractItemsTable({
                   group={group}
                   drafts={drafts}
                   isCreating={isCreating}
+                  canWrite={canWrite}
                   pendingCells={pendingCells}
                   isAdding={addingGroupId === group.id}
                   newRow={newRow}
@@ -489,6 +498,7 @@ interface GroupRowsProps {
   group: EmployerContractItemsResponse["groups"][number];
   drafts: Record<string, InlineRowDraft>;
   isCreating: boolean;
+  canWrite: boolean;
   isAdding: boolean;
   newRow: NewRowValues;
   onDraft: (itemId: string, patch: InlineRowDraft) => void;
@@ -511,6 +521,7 @@ function GroupRows({
   group,
   drafts,
   isCreating,
+  canWrite,
   pendingCells,
   isAdding,
   newRow,
@@ -547,7 +558,7 @@ function GroupRows({
                 maxLength={MAX_LENGTH.code}
                 className="ecd-items__cell-input ecd-items__cell-input--code"
                 aria-label={`${item.code} poz no`}
-                disabled={pendingCells.has(cellKey(item.id, "code"))}
+                disabled={!canWrite || pendingCells.has(cellKey(item.id, "code"))}
                 value={draft.code ?? item.code}
                 onChange={(event) => onDraft(item.id, { code: event.target.value })}
                 onBlur={() => onCommitCell(item, "code")}
@@ -565,7 +576,7 @@ function GroupRows({
                 className="ecd-items__cell-input ecd-items__cell-input--name"
                 title={item.description}
                 aria-label={`${item.code} poz adı`}
-                disabled={pendingCells.has(cellKey(item.id, "description"))}
+                disabled={!canWrite || pendingCells.has(cellKey(item.id, "description"))}
                 value={draft.description ?? item.description}
                 onChange={(event) => onDraft(item.id, { description: event.target.value })}
                 onBlur={() => onCommitCell(item, "description")}
@@ -580,6 +591,7 @@ function GroupRows({
                 // uçuşta seçim "son seçim" olarak tutulur ve gösterilir (uçuş
                 // bitince tek ek istek); uçuş işareti `aria-busy` (CSS'te soluk).
                 aria-busy={pendingCells.has(cellKey(item.id, "unit")) || undefined}
+                disabled={!canWrite}
                 value={selectedUnit(unitChoices(item.unit), draft.unit ?? item.unit)}
                 // Seçici: değişiklik ANINDA kaydolur (taslak + blur beklenmez).
                 // Blur'da taslak yoktur → ikinci istek ATILMAZ.
@@ -604,7 +616,7 @@ function GroupRows({
                 min={0}
                 className="ecd-items__cell-input"
                 aria-label={`${item.code} birim fiyatı`}
-                disabled={pendingCells.has(cellKey(item.id, "unitPrice"))}
+                disabled={!canWrite || pendingCells.has(cellKey(item.id, "unitPrice"))}
                 value={draft.unitPrice ?? trPriceInputValue(item.unit_price)}
                 onChange={(event) => onDraft(item.id, { unitPrice: event.target.value })}
                 onBlur={() => onCommitCell(item, "unitPrice")}
@@ -618,7 +630,7 @@ function GroupRows({
                 min={0}
                 className="ecd-items__cell-input"
                 aria-label={`${item.code} miktar`}
-                disabled={pendingCells.has(cellKey(item.id, "quantity"))}
+                disabled={!canWrite || pendingCells.has(cellKey(item.id, "quantity"))}
                 value={draft.quantity ?? trQuantityInputValue(item.quantity)}
                 onChange={(event) => onDraft(item.id, { quantity: event.target.value })}
                 onBlur={() => onCommitCell(item, "quantity")}
@@ -745,7 +757,7 @@ function GroupRows({
             </Button>
           </td>
         </tr>
-      ) : (
+      ) : canWrite ? (
         <tr className="ecd-items__add-row">
           <td colSpan={COLUMN_COUNT}>
             {/* Satır-içi ekleme GRUBUN İÇİNDE açılır: `group_id` zorunludur ve
@@ -761,7 +773,7 @@ function GroupRows({
             </Button>
           </td>
         </tr>
-      )}
+      ) : null}
     </>
   );
 }

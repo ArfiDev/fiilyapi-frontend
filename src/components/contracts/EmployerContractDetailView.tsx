@@ -18,6 +18,8 @@ import type { EmployerItemUpdateBody } from "./employer-item-inline";
 import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { contractTabHref } from "./contract-tabs";
 import { ContractDocumentsPendingCard } from "./ContractDocumentsPendingCard";
@@ -62,6 +64,10 @@ type AddItemDialog = "catalog" | "manual" | null;
 export function EmployerContractDetailView({ projectId }: EmployerContractDetailViewProps) {
   const searchParams = useSearchParams();
   const tab = parseEmployerContractTab(searchParams);
+  // IZN-F2.y · poz ekle/düzenle (POST/PATCH /projects/{id}/contract/items…) = sözleşme sayfaları
+  // Düzenler (VEYA, backend `contracts:full`). Bugün kapı yok → sayfa izni hiç yoksa (fallback) açık.
+  // Görüntüleme DEĞİŞMEZ.
+  const canWrite = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: true });
 
   const contractQuery = useEmployerContract(projectId);
   const projectQuery = useProject(projectId);
@@ -191,8 +197,9 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
                 onCreateItem={handleCreateItem}
                 isCreating={isCreatingItem}
                 saveError={saveError}
+                canWrite={canWrite}
               />
-              {addDialog === "catalog" && itemsQuery.data && (
+              {canWrite && addDialog === "catalog" && itemsQuery.data && (
                 <EmployerCatalogPickerHost
                   projectId={projectId}
                   projectName={projectQuery.data?.name}
@@ -207,7 +214,7 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
                   }
                 />
               )}
-              {addDialog === "manual" && itemsQuery.data && (
+              {canWrite && addDialog === "manual" && itemsQuery.data && (
                 <EmployerItemFormModal
                   projectId={projectId}
                   groups={itemsQuery.data.groups}
