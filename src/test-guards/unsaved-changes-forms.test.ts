@@ -72,8 +72,6 @@ const EXEMPT: Record<string, string> = {
   "components/ai/AiPanel.tsx": "AI sohbet girdisi geçici, kayıt değil",
   "components/invoices/InvoicesView.tsx": "süzgeç/arama, kalıcı kaydet kavramı yok",
   "components/personnel-form/PersonnelFormActions.tsx": "salt buton şeridi, state PersonnelForm'da",
-  "components/settings/permissions/PermissionMatrix.tsx":
-    "hücre bazında anında kaydeder, taslak yok — 'Değişiklikleri Kaydet' yalnız router.refresh(); izin turuna bırakıldı",
   "components/settings/users/UsersScreen.tsx": "salt liste+modal anahtarı, form alt-modallerde",
   "components/section-form/SectionTypePicker.tsx":
     "SectionForm'un alt-alan seçicisi: seçili tip SectionForm değerinde (dirty orada), 'yeni tip adı' geçici girdi",
@@ -83,7 +81,7 @@ const EXEMPT: Record<string, string> = {
   // bekçinin taramasında ek keşfedildi (envanter tam değildi). İkisi de
   // serbest metin/düzenlenebilir alan taşımayan TEK-TIKLA onay diyaloğu
   // (Modal + mutate/mutateAsync ama kaybolacak taslak veri yok) — mevcut
-  // "tek tıkla eylem" EXEMPT emsaliyle (PeriodClosingView, PermissionMatrix)
+  // "tek tıkla eylem" EXEMPT emsaliyle (PeriodClosingView)
   // aynı gerekçe.
   "components/earned-value/catalog/DisciplineDeleteDialog.tsx": "yalnız silme onayı, düzenlenebilir alan yok",
   // TKL-F1.3.1: taslaklar EKRAN düzeyine taşındı (KIK:233-236). Satır yalnız çizer; kirli kaydı

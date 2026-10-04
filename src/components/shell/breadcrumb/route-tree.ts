@@ -200,7 +200,7 @@ export const ROUTE_TRAIL_ROOT: TrailNode = {
         gorunum: { label: "Görünüm", href: () => routes.settings.appearance() },
         kullanicilar: { label: "Kullanıcılar", href: () => routes.settings.users() },
         roller: { label: "Rol Yönetimi", href: () => routes.settings.roles() },
-        "izin-matrisi": { label: "İzin Matrisi", href: () => routes.settings.permissionMatrix() },
+        "izin-matrisi": { label: "Sayfa İzinleri", href: () => routes.settings.permissionMatrix() },
         "onay-rolleri": {
           label: "Onay Rolleri ve Eşik",
           href: () => routes.settings.approvalRoles(),

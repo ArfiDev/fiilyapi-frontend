@@ -28,6 +28,8 @@ import { QURR_FIXTURE_EMPTY, QURR_FIXTURE_READY } from "@/components/earned-valu
 import { createOffersState, handleOffers, tklLastPrices, type OfferCatalogEntry, type TklLastPrice } from "./mock-offers";
 import { addDecimal, multiplyDecimal, quantizeDecimal } from "./mock-offer-calc";
 import { istanbulYear, type ConvertedProjectResult, type ConvertedProjectSpec } from "./mock-offer-types";
+// IZN-F2 · Sayfa İzinleri (`/pages`, `/roles/{id}/pages`, `/roles/{id}/copy`) — katalog + rol matrisi üreticisi AYRI dosyada.
+import { MOCK_PAGE_CATALOG, mockRolePages, mockRoleResponse, rolePagesViolation } from "./mock-role-pages";
 import { handleOfferExport } from "./mock-offer-export";
 
 /* ══════════════ SÖZLEŞME SORGU KISITLARI (F-BORDRO T1) ══════════════════════
@@ -9437,9 +9439,15 @@ export function startMockBackend(port: number): { server: Server; close: () => P
 
     // /modules, /roles listeleri
     if (method === "GET" && path === "/modules") return send(200, state.modules);
-    if (method === "GET" && path === "/roles") return send(200, state.roles);
-    // IZN-F1.2: sayfa kataloğu boş → menü ikiz kuralı uygulanmaz, `pages: {}` zaten hepsini gösterir.
-    if (method === "GET" && path === "/pages") return send(200, []);
+    // IZN-F2: `user_count` kullanıcı listesinden türetilir; `is_locked` yalnız Sistem Yöneticisi.
+    if (method === "GET" && path === "/roles") {
+      return send(
+        200,
+        state.roles.map((role) => mockRoleResponse(role, state.users.filter((user) => user.role_id === role.id).length)),
+      );
+    }
+    // IZN-F2: 100 sayfalık katalog. `/auth/me` `pages: {}` olduğundan menü ikiz kuralı hiçbir öğeyi gizlemez.
+    if (method === "GET" && path === "/pages") return send(200, MOCK_PAGE_CATALOG);
 
     // /projects — sayaçlar filtreden bağımsız, item listesi filtrelenir (spec §3).
     if (method === "GET" && path === "/projects") {
@@ -13510,6 +13518,40 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           item_count: new Set(scope.map((line) => line.item_id)).size,
           lines_without_price: linesWithoutPrice,
         },
+      });
+    }
+
+    // IZN-F2 · /roles/{id}/pages — GET okur; PUT gövdeyi doğrular ve YANKILAR (durumu DEĞİŞTİRMEZ: paylaşılan
+    // sahte backend'i kalıcı bozmaz); POST /roles/{id}/copy da kalıcı olmayan bir yanıt döner.
+    const rolePagesMatch = path.match(/^\/roles\/([^/]+)\/pages$/);
+    if (rolePagesMatch) {
+      const role = state.roles.find((r) => r.id === rolePagesMatch[1]);
+      if (!role) return send(404, { detail: "rol yok" });
+      if (method === "GET") return send(200, mockRolePages(role));
+      if (method === "PUT") {
+        if (role.key === "system_admin") return send(403, { detail: "Sistem Yöneticisi rolü değiştirilemez" });
+        return withBody((body) => {
+          const violation = rolePagesViolation(body as Parameters<typeof rolePagesViolation>[0]);
+          if (violation) return send(422, { detail: violation });
+          return send(200, { ...mockRolePages(role), pages: body.pages, hidden_fields: body.hidden_fields ?? [] });
+        });
+      }
+    }
+    const roleCopyMatch = path.match(/^\/roles\/([^/]+)\/copy$/);
+    if (method === "POST" && roleCopyMatch) {
+      const source = state.roles.find((r) => r.id === roleCopyMatch[1]);
+      if (!source) return send(404, { detail: "rol yok" });
+      return withBody((body) => {
+        const copy = {
+          ...source,
+          id: `role-copy-${source.id}`,
+          key: `${source.key}_2`,
+          name: String(body.name ?? ""),
+          emoji: String(body.emoji ?? source.emoji),
+          description: String(body.description ?? source.description),
+          is_system: false,
+        };
+        return send(201, mockRoleResponse(copy, 0));
       });
     }
 

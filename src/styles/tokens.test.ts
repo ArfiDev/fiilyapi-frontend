@@ -108,7 +108,12 @@ const tokensCss = readFileSync(
 // #1e40af (Kullanıcı Disiplin Ataması.dc.html:23); mevcut mavilerle karşılanmadı
 // (--color-primary-900 #1e3a8a ondan koyu, --color-info-strong #0369a1 ondan
 // yeşilimsi). Tek YENİ ton, `--color-info-deep-text`; yorumu hex taşımaz.
-const EXPECTED_HEX_COUNT = 103;
+// IZN-F2 (Sayfa İzinleri, değişen satır vurgusu): 103 → 105 — turuncu şerit/nokta
+// (Ayarlar - Sayfa İzinleri (TASLAK).dc.html:70-71, :142) ve "önce: X" etiketi zemini
+// (:145); mevcut turuncular (--color-orange-tint / -tint-border / -tint-text) bu iki
+// tonu karşılamıyor. İki YENİ ton: `--color-orange-accent`, `--color-orange-chip`;
+// yorumları hex taşımaz.
+const EXPECTED_HEX_COUNT = 105;
 
 describe("tokens.css", () => {
   it("çekirdek renk token'larını tanımlar (açık tema Slate + Blue)", () => {

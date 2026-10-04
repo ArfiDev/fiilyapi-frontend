@@ -30,6 +30,11 @@ describe("settings-nav-config Planlama (PLN-F1 · K21)", () => {
   it("GENEL grubunun son ogesi Planlama'dir; YENI cipi yoktur", () => {
     const genel = SETTINGS_NAV.find((g) => g.heading === "GENEL");
     const last = genel!.items[genel!.items.length - 1];
-    expect(last).toEqual({ label: "Planlama", href: "/ayarlar/planlama", emoji: "📈" });
+    expect(last).toEqual({
+      label: "Planlama",
+      pageKey: "ayarlar.planlama",
+      href: "/ayarlar/planlama",
+      emoji: "📈",
+    });
   });
 });

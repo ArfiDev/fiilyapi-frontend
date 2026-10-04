@@ -50,6 +50,7 @@ import {
   OFFER_PRINT_KIND_PARAM,
   OFFER_REV_PARAM,
   OFFER_TEMPLATE_PARAM,
+  ROLE_PARAM,
   type OfferPrintKind,
 } from "./navigation-params";
 
@@ -346,6 +347,8 @@ export const routes = {
     users: () => "/ayarlar/kullanicilar",
     roles: () => "/ayarlar/roller",
     permissionMatrix: () => "/ayarlar/izin-matrisi",
+    /** IZN-F2 · Sayfa İzinleri, verilen rol seçili açılır. */
+    permissionMatrixForRole: (roleId: RouteId) => `/ayarlar/izin-matrisi${qs({ [ROLE_PARAM]: roleId })}`,
     approvalRoles: () => "/ayarlar/onay-rolleri",
     notifications: () => "/ayarlar/bildirimler",
     appearance: () => "/ayarlar/gorunum",

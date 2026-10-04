@@ -289,6 +289,8 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     ["settings.users", routes.settings.users()],
     ["settings.roles", routes.settings.roles()],
     ["settings.permissionMatrix", routes.settings.permissionMatrix()],
+    // Çözücü sorgu dizgesini (`?rol=`) segment sanar → yalnız yol kısmı sınanır; sorgu ayrıca aşağıda.
+    ["settings.permissionMatrixForRole", routes.settings.permissionMatrixForRole("r-1").split("?")[0]],
     ["settings.approvalRoles", routes.settings.approvalRoles()],
     ["settings.notifications", routes.settings.notifications()],
     ["settings.appearance", routes.settings.appearance()],
@@ -390,6 +392,12 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     // `[paymentId]` onu bir kimlik sanıp yutuyordu.
     const result = resolveHrefIn(tree, "/hakedisler/isveren", true, SENTINEL);
     expect(result.kind).not.toBe("static");
+  });
+});
+
+describe("routes.settings.permissionMatrixForRole (IZN-F2)", () => {
+  it("Sayfa İzinleri yoluna seçili rolü `?rol=` olarak ekler", () => {
+    expect(routes.settings.permissionMatrixForRole("r-1")).toBe("/ayarlar/izin-matrisi?rol=r-1");
   });
 });
 
