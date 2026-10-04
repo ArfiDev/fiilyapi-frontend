@@ -24,20 +24,17 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { cx } from "@/lib/cx";
 import type { ProjectResponse, RoleResponse, UserResponse } from "@/lib/api/models";
-import { RolesPreviewCard } from "./RolesPreviewCard";
-import { PermissionMatrixPreviewCard } from "./PermissionMatrixPreviewCard";
 import "@/components/settings/settings.css";
 import "./users-screen.css";
-import "./users-preview.css";
 import { routes } from "@/lib/routes";
 
 // Ayarlar ana ekranı sekme şeridi — yalnız bu ekranda (mockup Ayarlar.dc.html §70-75);
-// diğer Ayarlar alt sayfaları (Rol Yönetimi, İzin Matrisi, Şirket...) kendi sub-header'ına
+// diğer Ayarlar alt sayfaları (Rol Yönetimi, Sayfa İzinleri, Şirket...) kendi sub-header'ına
 // sahip, bu şeridi tekrar etmiyor.
 const SETTINGS_TABS = [
   { href: routes.settings.users(), label: "Kullanıcılar" },
   { href: routes.settings.roles(), label: "Rol Yönetimi" },
-  { href: routes.settings.permissionMatrix(), label: "İzin Matrisi" },
+  { href: routes.settings.permissionMatrix(), label: "Sayfa İzinleri" },
   { href: routes.settings.company(), label: "Şirket" },
 ] as const;
 
@@ -263,11 +260,6 @@ export function UsersScreen() {
           </Button>
         </div>
       )}
-
-      <div className="users-preview-grid">
-        <RolesPreviewCard users={items} />
-        <PermissionMatrixPreviewCard />
-      </div>
 
       {modal?.type === "create" && <UserFormModal mode="create" onClose={closeModal} />}
       {modal?.type === "edit" && <UserFormModal mode="edit" user={modal.user} onClose={closeModal} />}

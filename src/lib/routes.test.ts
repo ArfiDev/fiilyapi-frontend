@@ -289,6 +289,7 @@ describe("routes — uretilen her yol GERCEK bir rotaya cozulur", () => {
     ["settings.users", routes.settings.users()],
     ["settings.roles", routes.settings.roles()],
     ["settings.permissionMatrix", routes.settings.permissionMatrix()],
+    ["settings.permissionMatrixForRole", routes.settings.permissionMatrixForRole("r-1")],
     ["settings.approvalRoles", routes.settings.approvalRoles()],
     ["settings.notifications", routes.settings.notifications()],
     ["settings.appearance", routes.settings.appearance()],

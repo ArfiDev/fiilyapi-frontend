@@ -83,7 +83,6 @@ const URUN_TARIH_ENVANTERI: Record<string, number> = {
   "components/purchasing/PurchaseRequestForm.tsx": 1,
   "components/section-detail/remainingDays.ts": 1,
   "components/settings/payroll-rates/PayrollRatesScreen.tsx": 1,
-  "components/settings/roles/RolesScreen.tsx": 1,
   // PLN-F3.0 (2026-09-25) — `?tarih=` ilk değeri artık `derive.ts
   // parseDiaryDateParam`in "bugün" yedeğinden gelir (TAŞINDI, YENİ maruziyet
   // DEĞİL): `activeDate`in eski `useState(() => isoDate(new Date()))`

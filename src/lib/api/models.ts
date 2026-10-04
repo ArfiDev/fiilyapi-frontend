@@ -9,6 +9,14 @@ export type UserStatus = components["schemas"]["UserStatus"];
 export type RoleResponse = DeepScale<components["schemas"]["RoleResponse"]>;
 export type RoleCreate = DeepScale<components["schemas"]["RoleCreate"]>;
 export type RoleRename = DeepScale<components["schemas"]["RoleRename"]>;
+// IZN-F2 · Sayfa İzinleri (backend IZN-B2): rol başına 100 sayfalık TAM matris + gizli alan kümesi.
+export type RoleCopy = DeepScale<components["schemas"]["RoleCopy"]>;
+export type RolePagesResponse = DeepScale<components["schemas"]["RolePagesResponse"]>;
+export type RolePagesUpdate = DeepScale<components["schemas"]["RolePagesUpdate"]>;
+export type PageGrant = DeepScale<components["schemas"]["PageGrant"]>;
+export type PageLevel = components["schemas"]["PageLevel"];
+export type PageKey = components["schemas"]["PageKey"];
+export type HiddenCategory = components["schemas"]["HiddenCategory"];
 export type ModuleResponse = DeepScale<components["schemas"]["ModuleResponse"]>;
 export type ModuleGroup = DeepScale<components["schemas"]["ModuleGroup"]>;
 export type ProjectResponse = WithPlainProgressPct<DeepScale<components["schemas"]["ProjectListItem"]>>;

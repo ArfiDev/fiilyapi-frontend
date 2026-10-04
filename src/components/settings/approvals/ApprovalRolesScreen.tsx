@@ -147,12 +147,12 @@ export function ApprovalRolesScreen() {
       {/* `:126-133` — bu ekranın Rol Yönetimi'nden farkını anlatan şerit. */}
       <aside className="okr-intro">
         <p className="okr-intro__text">
-          <strong>Rol Yönetimi</strong> rolün <em>neyi görebileceğini</em> tanımlar (modül
-          izinleri). Bu ekran ise <strong>kimin onaylayacağını</strong> belirler — bir kullanıcı
+          <strong>Sayfa İzinleri</strong> rolün <em>neyi görebileceğini</em> tanımlar (sayfa
+          erişimleri). Bu ekran ise <strong>kimin onaylayacağını</strong> belirler — bir kullanıcı
           birden çok onay rolü taşıyabilir.
         </p>
         <Link className="okr-intro__link" href={routes.settings.permissionMatrix()}>
-          İzin Matrisi
+          Sayfa İzinleri
           <ApprovalFlowArrow />
         </Link>
       </aside>

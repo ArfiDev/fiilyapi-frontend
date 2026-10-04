@@ -5,7 +5,8 @@ import { prepareFrame } from "./visual-scroll";
 async function login(page: import("@playwright/test").Page) {
   // F-ST T1 (onaylı görsel borç) — kadraj penceresi AÇIKÇA kurulur; bkz.
   // `login-visual.spec.ts` notu (config varsayılanı 1280×900, kanon 1440×900).
-  // Dokuz Ayarlar baseline'ının hepsi bu yardımcıdan geçer.
+  // Sekiz Ayarlar baseline'ının hepsi bu yardımcıdan geçer (izin matrisi karesi IZN-F2'de
+  // `page-access-visual.spec.ts`e TAŞINDI).
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/login");
   await page.getByLabel(/e-posta/i).fill("patron@fiil.com");
@@ -27,24 +28,12 @@ test("gorsel: ayarlar kullanicilar", async ({ page }) => {
 test("gorsel: ayarlar roller", async ({ page }) => {
   await login(page);
   await page.goto("/ayarlar/roller");
-  await expect(page.locator("main").getByText("Modül Erişimleri")).toBeVisible();
+  // IZN-F2: kart ızgarası (mockup 14 kart; sahte backend 6 rol) — "Modül Erişimleri" paneli KALKTI.
+  await expect(page.getByRole("article", { name: "Şantiye Şefi" })).toBeVisible();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("ayarlar-roller.png", { fullPage: true });
-});
-
-test("gorsel: ayarlar izin matrisi", async ({ page }) => {
-  await login(page);
-  await page.goto("/ayarlar/izin-matrisi");
-  // "Genel" hem ayarlar sidebar grup basligi hem matris icerik grup basligi olarak
-  // gectigi icin iddiayi yalnizca matris icerik bolgesine (.matrix-wrap) sabitliyoruz —
-  // aksi halde strict-mode "resolved to N elements" hatasi alinir.
-  await expect(page.locator("main .matrix-wrap").getByText("Genel")).toBeVisible();
-
-  // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
-  await prepareFrame(page);
-  await expect(page).toHaveScreenshot("ayarlar-izin-matrisi.png", { fullPage: true });
 });
 
 test("gorsel: ayarlar sirket bilgileri", async ({ page }) => {

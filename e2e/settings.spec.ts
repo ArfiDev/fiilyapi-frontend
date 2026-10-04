@@ -15,7 +15,7 @@ function settingsSidebar(page: import("@playwright/test").Page) {
   return page.getByRole("complementary", { name: "Ayarlar menüsü" });
 }
 
-test("ayarlar: sidebar gezinme + rol goruntule + matris hucre degisimi", async ({ page }) => {
+test("ayarlar: sidebar gezinme + rol kartlari + sayfa izinleri duzenleme", async ({ page }) => {
   await login(page);
   const sidebar = settingsSidebar(page);
 
@@ -25,24 +25,32 @@ test("ayarlar: sidebar gezinme + rol goruntule + matris hucre degisimi", async (
   await expect(sidebar.getByRole("link", { name: "Kullanıcılar" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("cell", { name: "Ahmet Yılmaz" })).toBeVisible();
 
-  // Rol Yönetimi'ne gec
+  // Rol Yönetimi'ne gec: IZN-F2 — master-detail kalkti, rol kartlari (kilitli Sistem Yoneticisi karti dahil)
   await sidebar.getByRole("link", { name: "Rol Yönetimi" }).click();
   await expect(page).toHaveURL(/\/ayarlar\/roller/);
-  await expect(page.locator(".role-detail__name")).toHaveText("Sistem Yöneticisi");
+  await expect(page.getByRole("article", { name: "Sistem Yöneticisi" })).toContainText("her şey açık · değiştirilemez");
 
-  // Izin Matrisi'ne gec
-  await sidebar.getByRole("link", { name: "İzin Matrisi" }).click();
+  // Sayfa İzinleri'ne gec (menu etiketi + rota: /ayarlar/izin-matrisi)
+  await sidebar.getByRole("link", { name: "Sayfa İzinleri" }).click();
   await expect(page).toHaveURL(/\/ayarlar\/izin-matrisi/);
-  // "Genel" hem ayarlar sidebar grup basligi hem matris icerik grup basligi olarak
-  // gecer; iddiayi yalnizca matris icerik bolgesine sabitleyerek strict-mode
-  // belirsizligini onluyoruz.
-  const matrixContent = page.locator(".matrix-wrap");
-  await expect(matrixContent.getByText("Genel")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sayfa İzinleri", level: 1 })).toBeVisible();
 
-  // Bir hucreyi degistir (system_admin disi bir rol — Santiye Sefi)
-  const cell = page.getByLabel("Personel — Şantiye Şefi");
-  await cell.selectOption({ label: "Tam" });
-  await expect(cell).toHaveValue("full");
+  // Bir sayfanin duzeyini degistir (system_admin disi bir rol — Santiye Sefi): sayac + Kaydet acilir.
+  await page.getByRole("button", { name: /Şantiye Şefi/ }).click();
+  await expect(page.getByRole("heading", { name: "Şantiye Şefi", level: 2 })).toBeVisible();
+  await page.getByRole("button", { name: /^Saha/ }).click();
+  await page
+    .getByRole("group", { name: "Makine & Ekipman › Kira Hakedişi erişim düzeyi" })
+    .getByRole("button", { name: "Düzenler" })
+    .click();
+  await expect(page.getByRole("status")).toHaveText("1 kaydedilmemiş değişiklik");
+
+  // Kaydet TEK PUT gonderir (100 anahtar); sahte backend yankilar, kalici durumu DEGISTIRMEZ.
+  const saved = page.waitForRequest((request) => request.method() === "PUT" && request.url().includes("/pages"));
+  await page.getByRole("button", { name: "Kaydet" }).click();
+  const body = (await saved).postDataJSON() as { pages: Record<string, unknown>; hidden_fields: string[] };
+  expect(Object.keys(body.pages)).toHaveLength(100);
+  await expect(page.getByRole("status")).toHaveCount(0);
 });
 
 test("ayarlar: denetim gunlugu listeler, filtreler ve excel indirir", async ({ page }) => {

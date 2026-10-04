@@ -5827,6 +5827,57 @@ export interface paths {
         patch: operations["rename_role_endpoint_roles__role_id__patch"];
         trace?: never;
     };
+    "/roles/{role_id}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy Role Endpoint
+         * @description Kaynak rolün sayfa hücreleri + gizli alanlarıyla yeni rol (anahtar addan türetilir).
+         *
+         *     404: kaynak rol yok. Kilit ve silinemezlik kopyalanmaz (yeni rol `is_system=false`).
+         */
+        post: operations["copy_role_endpoint_roles__role_id__copy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/{role_id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Role Pages Endpoint
+         * @description Bir rolün sayfa izinleri + gizli alanları (Sayfa İzinleri ekranı). Rol yoksa 404.
+         */
+        get: operations["get_role_pages_endpoint_roles__role_id__pages_get"];
+        /**
+         * Update Role Pages Endpoint
+         * @description Sayfa İzinleri "Kaydet": TAM matris (100 sayfa) + gizli alan kümesi, TEK transaction.
+         *
+         *     403: Sistem Yöneticisi rolü kilitli · 404: rol yok · 422: eksik sayfa, bilinmeyen sayfa
+         *     anahtarı ya da kategori, `approve=true` onay eylemi olmayan sayfada ya da `level=none`
+         *     iken. Reddedilen istek hiçbir şey yazmaz ve denetim satırı ÜRETMEZ; değişmeyen kısım için
+         *     da satır üretilmez (sayfa değişikliği ve gizli alan değişikliği ayrı satırlardır).
+         */
+        put: operations["update_role_pages_endpoint_roles__role_id__pages_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roles/{role_id}/permissions": {
         parameters: {
             query?: never;
@@ -5852,7 +5903,14 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Update Permission Endpoint */
+        /**
+         * Update Permission Endpoint
+         * @deprecated
+         * @description KALDIRILDI (IZN-B2): her çağrı 410 döner, hiçbir şey yazılmaz.
+         *
+         *     Eski modül hücreleri DONDURULDU; kapılar sayfa hücrelerinden karar verir. Gövde şeması
+         *     yalnız istemci tiplerinin kırılmaması için durur (B6'da uç ve şema birlikte sökülür).
+         */
         put: operations["update_permission_endpoint_roles__role_id__permissions__module_key__put"];
         post?: never;
         delete?: never;
@@ -19855,6 +19913,24 @@ export interface components {
          * @enum {string}
          */
         RiskSourceState: "ok" | "restricted";
+        /**
+         * RoleCopy
+         * @description `POST /roles/{id}/copy` gövdesi. `key` SUNUCUDA addan türetilir (çakışırsa `_2` eki).
+         */
+        RoleCopy: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Emoji
+             * @default
+             */
+            emoji: string;
+            /** Name */
+            name: string;
+        };
         /** RoleCreate */
         RoleCreate: {
             /**
@@ -19871,6 +19947,50 @@ export interface components {
             key: string;
             /** Name */
             name: string;
+        };
+        /**
+         * RolePagesResponse
+         * @description Bir rolün sayfa izinleri (Sayfa İzinleri ekranı): `/auth/me.pages` ile AYNI biçim.
+         *
+         *     `pages` rolün 100 sayfasının TÜMÜNÜ taşır (hücresi olmayan sayfa `none`/`false` döner).
+         *     Sistem Yöneticisi için her sayfa `edit` + (onay eylemi varsa) `approve=true`, `is_locked=true`.
+         */
+        RolePagesResponse: {
+            /** Hidden Fields */
+            hidden_fields: components["schemas"]["HiddenCategory"][];
+            /** Is Locked */
+            is_locked: boolean;
+            /** Pages */
+            pages: {
+                [key: string]: components["schemas"]["PageGrant"];
+            };
+            /**
+             * Role Id
+             * Format: uuid
+             */
+            role_id: string;
+        };
+        /**
+         * RolePagesUpdate
+         * @description `PUT /roles/{id}/pages` gövdesi: Sayfa İzinleri ekranının "Kaydet"i TÜM tabloyu gönderir.
+         *
+         *     TAM matris: `pages` katalogdaki 100 sayfanın HEPSİNİ taşımak zorundadır (eksik anahtar 422;
+         *     bilinmeyen/fazla anahtar Pydantic 422'si — anahtar bir ENUM'dur). Gerekçe: kısmi gövde
+         *     "gönderilmeyen sayfa ne olur" belirsizliğini doğurur ve eski bir istemci yeni eklenen sayfayı
+         *     sessizce `none` bırakır; tam gövde ile sonuç gövdenin kendisidir (idempotent, farksız).
+         *     `hidden_fields` gizli kategori kümesinin TAM değiştirmesidir (boş = hiçbiri gizli değil;
+         *     yinelenen değer tekilleştirilir). Pages + hidden_fields TEK transaction'da yazılır (atomik).
+         *     Kurallar (servis, 422): `approve=true` yalnız `has_approval=true` sayfada; `level=none` iken
+         *     `approve=true` olamaz. Bu dilimde `tum_tutarlar` dışındaki kategoriler yalnız SAKLANIR
+         *     (maske IZN-B4).
+         */
+        RolePagesUpdate: {
+            /** Hidden Fields */
+            hidden_fields: components["schemas"]["HiddenCategory"][];
+            /** Pages */
+            pages: {
+                [key: string]: components["schemas"]["PageGrant"];
+            };
         };
         /** RoleRename */
         RoleRename: {
@@ -19900,12 +20020,16 @@ export interface components {
             id: string;
             /** Is Assignable */
             is_assignable: boolean;
+            /** Is Locked */
+            is_locked: boolean;
             /** Is System */
             is_system: boolean;
             /** Key */
             key: string;
             /** Name */
             name: string;
+            /** User Count */
+            user_count: number;
         };
         /**
          * RowKind
@@ -40638,6 +40762,149 @@ export interface operations {
             };
         };
     };
+    copy_role_endpoint_roles__role_id__copy_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCopy"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_role_pages_endpoint_roles__role_id__pages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RolePagesResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_role_pages_endpoint_roles__role_id__pages_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RolePagesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RolePagesResponse"];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_role_permissions_endpoint_roles__role_id__permissions_get: {
         parameters: {
             query?: never;
@@ -40699,15 +40966,6 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PermissionCell"];
-                };
-            };
             /** @description Yetkisiz işlem */
             403: {
                 headers: {
@@ -40721,6 +40979,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Uç kaldırıldı: izinler artık sayfa bazlı (PUT /roles/{id}/pages) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

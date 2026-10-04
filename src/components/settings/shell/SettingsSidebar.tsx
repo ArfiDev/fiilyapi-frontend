@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { cx } from "@/lib/cx";
+import { usePages } from "@/lib/api/hooks/usePages";
+import { useSession } from "@/components/shell/SessionProvider";
+import { visibleNavGroups } from "@/components/shell/nav-visibility";
 import { isActivePath } from "@/lib/shell/isActive";
 import { useLogout } from "@/lib/shell/useLogout";
 import { SETTINGS_NAV } from "./settings-nav-config";
@@ -11,13 +15,17 @@ import "./settings-shell.css";
 export function SettingsSidebar() {
   const pathname = usePathname();
   const { logout, error } = useLogout();
+  // IZN-F2.2 — yalnız MENÜ süzülür (rota/düğme kapıları ayrı); kural ana kabukla AYNI (`visibleNavGroups`).
+  const { me } = useSession();
+  const { data: pageCatalog } = usePages();
+  const navGroups = useMemo(() => visibleNavGroups(SETTINGS_NAV, me, pageCatalog), [me, pageCatalog]);
 
   return (
     <aside className="settings-sidebar" aria-label="Ayarlar menüsü">
       <Link href="/" className="settings-sidebar__back">
         ← Gösterge Paneli
       </Link>
-      {SETTINGS_NAV.map((group, gi) => (
+      {navGroups.map((group, gi) => (
         <div key={group.heading}>
           <div className="settings-group">
             <div className="settings-group__label">{group.heading}</div>
@@ -37,7 +45,7 @@ export function SettingsSidebar() {
               })}
             </nav>
           </div>
-          {gi < SETTINGS_NAV.length - 1 && <div className="settings-divider" />}
+          {gi < navGroups.length - 1 && <div className="settings-divider" />}
         </div>
       ))}
       <div className="settings-divider" />
