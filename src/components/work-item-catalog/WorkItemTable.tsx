@@ -25,7 +25,7 @@ export interface WorkItemTableProps {
   onSave: (key: string) => void;
 }
 
-/** KIK:128-181 — 9 kolon, `min-width:960px`, yatay kaydırma; yeni satırlar en üstte (KIK:247). */
+/** KIK:128-181 — 9 kolon, `min-width:992px`, yatay kaydırma; yeni satırlar en üstte (KIK:247). */
 export function WorkItemTable({
   items,
   newDrafts,
