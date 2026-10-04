@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-04 17:00",
+  guncellendi: "2026-10-04 19:30",
   gorevler: [
     {
       kod: "IZN",
@@ -47,8 +47,10 @@ export const VERI: GelistirmeVerisi = {
         { kod: "T0", aciklama: "Sayfa ve proje sekmesi envanteri, hassas alanlar", durum: "bitti", hat: "frontend" },
         { kod: "M1 / M2", aciklama: "Sayfa İzinleri, Kullanıcılar, Rol Yönetimi mockup'ları (onaylı)", durum: "bitti", hat: "frontend" },
         { kod: "P0", aciklama: "Mimari plan + dilim sırası (IZN-PLAN.md)", durum: "bitti", hat: "backend" },
-        { kod: "B1", aciklama: "100 sayfalık katalog, yeni izin tabloları, giriş yapanın sayfaları", durum: "devam", hat: "backend" },
-        { kod: "F1", aciklama: "Menüde görülemeyen sayfalar gizlenir", durum: "sirada", hat: "frontend", bagimlilik: "IZN-B1" },
+        { kod: "B1", aciklama: "100 sayfalık katalog, yeni izin tabloları, giriş yapanın sayfaları", durum: "bitti", hat: "backend", pr: "backend #170" },
+        { kod: "F1", aciklama: "Menüde görülemeyen sayfalar gizlenir", durum: "bitti", hat: "frontend", pr: "frontend #177" },
+        { kod: "B2 / F2", aciklama: "Yetki kontrolü yeni tablolardan + Sayfa İzinleri ekranı, yeni roller atanabilir", durum: "sirada", hat: "backend" },
+        { kod: "B3…B6 / SIL", aciklama: "Proje ekibi, onay proje rolünden, hassas alanlar, eski sistemin sökümü; silme hattı", durum: "sirada", hat: "backend" },
       ],
       kararlar: [
         "Süper düzeyi kalkar; silme yalnız Sistem Yöneticisi, her koşulda.",
