@@ -329,6 +329,11 @@ const ALLOWED_ROOTS = new Set([
   // {id}/quotes`) AYRI bir kokten gecer ve bununla karismaz. Eksikse tum teklif ekranlari
   // YALNIZ CANLIDA 404 alir; jsdom ve e2e mock-backend BFF'yi atladigi icin GORMEZ.
   "offers",
+  // IZN-F1.2 — Sayfa kataloğu (`GET /pages`, 100 satır): menü görünürlüğü ikiz
+  // listesini buradan okur. Yeni kök; eksikse menü YALNIZ CANLIDA kök sayfaların
+  // ikiz kuralını uygulayamaz (404). jsdom ve e2e mock-backend BFF'yi atladığı
+  // için GÖRMEZ.
+  "pages",
 ]);
 
 // JSON/metin sayilan icerik tipleri: govde metne cozulup JSON olarak islenir.

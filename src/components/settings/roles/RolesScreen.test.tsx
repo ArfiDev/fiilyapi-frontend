@@ -186,3 +186,34 @@ describe("RolesScreen", () => {
     expect(screen.getByText(/rolünü silmek istediğinize emin misiniz/i)).toBeInTheDocument();
   });
 });
+
+// IZN-F1.3 — atanamaz roller (`is_assignable: false`) rol kartı olarak gösterilmez.
+describe("RolesScreen — atanamaz roller", () => {
+  it("is_assignable=false rolün kartı YOK ve izinleri istenmez; atanabilir roller görünür", async () => {
+    const mixedRoles = [
+      { ...roles[0], is_assignable: true },
+      { ...roles[1], is_assignable: true },
+      { id: "r3", key: "sayfa_rolu", name: "Sayfa Rolü", emoji: "📄", description: "", is_system: true, is_assignable: false },
+    ];
+    const json = (body: unknown) =>
+      new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/roles/") && url.includes("/permissions")) {
+        return json([{ module_key: "dashboard", access_level: "full", scope: "all" }]);
+      }
+      if (url.includes("/roles")) return json(mixedRoles);
+      if (url.includes("/modules")) return json(modules);
+      if (url.includes("/users")) return json({ items: [], total: 0, limit: 200, offset: 0 });
+      return json(null);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderScreen();
+
+    expect(await screen.findByRole("button", { name: /Saha ekibi|Saha/ })).toBeInTheDocument();
+    expect(screen.queryByText("Sayfa Rolü")).not.toBeInTheDocument();
+    const requested = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(requested.some((url) => url.includes("/roles/r3/permissions"))).toBe(false);
+  });
+});

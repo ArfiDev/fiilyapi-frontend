@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { cx } from "@/lib/cx";
 import { initials } from "@/lib/shell/initials";
 import { useLogout } from "@/lib/shell/useLogout";
 import { LockIcon } from "@/components/ui/icons";
+import { usePages } from "@/lib/api/hooks/usePages";
 import { activeNavHref, NAV_GROUPS } from "./nav-config";
+import { visibleNavGroups } from "./nav-visibility";
 import { useSession } from "./SessionProvider";
 import { UnsavedTabGuardModal } from "./workspace-tabs/UnsavedTabGuardModal";
 import { useWorkspaceTabsController } from "./workspace-tabs/useWorkspaceTabsController";
@@ -55,6 +57,10 @@ export default function Sidebar() {
   // `/hazine/cek-senet` yolunda `/hazine` de eşleşir ve iki öğe birden yanardı
   // (bkz. `activeNavHref` notu).
   const currentHref = activeNavHref(pathname);
+  // IZN-F1.2 — yalnız MENÜ süzülür (rota/düğme kapıları ayrı). Katalog (ikiz listesi)
+  // gelene kadar `pages` undefined: öğeler yalnız kendi grant'ına bakar.
+  const { data: pageCatalog } = usePages();
+  const navGroups = useMemo(() => visibleNavGroups(NAV_GROUPS, me, pageCatalog), [me, pageCatalog]);
   const navRef = useRef<HTMLElement>(null);
   useActiveItemInView(navRef, currentHref);
 
@@ -76,7 +82,7 @@ export default function Sidebar() {
             </Link>
           </div>
         )}
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.heading} className="sidebar-group">
             <div className="sidebar-group__heading">{group.heading}</div>
             {group.items.map(({ label, href, Icon }) => {

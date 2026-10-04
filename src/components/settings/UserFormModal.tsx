@@ -50,6 +50,13 @@ export function UserFormModal({ mode, user, onClose }: UserFormModalProps) {
   // KURAL 7 · Modal'a isDirty VERİLMEZ, doğrudan bağlanır.
   useUnsavedChanges(isDirty, "Kullanıcı");
 
+  // IZN-F1.2 — atanamaz roller seçicide görünmez (yalnız `is_assignable` okunur);
+  // kullanıcının ZATEN atanmış rolü atanamaz olsa da listede kalır, yoksa düzenleme
+  // formunda seçili değer kaybolur ve kayıt yanlışlıkla "Rol seçin" hatasına düşerdi.
+  const selectableRoles = (rolesQuery.data ?? []).filter(
+    (role) => role.is_assignable !== false || role.id === user?.role_id,
+  );
+
   const isPending = createUser.isPending || updateUser.isPending;
 
   function validate(): string | null {
@@ -129,7 +136,7 @@ export function UserFormModal({ mode, user, onClose }: UserFormModalProps) {
           {(control) => (
             <Select {...control} value={roleId} onChange={(e) => setRoleId(e.target.value)}>
               <option value="">Seçin…</option>
-              {rolesQuery.data?.map((role) => (
+              {selectableRoles.map((role) => (
                 <option key={role.id} value={role.id}>
                   {role.name}
                 </option>

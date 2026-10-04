@@ -17,9 +17,14 @@ vi.mock("next/navigation", () => ({
 // öğeleri düz Link gibi davranır (eski testler bu hâlde koşar); sekme
 // davranışı testleri `id`li oturumla koşar.
 const BASE_ME = { full_name: "Ahmet Yılmaz", role_key: "patron", title: "Patron" };
-let sessionMe: Record<string, string> = BASE_ME;
+let sessionMe: Record<string, unknown> = BASE_ME;
 vi.mock("./SessionProvider", () => ({
   useSession: () => ({ me: sessionMe, isLoading: false }),
+}));
+// IZN-F1.2: menü ikiz kuralı `GET /pages` kataloğunu okur; varsayılan = katalog henüz yok.
+let pageCatalog: { key: string; twins: string[] }[] | undefined;
+vi.mock("@/lib/api/hooks/usePages", () => ({
+  usePages: () => ({ data: pageCatalog }),
 }));
 
 afterEach(() => {
@@ -27,6 +32,7 @@ afterEach(() => {
   pushMock.mockReset();
   currentPath = "/";
   sessionMe = BASE_ME;
+  pageCatalog = undefined;
   unsavedRegistry.set("sidebar-test", null);
 });
 
@@ -268,5 +274,51 @@ describe("Sidebar · aktif öğe görünür alana alınır", () => {
     fakeBoxes(100);
     const { container } = render(<Sidebar />);
     expect(container.querySelector<HTMLElement>(".sidebar-nav")!.scrollTop).toBe(0);
+  });
+});
+
+// IZN-F1.2 — menü, oturumun sayfa izinlerine göre süzülür (yalnız menü; rota kapısı YOK).
+describe("Sidebar · sayfa izinlerine göre menü", () => {
+  const grant = (level: "none" | "view" | "edit") => ({ level, approve: false });
+
+  it("level none olan öğe menüde yok; view/edit olan ve izni tanımsız olan öğe görünür", () => {
+    sessionMe = {
+      ...BASE_ME,
+      is_system_admin: false,
+      pages: { "mali.hazine": grant("none"), "ik.personel": grant("view"), "saha.puantaj": grant("edit") },
+    };
+    render(<Sidebar />);
+    expect(screen.queryByRole("link", { name: /^Hazine$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Personel/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Puantaj/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Muhasebe/ })).toBeInTheDocument();
+  });
+
+  it("tüm öğeleri none olan grubun başlığı da gizlenir", () => {
+    sessionMe = { ...BASE_ME, is_system_admin: false, pages: { "ik.personel": grant("none") } };
+    render(<Sidebar />);
+    expect(screen.queryByText("İK")).not.toBeInTheDocument();
+    expect(screen.getByText("Saha")).toBeInTheDocument();
+  });
+
+  it("sistem yöneticisi none hücreli olsa da her öğeyi görür", () => {
+    sessionMe = { ...BASE_ME, is_system_admin: true, pages: { "mali.hazine": grant("none") } };
+    render(<Sidebar />);
+    expect(screen.getByRole("link", { name: /^Hazine$/ })).toBeInTheDocument();
+  });
+
+  it("KARAR 5: kök none ama ikizi view ise görünür; katalog yokken none öğe gizli kalır", () => {
+    sessionMe = {
+      ...BASE_ME,
+      is_system_admin: false,
+      pages: { "saha.puantaj": grant("none"), "santiye.puantaj": grant("view") },
+    };
+    const { unmount } = render(<Sidebar />);
+    expect(screen.queryByRole("link", { name: /Puantaj/ })).not.toBeInTheDocument();
+    unmount();
+
+    pageCatalog = [{ key: "saha.puantaj", twins: ["santiye.puantaj", "bolum.puantaj"] }];
+    render(<Sidebar />);
+    expect(screen.getByRole("link", { name: /Puantaj/ })).toBeInTheDocument();
   });
 });

@@ -22,11 +22,29 @@ import {
   SettingsIcon,
   DocumentDashedIcon,
 } from "@/components/ui/icons";
+import type { components } from "@/lib/api/schema";
 import { isActivePath } from "@/lib/shell/isActive";
 import { routes } from "@/lib/routes";
 
+/** Sayfa kataloğu anahtarı (`GET /pages`) — menü görünürlüğü `me.pages[pageKey]` ile okunur. */
+export type NavPageKey = components["schemas"]["PageKey"];
+
 export type NavItem = {
   label: string;
+  /**
+   * IZN-F1.2 — Öğenin KÖK sayfa anahtarı. Bir menü öğesi birden çok katalog sayfasını
+   * (ör. Muhasebe: yevmiye · mizan · KDV …) kapsasa da menü görünürlüğü o öğenin
+   * AÇILIŞ sayfasının anahtarına bağlanır; href'i katalog rotasıyla eşleştiren bekçi
+   * `nav-config.test.ts`tedir.
+   */
+  pageKey: NavPageKey;
+  /**
+   * IZN-F1.3 — Öğenin kapsadığı DİĞER katalog sayfaları (Muhasebe → mizan, KDV …). Öğe, kendi
+   * anahtarı ya da bunlardan biri "none" değilse menüde görünür. Liste backend kataloğunun
+   * `ad` alanındaki "<Menü adı> › <Alt sayfa>" ilişkisinden türetilir; kümenin tamlığını
+   * `nav-page-keys.test.ts` bekçisi zorunlu kılar.
+   */
+  extraPageKeys?: readonly NavPageKey[];
   href: string;
   Icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement;
 };
@@ -39,16 +57,16 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Genel",
     items: [
-      { label: "Gösterge Paneli", href: "/", Icon: DashboardIcon },
-      { label: "Onay Kutusu", href: routes.approvalInbox(), Icon: InboxIcon },
+      { label: "Gösterge Paneli", pageKey: "genel.gosterge_paneli", href: "/", Icon: DashboardIcon },
+      { label: "Onay Kutusu", pageKey: "genel.onay_kutusu", href: routes.approvalInbox(), Icon: InboxIcon },
       // AI-1 · FİİL AI Asistanı. Mockup (`AI Chat.dc.html`) kabuk sol menüsünü
       // ÇİZMEZ (kendi sohbet-geçmişi sütununu çizer), bu yüzden konum kabuk
       // canon'undan seçildi: "Genel" grubu tek bir modüle ait olmayan çapraz
       // yüzeylerin yeridir (Gösterge Paneli · Onay Kutusu · Raporlar) ve asistan
       // da tam olarak öyledir. Rota GERÇEKTİR (`/asistan`), ComingSoon DEĞİL.
-      { label: "FİİL AI", href: routes.assistant(), Icon: SparkleIcon },
-      { label: "Raporlar", href: routes.reports(), Icon: BarChartIcon },
-      { label: "Projeler", href: routes.projects.list(), Icon: BuildingIcon },
+      { label: "FİİL AI", pageKey: "genel.fiil_ai", href: routes.assistant(), Icon: SparkleIcon },
+      { label: "Raporlar", pageKey: "genel.raporlar", href: routes.reports(), Icon: BarChartIcon },
+      { label: "Projeler", pageKey: "genel.projeler", extraPageKeys: ["genel.proje_takvimi"], href: routes.projects.list(), Icon: BuildingIcon },
     ],
   },
   // 🔴 F-NAVSAHA · KULLANICI KARARI 2026-09-05 (tartışılmaz): tek `Saha & İK`
@@ -67,8 +85,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Saha",
     items: [
-      { label: "Puantaj", href: routes.timesheet(), Icon: CalendarCheckIcon },
-      { label: "Makine & Ekipman", href: routes.equipment.list(), Icon: TruckIcon },
+      { label: "Puantaj", pageKey: "saha.puantaj", href: routes.timesheet(), Icon: CalendarCheckIcon },
+      { label: "Makine & Ekipman", pageKey: "saha.makine_ekipman", extraPageKeys: ["saha.makine_calisma", "saha.makine_yakit", "saha.makine_kira"], href: routes.equipment.list(), Icon: TruckIcon },
       // Rota GERÇEKTİR (`/gunluk-kayit`), ComingSoon DEĞİL — bu dilimde
       // yazıldı. Ekran daha önce YALNIZ şantiye altında yaşıyordu
       // (`.../santiyeler/[siteId]/gunluk-kayit`); kök ikizi `/puantaj` ↔
@@ -80,12 +98,12 @@ export const NAV_GROUPS: NavGroup[] = [
       // `CalendarCheckIcon` Puantaj'ındır ve ikisi aynı grupta tutarlı okunur:
       // Puantaj = günün TEYİDİ (takvim + tik), Günlük Kayıt = günün KAYDI
       // (takvim). Ekran zaten gün eksenlidir (`derive.ts · isoDate`).
-      { label: "Günlük Kayıt", href: routes.siteDiary(), Icon: CalendarIcon },
+      { label: "Günlük Kayıt", pageKey: "saha.gunluk_kayit", href: routes.siteDiary(), Icon: CalendarIcon },
     ],
   },
   {
     heading: "İK",
-    items: [{ label: "Personel", href: routes.personnel.list(), Icon: UserIcon }],
+    items: [{ label: "Personel", pageKey: "ik.personel", extraPageKeys: ["ik.izin_yonetimi", "ik.belge_sertifika"], href: routes.personnel.list(), Icon: UserIcon }],
   },
   // PLN-F1 · K21 — mockup'ların sol menüsü `Planlama`yı `Saha & İK` ile
   // `Stok & Satınalma` arasına çizer (Planlama - Panel.dc.html:57-61); kodda
@@ -111,14 +129,14 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Planlama",
     items: [
-      { label: "Planlama Paneli", href: routes.planning.panel(), Icon: TrendingUpIcon },
-      { label: "Adam-Saat Bütçesi", href: routes.planning.budget(), Icon: CalculatorIcon },
-      { label: "Günlük İlerleme Raporu", href: routes.planning.dailyReport(), Icon: FileTextIcon },
-      { label: "Haftalık QURR", href: routes.planning.weeklyReport(), Icon: BarChartIcon },
-      { label: "Birim Oran Kataloğu", href: routes.planning.catalog(), Icon: BooksIcon },
+      { label: "Planlama Paneli", pageKey: "planlama.panel", href: routes.planning.panel(), Icon: TrendingUpIcon },
+      { label: "Adam-Saat Bütçesi", pageKey: "planlama.adam_saat_butcesi", href: routes.planning.budget(), Icon: CalculatorIcon },
+      { label: "Günlük İlerleme Raporu", pageKey: "planlama.gunluk_rapor", href: routes.planning.dailyReport(), Icon: FileTextIcon },
+      { label: "Haftalık QURR", pageKey: "planlama.haftalik_qurr", href: routes.planning.weeklyReport(), Icon: BarChartIcon },
+      { label: "Birim Oran Kataloğu", pageKey: "planlama.birim_oran_katalogu", href: routes.planning.catalog(), Icon: BooksIcon },
       // NAV-F2 · KULLANICI İSTEĞİ: disiplin buradan oluşturulur/yönetilir (M6 bileşenleri, yeni tasarım yok).
       // Birim Oran Kataloğu'ndaki "Disiplinler" modalı yerinde kalır. Simge settedeki `SettingsIcon` (yönetim).
-      { label: "Disiplin Yönetimi", href: routes.planning.disciplineManagement(), Icon: SettingsIcon },
+      { label: "Disiplin Yönetimi", pageKey: "planlama.disiplin_yonetimi", href: routes.planning.disciplineManagement(), Icon: SettingsIcon },
     ],
   },
   // NAV-F1 · KULLANICI KARARI (KARARLAR.md b1974d8) — kabuk kanonundan onaylı sapma:
@@ -130,21 +148,21 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       // TKL-F3.3 · T31: Rozet YOK, izinle SÜZÜLMEZ (F1 ÜS-14): `contracts:none` kullanıcı
       // öğeyi görür, ekran AccessDenied basar. Simge Sözleşmeler ile paylaşılır.
-      { label: "Teklif Hazırlama", href: routes.offers.list(), Icon: FileTextIcon },
+      { label: "Teklif Hazırlama", pageKey: "teklif.teklif_hazirlama", href: routes.offers.list(), Icon: FileTextIcon },
       // NAV-F2 · KULLANICI İSTEĞİ: Teklif Hazırlama'nın sekmesi kalktı, şablonlar menüden açılır.
       // `/teklif-hazirlama/sablonlar` Teklif Hazırlama'nın altıdır → `activeNavHref` EN UZUN eşleşmeyi seçer.
       // Simge settedeki `DocumentDashedIcon` (şablon = kesik çizgili belge).
-      { label: "Teklif Şablonları", href: routes.offers.templates(), Icon: DocumentDashedIcon },
-      { label: "Sözleşmeler", href: routes.contracts.list(), Icon: FileTextIcon },
+      { label: "Teklif Şablonları", pageKey: "teklif.sablonlar", href: routes.offers.templates(), Icon: DocumentDashedIcon },
+      { label: "Sözleşmeler", pageKey: "teklif.sozlesmeler", extraPageKeys: ["teklif.taseron_firmalar", "teklif.isveren_sozlesme", "teklif.poz_dagilimi", "teklif.taseron_sozlesme"], href: routes.contracts.list(), Icon: FileTextIcon },
       // TKL-F1.3 · ÜS-14: rozet YOK, izinle süzülmez; simge settedeki `ListIcon` (Bordro ile paylaşılır).
-      { label: "İş Kalemi Kataloğu", href: routes.planning.workItemCatalog(), Icon: ListIcon },
+      { label: "İş Kalemi Kataloğu", pageKey: "teklif.is_kalemi_katalogu", href: routes.planning.workItemCatalog(), Icon: ListIcon },
     ],
   },
   {
     heading: "Stok & Satınalma",
     items: [
-      { label: "Stok & Depo", href: routes.stock(), Icon: BoxIcon },
-      { label: "Satınalma & Teklif", href: routes.purchasing.root(), Icon: CartIcon },
+      { label: "Stok & Depo", pageKey: "stok.stok_depo", href: routes.stock(), Icon: BoxIcon },
+      { label: "Satınalma & Teklif", pageKey: "stok.satinalma_talepleri", extraPageKeys: ["stok.siparisler", "stok.tedarikciler", "stok.teklif_karsilastirma"], href: routes.purchasing.root(), Icon: CartIcon },
     ],
   },
   {
@@ -154,13 +172,13 @@ export const NAV_GROUPS: NavGroup[] = [
       // çizilir; kabuk canon'unda karşılığı YOKTU — ünite satışı/tahsilatı
       // mali bir yüzey olduğu için "Mali" grubunun başına eklendi. Rota GERÇEKTİR (`/satis`), ComingSoon DEĞİL;
       // nav href guard testi bunu ayrıca doğrular.
-      { label: "Satış Yönetimi", href: routes.sales.root(), Icon: BuildingIcon },
-      { label: "Muhasebe", href: routes.accounting.root(), Icon: BankIcon },
+      { label: "Satış Yönetimi", pageKey: "mali.satis", extraPageKeys: ["mali.satis_blok", "mali.satis_unite", "mali.satis_toplu_uretim", "mali.satis_excel", "mali.satis_paylasim"], href: routes.sales.root(), Icon: BuildingIcon },
+      { label: "Muhasebe", pageKey: "mali.yevmiye", extraPageKeys: ["mali.hesap_plani", "mali.mizan", "mali.kdv_beyani", "mali.banka_mutabakati", "mali.donem_kapanisi"], href: routes.accounting.root(), Icon: BankIcon },
       // F-FAT2 T2: FY (`Fatura Yönetimi.dc.html` 39) mockup'ın "Mali" bloğunda
       // Muhasebe'nin hemen ardında durur; rota GERÇEKTİR (`/faturalar`),
       // ComingSoon DEĞİL.
-      { label: "Fatura Yönetimi", href: routes.invoices.list(), Icon: FileTextIcon },
-      { label: "Hazine", href: routes.treasury.root(), Icon: WalletIcon },
+      { label: "Fatura Yönetimi", pageKey: "mali.fatura", href: routes.invoices.list(), Icon: FileTextIcon },
+      { label: "Hazine", pageKey: "mali.hazine", href: routes.treasury.root(), Icon: WalletIcon },
       // 🔴 F-UNIT1 T4 · ÖLÜ EKRAN DÜZELTMESİ. `/hazine/cek-senet` (E10 · Çek &
       // Ödeme) sayfası, görünümü, 401 satırlık testi ve 2 görsel karesiyle
       // AYLARDIR duruyordu ama repoda ona giden TEK BİR `Link`/`push` YOKTU:
@@ -180,15 +198,15 @@ export const NAV_GROUPS: NavGroup[] = [
       // Paylaşılan simge burada BİLGİ de taşır — bu ekran Hazine'nin alt
       // yüzeyidir. Simge tekrarı kabuk canonunda zaten var (`BuildingIcon` ×3,
       // `FileTextIcon` ×2); yeni glif İCAT EDİLMEDİ.
-      { label: "Çek & Ödeme", href: routes.treasury.financialInstruments(), Icon: WalletIcon },
-      { label: "Hakedişler", href: routes.progressPayments.list(), Icon: ClockIcon },
-      { label: "Mali Tablolar", href: routes.financialStatements.root(), Icon: TrendingUpIcon },
-      { label: "Bordro", href: routes.payroll.root(), Icon: ListIcon },
-      { label: "Şirket Varlıkları", href: routes.companyAssets(), Icon: BuildingIcon },
+      { label: "Çek & Ödeme", pageKey: "mali.cek_odeme", href: routes.treasury.financialInstruments(), Icon: WalletIcon },
+      { label: "Hakedişler", pageKey: "mali.hakedis_isveren", extraPageKeys: ["mali.hakedis_taseron"], href: routes.progressPayments.list(), Icon: ClockIcon },
+      { label: "Mali Tablolar", pageKey: "mali.gelir_tablosu", extraPageKeys: ["mali.bilanco", "mali.nakit_akisi"], href: routes.financialStatements.root(), Icon: TrendingUpIcon },
+      { label: "Bordro", pageKey: "mali.bordro", extraPageKeys: ["mali.bordro_gecmis", "mali.sgk_bildirimi"], href: routes.payroll.root(), Icon: ListIcon },
+      { label: "Şirket Varlıkları", pageKey: "mali.sirket_varliklari", href: routes.companyAssets(), Icon: BuildingIcon },
       // F-BC T4: Ekran 12 gerçek rotasıdır (`/belgeler`) — ComingSoon'dan çıktı.
       // Eski `/belge-arsivi` href'i hiç yazılmamış bir rotaydı; nav href guard
       // testi bu öğenin gerçek bir sayfaya düştüğünü ayrıca doğrular.
-      { label: "Belge Arşivi", href: routes.documents(), Icon: FolderIcon },
+      { label: "Belge Arşivi", pageKey: "mali.belge_arsivi", href: routes.documents(), Icon: FolderIcon },
     ],
   },
 ];

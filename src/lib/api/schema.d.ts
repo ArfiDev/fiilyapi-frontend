@@ -3732,6 +3732,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pages Endpoint
+         * @description Sayfa kataloğu: 100 sayfa, menü sırasıyla.
+         *
+         *     Kapı: yalnız oturum (`get_current_user`) — modül izni DEĞİL. Katalog bir kod sabitidir
+         *     (kiracı verisi taşımaz) ve her oturumun frontend'i `nav-config`i bu anahtarlarla çakıştırır;
+         *     izin ekranı (B2/F2) zaten kendi yazma kapısını taşır. `GET /company` ve `/auth/me` ile aynı
+         *     desen. DB'ye dokunmaz.
+         */
+        get: operations["list_pages_endpoint_pages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/payments/{payment_id}": {
         parameters: {
             query?: never;
@@ -13142,6 +13167,12 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * HiddenCategory
+         * @description Rol başına gizlenen hassas alan kategorisi. Satır var = o kategori bu rolde gizli.
+         * @enum {string}
+         */
+        HiddenCategory: "sozlesme_fiyat" | "maliyet_kar" | "maas_kisisel" | "banka_kasa" | "satis_alici" | "tum_tutarlar";
         /** HistogramWeek */
         HistogramWeek: {
             /** Actual People */
@@ -15244,11 +15275,19 @@ export interface components {
             email: string;
             /** Full Name */
             full_name: string;
+            /** Hidden Fields */
+            hidden_fields: components["schemas"]["HiddenCategory"][];
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Is System Admin */
+            is_system_admin: boolean;
+            /** Pages */
+            pages: {
+                [key: string]: components["schemas"]["PageGrant"];
+            };
             /** Permissions */
             permissions: {
                 [key: string]: components["schemas"]["AccessLevel"];
@@ -16054,6 +16093,60 @@ export interface components {
             source: components["schemas"]["WorkerSource"];
             /** Trade */
             trade: string;
+        };
+        /**
+         * PageGrant
+         * @description Bir sayfadaki erişim: düzey + onay eylemi. Silme düzey DEĞİLDİR (`is_system_admin`).
+         */
+        PageGrant: {
+            /** Approve */
+            approve: boolean;
+            level: components["schemas"]["PageLevel"];
+        };
+        /**
+         * PageGroup
+         * @enum {string}
+         */
+        PageGroup: "genel" | "saha" | "ik" | "planlama" | "teklif" | "stok" | "mali" | "proje_ici" | "ayarlar";
+        /**
+         * PageKey
+         * @enum {string}
+         */
+        PageKey: "genel.gosterge_paneli" | "genel.onay_kutusu" | "genel.fiil_ai" | "genel.raporlar" | "genel.projeler" | "genel.proje_takvimi" | "saha.puantaj" | "saha.makine_ekipman" | "saha.makine_calisma" | "saha.makine_yakit" | "saha.makine_kira" | "saha.gunluk_kayit" | "ik.personel" | "ik.izin_yonetimi" | "ik.belge_sertifika" | "planlama.panel" | "planlama.adam_saat_butcesi" | "planlama.gunluk_rapor" | "planlama.haftalik_qurr" | "planlama.birim_oran_katalogu" | "planlama.disiplin_yonetimi" | "teklif.teklif_hazirlama" | "teklif.sablonlar" | "teklif.sozlesmeler" | "teklif.taseron_firmalar" | "teklif.isveren_sozlesme" | "teklif.poz_dagilimi" | "teklif.taseron_sozlesme" | "teklif.is_kalemi_katalogu" | "stok.stok_depo" | "stok.satinalma_talepleri" | "stok.siparisler" | "stok.tedarikciler" | "stok.teklif_karsilastirma" | "mali.satis" | "mali.satis_blok" | "mali.satis_unite" | "mali.satis_toplu_uretim" | "mali.satis_excel" | "mali.satis_paylasim" | "mali.yevmiye" | "mali.hesap_plani" | "mali.mizan" | "mali.kdv_beyani" | "mali.banka_mutabakati" | "mali.donem_kapanisi" | "mali.fatura" | "mali.hazine" | "mali.cek_odeme" | "mali.hakedis_isveren" | "mali.hakedis_taseron" | "mali.gelir_tablosu" | "mali.bilanco" | "mali.nakit_akisi" | "mali.bordro" | "mali.bordro_gecmis" | "mali.sgk_bildirimi" | "mali.sirket_varliklari" | "mali.belge_arsivi" | "proje.santiyeler" | "proje.ozet" | "proje.paylasim_tablosu" | "proje.is_kalemleri" | "proje.isveren_hakedis" | "proje.taseron_hakedis" | "proje.belgeler" | "santiye.bolumler" | "santiye.is_kalemleri" | "santiye.puantaj" | "santiye.stok" | "santiye.hakedisler" | "santiye.gunluk_kayit" | "santiye.belgeler" | "santiye.bolum_dagilimi" | "santiye.gunluk_ozet" | "santiye.gunluk_planlama" | "santiye.adam_saat_butcesi" | "santiye.planlama_paneli" | "santiye.gunluk_ilerleme_raporu" | "santiye.haftalik_qurr" | "bolum.detay" | "bolum.is_kalemleri" | "bolum.puantaj" | "bolum.malzeme" | "bolum.hakedis" | "bolum.gunluk_kayit" | "bolum.gunluk_kayit_detay" | "ayarlar.sirket_bilgileri" | "ayarlar.bildirimler" | "ayarlar.gorunum" | "ayarlar.planlama" | "ayarlar.kullanicilar" | "ayarlar.rol_yonetimi" | "ayarlar.sayfa_izinleri" | "ayarlar.onay_rolleri" | "ayarlar.bordro_oranlari" | "ayarlar.entegrasyonlar" | "ayarlar.yedekleme" | "ayarlar.denetim_gunlugu" | "ayarlar.gelistirme";
+        /**
+         * PageKind
+         * @enum {string}
+         */
+        PageKind: "sirket" | "proje";
+        /**
+         * PageLevel
+         * @description Sayfa erişim düzeyi: Görmez / Görür / Düzenler. Silme düzey DEĞİLDİR (yalnız Sistem Yöneticisi);
+         *     "Onaylar" ayrı bir bayraktır (`can_approve`).
+         * @enum {string}
+         */
+        PageLevel: "none" | "view" | "edit";
+        /**
+         * PageResponse
+         * @description Katalogdaki bir sayfa. `key` bir ENUM'dur: OpenAPI'den TS birleşik tipi (union) üretilir.
+         */
+        PageResponse: {
+            group: components["schemas"]["PageGroup"];
+            /** Group Name */
+            group_name: string;
+            /** Has Approval */
+            has_approval: boolean;
+            key: components["schemas"]["PageKey"];
+            kind: components["schemas"]["PageKind"];
+            /** Name */
+            name: string;
+            /** Route */
+            route: string;
+            /** Source */
+            source: string;
+            /** Subgroup */
+            subgroup: string | null;
+            /** Twins */
+            twins: components["schemas"]["PageKey"][];
         };
         /**
          * PanelDiscipline
@@ -19805,6 +19898,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Is Assignable */
+            is_assignable: boolean;
             /** Is System */
             is_system: boolean;
             /** Key */
@@ -35716,6 +35811,40 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    list_pages_endpoint_pages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageResponse"][];
+                };
+            };
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

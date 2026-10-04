@@ -71,7 +71,9 @@ export function RolesScreen() {
   const rolesQuery = useRoles();
   const modulesQuery = useModules();
   const usersQuery = useUsers({ limit: USERS_PAGE_SIZE, offset: 0 });
-  const roles = rolesQuery.data ?? [];
+  // IZN-F1.3 — atanamaz roller (yeni sayfa-izin rolleri) bu ekranda kart/satır olmaz;
+  // yalnız `is_assignable` okunur. Kullanıcı ekranı rol etiketleri (UsersScreen) ayrı kalır.
+  const roles = (rolesQuery.data ?? []).filter((role) => role.is_assignable !== false);
   const permQueries = useAllRolePermissions(roles.map((r) => r.id));
   const createRole = useCreateRole();
   const deleteRole = useDeleteRole();

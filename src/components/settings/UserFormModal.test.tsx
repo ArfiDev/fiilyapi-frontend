@@ -121,3 +121,49 @@ describe("UserFormModal — kaydedilmemiş değişiklik kaydı (create)", () => 
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
   });
 });
+
+// IZN-F1.2 — atanamaz roller (`is_assignable: false`) rol seçicide görünmez.
+describe("UserFormModal — atanamaz roller süzülür", () => {
+  const ROLES = [
+    { id: "r1", key: "patron", name: "Patron", emoji: "", description: "", is_system: true, is_assignable: true },
+    { id: "r2", key: "sayfa_rolu", name: "Sayfa Rolü", emoji: "", description: "", is_system: true, is_assignable: false },
+  ];
+
+  function stubRoles() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(ROLES), { status: 200, headers: { "content-type": "application/json" } })),
+    );
+  }
+
+  function renderEdit(roleId: string) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const user = { id: "u1", email: "a@b.com", full_name: "Ali", title: "", role_id: roleId, status: "active" } as never;
+    return render(
+      <QueryClientProvider client={client}>
+        <UserFormModal mode="edit" user={user} onClose={() => {}} />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("oluştururken is_assignable=false rol seçenekte YOK, atanabilir rol var", async () => {
+    stubRoles();
+    renderModal(() => {});
+    await screen.findByRole("option", { name: "Patron" });
+    expect(screen.queryByRole("option", { name: "Sayfa Rolü" })).not.toBeInTheDocument();
+  });
+
+  it("düzenlerken kullanıcının ZATEN atanmış atanamaz rolü listede kalır ve seçili görünür", async () => {
+    stubRoles();
+    renderEdit("r2");
+    expect(await screen.findByRole("option", { name: "Sayfa Rolü" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Rol")).toHaveValue("r2");
+  });
+
+  it("düzenlerken başka (atanabilir) rolün kullanıcısı için atanamaz rol YİNE gizlidir", async () => {
+    stubRoles();
+    renderEdit("r1");
+    await screen.findByRole("option", { name: "Patron" });
+    expect(screen.queryByRole("option", { name: "Sayfa Rolü" })).not.toBeInTheDocument();
+  });
+});

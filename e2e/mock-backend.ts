@@ -543,6 +543,10 @@ const ME = {
   permissions: { earned_value: "admin" },
   // DSC-B0: atamasız kullanıcı = kısıtsız (boş liste).
   disciplines: [],
+  // IZN-F1.2: hücresiz rol = `pages: {}` → bilinmez = GÖRÜNÜR (menü ve kareler değişmez).
+  is_system_admin: false,
+  pages: {},
+  hidden_fields: [],
 } satisfies components["schemas"]["MeResponse"];
 
 // NOT: Gercek backend semasi (bkz. src/lib/api/schema.d.ts) tip-basi metrikleri duz
@@ -9434,6 +9438,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     // /modules, /roles listeleri
     if (method === "GET" && path === "/modules") return send(200, state.modules);
     if (method === "GET" && path === "/roles") return send(200, state.roles);
+    // IZN-F1.2: sayfa kataloğu boş → menü ikiz kuralı uygulanmaz, `pages: {}` zaten hepsini gösterir.
+    if (method === "GET" && path === "/pages") return send(200, []);
 
     // /projects — sayaçlar filtreden bağımsız, item listesi filtrelenir (spec §3).
     if (method === "GET" && path === "/projects") {
