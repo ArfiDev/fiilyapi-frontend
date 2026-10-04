@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui";
+import { PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useCreateProject } from "@/lib/api/hooks/useProjectMutations";
 import { useUsers } from "@/lib/api/hooks/useUsers";
 import { BackendError } from "@/lib/api/unwrap";
@@ -62,6 +65,9 @@ const MANAGER_OPTIONS_LIMIT = 200;
  */
 export function ProjectCreateView() {
   const router = useRouter();
+  // IZN-F2.y · POST /projects = genel.projeler Düzenler (backend `require_page`). Bugün kapı yok →
+  // sayfa izni hiç yoksa (fallback) form açık kalır.
+  const canCreate = useButtonGate({ pages: PROJECT_CREATE_EDIT, need: "edit", fallback: true });
   const createProject = useCreateProject();
   const usersQuery = useUsers({ limit: MANAGER_OPTIONS_LIMIT, offset: 0 });
   const managerNames = (usersQuery.data?.items ?? []).map((u) => u.full_name);
@@ -182,6 +188,8 @@ export function ProjectCreateView() {
       },
     });
   }
+
+  if (!canCreate) return <AccessDenied />;
 
   return (
     <div className="pf-shell">

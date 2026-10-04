@@ -15,6 +15,8 @@ import {
 } from "@/components/subcontractor-contract-form/form-state";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatPercent } from "@/lib/format";
 import { listTruncationMessage } from "@/lib/list-truncation";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -89,6 +91,10 @@ const VAT_READONLY_NOTE = "KDV oranı sözleşme formunda çizili değildir — 
 export function SubcontractorContractDetailView({
   contractId,
 }: SubcontractorContractDetailViewProps) {
+  // IZN-F2.y · poz ekle/fiyat/şartlar (POST/PATCH /subcontractor-contracts…) = sözleşme sayfaları
+  // Düzenler (VEYA, backend `contracts:full`). Bugün kapı yok → sayfa izni hiç yoksa (fallback) açık.
+  // Görüntüleme DEĞİŞMEZ.
+  const canWrite = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: true });
   const contractQuery = useSubcontractorContract(contractId);
   const detail = contractQuery.data;
   const projectId = detail?.project_id ?? "";
@@ -285,9 +291,10 @@ export function SubcontractorContractDetailView({
         errorMessage={itemsError}
         onCommitUnitPrice={handleCommitUnitPrice}
         onAddItem={() => setIsAddItemOpen(true)}
+        canWrite={canWrite}
       />
 
-      {isAddItemOpen && (
+      {canWrite && isAddItemOpen && (
         <SubcontractorItemFormModal
           contractId={detail.id}
           items={detail.items}
@@ -313,17 +320,19 @@ export function SubcontractorContractDetailView({
           <ContractTermsCard
             values={terms}
             errors={termsFieldErrors}
-            disabled={updateContract.isPending}
+            disabled={updateContract.isPending || !canWrite}
             headerAside={
-              <Button
-                variant="primary"
-                className="tsd-terms__save"
-                disabled={updateContract.isPending}
-                onClick={handleSaveTerms}
-                data-testid="tsd-terms-save"
-              >
-                {updateContract.isPending ? "Kaydediliyor…" : "Kaydet"}
-              </Button>
+              canWrite ? (
+                <Button
+                  variant="primary"
+                  className="tsd-terms__save"
+                  disabled={updateContract.isPending}
+                  onClick={handleSaveTerms}
+                  data-testid="tsd-terms-save"
+                >
+                  {updateContract.isPending ? "Kaydediliyor…" : "Kaydet"}
+                </Button>
+              ) : undefined
             }
             onChange={(field, value) => {
               setTerms((prev) => (prev ? { ...prev, [field]: value } : prev));

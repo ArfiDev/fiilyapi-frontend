@@ -73,6 +73,10 @@ export function EquipmentView() {
     fallback: hasAtLeast(permission.level, "full"),
   });
 
+  // IZN-F2.y · "+ Ekipman Ekle" ve kartlardaki "Düzenle" = POST/PATCH /equipment = saha.makine_* Düzenler
+  // (VEYA). Bugün bu ikisi izin bakmadan basılıyor → sayfa izni hiç yoksa (fallback) görünür kalır.
+  const canEditEquipment = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: true });
+
   if (!permission.canView || isForbidden(equipmentQuery.error)) return <AccessDenied />;
 
   const items = equipmentQuery.data?.items;
@@ -109,9 +113,11 @@ export function EquipmentView() {
         <h1 className="makine__title">Makine &amp; Ekipman</h1>
         {/* 62 — hedef form (M2) bu dilimin kapsamı dışında; rota şimdiden bağlanır
             (K4 "Düzenle" ile aynı karar), catch-all ComingSoon karşılar. */}
-        <Link href={routes.equipment.new()} className="btn btn--primary btn--md">
-          + Ekipman Ekle
-        </Link>
+        {canEditEquipment && (
+          <Link href={routes.equipment.new()} className="btn btn--primary btn--md">
+            + Ekipman Ekle
+          </Link>
+        )}
       </div>
 
       <EquipmentTabsStrip activeTab="Ekipman Listesi" />
@@ -145,6 +151,7 @@ export function EquipmentView() {
               siteLabel={resolveSiteLabel(equipment.site_id)}
               operatorName={resolveOperatorName(equipment.operator_id)}
               onAddDocumentClick={canWrite ? setDocumentTarget : undefined}
+              canEdit={canEditEquipment}
             />
           ))}
         </div>

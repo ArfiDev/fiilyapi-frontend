@@ -57,6 +57,11 @@ export interface SubcontractorContractItemsTableProps {
    * → buton ARTIK AKTİF; diyalogu sahibi ekran (TSD) açar.
    */
   onAddItem: () => void;
+  /**
+   * IZN-F2.y · yazma kapısı (sözleşme sayfaları Düzenler). Varsayılan `true` (bugünkü davranış);
+   * `false` ise "+ Poz Ekle" BASILMAZ ve taşeron birim fiyatı hücresi salt-okunur (disabled).
+   */
+  canWrite?: boolean;
 }
 
 const COLUMN_COUNT = 7;
@@ -76,6 +81,7 @@ export function SubcontractorContractItemsTable({
   errorMessage,
   onCommitUnitPrice,
   onAddItem,
+  canWrite = true,
 }: SubcontractorContractItemsTableProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   // TKL-F7a · T42: hücre okunamadığında (belirsiz nokta vb.) istek uçmaz, mesaj tabloda görünür.
@@ -121,15 +127,17 @@ export function SubcontractorContractItemsTable({
         )}
         {/* 92 · "+ Poz Ekle" — form mockup'ı geldi (F-BLG T2a), buton AKTİF.
             Diyalog: `SubcontractorItemFormModal`. */}
-        <Button
-          variant="ghost"
-          className="tsd-items__add"
-          onClick={onAddItem}
-          disabled={isBusy}
-          data-testid="tsd-add-item"
-        >
-          {FSO_TEXT.addItem}
-        </Button>
+        {canWrite && (
+          <Button
+            variant="ghost"
+            className="tsd-items__add"
+            onClick={onAddItem}
+            disabled={isBusy}
+            data-testid="tsd-add-item"
+          >
+            {FSO_TEXT.addItem}
+          </Button>
+        )}
       </div>
 
       {itemsMissingPrice > 0 && (
@@ -181,6 +189,7 @@ export function SubcontractorContractItemsTable({
                   groupIndex={groupIndex}
                   drafts={drafts}
                   isBusy={isBusy}
+                  canWrite={canWrite}
                   progressPctByItemId={progressPctByItemId}
                   progressPendingReason={progressPendingReason}
                   onDraft={(itemId, value) =>
@@ -223,6 +232,7 @@ interface ItemGroupProps {
   groupIndex: number;
   drafts: Record<string, string>;
   isBusy: boolean;
+  canWrite: boolean;
   progressPctByItemId: Map<string, number> | null;
   progressPendingReason: string;
   onDraft: (itemId: string, value: string) => void;
@@ -234,6 +244,7 @@ function ItemGroup({
   groupIndex,
   drafts,
   isBusy,
+  canWrite,
   progressPctByItemId,
   progressPendingReason,
   onDraft,
@@ -288,7 +299,7 @@ function ItemGroup({
                 className="tsd-items__price-input"
                 aria-label={`${item.code} taşeron birim fiyatı`}
                 placeholder={FSO_TEXT.missingPriceLabel}
-                disabled={isBusy}
+                disabled={isBusy || !canWrite}
                 value={drafts[item.id] ?? trPriceInputValue(item.unit_price)}
                 onChange={(event) => onDraft(item.id, event.target.value)}
                 onBlur={() => onCommit(item)}
