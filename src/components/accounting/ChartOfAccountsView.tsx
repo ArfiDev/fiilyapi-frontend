@@ -16,6 +16,8 @@ import {
 } from "@/lib/api/hooks/useChartOfAccounts";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -55,6 +57,9 @@ const SEARCH_DEBOUNCE_MS = 300;
  */
 export function ChartOfAccountsView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  // IZN-F2.x · hesap ekle/düzenle = mali.hesap_plani/yevmiye/donem_kapanisi Düzenler (VEYA); hesap SİLME = yalnız SA.
+  const canEditAccounts = useButtonGate({ pages: ACCOUNTING_EDIT, need: "edit", fallback: permission.canWrite });
+  const canDeleteAccounts = useButtonGate({ pages: ACCOUNTING_EDIT, need: "sa", fallback: permission.canDelete });
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
@@ -171,7 +176,7 @@ export function ChartOfAccountsView() {
           {/* HP:50 — `ChartAccountFormModal`ı açar (T4). */}
           <Button
             variant="primary"
-            disabled={!permission.canWrite}
+            disabled={!canEditAccounts}
             data-testid="hp-create"
             onClick={() => setDialog({ mode: "create" })}
           >
@@ -189,7 +194,7 @@ export function ChartOfAccountsView() {
           {exportError}
         </p>
       )}
-      {!permission.canWrite && (
+      {!canEditAccounts && (
         <p className="mu-notice" data-testid="hp-write-notice">
           {ACCOUNTING_REASONS.write}
         </p>
@@ -216,8 +221,8 @@ export function ChartOfAccountsView() {
               : undefined
           }
           isFiltered={trimmedSearch.length > 0}
-          canWrite={permission.canWrite}
-          canDelete={permission.canDelete}
+          canWrite={canEditAccounts}
+          canDelete={canDeleteAccounts}
           busyAccountId={busyAccountId}
           onEdit={(accountId) => setDialog({ mode: "edit", accountId })}
           onDeactivate={handleDeactivate}

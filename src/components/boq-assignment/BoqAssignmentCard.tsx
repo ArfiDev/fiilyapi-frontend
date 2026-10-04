@@ -13,6 +13,8 @@ import {
 } from "@/lib/contract-distribution-save";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { BOQ_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useBoq, type BoqItem } from "@/lib/api/hooks/useBoq";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import {
@@ -155,6 +157,12 @@ function LiveCard({
   //    `full`+ eşiğini ister (router.py `_FULL` bağımlılığı). `sites:full +
   //    boq:view` kullanıcısı eskiden canAssign=true görüp 403 alıyordu.
   const boqPermission = useModulePermission("boq");
+  // IZN-F2.x · iş kalemi dağılımı/ataması = santiye.is_kalemleri/bolum_dagilimi Düzenler (VEYA).
+  const canAssignBoq = useButtonGate({
+    pages: BOQ_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(boqPermission.level, "full"),
+  });
 
   const [draft, setDraft] = useState<ReadonlyMap<string, string>>(new Map());
   const [isPickerOpen, setPickerOpen] = useState(false);
@@ -189,7 +197,6 @@ function LiveCard({
   //    karışık bir yanıt gelirse de kısmi bir kotaya yazmak kullanıcıyı
   //    göremediği bir toplamla karşı karşıya bırakırdı.
   const hasMaskedQuantity = rows.some(isQuantityMasked);
-  const canAssignBoq = hasAtLeast(boqPermission.level, "full");
   const canAssign = canWrite && canAssignBoq && !hasMaskedQuantity;
 
   /**

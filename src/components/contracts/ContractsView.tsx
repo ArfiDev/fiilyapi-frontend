@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button/Button";
 import { useContracts } from "@/lib/api/hooks/useContracts";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { ContractsSummaryStrip } from "./ContractsSummaryStrip";
 import { ContractsTable } from "./ContractsTable";
@@ -44,6 +46,8 @@ export function ContractsView() {
   // reddeder ama liste ekranında görünür/tıklanabilir bir buton yanlış bir
   // yetki izlenimi verirdi.
   const permission = useModulePermission("contracts");
+  // IZN-F2.x · sözleşme/firma ekle = sözleşme sayfaları Düzenler (VEYA).
+  const canEditContracts = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: permission.canWrite });
 
   if (isForbidden(contractsQuery.error)) return <AccessDenied />;
 
@@ -76,7 +80,7 @@ export function ContractsView() {
           {/* 30 "+ Yeni Sözleşme" — ONAYLI KARAR S2: taşeron sekmesinde FSO
               formuna gider, işveren sekmesinde DEVRE DIŞI + görünür gerekçe
               (işveren sözleşmesi proje formunda kurulur). Buton SİLİNMEZ. */}
-          {tab === "subcontractor" && permission.canWrite ? (
+          {tab === "subcontractor" && canEditContracts ? (
             <Link href={routes.contracts.newSubcontractor()} className="szl__new-btn">
               + Yeni Sözleşme
             </Link>

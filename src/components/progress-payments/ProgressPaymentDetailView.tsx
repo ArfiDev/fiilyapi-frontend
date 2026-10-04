@@ -12,6 +12,8 @@ import {
 } from "@/lib/api/hooks/useProgressPayments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
 import { formatCurrencyPrecise } from "@/lib/format";
 
@@ -39,7 +41,9 @@ export function ProgressPaymentDetailView({ paymentId }: ProgressPaymentDetailVi
   // Özet sorgusu detay yüklenmeden ağa çıkmaz — hook'un `enabled` kapısı bos
   // id'yi zaten engelliyor (brief §Belirsizlik çözümü).
   const summaryQuery = useProgressPaymentSummary(detailQuery.data?.project_id ?? "");
-  const { canWrite } = useModulePermission("progress_payments");
+  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
+  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
+  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
 
   if (isForbidden(detailQuery.error)) return <AccessDenied />;
   if (detailQuery.isError) return <p className="pp-detail__message">Hakediş yüklenemedi</p>;

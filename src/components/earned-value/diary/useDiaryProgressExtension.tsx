@@ -11,7 +11,10 @@ import { useEvSettings } from "@/lib/api/hooks/useEvSettings";
 import { useSite } from "@/lib/api/hooks/useSites";
 import type { EvAllocationSave, EvCodeNode, EvDayView } from "@/lib/api/models";
 import { BackendError } from "@/lib/api/unwrap";
+import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EV_BUDGET_EDIT, EV_UNLOCK_APPROVE, SITE_DIARY_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { bandsFromSettings, type PfBandSettings } from "@/lib/earned-value";
 import { routes } from "@/lib/routes";
 
@@ -39,6 +42,11 @@ const ABSENT_STATUSES = new Set([403, 404, 409]);
 export function useDiaryProgressExtension(ctx: DiaryExtensionContext | null): DiaryExtension | undefined {
   const evPermission = useModulePermission("earned_value");
   const diaryPermission = useModulePermission("site_diary");
+  // IZN-F2.x · saat dağıtımı yazma = bütçe Düzenler; Gün Kilidi Aç = bütçe/günlük rapor Onaylar;
+  // günlük yazma = günlük kayıt Düzenler. Grant yoksa bugünkü seviye kararı.
+  const canWriteAllocation = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit", fallback: hasAtLeast(evPermission.level, "draft") });
+  const canUnlockDay = useButtonGate({ pages: EV_UNLOCK_APPROVE, need: "approve", fallback: hasAtLeast(evPermission.level, "approve") });
+  const diaryCanWrite = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: diaryPermission.canWrite });
   const siteId = evPermission.canView ? (ctx?.siteId ?? "") : "";
   const day = ctx?.day ?? "";
   const dayQuery = useEvDay(siteId, day);
@@ -71,7 +79,9 @@ export function useDiaryProgressExtension(ctx: DiaryExtensionContext | null): Di
     saveAllocation: saveAllocation.mutateAsync,
     itemFacts: buildItemFacts(budget.data),
     evLevel: evPermission.level,
-    diaryCanWrite: diaryPermission.canWrite,
+    diaryCanWrite,
+    canWriteAllocation,
+    canUnlockDay,
     isSiteCompleted: site.data?.status === "completed",
     siteName: site.data?.name ?? null,
     budgetHref: site.data ? routes.projects.sites.evBudget({ projectId: site.data.project.id, siteId: site.data.id }) : null,
@@ -90,6 +100,8 @@ interface BuildInput {
   itemFacts: ItemFacts;
   evLevel: ReturnType<typeof useModulePermission>["level"];
   diaryCanWrite: boolean;
+  canWriteAllocation: boolean;
+  canUnlockDay: boolean;
   isSiteCompleted: boolean;
   /** Tablet şeridi (İ:529 "24.09 · A-Blok") — şantiye henüz gelmediyse `null`. */
   siteName: string | null;
@@ -99,7 +111,14 @@ interface BuildInput {
 function buildExtension(input: BuildInput): DiaryExtension {
   const { view, draftApi } = input;
   const isLocked = view.lock.locked;
-  const access = resolveAllocationAccess({ evLevel: input.evLevel, diaryCanWrite: input.diaryCanWrite, isLocked, isSiteCompleted: input.isSiteCompleted });
+  const access = resolveAllocationAccess({
+    evLevel: input.evLevel,
+    canWriteAllocation: input.canWriteAllocation,
+    canUnlockDay: input.canUnlockDay,
+    diaryCanWrite: input.diaryCanWrite,
+    isLocked,
+    isSiteCompleted: input.isSiteCompleted,
+  });
   const strip = stripValues(view, draftApi.draft, draftApi.isDirty);
   const submitState = buildSubmitState({
     submit: view.submit,

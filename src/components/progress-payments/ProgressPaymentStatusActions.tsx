@@ -17,7 +17,10 @@ import {
 } from "@/lib/api/hooks/useProgressPaymentMutations";
 import { PROGRESS_PAYMENT_QUERY_KEY, type ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
+import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EMPLOYER_PAYMENT_APPROVE, PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 // Ayarlar modal/form kanonu birebir izlenir (SectionFormModal/BoqItemFormModal
 // deseniyle ayni): settings-form sinifi settings.css'ten, ConfirmDialog yikici
@@ -46,6 +49,11 @@ const REJECT_REASON_MAX_LENGTH = 500;
  */
 export function ProgressPaymentStatusActions({ detail }: ProgressPaymentStatusActionsProps) {
   const { level } = useModulePermission("progress_payments");
+  // IZN-F2.x · Gönder = hakediş sayfaları Düzenler; Onayla/Reddet/Ödendi = hakediş Onaylar; Onayı Geri Al = yalnız SA.
+  // Grant yoksa bugünkü seviye eşikleri (`permittedPaymentActions` varsayılanı).
+  const canSubmit = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: hasAtLeast(level, "draft") });
+  const canApprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "approve", fallback: hasAtLeast(level, "approve") });
+  const canUnapprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "sa", fallback: hasAtLeast(level, "admin") });
   const queryClient = useQueryClient();
 
   const submit = useSubmitProgressPayment();
@@ -148,7 +156,7 @@ export function ProgressPaymentStatusActions({ detail }: ProgressPaymentStatusAc
   // Görünürlük kapısı `shared/status-actions.ts`ten (F-TH T1 paylaşım kararı —
   // taşeron tarafı AYNI durum→aksiyon eşlemesini kullanır). Güvenlik sınırı
   // HER ZAMAN backend'dedir; bu yalnız çalışmayacak butonu göstermemek içindir.
-  const actions = permittedPaymentActions(detail.status, level);
+  const actions = permittedPaymentActions(detail.status, level, { canSubmit, canApprove, canUnapprove });
 
   return (
     <div className="pp-detail__actions" data-testid="pp-detail-actions">

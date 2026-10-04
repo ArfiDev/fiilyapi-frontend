@@ -7,6 +7,7 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { PROJECT_LIST_MAX_LIMIT, useProjects } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { ProjectCard } from "./ProjectCard";
@@ -32,6 +33,8 @@ export function ProjectsView() {
   // Backend yine de yazmayı reddeder ama liste ekranında görünür/tıklanabilir
   // bir buton yanlış bir yetki izlenimi verirdi.
   const permission = useModulePermission("projects");
+  // IZN-F2.x · "Yeni proje" = genel.projeler Düzenler (grant yoksa bugünkü modül kararı).
+  const canCreateProject = useButtonGate({ pages: "genel.projeler", need: "edit", fallback: permission.canWrite });
 
   // Kırpma korkuluğu (F-FIN emsali): tavan AÇIKÇA gönderilir, eksik kalan
   // kayıt `total` üzerinden GÖRÜNÜR bir bantla bildirilir — sessizce
@@ -71,7 +74,7 @@ export function ProjectsView() {
           <Link href={PROJECT_TIMELINE_HREF} className="prj__timeline-btn">
             Proje Takvimi
           </Link>
-          {permission.canWrite ? (
+          {canCreateProject ? (
             <Link href={routes.projects.new()} className="prj__new-btn">
               + Yeni Proje
             </Link>

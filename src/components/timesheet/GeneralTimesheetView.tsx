@@ -9,6 +9,8 @@ import { Select } from "@/components/ui/select/Select";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PERSONNEL_EDIT, TIMESHEET_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { AddPersonnelLink } from "./AddPersonnelLink";
 import { currentIsoWeek, parseIsoWeek, shiftIsoWeek, type TimesheetIsoWeek } from "./iso-week";
@@ -40,7 +42,13 @@ export function GeneralTimesheetView() {
   // "Personel Ekle" girişi AYRI modülün (personnel) yetkisine bağlı: puantaj
   // yazabilen herkes personel kartı açamaz. İzinsizde HİÇ basılmaz.
   const personnelPermission = useModulePermission("personnel");
-  const canAddPersonnel = hasAtLeast(personnelPermission.level, "full");
+  const canAddPersonnel = useButtonGate({
+    pages: PERSONNEL_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(personnelPermission.level, "full"),
+  });
+  // IZN-F2.x · puantaj kaydet = saha/santiye.puantaj Düzenler; personel ekle = ik.* Düzenler.
+  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite });
 
   const week = parseIsoWeek(searchParams.get("iso_year"), searchParams.get("iso_week"));
   const siteOptions = useSiteOptions();
@@ -83,7 +91,7 @@ export function GeneralTimesheetView() {
       week={week}
       // E5'te bölüm süzgeci YOKTUR — yeni hücre bölümsüz açılır.
       sectionId={null}
-      canWrite={permission.canWrite}
+      canWrite={canEditTimesheet}
       canAddPersonnel={canAddPersonnel}
       returnTo={returnTo}
       onShiftWeek={(delta) => pushParams({ week: shiftIsoWeek(week, delta) })}

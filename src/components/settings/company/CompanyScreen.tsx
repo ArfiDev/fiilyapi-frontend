@@ -11,6 +11,8 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import type { CompanyUpdate } from "@/lib/api/models";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import "./company-screen.css";
+import { COMPANY_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 // e-Arşiv portalı seçenekleri (ref mockup — backend serbest metin alanı kabul eder).
 const EARSIV_PORTAL_OPTIONS = ["Logo e-Fatura", "Mikro e-Fatura", "Paraşüt", "Türk Telekom"];
@@ -36,6 +38,8 @@ function vatRateToSelectValue(rate: CompanyUpdate["default_vat_rate"]): string {
 export function CompanyScreen() {
   const query = useCompany();
   const update = useUpdateCompany();
+  // IZN-F2.x · şirket bilgisi kaydet = ayarlar.sirket_bilgileri Düzenler (bugün KAPISIZ → grant yoksa serbest).
+  const canSaveCompany = useButtonGate({ pages: COMPANY_EDIT, need: "edit", fallback: true });
   const [form, setForm] = useState<CompanyUpdate>({});
   const [err, setErr] = useState<string | null>(null);
   // SEKME-F1.3b · dirty (tercih 2), taban `form`u dolduran AYNI efektte
@@ -242,7 +246,7 @@ export function CompanyScreen() {
         <Button variant="secondary" onClick={() => query.refetch()}>
           İptal
         </Button>
-        <Button variant="primary" onClick={save} disabled={update.isPending}>
+        <Button variant="primary" onClick={save} disabled={update.isPending || !canSaveCompany}>
           Değişiklikleri Kaydet
         </Button>
       </div>

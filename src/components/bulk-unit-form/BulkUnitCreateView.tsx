@@ -20,6 +20,8 @@ import {
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROJECT_UNITS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { parseCountInput } from "@/lib/decimal";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -97,6 +99,8 @@ export function BulkUnitCreateView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const permission = useModulePermission("projects");
+  // IZN-F2.x · toplu üretim yazma kapısı = mali.satis_* Düzenler (VEYA).
+  const canEdit = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
 
   const [values, setValues] = useState<BulkUnitFormValues>(() => emptyBulkUnitFormValues());
   // SEKME-F1.6-Y1 — taban artık anlık görüntü DEĞİL, `StockEntryForm`
@@ -188,7 +192,7 @@ export function BulkUnitCreateView() {
   // SEKME-F1.3b — hook, erken dönüşten ÖNCE (Rules of Hooks).
   useUnsavedChanges(isDirty, "Toplu ünite formu");
 
-  if (!hasAtLeast(permission.level, "full")) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
 
   const isPreviewing = previewMutation.isPending;
   const isSaving = createBulk.isPending;

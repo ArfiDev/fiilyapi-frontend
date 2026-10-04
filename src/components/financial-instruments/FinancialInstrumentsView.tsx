@@ -14,6 +14,8 @@ import {
 } from "@/lib/api/hooks/useFinancialInstruments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { TREASURY_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { InstrumentFormModal } from "./InstrumentFormModal";
@@ -65,6 +67,8 @@ export function FinancialInstrumentsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const permission = useModulePermission(FINANCIAL_INSTRUMENT_PERMISSION_MODULE);
+  // IZN-F2.x · çek ekle = mali.hazine/mali.cek_odeme Düzenler (VEYA).
+  const canAddInstrument = useButtonGate({ pages: TREASURY_EDIT, need: "edit", fallback: permission.canWrite });
 
   const tab = instrumentTabFromParam(searchParams.get(TAB_PARAM));
   const [isFormOpen, setFormOpen] = useState(false);
@@ -106,13 +110,13 @@ export function FinancialInstrumentsView() {
             hem `title` hem `sr-only` ile taşınır (F-HZ emsali). */}
         <Button
           variant="primary"
-          disabled={!permission.canWrite}
-          {...(permission.canWrite ? {} : { title: ADD_FORBIDDEN_HINT })}
+          disabled={!canAddInstrument}
+          {...(canAddInstrument ? {} : { title: ADD_FORBIDDEN_HINT })}
           onClick={() => setFormOpen(true)}
           data-testid="fin-add"
         >
           + Çek Ekle
-          {!permission.canWrite && <span className="sr-only"> — {ADD_FORBIDDEN_HINT}</span>}
+          {!canAddInstrument && <span className="sr-only"> — {ADD_FORBIDDEN_HINT}</span>}
         </Button>
       </div>
 

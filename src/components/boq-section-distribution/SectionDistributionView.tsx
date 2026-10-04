@@ -15,6 +15,8 @@ import {
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { BOQ_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { distributeRemaining } from "@/lib/distribute-remaining";
 import {
   buildSectionDistributionSaveBody,
@@ -69,6 +71,12 @@ export function SectionDistributionView({
   isSiteError = false,
 }: SectionDistributionViewProps) {
   const permission = useModulePermission("boq");
+  // IZN-F2.x · bölüm dağılımı kaydet = santiye.is_kalemleri/bolum_dagilimi Düzenler (VEYA).
+  const hasFullPermission = useButtonGate({
+    pages: BOQ_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(permission.level, "full"),
+  });
   const distributionQuery = useSectionDistribution(siteId);
   const saveMutation = useSaveSectionDistribution(siteId);
 
@@ -85,7 +93,6 @@ export function SectionDistributionView({
 
   const data = distributionQuery.data;
   const isMetrajHidden = data !== undefined && isSectionDistributionMetrajHidden(data.groups);
-  const hasFullPermission = hasAtLeast(permission.level, "full");
   const canWrite = hasFullPermission && !isMetrajHidden;
   const writeBlockReason = !hasFullPermission
     ? NO_FULL_PERMISSION_REASON

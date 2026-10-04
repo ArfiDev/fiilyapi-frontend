@@ -12,6 +12,8 @@ import { contractTabHref } from "@/components/contracts/contract-tabs";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { useEmployerContract } from "@/lib/api/hooks/useContract";
 import { useProjects } from "@/lib/api/hooks/useProjects";
@@ -74,7 +76,10 @@ import "./subcontractor-contract-form.css";
  */
 export function SubcontractorContractCreateView() {
   const router = useRouter();
-  const { canWrite, canDelete } = useModulePermission("contracts");
+  const { canWrite: moduleCanWrite, canDelete: moduleCanDelete } = useModulePermission("contracts");
+  // IZN-F2.x · taşeron sözleşmesi yaz = sözleşme sayfaları Düzenler (VEYA); poz satırı silme = yalnız SA.
+  const canWrite = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canDelete = useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: moduleCanDelete });
 
   const [values, setValues] = useState<SubcontractorContractFormValues>(
     emptySubcontractorContractFormValues,

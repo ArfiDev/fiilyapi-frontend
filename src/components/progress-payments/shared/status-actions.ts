@@ -7,6 +7,16 @@ import type { PaymentLifecycleStatus } from "./status";
 export type PaymentActionKind = "submit" | "reject" | "approve" | "unapprove" | "markPaid";
 
 /**
+ * IZN-F2.x · sayfa izni kararları (`useButtonGate`): verilen kapı seviye eşiğinin YERİNE geçer.
+ * Gönder = hakediş sayfaları Düzenler · Onayla/Reddet/Ödendi = hakediş Onaylar · Onayı Geri Al = yalnız SA.
+ */
+export interface PaymentActionGates {
+  canSubmit?: boolean;
+  canApprove?: boolean;
+  canUnapprove?: boolean;
+}
+
+/**
  * Durum + izin seviyesi → izinli aksiyon kümesi. `ProgressPaymentStatusActions.tsx`
  * (P7 T4) içindeki koşullardan çıkarıldı — backend `transitions.py` §7
  * tablosunun görünürlük yansıması. Güvenlik sınırı HER ZAMAN backend'dedir;
@@ -18,16 +28,20 @@ export type PaymentActionKind = "submit" | "reject" | "approve" | "unapprove" | 
 export function permittedPaymentActions(
   status: PaymentLifecycleStatus,
   level: AccessLevel | undefined,
+  gates: PaymentActionGates = {},
 ): PaymentActionKind[] {
+  const canSubmit = gates.canSubmit ?? hasAtLeast(level, "draft");
+  const canApprove = gates.canApprove ?? hasAtLeast(level, "approve");
+  const canUnapprove = gates.canUnapprove ?? hasAtLeast(level, "admin");
   switch (status) {
     case "draft":
-      return hasAtLeast(level, "draft") ? ["submit"] : [];
+      return canSubmit ? ["submit"] : [];
     case "pending_approval":
-      return hasAtLeast(level, "approve") ? ["reject", "approve"] : [];
+      return canApprove ? ["reject", "approve"] : [];
     case "approved": {
       const actions: PaymentActionKind[] = [];
-      if (hasAtLeast(level, "admin")) actions.push("unapprove");
-      if (hasAtLeast(level, "approve")) actions.push("markPaid");
+      if (canUnapprove) actions.push("unapprove");
+      if (canApprove) actions.push("markPaid");
       return actions;
     }
     case "paid":

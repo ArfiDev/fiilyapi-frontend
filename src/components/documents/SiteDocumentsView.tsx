@@ -16,6 +16,8 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { BackendError } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { DOCUMENTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { DocumentCardGrid } from "./DocumentCardGrid";
 import { documentGridMessage } from "./grid-message";
@@ -65,7 +67,12 @@ export function SiteDocumentsView() {
   const permission = useModulePermission("documents");
   // Yazma yüzeyi (yükleme + klasör açma) `full` ister. `documents:admin`
   // (silme) UI'da İMA EDİLMEZ — spec §4.
-  const canWrite = hasAtLeast(permission.level, "full");
+  // IZN-F2.x · belge yükle/klasör = mali.belge_arsivi/proje.belgeler/santiye.belgeler Düzenler (VEYA).
+  const canWrite = useButtonGate({
+    pages: DOCUMENTS_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(permission.level, "full"),
+  });
 
   const activeFolderId = searchParams.get(FOLDER_PARAM) ?? undefined;
   const query = searchParams.get(QUERY_PARAM) ?? "";

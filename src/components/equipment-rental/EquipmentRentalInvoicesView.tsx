@@ -14,6 +14,8 @@ import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import {
   buildListTruncation,
   listTruncationMessage,
@@ -70,7 +72,9 @@ export function EquipmentRentalInvoicesView() {
   const filters = parseRentalFilters(
     new URLSearchParams(searchParams.toString()),
   );
-  const { level, canWrite } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  const { level, canWrite: moduleCanWrite } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  // IZN-F2.x · kira hakedişi oluştur = saha.makine_* Düzenler (VEYA).
+  const canWrite = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: moduleCanWrite });
 
   // TB3 sayfalama kanonu: `limit` AÇIKÇA gönderilir (sunucu varsayılanı 50).
   const invoicesQuery = useEquipmentRentalInvoices({

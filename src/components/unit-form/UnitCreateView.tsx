@@ -15,6 +15,8 @@ import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateUnit } from "@/lib/api/hooks/useUnitMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROJECT_UNITS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildUnitBody } from "./build-body";
@@ -64,6 +66,8 @@ export function UnitCreateView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const permission = useModulePermission("projects");
+  // IZN-F2.x · blok/ünite/toplu/Excel/paylaşım yazma kapısı = mali.satis_* Düzenler (VEYA).
+  const canEdit = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [values, setValues] = useState<UnitFormValues>(() => emptyUnitFormValues());
   const [touched, setTouched] = useState<ReadonlySet<UnitFormField>>(
@@ -112,7 +116,7 @@ export function UnitCreateView() {
   // 🔴 Hook, erken dönüşten (`AccessDenied`) ÖNCE çağrılır.
   useUnsavedChanges(touched.size > 0, "Ünite");
 
-  if (!permission.canWrite) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
 
   const isSaving = createUnit.isPending;
 

@@ -9,6 +9,8 @@ import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { OFFER_CONVERT_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routeKeyOf, routes } from "@/lib/routes";
 
 import { ConvertBoard } from "./ConvertBoard";
@@ -31,7 +33,13 @@ export function ConvertScreen({ offerId }: ConvertScreenProps) {
   const contracts = useModulePermission("contracts");
   const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
-  const isAllowed = hasAtLeast(projects.level, PROJECTS_LEVEL) && hasAtLeast(contracts.level, CONTRACTS_LEVEL) && !scope.isRestricted;
+  // IZN-F2.x · Dönüştür = teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (grant yoksa bugünkü `projects ≥ admin` ∧ `contracts ≥ full`).
+  const canConvert = useButtonGate({
+    pages: OFFER_CONVERT_APPROVE,
+    need: "approve",
+    fallback: hasAtLeast(projects.level, PROJECTS_LEVEL) && hasAtLeast(contracts.level, CONTRACTS_LEVEL),
+  });
+  const isAllowed = canConvert && !scope.isRestricted;
   if (!isAllowed) return <AccessDenied />;
   return <ConvertGate offerId={offerId} />;
 }

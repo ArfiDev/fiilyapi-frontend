@@ -9,6 +9,8 @@ import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EV_CATALOG_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useEvCatalog } from "@/lib/api/hooks/useEvCatalog";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
 import type { EvCatalogItemRead } from "@/lib/api/models";
@@ -39,8 +41,10 @@ const SKELETON_ROWS = 4;
  */
 export function UnitRateCatalogScreen() {
   const { level } = useModulePermission("earned_value");
-  const canWrite = hasAtLeast(level, WRITE_LEVEL);
-  const canDelete = hasAtLeast(level, DELETE_LEVEL);
+  // IZN-F2.x · katalog + disiplin ekle/düzenle = planlama.birim_oran_katalogu/disiplin_yonetimi Düzenler;
+  // disiplin SİLME = yalnız sistem yöneticisi.
+  const canWrite = useButtonGate({ pages: EV_CATALOG_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canDelete = useButtonGate({ pages: EV_CATALOG_EDIT, need: "sa", fallback: hasAtLeast(level, DELETE_LEVEL) });
 
   const catalog = useEvCatalog();
   const disciplines = useEvDisciplines();

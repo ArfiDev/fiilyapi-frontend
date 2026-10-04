@@ -3,6 +3,8 @@ import { LockIcon } from "@/components/ui/icons";
 import { cx } from "@/lib/cx";
 import type { RoleResponse } from "@/lib/api/models";
 import { NEW_ROLE_KEYS } from "./page-access-labels";
+import { ROLES_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 interface RoleListProps {
   roles: readonly RoleResponse[];
@@ -17,6 +19,8 @@ function userCountLabel(role: RoleResponse): string {
 
 /** Sol rol listesi: kilitli Sistem Yöneticisi kutusu · mevcut roller · ayraç · "Yeni" rozetli 6 rol · "+ Yeni rol". */
 export function RoleList({ roles, selectedId, onSelect, onCreate }: RoleListProps) {
+  // IZN-F2.x · + Yeni rol = ayarlar.rol_yonetimi Düzenler (bugün KAPISIZ → grant yoksa görünür).
+  const canCreateRole = useButtonGate({ pages: ROLES_EDIT, need: "edit", fallback: true });
   const locked = roles.filter((role) => role.is_locked);
   const regular = roles.filter((role) => !role.is_locked && !NEW_ROLE_KEYS.has(role.key));
   const added = roles.filter((role) => !role.is_locked && NEW_ROLE_KEYS.has(role.key));
@@ -67,9 +71,11 @@ export function RoleList({ roles, selectedId, onSelect, onCreate }: RoleListProp
           ))}
         </Fragment>
       ))}
-      <button type="button" className="role-list__create" onClick={onCreate}>
-        + Yeni rol
-      </button>
+      {canCreateRole && (
+        <button type="button" className="role-list__create" onClick={onCreate}>
+          + Yeni rol
+        </button>
+      )}
     </aside>
   );
 }

@@ -135,6 +135,12 @@ export function buildSubmitState(input: SubmitInput): SubmitState {
 
 export interface AccessInput {
   evLevel: AccessLevel | undefined;
+  /**
+   * IZN-F2.x · sayfa izni kararları (`useButtonGate`): verilirse `evLevel` eşiklerinin YERİNE geçer.
+   * Dağıtımı yazma = adam-saat bütçesi Düzenler; Kilidi aç = bütçe/günlük rapor Onaylar.
+   */
+  canWriteAllocation?: boolean;
+  canUnlockDay?: boolean;
   diaryCanWrite: boolean;
   isLocked: boolean;
   isSiteCompleted: boolean;
@@ -157,7 +163,7 @@ export interface AllocationAccess {
  * salt okunur. Bilinmeyen seviye `hasAtLeast` kuralıyla yetkili sayılır.
  */
 export function resolveAllocationAccess(input: AccessInput): AllocationAccess {
-  const isForeman = !hasAtLeast(input.evLevel, "draft");
+  const isForeman = !(input.canWriteAllocation ?? hasAtLeast(input.evLevel, "draft"));
   const readOnlyText = input.isLocked
     ? "gün kilitli"
     : input.isSiteCompleted
@@ -170,6 +176,6 @@ export function resolveAllocationAccess(input: AccessInput): AllocationAccess {
     readOnlyText,
     isForeman,
     showForemanBand: isForeman && input.diaryCanWrite && !input.isLocked,
-    canUnlock: hasAtLeast(input.evLevel, "approve") && !input.isSiteCompleted,
+    canUnlock: (input.canUnlockDay ?? hasAtLeast(input.evLevel, "approve")) && !input.isSiteCompleted,
   };
 }

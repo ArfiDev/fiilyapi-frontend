@@ -18,6 +18,8 @@ import {
 } from "@/lib/api/hooks/useUnitImport";
 import type { UnitImportUploadInput } from "@/lib/api/units-import-client";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROJECT_UNITS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildImportFields, emptyUnitImportFormValues, type UnitImportFormValues } from "./build-request";
@@ -104,6 +106,8 @@ export function UnitImportView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const permission = useModulePermission("projects");
+  // IZN-F2.x · blok/ünite/toplu/Excel/paylaşım yazma kapısı = mali.satis_* Düzenler (VEYA).
+  const canEdit = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [values, setValues] = useState<UnitImportFormValues>(() => emptyUnitImportFormValues());
   // SEKME-F1.6-Y1 — taban `StockEntryForm` deseniyle AYRI durum
@@ -167,7 +171,7 @@ export function UnitImportView() {
   // Hook, erken dönüşten (`AccessDenied`) ÖNCE çağrılır.
   useUnsavedChanges(isDirty, "Ünite içe aktarma");
 
-  if (!permission.canWrite) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
 
   const projects = projectsQuery.data?.items ?? [];
   const sites = sitesQuery.data?.items ?? [];

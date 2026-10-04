@@ -19,8 +19,13 @@ export type RevisionMode = "none" | "draft" | "active" | "archived";
 export interface BudgetAccess {
   /** draft: oran/eşleme/pencere/dağılım yazar + "Taslak aç" (F0-5). */
   canDraft: boolean;
-  /** approve: dondur + taslak sil (B1-8). */
+  /** approve: dondur (B1-8). IZN-F2.x: adam-saat bütçesi Onaylar (Baseline Dondur). */
   canApprove: boolean;
+  /**
+   * IZN-F2.x: taslak sil = YALNIZ sistem yöneticisi. Verilmezse bugünkü kural (`canApprove`) geçerlidir
+   * (eski çağıranlar/fikstürler).
+   */
+  canDeleteDraft?: boolean;
 }
 
 export interface ScreenState {
@@ -49,8 +54,12 @@ export function revisionMode(view: EvBudgetView): RevisionMode {
   return view.revision.status === "active" ? "active" : "archived";
 }
 
-export function budgetAccess(level: AccessLevel | undefined): BudgetAccess {
-  return { canDraft: hasAtLeast(level, "draft"), canApprove: hasAtLeast(level, "approve") };
+export function budgetAccess(level: AccessLevel | undefined, gates: Partial<BudgetAccess> = {}): BudgetAccess {
+  return {
+    canDraft: gates.canDraft ?? hasAtLeast(level, "draft"),
+    canApprove: gates.canApprove ?? hasAtLeast(level, "approve"),
+    canDeleteDraft: gates.canDeleteDraft,
+  };
 }
 
 /** F0-5: numara yalnız baseline'a verilir → yeni taslak = en büyük donmuş numara + 1. */
@@ -84,7 +93,7 @@ export function screenState(
     siteCompleted,
     hideActions: isViewer || siteCompleted,
     canFreeze: writable && mode === "draft" && access.canApprove,
-    canDeleteDraft: writable && mode === "draft" && access.canApprove,
+    canDeleteDraft: writable && mode === "draft" && (access.canDeleteDraft ?? access.canApprove),
     canOpenDraft: writable && mode !== "draft" && mode !== "none" && draft === null && access.canDraft,
     draft,
     active,

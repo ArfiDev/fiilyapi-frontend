@@ -29,6 +29,8 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { APPROVAL_ROLES_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
 import { formatCurrencyTight } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -80,7 +82,15 @@ export function ApprovalRolesScreen() {
   // `approvals: admin` yazar, `full` seviyeli kullanıcı 403 alır. Bilinmezlik
   // kuralı (seviye yoksa `true`) kasıtlı korunur — yükü gelmemiş oturumda
   // gizleme, tam yetkili kullanıcıya sessiz yetenek kaybı olurdu.
-  const canEditThreshold = hasAtLeast(level, "admin");
+  // IZN-F2.x · eşik kaydet + onay rolü atama = ayarlar.onay_rolleri Düzenler.
+  const canEditThreshold = useButtonGate({
+    pages: APPROVAL_ROLES_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(level, "admin"),
+  });
+
+  // Onay rolü atama bugün KAPISIZ → grant yoksa serbest (fallback true).
+  const canAssignRoles = useButtonGate({ pages: APPROVAL_ROLES_EDIT, need: "edit", fallback: true });
 
   const [thresholdDraft, setThresholdDraft] = useState<string | null>(null);
   const [thresholdError, setThresholdError] = useState<string | null>(null);
@@ -301,7 +311,7 @@ export function ApprovalRolesScreen() {
                               on ? { background: visual.badgeBg, color: visual.badgeText } : undefined
                             }
                             aria-pressed={on}
-                            disabled={setRoles.isPending}
+                            disabled={setRoles.isPending || !canAssignRoles}
                             onClick={() => toggleRow(row, role)}
                           >
                             {APPROVAL_ROLE_LABELS[role]}

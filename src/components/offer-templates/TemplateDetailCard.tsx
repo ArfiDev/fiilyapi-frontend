@@ -13,6 +13,8 @@ import { TemplateRatesStat } from "./TemplateRatesStat";
 import type { RateDefaults } from "./template-rates";
 import type { TemplatePatch } from "./useTemplateContentEditor";
 import "./offer-templates.css";
+import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 export const NAME_MAX_LENGTH = 80;
 export const MSG_TEMPLATE_NAME_REQUIRED = "Şablon adı zorunlu";
@@ -38,6 +40,8 @@ interface TemplateDetailCardProps {
 /** TS:109-128 — ad · açıklama · düğmeler · 4 istatistik · mavi not. */
 export function TemplateDetailCard(props: TemplateDetailCardProps) {
   const { detail, usageCount, defaults, canWrite, isBusy } = props;
+  // IZN-F2.x · şablon silme = yalnız sistem yöneticisi (SIL-B1; blok zaten canWrite içinde; grant yoksa görünür).
+  const canDeleteTemplate = useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: true });
   return (
     <section className="otpl-detail" aria-label="Şablon ayrıntısı">
       <div className="otpl-detail__head">
@@ -59,9 +63,11 @@ export function TemplateDetailCard(props: TemplateDetailCardProps) {
             <Button variant="secondary" size="sm" disabled={isBusy} onClick={props.onCopy}>
               Kopyala
             </Button>
-            <Button variant="secondary" size="sm" className="otpl-delete-btn" disabled={isBusy} onClick={props.onDelete}>
-              Sil
-            </Button>
+            {canDeleteTemplate && (
+              <Button variant="secondary" size="sm" className="otpl-delete-btn" disabled={isBusy} onClick={props.onDelete}>
+                Sil
+              </Button>
+            )}
             <Link href={routes.offers.new({ templateId: detail.id })} className="btn btn--primary btn--sm">
               Bu şablonla teklif başlat →
             </Link>

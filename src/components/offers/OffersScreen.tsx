@@ -13,6 +13,8 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { CONTRACTS_EDIT, OFFER_CONVERT_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { routes } from "@/lib/routes";
 
@@ -51,9 +53,16 @@ export function OffersScreen() {
 function OffersContent({ level }: { level: AccessLevel | undefined }) {
   const router = useRouter();
   const scope = useDisciplineScope();
-  const canWrite = hasAtLeast(level, WRITE_LEVEL) && !scope.isRestricted;
+  // IZN-F2.x · teklif yaz = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; Dönüştür =
+  // teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (grant yoksa bugünkü `projects ≥ admin` kuralı).
+  const canEditOffers = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canWrite = canEditOffers && !scope.isRestricted;
   const projects = useModulePermission("projects");
-  const canConvert = canWrite && hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL);
+  const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
+  const canConvert =
+    convertPermission.isSystemAdmin || convertPermission.hasGrant
+      ? convertPermission.canApprove && !scope.isRestricted
+      : canWrite && hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL);
 
   const [status, setStatus] = useState<OfferStatus | null>(null);
   const [conversion, setConversion] = useState<OfferConversionFilter | null>(null);

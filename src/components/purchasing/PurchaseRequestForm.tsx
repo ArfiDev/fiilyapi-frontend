@@ -23,6 +23,8 @@ import { useStockSummary } from "@/lib/api/hooks/useStockSummary";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PURCHASE_REQUEST_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { PurchaseRequestApprovalBox } from "./PurchaseRequestApprovalBox";
 import { PurchaseRequestFormInfoCard } from "./PurchaseRequestFormInfoCard";
@@ -94,6 +96,8 @@ const PURCHASING_LIST_HREF = routes.purchasing.root();
 export function PurchaseRequestForm() {
   const router = useRouter();
   const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
+  // IZN-F2.x · talep oluştur/düzenle/Onaya Gönder = stok.satinalma_talepleri Düzenler.
+  const canEdit = useButtonGate({ pages: PURCHASE_REQUEST_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [values, setValues] = useState<PurchaseRequestFormValues>(() =>
     // Tarih `new Date()`ten TEK yerde türetilir (site-diary `isoDate` deseni:
@@ -163,7 +167,7 @@ export function PurchaseRequestForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingSubmit, createdRequest, router]);
 
-  if (!permission.canWrite) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
   if (isForbidden(projectsQuery.error)) return <AccessDenied />;
 
   const isSaving =

@@ -6,7 +6,10 @@ import { useMemo, useState, type ReactNode } from "react";
 import { ErrorCard, Skeleton, SkeletonRows } from "@/components/earned-value/common/state";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
+import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EV_BUDGET_EDIT, EV_FREEZE_APPROVE } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
 import {
   useEvBudget,
@@ -115,7 +118,12 @@ function diffAvailableFor(view: EvBudgetView, revisions: readonly EvRevisionOut[
 /** Yüklenmiş ekranın türetilmiş durumu + eylemleri (izin, revizyon hâli, fark, önizleme). */
 function useLoadedModel({ siteId, view, revisions, siteCompleted, url }: LoadedBudgetProps) {
   const permission = useModulePermission("earned_value");
-  const access = budgetAccess(permission.level);
+  // IZN-F2.x · bütçe yaz = adam-saat bütçesi/ayarlar.planlama Düzenler; Baseline Dondur = bütçe Onaylar;
+  // taslak sil = yalnız sistem yöneticisi. Grant yoksa bugünkü seviye kararı.
+  const canDraft = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "draft") });
+  const canFreeze = useButtonGate({ pages: EV_FREEZE_APPROVE, need: "approve", fallback: hasAtLeast(permission.level, "approve") });
+  const canDeleteDraft = useButtonGate({ pages: EV_FREEZE_APPROVE, need: "sa", fallback: hasAtLeast(permission.level, "approve") });
+  const access = budgetAccess(permission.level, { canDraft, canApprove: canFreeze, canDeleteDraft });
   const state = screenState(view, access, revisions, siteCompleted);
   const actions = useBudgetActions(siteId);
   const [showDiff, setShowDiff] = useState(false);

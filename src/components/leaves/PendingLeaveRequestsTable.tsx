@@ -36,6 +36,8 @@ type TypeBadgeStyle = React.CSSProperties & { "--iz-type-color"?: string };
  * devre-dışı kalır ve gerekçe ekranda okunur.
  */
 export interface LeaveDecisionHandlers {
+  /** IZN-F2.x: false → Onayla/Reddet pasif (ik.izin_yonetimi Onaylar yok). Varsayılan true. */
+  canDecide?: boolean;
   onApproveRequest?: (request: LeaveRequestResponse) => void;
   onRejectRequest?: (request: LeaveRequestResponse) => void;
 }
@@ -69,6 +71,7 @@ export function PendingLeaveRequestsTable({
   isLoading,
   errorMessage,
   isApprovePending = false,
+  canDecide = true,
   onApproveRequest,
   onRejectRequest,
 }: PendingLeaveRequestsTableProps) {
@@ -255,7 +258,7 @@ export function PendingLeaveRequestsTable({
                           size="sm"
                           className="iz-action"
                           // 99 — hak aşımında onay PASİF
-                          disabled={isBlocked || onApproveRequest === undefined || isApprovePending}
+                          disabled={isBlocked || !canDecide || onApproveRequest === undefined || isApprovePending}
                           title={isBlocked ? APPROVE_BLOCKED_REASON : undefined}
                           // Aynı personelin BİRDEN ÇOK bekleyen talebi olabilir;
                           // erişilebilir ad tarihi de taşır ki iki düğme
@@ -271,7 +274,7 @@ export function PendingLeaveRequestsTable({
                           variant="secondary"
                           size="sm"
                           className="iz-action iz-action--reject"
-                          disabled={onRejectRequest === undefined}
+                          disabled={!canDecide || onRejectRequest === undefined}
                           aria-label={`${REJECT_ACTION_LABEL}: ${row.personnel_name}, ${formatDateDots(row.start_date)}`}
                           data-testid={`iz-reject-${row.id}`}
                           onClick={() => onRejectRequest?.(row)}

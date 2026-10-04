@@ -16,6 +16,8 @@ import "@/components/hr-documents/hr-documents.css";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { usePersonnelDocuments } from "@/lib/api/hooks/useHrDocuments";
 import type { PersonnelDetailResponse } from "@/lib/api/hooks/usePersonnelDetail";
+import { PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 export interface PersonnelDocumentsSummaryCardProps {
   /**
@@ -47,19 +49,23 @@ export function PersonnelDocumentsSummaryCard({
   const documentsQuery = usePersonnelDocuments(personnel.id);
   const documents = documentsQuery.data;
   const [isFormOpen, setFormOpen] = useState(false);
+  // IZN-F2.x · "+ Ekle" bugün KAPISIZ (fallback true); belge ekle = ik.* Düzenler (VEYA).
+  const canAddDocument = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit", fallback: true });
 
   return (
     <section className="pd-card" data-testid="personnel-documents-card">
       <div className="pd-card__head">
         <h2 className="pd-card__title">Belgeler</h2>
         {/* PD 131 — F-BLG T2c'den beri GERÇEK: belge ekleme diyaloğunu açar */}
-        <button
-          type="button"
-          className="pd-card__add-btn"
-          onClick={() => setFormOpen(true)}
-        >
-          + Ekle
-        </button>
+        {canAddDocument && (
+          <button
+            type="button"
+            className="pd-card__add-btn"
+            onClick={() => setFormOpen(true)}
+          >
+            + Ekle
+          </button>
+        )}
       </div>
 
       {isFormOpen && (

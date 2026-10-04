@@ -11,6 +11,8 @@ import { INVOICE_LIST_MAX_LIMIT, useInvoices, useInvoiceSummary } from "@/lib/ap
 import { useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { INVOICE_APPROVE, INVOICING_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatMonthName } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -56,6 +58,9 @@ export function InvoicesView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
+  // IZN-F2.x · Yeni Fatura = mali.fatura Düzenler; gelen faturada Onayla = mali.fatura Onaylar.
+  const canCreateInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
+  const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve", fallback: permission.canWrite });
 
   // 📅 Dönem penceresinin TEK referansı; mount başına bir kez üretilir
   // (`PurchaseOrdersView` deseni) — bileşenler `new Date()` çağırmaz, testler
@@ -156,7 +161,7 @@ export function InvoicesView() {
           </Button>
           {/* 24 — GERÇEK rota. */}
           <Link href={INVOICE_CREATE_URL} data-testid="fat-create-link">
-            <Button variant="primary" disabled={!permission.canWrite} title={permission.canWrite ? undefined : WRITE_DISABLED_REASON}>
+            <Button variant="primary" disabled={!canCreateInvoice} title={canCreateInvoice ? undefined : WRITE_DISABLED_REASON}>
               + Fatura Kes
             </Button>
           </Link>
@@ -323,7 +328,7 @@ export function InvoicesView() {
             }
             onApprove={handleApprove}
             approvingId={approvingId}
-            canWrite={permission.canWrite}
+            canWrite={canApproveInvoice}
             writeDisabledReason={WRITE_DISABLED_REASON}
             tab={tab}
           />

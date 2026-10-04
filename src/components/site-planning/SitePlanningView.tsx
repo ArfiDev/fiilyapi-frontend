@@ -13,6 +13,8 @@ import { useSitePlan } from "@/lib/api/hooks/useSitePlan";
 import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { SITE_DIARY_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { planSectionsState } from "./plan-sections";
 import { PlanAddRowButton } from "./PlanAddRowButton";
@@ -63,6 +65,8 @@ export function SitePlanningView() {
   }>();
 
   const permission = useModulePermission("site_diary");
+  // IZN-F2.x · plan kaydet = santiye.gunluk_planlama/günlük kayıt Düzenler (VEYA).
+  const canWritePlan = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite });
   const weekStart = resolveWeekStart(searchParams.get("week"));
   // 🔴 URL-3 — bu ekranin cozumleme kaynagi YOKTU (tek `useSite` cagirmayan
   // santiye ekraniydi). Slug'li adreste `useSitePlan`/`useSiteSections`/dort
@@ -92,7 +96,7 @@ export function SitePlanningView() {
 
   const plan = planQuery.data;
   const base = routes.projects.sites.detail({ projectId: projectKey, siteId: siteKey });
-  const canSave = permission.canWrite && isDirty && !saveHandle.isSaving;
+  const canSave = canWritePlan && isDirty && !saveHandle.isSaving;
   const sections = planSectionsState(
     sectionsQuery.data,
     sectionsQuery.isLoading,
@@ -173,7 +177,7 @@ export function SitePlanningView() {
           weekEnd={plan?.week_end ?? weekEndOf(weekStart)}
           // Sprint adı TASLAKTAN okunur: düzenleme "Kaydet"ten önce görünür.
           sprintName={draft.sprintName}
-          canWrite={permission.canWrite}
+          canWrite={canWritePlan}
           onShiftWeek={handleShiftWeek}
           onChangeSprintName={(name) => dispatch({ type: "setSprintName", name })}
         />
@@ -196,7 +200,7 @@ export function SitePlanningView() {
               defaultKind="crew"
               defaultSectionId={null}
               sections={sections}
-              canWrite={permission.canWrite}
+              canWrite={canWritePlan}
               onAdd={(row) => dispatch({ type: "addRow", row })}
             />
           </div>
@@ -206,7 +210,7 @@ export function SitePlanningView() {
             days={plan.days}
             draft={draft}
             sections={sections}
-            canWrite={permission.canWrite}
+            canWrite={canWritePlan}
             dispatch={dispatch}
           />
         )}
@@ -229,7 +233,7 @@ export function SitePlanningView() {
       {/* P184-228 — alt iki kart */}
       <div className="plan__bottom">
         <PlanMaterialsCard />
-        <PlanGoalsCard goals={draft.goals} canWrite={permission.canWrite} dispatch={dispatch} />
+        <PlanGoalsCard goals={draft.goals} canWrite={canWritePlan} dispatch={dispatch} />
       </div>
     </div>
   );

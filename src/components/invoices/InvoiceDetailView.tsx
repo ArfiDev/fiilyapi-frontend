@@ -15,6 +15,8 @@ import {
 import { useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { INVOICE_APPROVE, INVOICING_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrencyTight, formatDateDots } from "@/lib/format";
 
 import { InvoiceLinesTable } from "./InvoiceLinesTable";
@@ -83,6 +85,9 @@ function PartyBlock({
  */
 export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
   const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
+  const canEditInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
+  const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve", fallback: permission.canWrite });
+  const canDeletePayment = useButtonGate({ pages: INVOICING_EDIT, need: "sa", fallback: permission.canDelete });
   const detailQuery = useInvoiceDetail(invoiceId);
   const companyQuery = useCompany();
   const actionMutation = useInvoiceAction();
@@ -117,7 +122,9 @@ export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
   }
 
   const busy = actionMutation.isPending;
-  const canWrite = permission.canWrite;
+  // IZN-F2.x · İtiraz/GİB'e Gönder/ödeme = mali.fatura Düzenler; Onayla + Tahsil Edildi = mali.fatura Onaylar;
+  // tahsilat silme = yalnız sistem yöneticisi (üstteki kapılar). Grant yoksa bugünkü modül kararı.
+  const canWrite = canEditInvoice;
 
   return (
     <div className="fat">
@@ -141,7 +148,7 @@ export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
               </Button>
               <Button
                 variant="success"
-                disabled={!canWrite || busy || invoice.status !== "pending"}
+                disabled={!canApproveInvoice || busy || invoice.status !== "pending"}
                 data-testid="fat-action-approve"
                 onClick={() => runAction("approve")}
               >
@@ -168,7 +175,7 @@ export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
               {/* FY:130 — `sent → collected` damgası. */}
               <Button
                 variant="primary"
-                disabled={!canWrite || busy || invoice.status !== "sent"}
+                disabled={!canApproveInvoice || busy || invoice.status !== "sent"}
                 data-testid="fat-action-collected"
                 onClick={() => runAction("mark-collected")}
               >
@@ -354,7 +361,7 @@ export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
           invoiceId={invoiceId}
           isIncoming={isIncoming}
           canWrite={canWrite}
-          canDelete={permission.canDelete}
+          canDelete={canDeletePayment}
         />
       </div>
 

@@ -13,6 +13,8 @@ import { parseCountInput } from "@/lib/decimal";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { CONTRACTS_EDIT, OFFER_CONVERT_APPROVE, PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
 import { OfferDetailView, type OfferItemsSlotContext } from "./OfferDetailView";
@@ -60,6 +62,19 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
   const { level } = useModulePermission("contracts");
   const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
+  const canEditOffers = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canWrite = canEditOffers && !scope.isRestricted;
+  const canAddEmployer = useButtonGate({
+    pages: PROJECT_CREATE_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL),
+  });
+  const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
+  // Grant yoksa `undefined` → bugünkü kural (`canWrite` ∧ `projects ≥ admin`).
+  const canConvert =
+    convertPermission.isSystemAdmin || convertPermission.hasGrant
+      ? convertPermission.canApprove && !scope.isRestricted
+      : undefined;
   const detailQuery = useOffer(offerId);
   // Toast revizyon ANAHTARININ ÜSTÜNDE yaşar: yeni revizyona geçişte görünüm yeniden kurulur, bildirim kalır.
   const [toast, setToast] = useState<{ text: string } | null>(null);
@@ -86,15 +101,17 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
     return <NotFound text={`Rev.${revNo} bulunamadı`} backTo={routes.offers.detail({ offerId })} />;
   }
 
-  const canWrite = hasAtLeast(level, WRITE_LEVEL) && !scope.isRestricted;
+  // IZN-F2.x · teklif yaz = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; işveren ekle =
+  // genel.projeler Düzenler; Dönüştür = teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız.
   return (
     <OfferRevisionLoader
       key={`${offerId}:${revNo}`}
       detail={detail}
       revNo={revNo}
       canWrite={canWrite}
-      canAddEmployer={hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL)}
+      canAddEmployer={canAddEmployer}
       canAdminProjects={hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL)}
+      canConvert={canConvert}
       readOnlyText={readOnlyMessage(level, scope.isRestricted)}
       renderItems={renderItems}
       toast={toast?.text ?? null}
@@ -113,6 +130,7 @@ interface OfferRevisionLoaderProps {
   canAddEmployer: boolean;
   /** TKL-F5.5 · SO-42: dönüştürme `projects ≥ admin` ister. */
   canAdminProjects: boolean;
+  canConvert: boolean | undefined;
   readOnlyText: string;
   renderItems?: (context: OfferItemsSlotContext) => ReactNode;
   onSelectRevision: (revNo: number | null) => void;

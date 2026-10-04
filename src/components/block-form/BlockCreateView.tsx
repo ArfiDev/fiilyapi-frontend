@@ -14,6 +14,8 @@ import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateBlock } from "@/lib/api/hooks/useUnitMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROJECT_UNITS_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
 import { buildBlockBody } from "./build-body";
@@ -66,6 +68,8 @@ export function BlockCreateView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const permission = useModulePermission("projects");
+  // IZN-F2.x · blok/ünite/toplu/Excel/paylaşım yazma kapısı = mali.satis_* Düzenler (VEYA).
+  const canEdit = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [values, setValues] = useState<BlockFormValues>(() => emptyBlockFormValues());
   const [touched, setTouched] = useState<ReadonlySet<BlockFormField>>(
@@ -92,7 +96,7 @@ export function BlockCreateView() {
   // SEKME-F1.3b — hook, erken dönüşten ÖNCE (Rules of Hooks).
   useUnsavedChanges(touched.size > 0, "Blok formu");
 
-  if (!permission.canWrite) return <AccessDenied />;
+  if (!canEdit) return <AccessDenied />;
 
   const isSaving = createBlock.isPending;
 
