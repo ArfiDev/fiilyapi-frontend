@@ -34,7 +34,7 @@ export type GelistirmeVerisi = {
 };
 
 export const VERI: GelistirmeVerisi = {
-  guncellendi: "2026-10-04 19:30",
+  guncellendi: "2026-10-05 00:00",
   gorevler: [
     {
       kod: "IZN",
@@ -49,8 +49,11 @@ export const VERI: GelistirmeVerisi = {
         { kod: "P0", aciklama: "Mimari plan + dilim sırası (IZN-PLAN.md)", durum: "bitti", hat: "backend" },
         { kod: "B1", aciklama: "100 sayfalık katalog, yeni izin tabloları, giriş yapanın sayfaları", durum: "bitti", hat: "backend", pr: "backend #170" },
         { kod: "F1", aciklama: "Menüde görülemeyen sayfalar gizlenir", durum: "bitti", hat: "frontend", pr: "frontend #177" },
-        { kod: "B2 / F2", aciklama: "Yetki kontrolü yeni tablolardan + Sayfa İzinleri ekranı, yeni roller atanabilir", durum: "sirada", hat: "backend" },
-        { kod: "B3…B6 / SIL", aciklama: "Proje ekibi, onay proje rolünden, hassas alanlar, eski sistemin sökümü; silme hattı", durum: "sirada", hat: "backend" },
+        { kod: "B2 / F2", aciklama: "Yetki kontrolü yeni tablolardan + Sayfa İzinleri ekranı, yeni roller atanabilir", durum: "bitti", hat: "backend", pr: "backend #171 · frontend #178" },
+        { kod: "F2.x", aciklama: "Düğmeler sayfa izinlerinden", durum: "bitti", hat: "frontend", pr: "frontend #180" },
+        { kod: "SIL-B1 / F1", aciklama: "Yalnız Sistem Yöneticisi siler + \"şunlar da silinecek\" penceresi (şantiye, bölüm)", durum: "bitti", hat: "backend", pr: "backend #172 · frontend #179" },
+        { kod: "B3 / F3", aciklama: "Proje ekibi: rol ve disiplin proje başına, Kullanıcılar ekranı", durum: "devam", hat: "backend" },
+        { kod: "B3b…B6 / SIL-B2…", aciklama: "Onay proje rolünden, hassas alanlar, eski sistemin sökümü; mali kayıt silme", durum: "sirada", hat: "backend" },
       ],
       kararlar: [
         "Süper düzeyi kalkar; silme yalnız Sistem Yöneticisi, her koşulda.",
