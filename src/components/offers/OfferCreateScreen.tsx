@@ -9,12 +9,14 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { useSession } from "@/components/shell/SessionProvider";
 import { Badge, Button } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
+import { EMPTY_CELL } from "@/lib/format";
 import { useEmployers, type EmployerListItem } from "@/lib/api/hooks/useEmployers";
 import { useCreateOffer } from "@/lib/api/hooks/useOfferMutations";
 import { useOfferSettings } from "@/lib/api/hooks/useOffers";
 import { useOfferTemplates, type OfferTemplateListItem } from "@/lib/api/hooks/useOfferTemplates";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { CONTRACTS_EDIT, PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
@@ -27,6 +29,8 @@ import { OfferInfoFields } from "./OfferInfoFields";
 import { OfferRateFields } from "./OfferRateFields";
 import { OfferStartChoice } from "./OfferStartChoice";
 import {
+  BOTH_RATES_MASKED,
+  NO_MASKED_RATES,
   buildOfferCreateBody,
   initialOfferFormValues,
   missingFieldsText,
@@ -164,7 +168,11 @@ function OfferCreateForm({ settings, canAddEmployer, initialTemplate }: OfferCre
   useUnsavedChanges(isDirty && !isCreated, "Teklif taslağı");
 
   // Doğrulama gönderim denemesinden sonra CANLI sürer (düzeltilen alan hatası ve bant sayısı anında güncellenir).
-  const errors = useMemo(() => (attempted ? validateOfferForm(values) : {}), [attempted, values]);
+  // IZN-F4.2: `maliyet_kar` gizli rol GG/kâr yazamaz (dolu gönderim 403) → iki oran salt okunur "—", gövdeye girmez;
+  // sunucu ayardan / kaynaktan kendisi alır.
+  const isMaliyetKarHidden = useCategoryHidden("maliyet_kar");
+  const maskedRates = isMaliyetKarHidden ? BOTH_RATES_MASKED : NO_MASKED_RATES;
+  const errors = useMemo(() => (attempted ? validateOfferForm(values, maskedRates) : {}), [attempted, values, maskedRates]);
   const errorCount = Object.keys(errors).length;
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -193,7 +201,7 @@ function OfferCreateForm({ settings, canAddEmployer, initialTemplate }: OfferCre
     if (createOffer.isPending) return;
     setServerError(null);
     setAttempted(true);
-    if (Object.keys(validateOfferForm(values)).length > 0) {
+    if (Object.keys(validateOfferForm(values, maskedRates)).length > 0) {
       shouldFocusRef.current = true;
       return;
     }
@@ -201,7 +209,7 @@ function OfferCreateForm({ settings, canAddEmployer, initialTemplate }: OfferCre
       setServerError(start.startProblem);
       return;
     }
-    createOffer.mutate(buildOfferCreateBody(values, start.bodyStart), {
+    createOffer.mutate(buildOfferCreateBody(values, start.bodyStart, maskedRates), {
       onSuccess: (offer) => {
         setIsCreated(true);
         router.replace(routes.offers.detail({ offerId: offer.id }));
@@ -287,6 +295,8 @@ function OfferCreateForm({ settings, canAddEmployer, initialTemplate }: OfferCre
               values={values}
               errors={errors}
               onChange={change}
+              masked={maskedRates}
+              isHiddenHintShown={isMaliyetKarHidden}
               defaults={{
                 overheadPct: pctToInputText(settings.default_overhead_pct),
                 profitPct: pctToInputText(settings.default_profit_pct),
@@ -300,8 +310,8 @@ function OfferCreateForm({ settings, canAddEmployer, initialTemplate }: OfferCre
             title={values.title}
             validityDays={values.validityDays}
             validUntil={validUntil}
-            overheadPct={values.overheadPct}
-            profitPct={values.profitPct}
+            overheadPct={maskedRates.has("overheadPct") ? EMPTY_CELL : values.overheadPct}
+            profitPct={maskedRates.has("profitPct") ? EMPTY_CELL : values.profitPct}
             vatPct={values.vatPct}
           />
         </div>

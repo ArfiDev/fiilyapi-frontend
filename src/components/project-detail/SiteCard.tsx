@@ -5,6 +5,9 @@ import { formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules";
 import type { SiteListItem } from "@/lib/api/hooks/useSites";
 import type { ProjectType } from "@/lib/api/hooks/useProjects";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
 
 import "./project-detail.css";
 import { routes, routeKeyOf } from "@/lib/routes";
@@ -61,9 +64,11 @@ function subtitle(site: SiteListItem): string {
 function PlaceholderValue({
   valueClassName,
   pendingModule,
+  isRestricted = false,
 }: {
   valueClassName: string;
   pendingModule: PendingModuleKey;
+  isRestricted?: boolean;
 }) {
   return (
     <div
@@ -72,11 +77,12 @@ function PlaceholderValue({
       // + `pending_module:null` = ROLÜN İZNİ YOK (backend `restricted()`).
       // O hâlde `pendingModuleLabel(null)`ın döndürdüğü "İlgili modülle
       // birlikte gelir" cümlesi YALANDIR — modül vardır, izin yoktur. Gerekçe
-      // bilinmiyorsa ipucu HİÇ basılmaz (aynı ekranın alt şeridi de böyle
-      // yapar: SiteTotalsStrip.tsx:77-78).
-      title={pendingModule ? pendingModuleLabel(pendingModule) : undefined}
+      // bilinmiyorsa uydurulmaz; IZN-F4.2: 3. hâl artık kilit + "Bu bilgi rolünüz
+      // için gizli" ipucu basar (`isRestricted`).
+      title={isRestricted ? HIDDEN_FIELD_HINT : pendingModule ? pendingModuleLabel(pendingModule) : undefined}
     >
       —
+      {isRestricted && <HiddenMark />}
     </div>
   );
 }
@@ -253,6 +259,7 @@ export function SiteCard({ projectKey, site, projectType }: SiteCardProps) {
               <PlaceholderValue
                 valueClassName="site-card__kpi-value site-card__kpi-value--worker"
                 pendingModule={site.worker_count.pending_module}
+                isRestricted={isRestrictedEnvelope(site.worker_count)}
               />
             )}
             <div className="site-card__kpi-label">İşçi</div>
@@ -268,6 +275,7 @@ export function SiteCard({ projectKey, site, projectType }: SiteCardProps) {
               <PlaceholderValue
                 valueClassName="site-card__kpi-value site-card__kpi-value--progress"
                 pendingModule={site.progress_pct.pending_module}
+                isRestricted={isRestrictedEnvelope(site.progress_pct)}
               />
             )}
             <div className="site-card__kpi-label">{physicalLabel("İlerleme", isRestricted)}</div>

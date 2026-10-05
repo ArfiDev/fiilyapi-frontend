@@ -62,6 +62,11 @@ export interface FakeOffersOptions {
   readonly seeded?: boolean;
   /** TKL-F5.6 · sayfaya özel dönüştürme yazma portu (`offers-convert-fake.ts`); yoksa `/convert` 404 (paylaşılan mock'a YAZILMAZ). */
   readonly convert?: ConvertPort;
+  /**
+   * IZN-F4.2 · opt-in: başarılı bir yanıtın gövdesini yol bazında dönüştürür (rol maskesi taklidi: backend `null` döner).
+   * Yalnız çağıran testin sayfasına etki eder; paylaşılan mock'a/tohuma dokunmaz. Verilmezse davranış AYNEN eski.
+   */
+  readonly transformBody?: (path: string, body: unknown) => unknown;
 }
 
 interface CatalogRead {
@@ -158,7 +163,7 @@ function record(server: FakeOffersServer, port: OffersPort, body: Json | null): 
  * navigasyondan ÖNCE çağrılır.
  */
 export async function installFakeOffersServer(page: Page, options: FakeOffersOptions = {}): Promise<FakeOffersServer> {
-  const { seeded = true, convert } = options;
+  const { seeded = true, convert, transformBody } = options;
   const catalog = await readCatalog(page);
   const employers = await readEmployers(page);
   const clock = () => new Date(FIXED_NOW);
@@ -187,7 +192,7 @@ export async function installFakeOffersServer(page: Page, options: FakeOffersOpt
     return route.fulfill({
       status: captured.status,
       contentType: "application/json",
-      body: JSON.stringify(captured.body ?? {}),
+      body: JSON.stringify((transformBody ? transformBody(port.path, captured.body) : captured.body) ?? {}),
     });
   });
   return server;

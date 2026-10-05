@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 import { cx } from "@/lib/cx";
 import type { ProjectListItem } from "@/lib/api/hooks/useProjects";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
-import { pendingModuleHint, pendingModuleLabel } from "@/lib/pending-modules";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { pendingModuleLabel } from "@/lib/pending-modules";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
 import type { MetricPlaceholder } from "@/lib/api/scale";
 
 import { ShareBar } from "./ShareBar";
@@ -75,7 +78,9 @@ function progressMetric(project: Project): PercentMetric | undefined {
 // Jenerik: hem para (`Metric`) hem yüzde (`PercentMetric`) zarfları için AYNI
 // fonksiyon yeterli — yalnız `pending_module` okunuyor, `.value`in tipi
 // önemsiz (FAZ 2d, `MetricPlaceholder` varsayılan `V` ile).
+// IZN-F4.2: 3. hâl artık "Bu bilgi rolünüz için gizli" ipucu + kilit basar (`isRestrictedEnvelope`); 2. hâl aynen.
 function pendingReason(metric: MetricPlaceholder | undefined | null): string | undefined {
+  if (isRestrictedEnvelope(metric)) return HIDDEN_FIELD_HINT;
   return metric?.pending_module ? pendingModuleLabel(metric.pending_module) : undefined;
 }
 
@@ -145,6 +150,7 @@ function ProgressRow({
             title={pendingReason(metric)}
           >
             —
+            {isRestrictedEnvelope(metric) && <HiddenMark />}
           </span>
         )}
       </div>
@@ -216,9 +222,10 @@ function MetricValue({
   return (
     <span
       className="prj-kpi__value prj-kpi__value--pending"
-      title={pendingModuleHint(metric?.pending_module)}
+      title={pendingReason(metric)}
     >
       —
+      {isRestrictedEnvelope(metric) && <HiddenMark />}
     </span>
   );
 }
@@ -281,9 +288,10 @@ function MarginChip({ metric }: { metric: PercentMetric | undefined }) {
       ) : (
         <span
           className="prj-card__margin prj-card__margin--pending"
-          title={pendingModuleHint(metric?.pending_module)}
+          title={pendingReason(metric)}
         >
           — marj
+          {isRestrictedEnvelope(metric) && <HiddenMark />}
         </span>
       )}
     </div>

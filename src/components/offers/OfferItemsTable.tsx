@@ -31,8 +31,8 @@ const EMPTY_GROUP_TEXT = 'Bu grupta henüz kalem yok · "+ Katalogdan Ekle" ile 
 export interface OfferItemsTableProps {
   groups: OfferRevisionRead["groups"];
   /** Revizyon geneli oranlar (kalemde null iken gösterilen). */
-  overheadPct: string;
-  profitPct: string;
+  overheadPct: string | null;
+  profitPct: string | null;
   catalogById: ReadonlyMap<string, WorkItemRead>;
   editor: OfferItemEditor;
   canEdit: boolean;

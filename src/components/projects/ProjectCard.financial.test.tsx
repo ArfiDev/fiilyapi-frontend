@@ -111,10 +111,10 @@ describe("ProjectCard mali ilerleme cubugu — taahhut", () => {
     expect(ffill()).not.toBeInTheDocument();
   });
 
-  it("izin yok halinde (pending_module:null) sahte gerekce basmaz", () => {
+  it("izin yok halinde (pending_module:null) sahte gerekce basmaz; gizli ipucu + kilit basar", () => {
     render(<ProjectCard project={taahhut(METRIC_RESTRICTED)} />);
     expect(fpct()).toHaveTextContent("—");
-    expect(fpct()).not.toHaveAttribute("title");
+    expect(fpct()).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     expect(screen.queryByTitle("İlgili modülle birlikte gelir")).not.toBeInTheDocument();
     expect(ffill()).not.toBeInTheDocument();
   });

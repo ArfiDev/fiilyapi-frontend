@@ -1,7 +1,10 @@
 import { Badge, Button } from "@/components/ui";
 import { cx } from "@/lib/cx";
 import { formatQuantity } from "@/lib/format";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import { pendingModuleHint } from "@/lib/pending-modules";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
 import type { SiteStockRow } from "@/lib/api/hooks/useSiteStock";
 
 import {
@@ -117,8 +120,11 @@ export function SiteStockTable({ rows, isLoading, isError }: SiteStockTableProps
             const action = siteStockRowAction(row.status);
             const need = monthlyNeedText(row.monthly_need);
             const section = sectionText(row.section);
-            const needReason = pendingModuleHint(row.monthly_need.pending_module);
-            const sectionReason = pendingModuleHint(row.section.pending_module);
+            // IZN-F4.2: 3. hâl (rolün izni yok) → kilit + "Bu bilgi rolünüz için gizli"; 2. hâl aynen.
+            const isNeedHidden = isRestrictedEnvelope(row.monthly_need);
+            const isSectionHidden = isRestrictedEnvelope(row.section);
+            const needReason = isNeedHidden ? HIDDEN_FIELD_HINT : pendingModuleHint(row.monthly_need.pending_module);
+            const sectionReason = isSectionHidden ? HIDDEN_FIELD_HINT : pendingModuleHint(row.section.pending_module);
             return (
               <tr
                 key={row.id}
@@ -150,6 +156,7 @@ export function SiteStockTable({ rows, isLoading, isError }: SiteStockTableProps
                       data-testid={`santiye-stok-need-${row.code}`}
                     >
                       —
+                      {isNeedHidden && <HiddenMark />}
                     </span>
                   )}
                 </td>
@@ -163,6 +170,7 @@ export function SiteStockTable({ rows, isLoading, isError }: SiteStockTableProps
                       data-testid={`santiye-stok-section-${row.code}`}
                     >
                       —
+                      {isSectionHidden && <HiddenMark />}
                     </span>
                   )}
                 </td>

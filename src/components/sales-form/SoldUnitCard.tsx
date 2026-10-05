@@ -1,4 +1,6 @@
 import { Field, Select } from "@/components/ui";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import type { ProjectListItem } from "@/lib/api/hooks/useProjects";
 import type { UnitBlockGroup, UnitResponse } from "@/lib/api/hooks/useProjectUnits";
 
@@ -177,9 +179,10 @@ export function SoldUnitCard({
             <div
               className="sf-unit-info__value sf-unit-info__value--muted sf-unit-info__pending"
               data-testid="satis-form-maliyet"
-              title={UNIT_COST_PENDING_REASON}
+              title={info?.cost.isRestricted ? HIDDEN_FIELD_HINT : UNIT_COST_PENDING_REASON}
             >
               {EMPTY_METRIC}
+              {info?.cost.isRestricted && <HiddenMark />}
             </div>
           )}
         </div>

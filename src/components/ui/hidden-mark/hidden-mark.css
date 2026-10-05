@@ -1,0 +1,10 @@
+/* IZN-F4.2 · maskeli alan işareti: küçük, sönük kilit; metin yalnız form alanı altında görünür. */
+.hidden-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-hidden-mark-gap);
+  margin-inline-start: var(--space-hidden-mark-gap);
+  color: var(--color-text-subtle);
+  vertical-align: middle;
+}
+.hidden-mark--text { margin-inline-start: 0; font-size: var(--text-small); }

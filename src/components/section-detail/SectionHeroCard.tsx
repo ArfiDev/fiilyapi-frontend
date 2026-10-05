@@ -8,6 +8,9 @@ import {
   pendingModuleLabel,
   type PendingModuleKey,
 } from "@/lib/pending-modules";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { SECTION_STATUS_CLASS_SUFFIX, SECTION_STATUS_LABELS } from "@/lib/section-labels";
 import type { SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import { remainingDays } from "./remainingDays";
@@ -57,10 +60,15 @@ function metaParts(section: SectionDetailResponse, siteName: string): string[] {
 
 // Yer tutucu KPI değeri — SiteHeroBar/SectionCard ile aynı desen: düzeni
 // korur, "—" basar, title'da açıklama verir (spec §7.1).
-function PlaceholderValue({ pendingModule }: { pendingModule: PendingModuleKey }) {
+// IZN-F4.2: 3. hâl (rolün izni yok) → kilit + "Bu bilgi rolünüz için gizli".
+function PlaceholderValue({ pendingModule, isRestricted = false }: { pendingModule: PendingModuleKey; isRestricted?: boolean }) {
   return (
-    <div className="section-hero__kpi-value section-hero__kpi-value--pending" title={pendingModuleHint(pendingModule)}>
+    <div
+      className="section-hero__kpi-value section-hero__kpi-value--pending"
+      title={isRestricted ? HIDDEN_FIELD_HINT : pendingModuleHint(pendingModule)}
+    >
       —
+      {isRestricted && <HiddenMark />}
     </div>
   );
 }
@@ -78,7 +86,7 @@ function ProgressCell({ progress }: { progress: SectionDetailResponse["progress_
         // ProgressCell yorumu) — kaçış YOK.
         <div className="section-hero__kpi-value">{formatPercent(progress.value ?? "0")}</div>
       ) : (
-        <PlaceholderValue pendingModule={progress.pending_module} />
+        <PlaceholderValue pendingModule={progress.pending_module} isRestricted={isRestrictedEnvelope(progress)} />
       )}
       <div className="section-hero__kpi-track">
         {isReal && (
@@ -109,7 +117,10 @@ function BudgetCell({ budget }: { budget: SectionDetailResponse["budget"] }) {
           {formatCompactCurrency(raw)}
         </div>
       ) : (
-        <PlaceholderValue pendingModule={budget.pending_module ?? "boq"} />
+        <PlaceholderValue
+          pendingModule={budget.pending_module ?? (isRestrictedEnvelope(budget) ? undefined : "boq")}
+          isRestricted={isRestrictedEnvelope(budget)}
+        />
       )}
       <div
         className="section-hero__kpi-note section-hero__kpi-note--pending"
@@ -131,7 +142,7 @@ function WorkerCell({ worker }: { worker: SectionDetailResponse["worker_count"] 
       {isReal ? (
         <div className="section-hero__kpi-value">{worker.count}</div>
       ) : (
-        <PlaceholderValue pendingModule={worker.pending_module} />
+        <PlaceholderValue pendingModule={worker.pending_module} isRestricted={isRestrictedEnvelope(worker)} />
       )}
       <div className="section-hero__kpi-note">Bu bölümde</div>
     </div>
@@ -149,7 +160,7 @@ function BoqCountCell({ boqItemCount }: { boqItemCount: SectionDetailResponse["b
       {isReal ? (
         <div className="section-hero__kpi-value">{boqItemCount.count}</div>
       ) : (
-        <PlaceholderValue pendingModule={boqItemCount.pending_module} />
+        <PlaceholderValue pendingModule={boqItemCount.pending_module} isRestricted={isRestrictedEnvelope(boqItemCount)} />
       )}
       <div
         className="section-hero__kpi-note section-hero__kpi-note--pending"

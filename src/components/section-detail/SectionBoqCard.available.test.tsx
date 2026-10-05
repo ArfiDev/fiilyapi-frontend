@@ -62,13 +62,13 @@ describe("SectionBoqCard · BÖLÜM TOPLAM yüzdesi", () => {
     expect(pct).not.toHaveTextContent("%62,5");
   });
 
-  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → title VERİLMEZ", () => {
+  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → gizli ipucu (kilit), modül gerekçesi YOK", () => {
     const pct = renderCard(
       totalsWith({ grand_progress_pct: { available: false, value: null, pending_module: null } }),
     );
     expect(pct).toHaveTextContent("—");
     expect(pct).toHaveClass("boq-table__pct--pending");
-    expect(pct).not.toHaveAttribute("title");
+    expect(pct).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     expect(within(pct).queryByText("İlgili modülle birlikte gelir")).not.toBeInTheDocument();
   });
 });

@@ -107,6 +107,59 @@ test("teklif detay kalemler gorsel", async ({ page }) => {
   await expect(page).toHaveScreenshot("teklif-detay-kalemler.png", { fullPage: true });
 });
 
+/** IZN-F4.2 · `maliyet_kar` gizli rol: backend revizyonda GG/kâr %, kalem maliyeti ve iç toplamları `null` döner. */
+function maskMaliyetKar(path: string, body: unknown): unknown {
+  if (!/^\/offers\/[^/]+\/revisions\/\d+$/.test(path) || typeof body !== "object" || body === null) return body;
+  const revision = body as {
+    overhead_pct: string | null;
+    profit_pct: string | null;
+    groups: Array<{ items: Array<Record<string, unknown>> }>;
+    totals: { internal: Record<string, unknown> };
+  };
+  return {
+    ...revision,
+    overhead_pct: null,
+    profit_pct: null,
+    groups: revision.groups.map((group) => ({
+      ...group,
+      items: group.items.map((item) => ({
+        ...item,
+        cost_unit_price: null,
+        overhead_pct: null,
+        profit_pct: null,
+        internal: { cost: null, overhead: null, profit: null, profit_pct: null, man_hours: (item.internal as { man_hours: unknown }).man_hours },
+      })),
+    })),
+    totals: {
+      ...revision.totals,
+      internal: { ...revision.totals.internal, cost: null, overhead: null, profit: null, profit_pct: null },
+    },
+  };
+}
+
+// IZN-F4.2 · `/auth/me.hidden_fields = ["maliyet_kar"]` yalnız bu sayfada (page.route); fake sunucu aynı rol için GG/kâr %'yi `null`
+// döndürür. Beklenen: oranlar salt okunur "—" + kilit ipucu, kalem GG/kâr hücreleri "—" ve kapalı, toplamlarda "—".
+test("teklif detay maliyet gizli gorsel", async ({ page }) => {
+  await page.route("**/api/auth/me", async (route) => {
+    const response = await route.fetch();
+    const me = (await response.json()) as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...me, hidden_fields: ["maliyet_kar"] }),
+    });
+  });
+  await loginForOffers(page, { transformBody: maskMaliyetKar });
+  await openOfferDetail(page, SEED_NO.draftItems);
+  await expect(page.getByTestId("oit-amount").first()).toBeVisible();
+  await expect(page.getByLabel("Genel gider", { exact: true })).toHaveValue("—");
+  await expect(page.getByLabel("Kâr", { exact: true })).toHaveValue("—");
+  await expect(page.getByTestId("hidden-mark").first()).toBeVisible();
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("teklif-detay-maliyet-gizli.png", { fullPage: true });
+});
+
 test("teklif secici gorsel", async ({ page }) => {
   await loginForOffers(page);
   await openOfferDetail(page, SEED_NO.draftItems);

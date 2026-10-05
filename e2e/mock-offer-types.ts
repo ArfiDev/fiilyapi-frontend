@@ -307,7 +307,8 @@ export interface OffersPort {
   catalog: () => readonly OfferCatalogEntry[];
   employers: () => ReadonlyArray<{ id: string; name: string }>;
   /** Şirket geneli katalog son fiyatı (HK / SZL / TKL birleşik) — SO-6 önerisi buradan. */
-  lastPrices: () => ReadonlyMap<string, { price: string }>;
+  /** `price: null` = maskeli (`sozlesme_fiyat` gizli; IZN-B4a): maliyet önerisine girmez. */
+  lastPrices: () => ReadonlyMap<string, { price: string | null }>;
   actor: MockUser;
   /** TKL-F5.1 · dönüştürme yazma portu; yoksa `/offers/{id}/convert` bu harness'ta DESTEKLENMEZ (404). */
   convert?: ConvertPort;

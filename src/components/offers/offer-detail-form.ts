@@ -5,9 +5,12 @@ import type { OfferDetailRead, OfferRevisionRead } from "@/lib/api/hooks/useOffe
 import { parseQuantityInput } from "@/lib/tr-decimal";
 
 import {
+  NO_MASKED_RATES,
   OFFER_SCOPE_MAX_LENGTH,
   pctToInputText,
   validateOfferForm,
+  type MaskedRateField,
+  type MaskedRates,
   type OfferFormValues,
 } from "./offer-form";
 
@@ -63,6 +66,17 @@ const REVISION_FIELDS = [
 export const OFFER_FORM_FIELDS: readonly OfferDetailFormField[] = [...OFFER_FIELDS, ...REVISION_FIELDS];
 export const OFFER_INFO_FIELD_SET: ReadonlySet<OfferDetailFormField> = new Set(OFFER_FIELDS);
 
+/**
+ * IZN-F4.2 · sunucunun MASKELEDİĞİ (`null` döndürdüğü) oranlar. Bu alanlar formda salt okunur "—"dir; değişmiş sayılmaz,
+ * doğrulanmaz, gövdeye girmez. Sunucu değeri dolu olan oran normal düzenlenir.
+ */
+export function maskedRatesOf(revision: Pick<OfferRevisionRead, "overhead_pct" | "profit_pct">): MaskedRates {
+  const masked = new Set<MaskedRateField>();
+  if (revision.overhead_pct === null) masked.add("overheadPct");
+  if (revision.profit_pct === null) masked.add("profitPct");
+  return masked;
+}
+
 /** Sunucu durumundan form değerleri (baseline). */
 export function detailFormValuesFromServer(
   detail: OfferDetailRead,
@@ -91,7 +105,8 @@ function effectiveIndex(values: OfferDetailFormValues): PriceIndexChoice {
 }
 
 /** Yüzde metni sunucudaki değere eşit mi? Okunamayan metin = değişmiş (doğrulama yakalar). */
-function pctEquals(text: string, serverPct: string): boolean {
+function pctEquals(text: string, serverPct: string | null): boolean {
+  if (serverPct === null) return true; // maskeli: değişmiş sayılamaz (`maskedRatesOf`)
   const parsed = parseQuantityInput(text);
   return parsed.kind === "ok" && compareDecimalStrings(parsed.value, serverPct) === 0;
 }
@@ -111,7 +126,7 @@ export function changedFormFields(
   return changed;
 }
 
-type ServerPct = { overheadPct: string; profitPct: string; vatPct: string };
+type ServerPct = { overheadPct: string | null; profitPct: string | null; vatPct: string };
 
 function isFieldChanged(
   field: OfferDetailFormField,
@@ -188,8 +203,11 @@ export function buildOfferPatchBodies(
   };
 }
 
-export function validateDetailForm(values: OfferDetailFormValues): OfferDetailFormErrors {
-  const errors: { -readonly [K in OfferDetailFormField]?: string } = { ...validateOfferForm(values) };
+export function validateDetailForm(
+  values: OfferDetailFormValues,
+  masked: MaskedRates = NO_MASKED_RATES,
+): OfferDetailFormErrors {
+  const errors: { -readonly [K in OfferDetailFormField]?: string } = { ...validateOfferForm(values, masked) };
   if (values.offerDate === "") errors.offerDate = OFFER_DETAIL_MESSAGES.offerDateRequired;
   if (values.deliveryDays !== "") {
     const days = parseCountInput(values.deliveryDays);

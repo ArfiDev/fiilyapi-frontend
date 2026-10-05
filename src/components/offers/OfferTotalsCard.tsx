@@ -1,7 +1,7 @@
 import { WarningTriangleIcon } from "@/components/ui/icons";
 import { formatMoneyTl, formatWholeNumber } from "@/components/work-item-catalog/work-item-model";
 import { divideDecimalStrings, multiplyDecimalStrings } from "@/lib/decimal";
-import { formatDecimal } from "@/lib/format";
+import { EMPTY_CELL, formatDecimal } from "@/lib/format";
 import type { OfferRevisionRead } from "@/lib/api/hooks/useOffers";
 
 import "./offer-detail.css";
@@ -21,9 +21,12 @@ export interface OfferTotalsCardProps {
 /** TD:422-429 `tl(v)` — kuruşlu, grup/kalem satırlarıyla aynı biçim; dize tabanlı, kayıpsız; maskeli → "—". */
 const money = formatMoneyTl;
 
-/** `null`/boş bölen → yüzde basılmaz. */
+/**
+ * Türev yüzde. MASKELİ (`null`) girdi → hesap YAPILAMAZ → "—" (sıfır sayılmaz, uydurulmaz — IZN-F4.2).
+ * Bölen sıfır → yüzde basılmaz.
+ */
 function pctText(part: string | null, base: string | null): string {
-  if (part === null || base === null) return "";
+  if (part === null || base === null) return EMPTY_CELL;
   const ratio = divideDecimalStrings(multiplyDecimalStrings(part, PERCENT), base, PCT_DISPLAY_DIGITS);
   return ratio === null ? "" : `%${formatDecimal(ratio, PCT_DISPLAY_DIGITS)}`;
 }
@@ -43,7 +46,7 @@ export function OfferTotalsCard({ totals, vatPct }: OfferTotalsCardProps) {
     { label: "Genel gider", pct: pctText(internal.overhead, internal.cost), value: money(internal.overhead) },
     {
       label: "Kâr",
-      pct: internal.profit_pct === null ? "" : `%${formatDecimal(internal.profit_pct, PCT_DISPLAY_DIGITS)}`,
+      pct: internal.profit_pct === null ? EMPTY_CELL : `%${formatDecimal(internal.profit_pct, PCT_DISPLAY_DIGITS)}`,
       value: money(internal.profit),
     },
   ];

@@ -96,11 +96,11 @@ describe.each(YUZEYLER)("$ad · poz satırı Gerç. %", ({ testId, render: rende
     expect(within(cell).getByText(/günlük|bağlanmadı|gelir/i)).toBeInTheDocument();
   });
 
-  it("ÜÇÜNCÜ HÂL (izin yok): '—' basar ama SAHTE GEREKÇE basmaz", () => {
+  it("ÜÇÜNCÜ HÂL (izin yok): '—' + kilit + gizli ipucu; sahte modül gerekçesi YOK (IZN-F4.2)", () => {
     renderSurface(IZINSIZ);
     const cell = screen.getByTestId(testId);
     expect(cell).toHaveTextContent("—");
-    expect(cell).not.toHaveAttribute("title");
+    expect(cell).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     expect(within(cell).queryByText(/gelir|bağlanmadı/i)).not.toBeInTheDocument();
   });
 

@@ -231,11 +231,11 @@ describe("ProjectCard ilerleme cubugu — K-ZARF 3. hâl (izin yok)", () => {
    * `pendingModuleLabel(null)` "İlgili modülle birlikte gelir" doner; bu hâlde
    * o metin YALANDIR (modul var, izin yok) → title HIC verilmemelidir.
    */
-  it("izin yok hâlinde sahte gerekce basmaz (title YOK)", () => {
+  it("izin yok hâlinde sahte gerekce basmaz; title = gizli ipucu (IZN-F4.2)", () => {
     render(<ProjectCard project={taahhut(METRIC_RESTRICTED)} />);
     const pct = screen.getByTestId("prj-progress-pct");
     expect(pct).toHaveTextContent("—");
-    expect(pct).not.toHaveAttribute("title");
+    expect(pct).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     expect(screen.queryByTitle("İlgili modülle birlikte gelir")).not.toBeInTheDocument();
     expect(fill()).not.toBeInTheDocument();
   });

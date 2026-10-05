@@ -73,7 +73,7 @@ describe("BoqTotalsStrip · karşıt kanıt (boş zarf)", () => {
     }
   });
 
-  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → title VERİLMEZ", () => {
+  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → gizli ipucu (kilit), modül gerekçesi YOK", () => {
     render(
       <BoqTotalsStrip
         totals={totalsWith({ contract_total: { available: false, value: null, pending_module: null } })}
@@ -82,7 +82,7 @@ describe("BoqTotalsStrip · karşıt kanıt (boş zarf)", () => {
     const value = screen.getAllByTestId("boq-kpi-value")[0];
     expect(value).toHaveTextContent("—");
     expect(value).toHaveClass("boq-kpi__value--pending");
-    expect(value).not.toHaveAttribute("title");
+    expect(value).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     expect(within(value).queryByText("İlgili modülle birlikte gelir")).not.toBeInTheDocument();
   });
 

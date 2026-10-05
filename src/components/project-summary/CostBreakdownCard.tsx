@@ -1,3 +1,4 @@
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
 import { formatCurrency } from "@/lib/format";
 import type { ProjectCostBreakdown } from "@/lib/api/hooks/useProjectCosts";
 
@@ -96,6 +97,7 @@ export function CostBreakdownCard({ breakdown }: CostBreakdownCardProps) {
           <PendingCell
             label="Ruhsat ve Harçlar"
             moduleKey={breakdown.permits.pending_module ?? "accounting"}
+            isHidden={isRestrictedEnvelope(breakdown.permits)}
             className="psum-cost__pending"
           />
         )}
@@ -110,6 +112,7 @@ export function CostBreakdownCard({ breakdown }: CostBreakdownCardProps) {
           <PendingCell
             label="Finansman (Kredi Faizi)"
             moduleKey={breakdown.financing.pending_module ?? "treasury"}
+            isHidden={isRestrictedEnvelope(breakdown.financing)}
             className="psum-cost__pending"
           />
         )}
@@ -120,6 +123,7 @@ export function CostBreakdownCard({ breakdown }: CostBreakdownCardProps) {
           <PendingCell
             label="Pazarlama ve Satış"
             moduleKey={breakdown.marketing.pending_module ?? "accounting"}
+            isHidden={isRestrictedEnvelope(breakdown.marketing)}
             className="psum-cost__pending"
           />
         )}

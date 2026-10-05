@@ -201,6 +201,7 @@ export function SalesView() {
         onStatusFilterChange={(next) => pushParam(STATUS_PARAM, next)}
         isLoading={salesQuery.isLoading}
         isError={salesQuery.isError}
+        projectId={selectedProjectId || undefined}
         errorMessage={
           salesQuery.isError
             ? backendErrorMessage(salesQuery.error, "Satış listesi yüklenemedi.")
@@ -214,6 +215,7 @@ export function SalesView() {
         items={summaryQuery.data?.upcoming_collections}
         isLoading={summaryQuery.isLoading}
         isError={summaryQuery.isError}
+        projectId={selectedProjectId || undefined}
         errorMessage={
           summaryQuery.isError
             ? backendErrorMessage(summaryQuery.error, "Yaklaşan tahsilatlar yüklenemedi.")

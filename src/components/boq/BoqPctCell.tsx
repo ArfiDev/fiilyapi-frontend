@@ -1,5 +1,6 @@
 import { cx } from "@/lib/cx";
 import { formatPercent } from "@/lib/format";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { metricCell, type MetricEnvelope } from "@/lib/placeholder-cell";
 
 import "./boq.css";
@@ -45,7 +46,7 @@ export interface BoqPctCellProps {
  * kapsamı dışındadır — bağlanan yalnızca SAYININ KENDİSİDİR.
  */
 export function BoqPctCell({ progress, className, "data-testid": testId }: BoqPctCellProps) {
-  const { text, hint } = metricCell(progress, formatPercent);
+  const { text, hint, isHidden } = metricCell(progress, formatPercent);
   return (
     <td
       className={cx(
@@ -54,13 +55,12 @@ export function BoqPctCell({ progress, className, "data-testid": testId }: BoqPc
         text === null && "boq-table__pct--pending",
       )}
       data-testid={testId}
-      // 3. hâl (`available:false` + `pending_module:null` = rolün izni yok)
-      // `hint` taşımaz → ne `title` ne sr-only basılır: "modül henüz gelmedi"
-      // demek orada YALAN olurdu (modül var, izin yok).
+      // 3. hâl (`available:false` + `pending_module:null` = rolün izni yok): "modül henüz gelmedi"
+      // YALAN olurdu → hint "Bu bilgi rolünüz için gizli" + kilit (IZN-F4.2).
       title={hint}
     >
       {text ?? "—"}
-      {hint !== undefined && <span className="sr-only">{hint}</span>}
+      {isHidden ? <HiddenMark /> : hint !== undefined && <span className="sr-only">{hint}</span>}
     </td>
   );
 }

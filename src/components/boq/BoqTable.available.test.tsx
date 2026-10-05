@@ -74,7 +74,7 @@ describe("BoqTable · GENEL TOPLAM yüzdesi", () => {
     expect(pct).not.toHaveTextContent("%75");
   });
 
-  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → title VERİLMEZ", () => {
+  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → gizli ipucu (kilit), modül gerekçesi YOK", () => {
     render(
       <BoqTable
         groups={GROUPS}
@@ -84,7 +84,7 @@ describe("BoqTable · GENEL TOPLAM yüzdesi", () => {
     const pct = screen.getByTestId("boq-total-pct");
     expect(pct).toHaveTextContent("—");
     expect(pct).toHaveClass("boq-table__pct--pending");
-    expect(pct).not.toHaveAttribute("title");
+    expect(pct).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     expect(within(pct).queryByText("İlgili modülle birlikte gelir")).not.toBeInTheDocument();
   });
 });

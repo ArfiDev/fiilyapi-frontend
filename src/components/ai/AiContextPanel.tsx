@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button, Select } from "@/components/ui";
 import { currentPeriod } from "@/components/timesheet/month";
 import { formatMonthName, formatPercent } from "@/lib/format";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { countCell, metricCell, type PlaceholderCell } from "@/lib/placeholder-cell";
 import type { ProjectListItem } from "@/lib/api/hooks/useProjects";
 import type { SiteListItem } from "@/lib/api/hooks/useSites";
@@ -173,6 +174,7 @@ function ZarfSatiri({
       {hucre.text === null ? (
         <dd className="ai-context__pending" data-testid={testId} title={hucre.hint}>
           —
+          {hucre.isHidden && <HiddenMark />}
         </dd>
       ) : (
         <dd

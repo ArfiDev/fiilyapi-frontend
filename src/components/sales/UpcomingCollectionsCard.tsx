@@ -1,5 +1,7 @@
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { cx } from "@/lib/cx";
-import { formatCurrency, formatDateDots } from "@/lib/format";
+import { EMPTY_CELL, formatCurrency, formatDateDots } from "@/lib/format";
 import type { UpcomingCollection } from "@/lib/api/hooks/useSalesSummary";
 
 import "./sales.css";
@@ -11,6 +13,8 @@ export interface UpcomingCollectionsCardProps {
   isError: boolean;
   /** Sunucunun Türkçe hata cümlesi — sabit cümle SON çaredir (ST §4b kanonu). */
   errorMessage?: string;
+  /** IZN-F4.2 · proje bağlamı: alıcı adı gizliliği ekip rolünden okunur; yoksa ana rol. */
+  projectId?: string;
 }
 
 /**
@@ -68,8 +72,10 @@ export function UpcomingCollectionsCard({
   isLoading,
   isError,
   errorMessage,
+  projectId,
 }: UpcomingCollectionsCardProps) {
   const rows = items ?? [];
+  const isBuyerHidden = useCategoryHidden("satis_alici", projectId);
 
   return (
     <section className="satis-upcoming" aria-labelledby="satis-yaklasan-basligi">
@@ -98,7 +104,8 @@ export function UpcomingCollectionsCard({
               <div>
                 {/* 222 */}
                 <div className="satis-upcoming__name">
-                  {item.unit_label} — {item.customer_name}
+                  {item.unit_label} — {item.customer_name ?? EMPTY_CELL}
+                  {item.customer_name === null && isBuyerHidden && <HiddenMark />}
                 </div>
                 <div
                   className={cx(

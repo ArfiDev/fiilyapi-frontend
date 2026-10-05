@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { countCell, metricCell } from "./placeholder-cell";
+import { countCell, isRestrictedEnvelope, metricCell } from "./placeholder-cell";
 
 /**
  * F-ILRUI — K-ZARF üç hâli.
@@ -26,12 +26,25 @@ describe("metricCell — MetricPlaceholder (alan adı `value`)", () => {
     ).toEqual({ text: null, hint: "Hakediş verisi bu yüzeye henüz bağlanmadı" });
   });
 
-  it("3. hâl: available:false + pending_module null (rolün izni yok) → ipucu VERİLMEZ", () => {
-    // `pendingModuleLabel(null)` "İlgili modülle birlikte gelir" der; bu hâlde
-    // o cümle YALANDIR — modül var, izin yok.
+  it("3. hâl: available:false + pending_module null (rolün izni yok) → GİZLİ ipucu + isHidden (kilit)", () => {
+    // `pendingModuleLabel(null)` "İlgili modülle birlikte gelir" der; bu hâlde o cümle YALANDIR — modül var, izin yok.
+    // IZN-F4.2 GECE KARARI: ipucu "Bu bilgi rolünüz için gizli", ekran kilit simgesi basar.
     expect(metricCell({ available: false, value: null, pending_module: null }, upper)).toEqual({
       text: null,
+      hint: "Bu bilgi rolünüz için gizli",
+      isHidden: true,
     });
+  });
+
+  it("2. hâl (modül bekleniyor) AYNEN kalır: isHidden YOK, modül gerekçesi", () => {
+    const cell = metricCell({ available: false, value: null, pending_module: "accounting" }, upper);
+    expect(cell.isHidden).toBeUndefined();
+    expect(cell.hint).not.toBe("Bu bilgi rolünüz için gizli");
+    expect(cell.text).toBeNull();
+  });
+
+  it("dolu zarf: gizli işaret YOK", () => {
+    expect(metricCell({ available: true, value: "5", pending_module: null }, upper)).toEqual({ text: "<5>" });
   });
 
   it("zarf hiç yokken (yükleme/hata) ipucu UYDURULMAZ", () => {
@@ -78,9 +91,11 @@ describe("countCell — CountPlaceholder (alan adı `count`)", () => {
     );
   });
 
-  it("available:false + pending_module null → ipucu VERİLMEZ", () => {
+  it("available:false + pending_module null → GİZLİ ipucu + isHidden (IZN-F4.2)", () => {
     expect(countCell({ available: false, count: null, pending_module: null }, asis)).toEqual({
       text: null,
+      hint: "Bu bilgi rolünüz için gizli",
+      isHidden: true,
     });
   });
 
@@ -89,5 +104,16 @@ describe("countCell — CountPlaceholder (alan adı `count`)", () => {
       text: null,
       hint: "Puantaj verisi bu yüzeye henüz bağlanmadı",
     });
+  });
+});
+
+describe("isRestrictedEnvelope — 3. hâl tespiti", () => {
+  it("yalnız zarf VAR + available:false + modül anahtarı yok iken true", () => {
+    expect(isRestrictedEnvelope({ available: false, pending_module: null })).toBe(true);
+    expect(isRestrictedEnvelope({ available: false })).toBe(true);
+    expect(isRestrictedEnvelope({ available: false, pending_module: "boq" })).toBe(false);
+    expect(isRestrictedEnvelope({ available: true, pending_module: null })).toBe(false);
+    expect(isRestrictedEnvelope(undefined)).toBe(false);
+    expect(isRestrictedEnvelope(null)).toBe(false);
   });
 });

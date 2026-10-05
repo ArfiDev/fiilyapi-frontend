@@ -664,6 +664,7 @@
   --space-restricted-empty-y: 28px;
   --space-restricted-empty-x: 16px;
   --space-restricted-empty-gap: 6px;
+  --space-hidden-mark-gap: 4px; /* IZN-F4.2 · kilit simgesi ↔ metin */
   --text-restricted-empty-desc: 12px; /* açıklama satırı (277-278) */
 
   /* IZN-F2 · Sayfa İzinleri — Ayarlar - Sayfa İzinleri (TASLAK).dc.html: değişen
