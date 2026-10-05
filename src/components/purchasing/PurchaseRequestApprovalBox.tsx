@@ -10,6 +10,11 @@ import type { PurchaseRequestLineValues } from "./purchase-request-form-state";
 
 interface PurchaseRequestApprovalBoxProps {
   lines: readonly PurchaseRequestLineValues[];
+  /**
+   * IZN-F4d.2 — kayıtlı talebin fiyatları gizli: kutu tutar/hüküm cümlesi BASMAZ (fiyatsız satırlardan türeyen "₺0"
+   * yalan olurdu). Eşiği sunucu maskesiz tutarla uygular; onay zinciri adımları yine görünür.
+   */
+  isPriceMasked?: boolean;
 }
 
 /**
@@ -32,10 +37,11 @@ interface PurchaseRequestApprovalBoxProps {
  */
 export function PurchaseRequestApprovalBox({
   lines,
+  isPriceMasked = false,
 }: PurchaseRequestApprovalBoxProps) {
   const threshold = useApprovalSettings().data?.approval_threshold_try;
   const estimate = estimatePurchaseApproval(lines, threshold);
-  const message = purchaseApprovalMessage(estimate);
+  const message = isPriceMasked ? null : purchaseApprovalMessage(estimate);
 
   return (
     <section className="saf-approval" data-testid="talep-onay-akisi">

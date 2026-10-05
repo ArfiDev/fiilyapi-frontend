@@ -5,7 +5,10 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge/Badge";
 import { Button } from "@/components/ui/button/Button";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { SITE_DIARY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { formatCurrencyPrecise } from "@/lib/format";
 import type { SiteDiaryEntryDetail } from "@/lib/api/hooks/useSiteDiary";
@@ -23,7 +26,7 @@ export interface DiaryLinesCardProps {
   /** Kayıt henüz açılmadıysa `undefined` — ağaç önizleme iskeletinden gelir (GKS-F1.3). */
   entry: SiteDiaryEntryDetail | undefined;
   /** Tfoot "Bugünkü Hakediş Katkısı": kayıtta `entry.lines_total`, önizlemede `skeleton.lines_total`. */
-  linesTotal?: string;
+  linesTotal?: string | null;
   /** Önizleme sorgusunun durumu (kayıt yokken); verilmezse hazır sayılır. */
   previewStatus?: DiaryPreviewStatus;
   onRetryPreview?: () => void;
@@ -111,6 +114,8 @@ export function DiaryLinesCard({
   const hasLeaves = groups.some((group) => group.leaves.length > 0);
   const isSectionEmpty = isPreview && hasSection && !hasLeaves && !isPreviewPending;
   const scope = useDisciplineScope();
+  const isAmountHidden = useCategoryHidden(SITE_DIARY_HIDDEN_CATEGORIES);
+  const amountValues = groups.flatMap((group) => group.leaves.filter((leaf) => !leaf.isAdded).map((leaf) => leaf.amount));
   const canMutateRows = canEditRows && !disabled && !isLocked;
 
   function handleRemove(group: DiaryItemGroup, leaf: DiaryLeafRow) {
@@ -214,6 +219,7 @@ export function DiaryLinesCard({
                 ))}
                 <th scope="col" className="diary-lines__col-amount">
                   Hakediş ₺
+                  <MaskedMark isHidden={isAmountHidden} values={amountValues} />
                 </th>
                 <th scope="col" className="diary-lines__col-remove">
                   <span className="diary-lines__sr">Satır işlemleri</span>
@@ -300,7 +306,7 @@ export function DiaryLinesCard({
               {/* K16 · GK255-258 — Hakediş katkısı KALIR. */}
               <tr className="diary-lines__total-row">
                 <td colSpan={columnCount - 2}>Bugünkü Hakediş Katkısı</td>
-                <td className="diary-lines__total-amount">{formatCurrencyPrecise(linesTotal ?? entry?.lines_total ?? "0")}</td>
+                <td className="diary-lines__total-amount">{formatCurrencyPrecise(linesTotal !== undefined ? linesTotal : entry ? entry.lines_total : "0")}</td>
                 <td />
               </tr>
             </tfoot>

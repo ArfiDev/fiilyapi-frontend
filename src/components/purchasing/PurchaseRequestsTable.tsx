@@ -1,5 +1,9 @@
 "use client";
 
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -99,6 +103,7 @@ export function PurchaseRequestsTable({
   hasFilter,
 }: PurchaseRequestsTableProps) {
   const visibleRows = rows ?? [];
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const message =
     visibleRows.length === 0
       ? emptyMessage({ isLoading, isError, errorMessage, hasFilter })
@@ -124,6 +129,7 @@ export function PurchaseRequestsTable({
             </th>
             <th scope="col" className="sat-table__th sat-table__th--right">
               Tahmini Tutar
+              <MaskedMark isHidden={isCostHidden} values={visibleRows.map((row) => row.estimated_total)} />
             </th>
             <th scope="col" className="sat-table__th sat-table__th--center">
               Teklif

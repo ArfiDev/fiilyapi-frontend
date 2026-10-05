@@ -1,3 +1,9 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency, formatDecimal, formatPercent, formatPeriod } from "@/lib/format";
 import type {
   WorkSummaryRow,
@@ -42,6 +48,7 @@ export function EquipmentWorkSummaryTable({
   resolveSiteLabel,
   isLoading,
 }: EquipmentWorkSummaryTableProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   return (
     <section className="makine-cal-panel" data-testid="makine-cal-summary-table">
       {/* 112 */}
@@ -73,6 +80,7 @@ export function EquipmentWorkSummaryTable({
               </th>
               <th scope="col" className="makine-cal-table__right">
                 Maliyet
+                <MaskedMark isHidden={isCostHidden} values={[...rows.map((row) => row.cost), totals?.cost]} />
               </th>
             </tr>
           </thead>
@@ -150,7 +158,12 @@ export function EquipmentWorkSummaryTable({
                     {row.cost === null ? (
                       <span
                         className="makine-cal-table__muted"
-                        title="Ekipmanın kira/saat bedeli tanımlı değil — maliyet hesaplanamıyor."
+                        // IZN-F4d.2: gizli kategoride `null` = maske; "bedeli tanımlı değil" yalan olurdu.
+                        title={
+                          isCostHidden
+                            ? HIDDEN_FIELD_HINT
+                            : "Ekipmanın kira/saat bedeli tanımlı değil — maliyet hesaplanamıyor."
+                        }
                         data-testid="makine-cal-cost-empty"
                       >
                         {EMPTY_VALUE}

@@ -34,8 +34,10 @@ import type {
   PurchaseRequestLineValues,
 } from "./purchase-request-form-state";
 
-function buildLine(line: PurchaseRequestLineValues): PurchaseRequestLineCreate {
-  const unitPrice = normalizeDecimalInput(line.unitPrice);
+function buildLine(line: PurchaseRequestLineValues, omitPrice = false): PurchaseRequestLineCreate {
+  // IZN-F4d.2: maskeli rolde kayıtlı talebin fiyatı `null` döner ve PATCH'te DOLU fiyat 403 (çağrı hiç koşmaz) →
+  // fiyat anahtarı gövdeye HİÇ konmaz. POST (ilk kayıt) serbesttir.
+  const unitPrice = omitPrice ? null : normalizeDecimalInput(line.unitPrice);
   return {
     ...(line.source === "stock"
       ? { stock_item_id: line.stockItemId }
@@ -56,7 +58,7 @@ function buildLine(line: PurchaseRequestLineValues): PurchaseRequestLineCreate {
 export function buildPurchaseRequestLines(
   lines: readonly PurchaseRequestLineValues[],
 ): PurchaseRequestLineCreate[] {
-  return lines.map(buildLine);
+  return lines.map((line) => buildLine(line));
 }
 
 /**
@@ -109,6 +111,7 @@ export function buildPurchaseRequestCreateBody(
  */
 export function buildPurchaseRequestUpdateBody(
   values: PurchaseRequestFormValues,
+  options: { omitPrices?: boolean } = {},
 ): PurchaseRequestUpdate {
   const justification = values.justification.trim();
   return {
@@ -121,6 +124,6 @@ export function buildPurchaseRequestUpdateBody(
     justification: justification || null,
     quote_deadline: values.quoteDeadline || null,
     // TAM DEĞİŞTİRME — dizi her zaman eksiksiz gider.
-    lines: buildPurchaseRequestLines(values.lines),
+    lines: values.lines.map((line) => buildLine(line, options.omitPrices === true)),
   };
 }

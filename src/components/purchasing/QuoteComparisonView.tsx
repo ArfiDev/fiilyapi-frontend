@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
 import { Alert, Badge, Button } from "@/components/ui";
+import { MaskedNote } from "@/components/ui/hidden-mark/HiddenMark";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { usePurchaseRequest } from "@/lib/api/hooks/usePurchaseRequests";
@@ -13,6 +14,8 @@ import { useSelectQuoteAndOrder } from "@/lib/api/hooks/useQuoteMutations";
 import { useQuotes } from "@/lib/api/hooks/useQuotes";
 import { downloadQuoteComparisonExport } from "@/lib/api/purchase-quote-client";
 import { isForbidden } from "@/lib/api/unwrap";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PROCUREMENT_EDIT, QUOTE_ORDER_APPROVE, PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -75,6 +78,7 @@ export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
   const quotesQuery = useQuotes(requestId);
   const projectsQuery = useProjects();
   const selectAndOrder = useSelectQuoteAndOrder(requestId);
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   const [pendingQuoteId, setPendingQuoteId] = useState<string | null>(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
@@ -253,6 +257,8 @@ export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
       </section>
 
       {/* 53-116 · mockup'ın ÜÇ örnek kartı SABİT BASILMAZ — hepsi veriden gelir */}
+      {/* IZN-F4d.2: fiyat/tutar `null` (gizli kategori) → kartlarda "—"; "EN İYİ FİYAT" rozeti sunucu damgasıdır, GÖRÜNÜR kalır. */}
+      <MaskedNote isHidden={isCostHidden} values={items.flatMap((quote) => [quote.unit_price, quote.total_cost])} />
       <div className="tek-grid">
         {items.map((quote) => (
           <QuoteComparisonCard

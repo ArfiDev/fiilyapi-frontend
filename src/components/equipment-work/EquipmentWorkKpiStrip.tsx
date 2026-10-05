@@ -1,3 +1,8 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency, formatDecimal, formatPercent } from "@/lib/format";
 import type { FuelSummaryResponse } from "@/lib/api/hooks/useEquipmentFuelSummary";
 import type {
@@ -46,6 +51,7 @@ export function EquipmentWorkKpiStrip({
   fuel,
   fuelSiteFiltered,
 }: EquipmentWorkKpiStripProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const usageWidth = totals ? usageBarWidth(totals.usage_pct_avg) : null;
   const worstName = topBreakdownName(rows);
 
@@ -67,6 +73,7 @@ export function EquipmentWorkKpiStrip({
         <div className="makine-cal-kpi__label">Toplam Maliyet</div>
         <div className="makine-cal-kpi__value makine-cal-kpi__value--mono">
           {totals ? formatCurrency(totals.cost) : EMPTY_VALUE}
+          <MaskedMark isHidden={isCostHidden} values={[totals?.cost]} />
         </div>
         <div className="makine-cal-kpi__hint">
           {rows ? `${rows.length} ekipman` : EMPTY_VALUE}
@@ -114,6 +121,7 @@ export function EquipmentWorkKpiStrip({
         </div>
         <div className="makine-cal-kpi__hint">
           {fuel ? formatCurrency(fuel.total_amount) : EMPTY_VALUE}
+          <MaskedMark isHidden={isCostHidden} values={[fuel?.total_amount]} />
         </div>
         {fuelSiteFiltered && (
           <div

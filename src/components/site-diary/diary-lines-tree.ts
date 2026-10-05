@@ -64,7 +64,7 @@ export interface DiaryLeafRow {
   isOverrun: boolean;
   /** Aşım miktarı (pozitif), aşım yoksa `null`. */
   overrunExcess: string | null;
-  /** Satır hakedişi — YANITTAN (K16); eklenmiş satırda `null`. */
+  /** Satır hakedişi — YANITTAN (K16); eklenmiş satırda henüz yok, maskeli rolde (IZN-F4d.2) `null`. */
   amount: string | null;
 }
 
@@ -182,8 +182,9 @@ function totalsOf(leaves: readonly DiaryLeafRow[]): DiaryItemGroup["totals"] {
     cumulative: pick((leaf) => leaf.cumulative),
     planned: pick((leaf) => leaf.planned),
     remaining: pick((leaf) => leaf.remaining),
-    // Eklenmiş satırın ₺'si henüz yok (backend kayıtta hesaplar) — toplamı bozmaz.
-    amount: leaves.length === 0 ? null : sumDecimalStrings(leaves.map((leaf) => leaf.amount ?? "0")),
+    // Eklenmiş satırın ₺'si henüz yok (backend kayıtta hesaplar) — toplamı bozmaz. Kayıtlı satırın (`!isAdded`) `null`ı GİZLİ'dir
+    // (IZN-F4d.2): toplam bilinmez → `null`, 0 SAYILMAZ.
+    amount: leaves.length === 0 ? null : sumDecimalStrings(leaves.filter((leaf) => !leaf.isAdded).map((leaf) => leaf.amount)),
   };
 }
 

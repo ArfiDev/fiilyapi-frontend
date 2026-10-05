@@ -14527,8 +14527,14 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       const fuelRows = FUEL_SUMMARY_FIXTURE.rows.filter(
         (row) => row.equipment_id === fuelEquipmentId,
       );
-      const fuelSum = (pick: (row: (typeof fuelRows)[number]) => string) =>
-        fuelRows.reduce((total, row) => total + Number(pick(row)), 0).toFixed(2);
+      // IZN-F4d.2: `amount` artık `string | null` (maskeli rolde null) — ikiz de sunucu gibi davranır: bir bileşen
+      // null ise toplam null (0 SAYILMAZ). Varsayılan fikstürde hepsi dolu.
+      const fuelSum = (pick: (row: (typeof fuelRows)[number]) => string | null) => {
+        const parts = fuelRows.map(pick);
+        return parts.some((part) => part === null)
+          ? null
+          : parts.reduce((total, part) => total + Number(part), 0).toFixed(2);
+      };
       return send(200, {
         ...FUEL_SUMMARY_FIXTURE,
         rows: fuelRows,

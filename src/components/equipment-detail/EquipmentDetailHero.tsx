@@ -1,5 +1,10 @@
+"use client";
+
 import { equipmentCategoryIcon } from "@/components/equipment/category-icon";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { CheckIcon, inlineSymbolProps } from "@/components/ui/icons";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import {
   EQUIPMENT_EMPTY_VALUE,
   EQUIPMENT_OWNERSHIP_LABELS,
@@ -59,6 +64,7 @@ export function EquipmentDetailHero({
   ].filter((part): part is string => Boolean(part));
 
   const statusVariant = EQUIPMENT_STATUS_BADGE_VARIANTS[equipment.status];
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   // MD:79-81 — mockup `Bu Ay Kira Bedeli` yazıyor; ekran `Bu Ay Maliyeti`
   // basar. SAPMA ve gerekçesi rapordadır: bu sayı `WorkSummaryRow.cost`tur
@@ -116,6 +122,7 @@ export function EquipmentDetailHero({
           <div className="makine-det__hero-money-label">Bu Ay Maliyeti</div>
           <div className="makine-det__hero-money-value" data-testid="makine-det-monthly-cost">
             {cost === null ? EQUIPMENT_EMPTY_VALUE : formatCurrencyTight(cost)}
+            <MaskedMark isHidden={isCostHidden} values={[cost]} />
           </div>
           <div className="makine-det__hero-money-note">
             {workRow === undefined

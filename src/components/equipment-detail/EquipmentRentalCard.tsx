@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
 
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES, EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrencyTight, formatDateDots } from "@/lib/format";
 import type { EquipmentResponse } from "@/lib/api/hooks/useEquipment";
 import type { EquipmentRentalTotals } from "@/lib/api/hooks/useEquipmentDetailScreen";
@@ -47,7 +52,10 @@ export function EquipmentRentalCard({
   supplierIsError = false,
 }: EquipmentRentalCardProps) {
   const isRented = equipment.ownership === "rented";
-  const unknown = rental.cumulative_paid_unknown_count;
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
+  const isPaymentHidden = useCategoryHidden(EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES);
+  // IZN-F4d.2: toplam gizliyse (`null`) "hesaplanamadı" bandı BASILMAZ — yalan olurdu (kilit değerin yanında).
+  const unknown = rental.cumulative_paid === null ? 0 : rental.cumulative_paid_unknown_count;
 
   return (
     <section className="makine-det__card" aria-label="Kiralama Bilgileri">
@@ -98,6 +106,7 @@ export function EquipmentRentalCard({
           equipment.rate_amount === null ? null : formatCurrencyTight(equipment.rate_amount)
         }
         tones={["mono"]}
+        mark={<MaskedMark isHidden={isCostHidden} values={[equipment.rate_amount]} />}
       />
       <DetailKv
         label="Aylık Asgari Saat"
@@ -112,8 +121,9 @@ export function EquipmentRentalCard({
       {/* MD:132 */}
       <DetailKv
         label="Kümülatif Ödenen"
-        value={formatCurrencyTight(rental.cumulative_paid)}
+        value={rental.cumulative_paid === null ? null : formatCurrencyTight(rental.cumulative_paid)}
         tones={["mono", "success"]}
+        mark={<MaskedMark isHidden={isPaymentHidden} values={[rental.cumulative_paid]} />}
         testId="makine-det-cumulative-paid"
       />
 

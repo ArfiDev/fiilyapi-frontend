@@ -1,4 +1,5 @@
 import { Button, Input, Select } from "@/components/ui";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { WarningTriangleIcon, inlineSymbolProps } from "@/components/ui/icons";
 import type { StockSummaryRow } from "@/lib/api/hooks/useStockSummary";
 import { formatAmount, formatQuantity } from "@/lib/format";
@@ -26,6 +27,11 @@ import type { PurchaseRequestFormErrors } from "./purchase-request-validate";
 
 interface PurchaseRequestFormLinesCardProps {
   values: PurchaseRequestFormValues;
+  /**
+   * IZN-F4d.2 — kayıtlı talebin fiyatları bu rolde GİZLİ (`maliyet_kar` gizli + talep sunucuda kayıtlı): fiyat/tutar
+   * hücreleri salt okunur "—" + kilit, fiyat PATCH gövdesine konmaz, toplam/eksiklik notu basılmaz.
+   */
+  isPriceMasked?: boolean;
   errors: PurchaseRequestFormErrors;
   /** `GET /stock/summary` satırları — künye + SUNUCU türevi bakiye/durum. */
   stockRows: readonly StockSummaryRow[];
@@ -67,6 +73,7 @@ function stockToneClass(row: StockSummaryRow | undefined): string {
  */
 export function PurchaseRequestFormLinesCard({
   values,
+  isPriceMasked = false,
   errors,
   stockRows,
   stockIsLoading,
@@ -80,7 +87,7 @@ export function PurchaseRequestFormLinesCard({
   // BİLİNÇLİ olarak geçilmez — `undefined` açıkça yazılır ki parametreyi
   // unutmakla bilerek atlamak karışmasın.
   const estimate = estimatePurchaseApproval(values.lines, undefined);
-  const incompleteNote = purchaseTotalIncompleteNote(estimate);
+  const incompleteNote = isPriceMasked ? null : purchaseTotalIncompleteNote(estimate);
   const stockNote = stockIsError
     ? STOCK_ITEMS_LOAD_ERROR
     : !stockIsLoading && stockRows.length === 0
@@ -134,6 +141,7 @@ export function PurchaseRequestFormLinesCard({
             </th>
             <th scope="col" className="saf-table__right">
               Tahmini B.Fiyat
+              {isPriceMasked && <HiddenMark />}
             </th>
             <th scope="col" className="saf-table__right">
               Tahmini Tutar
@@ -150,7 +158,7 @@ export function PurchaseRequestFormLinesCard({
                 ? rowsById.get(line.stockItemId)
                 : undefined;
             const lineErrors = errors.lineErrors[line.key];
-            const total = purchaseRequestLineTotal(line);
+            const total = isPriceMasked ? null : purchaseRequestLineTotal(line);
             const isCritical = stockRow?.status === "critical";
             // 84 — birim stok kartlı kalemde KARTIN birimidir, elle girilmez.
             const unit =
@@ -330,6 +338,9 @@ export function PurchaseRequestFormLinesCard({
 
                 {/* 87 / 96 */}
                 <td className="saf-table__right">
+                  {isPriceMasked ? (
+                    <span data-testid={`talep-fiyat-gizli-${index}`}>{EMPTY_VALUE}</span>
+                  ) : (
                   <Input
                     size="row"
                     numeric
@@ -343,6 +354,7 @@ export function PurchaseRequestFormLinesCard({
                       onChangeLine(line.key, { unitPrice: event.target.value })
                     }
                   />
+                  )}
                   {lineErrors?.unitPrice && (
                     <span className="saf-table__error">
                       {lineErrors.unitPrice}
@@ -399,7 +411,7 @@ export function PurchaseRequestFormLinesCard({
               className="saf-table__right saf-table__total"
               data-testid="talep-toplam"
             >
-              ₺{formatAmount(estimate.knownTotal)}
+              {isPriceMasked ? EMPTY_VALUE : `₺${formatAmount(estimate.knownTotal)}`}
             </td>
             <td />
           </tr>

@@ -1,3 +1,8 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency, formatQuantity } from "@/lib/format";
 import type { PurchaseQuoteCard } from "@/lib/api/hooks/useQuotes";
 
@@ -35,6 +40,7 @@ export function QuoteComparisonSummary({
   quantityTotal,
   quantityUnit,
 }: QuoteComparisonSummaryProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const comparison = buildQuoteComparison(items, estimatedTotal);
   const difference = comparison.differenceToBudget;
   // 125 · negatif fark YEŞİL ("Bütçenin altında"), pozitif fark KIRMIZI.
@@ -50,7 +56,10 @@ export function QuoteComparisonSummary({
       <div className="tek-summary__grid">
         {/* 122 */}
         <div className="tek-summary__cell">
-          <div className="tek-summary__label">En Düşük Teklif</div>
+          <div className="tek-summary__label">
+            En Düşük Teklif
+            <MaskedMark isHidden={isCostHidden} values={[comparison.lowest?.total_cost]} />
+          </div>
           <div
             className="tek-summary__value tek-summary__value--success"
             data-testid="tek-summary-lowest"
@@ -68,7 +77,10 @@ export function QuoteComparisonSummary({
 
         {/* 123 */}
         <div className="tek-summary__cell">
-          <div className="tek-summary__label">En Yüksek Teklif</div>
+          <div className="tek-summary__label">
+            En Yüksek Teklif
+            <MaskedMark isHidden={isCostHidden} values={items.map((item) => item.total_cost)} />
+          </div>
           <div
             className="tek-summary__value tek-summary__value--danger"
             data-testid="tek-summary-highest"
@@ -76,13 +88,17 @@ export function QuoteComparisonSummary({
             {comparison.highest ? formatCurrency(comparison.highest.total_cost) : EMPTY_VALUE}
           </div>
           <div className="tek-summary__note">
-            {comparison.highest?.supplier_name ?? "Henüz teklif yok"}
+            {/* Maskeli toplamlarda "en yüksek" belirlenemez ama teklif VARDIR — "Henüz teklif yok" yalan olurdu. */}
+            {comparison.highest?.supplier_name ?? (items.length === 0 ? "Henüz teklif yok" : EMPTY_VALUE)}
           </div>
         </div>
 
         {/* 124 */}
         <div className="tek-summary__cell">
-          <div className="tek-summary__label">Tahmini Bütçe</div>
+          <div className="tek-summary__label">
+            Tahmini Bütçe
+            <MaskedMark isHidden={isCostHidden} values={[estimatedTotal]} />
+          </div>
           <div className="tek-summary__value" data-testid="tek-summary-budget">
             {estimatedTotal === null ? EMPTY_VALUE : formatCurrency(estimatedTotal)}
           </div>
@@ -102,7 +118,10 @@ export function QuoteComparisonSummary({
 
         {/* 125 */}
         <div className="tek-summary__cell">
-          <div className="tek-summary__label">En İyi Teklif Farkı</div>
+          <div className="tek-summary__label">
+            En İyi Teklif Farkı
+            <MaskedMark isHidden={isCostHidden} values={[comparison.lowest?.total_cost, estimatedTotal]} />
+          </div>
           <div
             className={
               difference === null
@@ -125,7 +144,9 @@ export function QuoteComparisonSummary({
             }
           >
             {difference === null
-              ? "Teklif ya da bütçe yok"
+              ? comparison.isTotalMasked
+                ? EMPTY_VALUE
+                : "Teklif ya da bütçe yok"
               : isUnderBudget
                 ? "Bütçenin altında"
                 : "Bütçenin üzerinde"}

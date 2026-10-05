@@ -5,7 +5,7 @@ import type {
 
 import type { EquipmentCategory } from "./constants";
 import { SITE_UNASSIGNED_VALUE, type EquipmentFormValues } from "./form-state";
-import type { OmittableEquipmentField } from "./omit-fields";
+import type { MaskableEquipmentMoneyField, OmittableEquipmentField } from "./omit-fields";
 
 /**
  * `MK-1 K7` — `monthly_capacity_hours` sunucu varsayılanı. Gövde şeması bu
@@ -125,13 +125,22 @@ export function buildEquipmentCreateBody(
  */
 export function buildEquipmentUpdateBody(
   values: SubmittableEquipmentFormValues,
-  options: { omitFields?: readonly OmittableEquipmentField[] } = {},
+  options: {
+    omitFields?: readonly OmittableEquipmentField[];
+    /** IZN-F4d.2 — maskeli para alanları gövdeye HİÇ konmaz (dolu → 403; `null` da gönderilmez). */
+    maskedMoneyFields?: readonly MaskableEquipmentMoneyField[];
+  } = {},
 ): EquipmentUpdateRequest {
   const omitted = options.omitFields ?? [];
   const isOmitted = (field: OmittableEquipmentField) => omitted.includes(field);
+  const masked = options.maskedMoneyFields ?? [];
+  const common = commonFields(values);
+  const unmaskedCommon = Object.fromEntries(
+    Object.entries(common).filter(([key]) => !masked.some((field) => field === key)),
+  ) as typeof common;
 
   return {
-    ...commonFields(values),
+    ...unmaskedCommon,
     ...(isOmitted("depreciation_years")
       ? {}
       : { depreciation_years: intOrNull(values.depreciationYears) }),

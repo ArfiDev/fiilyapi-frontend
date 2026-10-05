@@ -2,7 +2,10 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 
 import { ArrowRightIcon, ClockIcon } from "@/components/ui/icons";
+import { MaskedNote } from "@/components/ui/hidden-mark/HiddenMark";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
+import { SITE_DIARY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { formatCurrency, formatCurrencyTight } from "@/lib/format";
 
@@ -186,6 +189,8 @@ export function DiaryDetailLinesCard({ groups, columns, notice, isPaymentHidden,
   const style = { minWidth: coreWidth + extraWidth + (isPaymentHidden ? 0 : AMOUNT_WIDTH) } as CSSProperties;
   // Disiplini atanmış kullanıcıda backend süzmesi tüm satırları boşaltabilir (DSC-F1.3).
   const scope = useDisciplineScope();
+  // IZN-F4d.2: ₺ kolonu S10'da zaten basılmaz (tutar `null`); kategori gerçekten gizliyse nedenini söyleyen TEK kilit notu.
+  const isAmountHidden = useCategoryHidden(SITE_DIARY_HIDDEN_CATEGORIES);
   return (
     <section className="diary-detail-card" aria-labelledby="diary-detail-lines">
       <div className="diary-detail-lines__head">
@@ -198,6 +203,7 @@ export function DiaryDetailLinesCard({ groups, columns, notice, isPaymentHidden,
         <span className="diary-detail-lines__badge">Sözleşme BOQ&apos;a bağlı</span>
       </div>
       {notice}
+      <MaskedNote isHidden={isAmountHidden} values={isPaymentHidden ? [null] : []} />
       {groups.totalCount === 0 ? (
         scope.isRestricted ? <RestrictedEmptyNotice names={scope.names} /> : <EmptyLinesBody />
       ) : (

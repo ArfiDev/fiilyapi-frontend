@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
 import { consumptionTone, deviationReasonText } from "@/components/equipment-fuel/consumption";
 import { EQUIPMENT_EMPTY_VALUE } from "@/components/equipment/equipment-labels";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrencyTight, formatDecimal, formatPercent } from "@/lib/format";
 import type { EquipmentResponse } from "@/lib/api/hooks/useEquipment";
 import type { FuelSummaryResponse } from "@/lib/api/hooks/useEquipmentFuelSummary";
@@ -35,6 +40,7 @@ export interface EquipmentFuelCardProps {
 export function EquipmentFuelCard({ equipment, summary }: EquipmentFuelCardProps) {
   const row = summary?.rows.find((item) => item.equipment_id === equipment.id) ?? null;
   const isPending = summary === undefined;
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const normSuffix = equipment.norm_unit === null ? "" : NORM_UNIT_SUFFIX[equipment.norm_unit];
 
   return (
@@ -57,6 +63,7 @@ export function EquipmentFuelCard({ equipment, summary }: EquipmentFuelCardProps
         <div className="makine-det__tile makine-det__tile--danger">
           <div className="makine-det__tile-value" data-testid="makine-det-fuel-amount">
             {summary ? formatCurrencyTight(summary.total_amount) : EQUIPMENT_EMPTY_VALUE}
+            <MaskedMark isHidden={isCostHidden} values={[summary?.total_amount]} />
           </div>
           <div className="makine-det__tile-label">Yakıt Maliyeti</div>
         </div>

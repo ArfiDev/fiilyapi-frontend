@@ -1,3 +1,8 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { SITE_DIARY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { compareDecimalStrings, multiplyDecimalStrings } from "@/lib/decimal";
 import { formatAmount, formatCurrencyPrecise, formatPercent } from "@/lib/format";
 import { asPercentOrNull, type Percent } from "@/lib/api/scale";
@@ -48,6 +53,7 @@ export function DiarySummaryAccrualTable({
   isError,
 }: DiarySummaryAccrualTableProps) {
   const items = summary?.items ?? [];
+  const isAmountHidden = useCategoryHidden(SITE_DIARY_HIDDEN_CATEGORIES);
 
   return (
     <section className="diary-card diary-card--flush" aria-labelledby="diary-summary-table-title">
@@ -77,12 +83,17 @@ export function DiarySummaryAccrualTable({
               </th>
               <th scope="col" className="diary-summary-table__col-amount">
                 Sözleşme
+                <MaskedMark isHidden={isAmountHidden} values={items.map((item) => item.boq_amount)} />
               </th>
               <th
                 scope="col"
                 className="diary-summary-table__col-amount diary-summary-table__col-month"
               >
                 Bu Ay
+                <MaskedMark
+                  isHidden={isAmountHidden}
+                  values={[...items.map((item) => item.amount), summary?.total_amount]}
+                />
               </th>
               <th scope="col" className="diary-summary-table__col-pct">
                 %
@@ -138,7 +149,7 @@ export function DiarySummaryAccrualTable({
               {/* HÖ166 — mockup'ta BOŞ; sözleşme toplamı icat edilmez */}
               <td />
               <td className="diary-summary-table__total-amount">
-                {formatCurrencyPrecise(summary?.total_amount ?? "0")}
+                {formatCurrencyPrecise(summary ? summary.total_amount : "0")}
               </td>
               <td />
             </tr>

@@ -13,6 +13,9 @@ import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { PurchasingTabs } from "./PurchasingTabs";
+import { MaskedNote } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { SupplierGridCard } from "./SupplierGridCard";
 import { SupplierModal } from "./SupplierModal";
 import {
@@ -42,6 +45,7 @@ export function SuppliersView() {
     fallback: permission.canView,
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   // Kırpılma korkuluğu (ARCHITECTURE §5): tavan AÇIKÇA gönderilir.
   // ⚠️ `is_active` süzgeci GÖNDERİLMEZ: mockup dört kartın dördünü de
@@ -88,6 +92,8 @@ export function SuppliersView() {
       )}
 
       {/* 39-130 · üç sütunlu kart ızgarası */}
+      {/* IZN-F4d.2: kartlardaki maskeli "Bu Yıl Toplam Sipariş" için listenin üstünde TEK kilit notu. */}
+      <MaskedNote isHidden={isCostHidden} values={suppliers.map((supplier) => supplier.orders_total_this_year)} />
       <div className="ted-grid">
         {suppliers.map((supplier, index) => (
           <SupplierGridCard key={supplier.id} supplier={supplier} index={index} />

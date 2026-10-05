@@ -109,10 +109,12 @@ export const RENTAL_UNKNOWN_WARNING_SUFFIX = "satırın tutarı hesaplanamadı, 
  * sanırdı (MK-1 `summarize` kanonu).
  */
 export function rentalUnknownWarning(totals: RentalInvoiceTotals): string | null {
+  // IZN-F4d.2: maskeli (`null`) toplamın "eksik bileşen" sayacı anlamsızdır — gizli toplam için
+  // "N satırın tutarı hesaplanamadı" demek yalan olurdu; yalnız GÖRÜNEN toplamların sayaçları sayılır.
   const count =
-    totals.our_total_unknown_count +
-    totals.owned_total_unknown_count +
-    totals.excluded_breakdown_unknown_count;
+    (totals.our_total === null ? 0 : totals.our_total_unknown_count) +
+    (totals.owned_total === null ? 0 : totals.owned_total_unknown_count) +
+    (totals.excluded_breakdown_amount === null ? 0 : totals.excluded_breakdown_unknown_count);
   return count > 0 ? `${count} ${RENTAL_UNKNOWN_WARNING_SUFFIX}` : null;
 }
 
@@ -145,7 +147,9 @@ export const RENTAL_PAYABLE_UNAVAILABLE =
  * bir kontrol, matrahsız ama toplamı dolu gelen tutarsız bir yükü sessizce
  * basardı.
  */
-export function rentalPayableUnavailable(totals: RentalInvoiceTotals): string | null {
+export function rentalPayableUnavailable(totals: RentalInvoiceTotals, isMasked = false): string | null {
+  // IZN-F4d.2: kategori gizliyken `null` = maske ("fatura tutarı girilmedi" DEĞİL) — gerekçe basılmaz, kilit basılır.
+  if (isMasked) return null;
   if (totals.invoice_amount === null || totals.payable_total === null) {
     return RENTAL_PAYABLE_UNAVAILABLE;
   }

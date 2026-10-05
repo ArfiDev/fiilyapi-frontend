@@ -40,7 +40,8 @@ function lineCountKpi(groups: DetailLineGroups): DiaryDetailKpi {
 }
 
 function paymentKpi(groups: DetailLineGroups): DiaryDetailKpi {
-  const section = groups.current?.amountTotal ?? groups.dayAmountTotal;
+  // `??` DEĞİL: bölüm ara toplamı gizliyse (`null`) günün toplamına DÜŞMEZ (IZN-F4d.2).
+  const section = groups.current !== null ? groups.current.amountTotal : groups.dayAmountTotal;
   return {
     key: "payment",
     label: "Hakediş katkısı",

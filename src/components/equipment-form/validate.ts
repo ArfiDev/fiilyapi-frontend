@@ -48,6 +48,8 @@ export interface EquipmentValidationContext {
    * kullanıcıyı gereksiz yere durdurmamak içindir.)
    */
   hasSiteOptions: boolean;
+  /** IZN-F4d.2 — alış bedeli maskeli (gizli kategori + sunucu `null`) → "zorunlu" kuralı uygulanamaz (alan gönderilmez). */
+  isPurchaseAmountMasked?: boolean;
 }
 
 export function validateEquipmentForm(
@@ -60,7 +62,11 @@ export function validateEquipmentForm(
   if (values.category === "") errors.category = MESSAGES.categoryRequired;
 
   // K8 — koşullu zorunluluk.
-  if (isPurchaseAmountRequired(values) && values.purchaseAmount.trim() === "") {
+  if (
+    !context.isPurchaseAmountMasked &&
+    isPurchaseAmountRequired(values) &&
+    values.purchaseAmount.trim() === ""
+  ) {
     errors.purchaseAmount = MESSAGES.purchaseAmountRequired;
   }
 

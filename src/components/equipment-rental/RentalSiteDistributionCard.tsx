@@ -1,5 +1,8 @@
 "use client";
 
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatDecimal } from "@/lib/format";
 import type { RentalSiteDistributionEntry } from "@/lib/api/hooks/useEquipmentRentalInvoices";
 
@@ -22,11 +25,13 @@ export interface RentalSiteDistributionCardProps {
  * cümlesi metin olarak korundu.
  */
 export function RentalSiteDistributionCard({ entries }: RentalSiteDistributionCardProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   return (
     <section className="makine-kira__card" aria-labelledby="makine-kira-dist-title">
       <div className="makine-kira__card-body">
         <h2 id="makine-kira-dist-title" className="makine-kira__card-title">
           Proje Bazlı Maliyet Dağılımı
+          <MaskedMark isHidden={isCostHidden} values={entries.map((entry) => entry.amount)} />
         </h2>
 
         <div className="makine-kira__dist" data-testid="makine-kira-distribution">
@@ -37,7 +42,8 @@ export function RentalSiteDistributionCard({ entries }: RentalSiteDistributionCa
           )}
 
           {entries.map((entry) => {
-            const unknownWarning = rentalDistributionUnknownWarning(entry);
+            // Maskeli kovada (`amount` null) "hesaplanamadı" uyarısı yalan olurdu.
+            const unknownWarning = entry.amount === null ? null : rentalDistributionUnknownWarning(entry);
             return (
               <div
                 key={entry.site_id ?? "unassigned"}
@@ -60,8 +66,7 @@ export function RentalSiteDistributionCard({ entries }: RentalSiteDistributionCa
                   )}
                 </div>
                 <span className="makine-kira__dist-amount makine-kira__mono">
-                  {"₺"}
-                  {formatAmount(entry.amount)}
+                  {entry.amount === null ? "—" : `₺${formatAmount(entry.amount)}`}
                 </span>
               </div>
             );

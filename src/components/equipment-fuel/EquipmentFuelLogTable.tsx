@@ -1,5 +1,10 @@
+"use client";
+
 import { DiaryMonthNav } from "@/components/site-diary/DiaryMonthNav";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { Select } from "@/components/ui/select/Select";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrencyPrecise, formatDateDots, formatDecimal } from "@/lib/format";
 import type { EquipmentListResponse } from "@/lib/api/hooks/useEquipment";
 import type { FuelLogListResponse } from "@/lib/api/hooks/useEquipmentFuelLogs";
@@ -58,6 +63,7 @@ export function EquipmentFuelLogTable({
   resolveEquipmentName,
 }: EquipmentFuelLogTableProps) {
   const items = logs?.items;
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   return (
     <section className="makine-yakit-panel" data-testid="makine-yakit-log-table">
@@ -109,9 +115,11 @@ export function EquipmentFuelLogTable({
               </th>
               <th scope="col" className="makine-yakit-table__right">
                 Lt Fiyatı
+                <MaskedMark isHidden={isCostHidden} values={items.map((log) => log.unit_price)} />
               </th>
               <th scope="col" className="makine-yakit-table__right">
                 Tutar
+                <MaskedMark isHidden={isCostHidden} values={items.map((log) => log.amount)} />
               </th>
               <th scope="col" className="makine-yakit-table__center">
                 Tüketim

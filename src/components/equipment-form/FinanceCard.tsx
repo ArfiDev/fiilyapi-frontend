@@ -1,6 +1,7 @@
 import { useId } from "react";
 
 import { DateInput, Field, Input, Select } from "@/components/ui";
+import { MaskedReadonlyField } from "@/components/ui/hidden-mark/MaskedReadonlyField";
 
 import {
   DEPRECIATION_YEAR_OPTIONS,
@@ -13,6 +14,7 @@ import {
   SUPPLIER_SHARED_NOTE,
 } from "./constants";
 import type { EquipmentFormValues } from "./form-state";
+import type { MaskableEquipmentMoneyField } from "./omit-fields";
 import { isPurchaseAmountRequired, type EquipmentFormErrors } from "./validate";
 
 /** "Tedarikçi / Kiralama Firması" seçicisinin veri durumu. */
@@ -30,6 +32,8 @@ interface FinanceCardProps {
   ) => void;
   suppliers: SupplierPickerState;
   errors?: EquipmentFormErrors;
+  /** IZN-F4d.2 — maskeli para alanları: salt okunur "—" + kilit (PATCH gövdesine konmaz). */
+  maskedMoney?: readonly MaskableEquipmentMoneyField[];
 }
 
 /** Sessiz boş açılır liste YASAK — seçicinin altında her durumda görünür not. */
@@ -57,7 +61,7 @@ export function supplierNote(state: SupplierPickerState): string {
  * durumunu okur/yazar, ikinci bir state YOKTUR. Mockup 101'i serbest metin
  * çiziyor; FK olduğu için seçiciye çevrildi (onaylı sapma, not GÖRÜNÜR).
  */
-export function FinanceCard({ values, onChange, suppliers, errors }: FinanceCardProps) {
+export function FinanceCard({ values, onChange, suppliers, errors, maskedMoney = [] }: FinanceCardProps) {
   const supplierNoteId = useId();
   const purchaseRequired = isPurchaseAmountRequired(values);
 
@@ -87,6 +91,9 @@ export function FinanceCard({ values, onChange, suppliers, errors }: FinanceCard
       {/* 97 — üç sütun */}
       <div className="pf-grid pf-grid--3">
         {/* 98 — K8 koşullu zorunluluk */}
+        {maskedMoney.includes("purchase_amount") ? (
+          <MaskedReadonlyField label="Alış Bedeli (₺)" inputClassName="eqf-amount" />
+        ) : (
         <Field label="Alış Bedeli (₺)" required={purchaseRequired} error={errors?.purchaseAmount}>
           {(control) => (
             <Input
@@ -103,6 +110,7 @@ export function FinanceCard({ values, onChange, suppliers, errors }: FinanceCard
             />
           )}
         </Field>
+        )}
 
         {/* 99 */}
         <Field label="Alış Tarihi">
@@ -178,6 +186,9 @@ export function FinanceCard({ values, onChange, suppliers, errors }: FinanceCard
         </Field>
 
         {/* 103 — ipucu mockup'tan AYNEN */}
+        {maskedMoney.includes("market_value") ? (
+          <MaskedReadonlyField label="Güncel Piyasa Değeri (₺)" inputClassName="eqf-amount" />
+        ) : (
         <Field label="Güncel Piyasa Değeri (₺)" hint={MARKET_VALUE_HINT}>
           {(control) => (
             <Input
@@ -193,6 +204,7 @@ export function FinanceCard({ values, onChange, suppliers, errors }: FinanceCard
             />
           )}
         </Field>
+        )}
       </div>
 
       {/* Sessiz boş açılır liste YASAK: iki tedarikçi seçicisinin ORTAK notu. */}
@@ -245,6 +257,9 @@ export function FinanceCard({ values, onChange, suppliers, errors }: FinanceCard
         </Field>
 
         {/* 110 */}
+        {maskedMoney.includes("rate_amount") ? (
+          <MaskedReadonlyField label="Kira Bedeli (₺)" inputClassName="eqf-amount" />
+        ) : (
         <Field label="Kira Bedeli (₺)">
           {(control) => (
             <Input
@@ -260,6 +275,7 @@ export function FinanceCard({ values, onChange, suppliers, errors }: FinanceCard
             />
           )}
         </Field>
+        )}
       </div>
     </section>
   );

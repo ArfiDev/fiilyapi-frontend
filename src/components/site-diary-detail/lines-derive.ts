@@ -24,7 +24,8 @@ export interface DetailLineRow {
   /** Satırın bölümü ("Kat 1–5") ya da "Bölümsüz". */
   sectionLabel: string;
   unit: string;
-  unitPrice: string;
+  /** IZN-F4d.2 — `null` = gizli (maskeli rol); 0 DEĞİL. */
+  unitPrice: string | null;
   today: string;
   cumulative: string;
   planned: string | null;
@@ -32,15 +33,16 @@ export interface DetailLineRow {
   /** Planlı aşıldıysa aşım miktarı (İ:236-237); aşılmadıysa `null`. */
   overrunExcess: string | null;
   overrunReason: string | null;
-  amount: string;
+  /** `null` = gizli. */
+  amount: string | null;
 }
 
 export interface DetailCurrentGroup {
   sectionId: string;
   sectionName: string;
   rows: DetailLineRow[];
-  /** Bu bölümün Hakediş ₺ ara toplamı. */
-  amountTotal: string;
+  /** Bu bölümün Hakediş ₺ ara toplamı; satırlardan biri gizliyse `null` (0 SAYILMAZ). */
+  amountTotal: string | null;
 }
 
 export interface DetailLineGroups {
@@ -49,8 +51,8 @@ export interface DetailLineGroups {
   /** Diğer bölümlerin satırları — bağlam yoksa TÜM satırlar. */
   others: DetailLineRow[];
   totalCount: number;
-  /** Günün tümü (`lines_total`). */
-  dayAmountTotal: string;
+  /** Günün tümü (`lines_total`); gizliyse `null`. */
+  dayAmountTotal: string | null;
 }
 
 function isPositive(value: string): boolean {

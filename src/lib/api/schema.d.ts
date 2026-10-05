@@ -12829,7 +12829,7 @@ export interface components {
          */
         EquipmentRentalTotals: {
             /** Cumulative Paid */
-            cumulative_paid: string;
+            cumulative_paid: string | null;
             /** Cumulative Paid Unknown Count */
             cumulative_paid_unknown_count: number;
             /** Paid Invoice Count */
@@ -12959,7 +12959,7 @@ export interface components {
             /** Maintenance */
             maintenance: number;
             /** Monthly Cost */
-            monthly_cost: string;
+            monthly_cost: string | null;
             /** Monthly Cost Unknown Count */
             monthly_cost_unknown_count: number;
             /** Working */
@@ -13408,7 +13408,7 @@ export interface components {
          */
         FuelLogResponse: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /**
              * Created At
              * Format: date-time
@@ -13438,7 +13438,7 @@ export interface components {
             /** Site Id */
             site_id: string | null;
             /** Unit Price */
-            unit_price: string;
+            unit_price: string | null;
         };
         /**
          * FuelLogUpdate
@@ -13482,7 +13482,7 @@ export interface components {
             /** Rows */
             rows: components["schemas"]["FuelSummaryRow"][];
             /** Total Amount */
-            total_amount: string;
+            total_amount: string | null;
             /** Total Liters */
             total_liters: string;
             /** Year */
@@ -13500,7 +13500,7 @@ export interface components {
             /** Actual */
             actual: string | null;
             /** Amount */
-            amount: string;
+            amount: string | null;
             consumption_status: components["schemas"]["ConsumptionStatus"] | null;
             /** Deviation Pct */
             deviation_pct: string | null;
@@ -19006,7 +19006,7 @@ export interface components {
             /** Supplier Name */
             supplier_name: string;
             /** Total Amount */
-            total_amount: string;
+            total_amount: string | null;
         };
         /**
          * PurchaseOrderStatus
@@ -19095,9 +19095,9 @@ export interface components {
             /** Supplier Name */
             supplier_name: string;
             /** Total Cost */
-            total_cost: string;
+            total_cost: string | null;
             /** Unit Price */
-            unit_price: string;
+            unit_price: string | null;
             /** Warranty Note */
             warranty_note: string | null;
         };
@@ -19191,7 +19191,7 @@ export interface components {
             /** Supplier Name */
             supplier_name: string;
             /** Unit Price */
-            unit_price: string;
+            unit_price: string | null;
             /** Warranty Note */
             warranty_note: string | null;
         };
@@ -19380,7 +19380,7 @@ export interface components {
              */
             created_by_user_id: string;
             /** Estimated Total */
-            estimated_total: string;
+            estimated_total: string | null;
             /**
              * Id
              * Format: uuid
@@ -19454,7 +19454,7 @@ export interface components {
              */
             created_by_user_id: string;
             /** Estimated Total */
-            estimated_total: string;
+            estimated_total: string | null;
             /**
              * Id
              * Format: uuid
@@ -19555,7 +19555,7 @@ export interface components {
             /** Open Requests */
             open_requests: number;
             /** Orders This Month Total */
-            orders_this_month_total: string;
+            orders_this_month_total: string | null;
             /** Pending Approval Requests */
             pending_approval_requests: number;
             /** Quote Wait Requests */
@@ -20078,17 +20078,17 @@ export interface components {
          */
         RentalInvoiceTotals: {
             /** Excluded Breakdown Amount */
-            excluded_breakdown_amount: string;
+            excluded_breakdown_amount: string | null;
             /** Excluded Breakdown Unknown Count */
             excluded_breakdown_unknown_count: number;
             /** Invoice Amount */
             invoice_amount: string | null;
             /** Our Total */
-            our_total: string;
+            our_total: string | null;
             /** Our Total Unknown Count */
             our_total_unknown_count: number;
             /** Owned Total */
-            owned_total: string;
+            owned_total: string | null;
             /** Owned Total Unknown Count */
             owned_total_unknown_count: number;
             /** Payable Total */
@@ -20153,7 +20153,7 @@ export interface components {
          */
         RentalSiteDistributionEntry: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Equipments */
             equipments: components["schemas"]["RentalSiteDistributionEquipment"][];
             /** Hours */
@@ -21121,13 +21121,13 @@ export interface components {
          */
         SectionStockKpis: {
             /** Issued Value */
-            issued_value: string;
+            issued_value: string | null;
             /** Item Count */
             item_count: number;
             /** Lines Without Price */
             lines_without_price: number;
             /** Total Value */
-            total_value: string;
+            total_value: string | null;
         };
         /** SectionStockResponse */
         SectionStockResponse: {
@@ -21196,7 +21196,7 @@ export interface components {
             /** Net Quantity */
             net_quantity: string;
             /** Total Value */
-            total_value: string;
+            total_value: string | null;
             /** Unit */
             unit: string;
         };
@@ -21745,7 +21745,7 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["SiteDiaryLineRead"][];
             /** Lines Total */
-            lines_total: string;
+            lines_total: string | null;
             /** Lock Report Date */
             lock_report_date: string | null;
             /** Locked */
@@ -21839,7 +21839,7 @@ export interface components {
              */
             id: string;
             /** Lines Total */
-            lines_total: string;
+            lines_total: string | null;
             /**
              * Project Id
              * Format: uuid
@@ -21966,7 +21966,7 @@ export interface components {
             /** Leaf Cumulative Quantity */
             leaf_cumulative_quantity?: string | null;
             /** Line Amount */
-            line_amount: string;
+            line_amount: string | null;
             /** Overrun Reason */
             overrun_reason?: string | null;
             /** Planned Quantity */
@@ -21982,7 +21982,7 @@ export interface components {
             /** Unit */
             unit: string;
             /** Unit Price */
-            unit_price: string;
+            unit_price: string | null;
         };
         /**
          * SiteDiaryLinesSave
@@ -22008,7 +22008,7 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["SiteDiarySkeletonLine"][];
             /** Lines Total */
-            lines_total: string;
+            lines_total: string | null;
             /** Lock Report Date */
             lock_report_date: string | null;
             /** Locked */
@@ -22040,7 +22040,7 @@ export interface components {
             /** Leaf Cumulative Quantity */
             leaf_cumulative_quantity?: string | null;
             /** Line Amount */
-            line_amount: string;
+            line_amount: string | null;
             /** Overrun Reason */
             overrun_reason?: string | null;
             /** Planned Quantity */
@@ -22056,7 +22056,7 @@ export interface components {
             /** Unit */
             unit: string;
             /** Unit Price */
-            unit_price: string;
+            unit_price: string | null;
         };
         /**
          * SiteDiarySummary
@@ -22083,7 +22083,7 @@ export interface components {
              */
             site_id: string;
             /** Total Amount */
-            total_amount: string;
+            total_amount: string | null;
             /** Year */
             year: number | null;
         };
@@ -22098,9 +22098,9 @@ export interface components {
          */
         SiteDiarySummaryItem: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Boq Amount */
-            boq_amount: string;
+            boq_amount: string | null;
             /**
              * Boq Item Id
              * Format: uuid
@@ -22125,7 +22125,7 @@ export interface components {
             /** Unit */
             unit: string;
             /** Unit Price */
-            unit_price: string;
+            unit_price: string | null;
         };
         /**
          * SiteDiaryWorkerCountInput
@@ -22768,7 +22768,7 @@ export interface components {
             /** Total Items */
             total_items: number;
             /** Total Value */
-            total_value: string;
+            total_value: string | null;
         };
         /** SiteStockResponse */
         SiteStockResponse: {
@@ -23257,7 +23257,7 @@ export interface components {
             /** Total Items */
             total_items: number;
             /** Total Value */
-            total_value: string;
+            total_value: string | null;
         };
         /** StockSummaryResponse */
         StockSummaryResponse: {
@@ -24310,7 +24310,7 @@ export interface components {
             /** Orders Count This Year */
             orders_count_this_year: number;
             /** Orders Total This Year */
-            orders_total_this_year: string;
+            orders_total_this_year: string | null;
             payment_terms: components["schemas"]["PaymentTerms"];
             /** Phone */
             phone: string | null;
@@ -26902,7 +26902,7 @@ export interface components {
             /** Breakdown Hours */
             breakdown_hours: string;
             /** Cost */
-            cost: string;
+            cost: string | null;
             /** Hours */
             hours: string;
             /** Usage Pct Avg */

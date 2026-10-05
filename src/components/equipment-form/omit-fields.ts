@@ -89,3 +89,25 @@ export function omittedEquipmentFields(
     (field) => detail[field] === null && !touched.has(OMITTABLE_FIELD_SOURCES[field]),
   );
 }
+
+/**
+ * IZN-F4d.2 — `maliyet_kar` gizliyken sunucu şu üç para alanını `null` döner ve `PATCH /equipment/{id}`'de DOLU
+ * gönderilmesini reddeder (403; `IZN-B4d-SOZLESME.md` §5). Form bu alanları salt okunur "—" + kilit çizer ve PATCH
+ * gövdesinden ÇIKARIR (`null` da gönderilmez). POST serbesttir — `detail` yoksa hiçbiri maskeli değildir.
+ */
+export type MaskableEquipmentMoneyField = "purchase_amount" | "market_value" | "rate_amount";
+
+export const MASKABLE_EQUIPMENT_MONEY_FIELDS: readonly MaskableEquipmentMoneyField[] = [
+  "purchase_amount",
+  "market_value",
+  "rate_amount",
+];
+
+/** Kategori gizli (`isHidden`) VE sunucu değeri `null` olan para alanları (kategori gizli ama değer dolu ise alan normal). */
+export function maskedEquipmentMoneyFields(
+  detail: EquipmentEditResponse | undefined,
+  isHidden: boolean,
+): readonly MaskableEquipmentMoneyField[] {
+  if (!detail || !isHidden) return [];
+  return MASKABLE_EQUIPMENT_MONEY_FIELDS.filter((field) => detail[field] === null);
+}

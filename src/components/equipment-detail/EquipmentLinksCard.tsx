@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
 import { RENTAL_STATUS_BADGE } from "@/components/equipment-rental/rental-labels";
 import { EQUIPMENT_EMPTY_VALUE } from "@/components/equipment/equipment-labels";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrencyTight, formatPeriod } from "@/lib/format";
 import type { EquipmentResponse } from "@/lib/api/hooks/useEquipment";
 import type { RentalInvoiceResponse } from "@/lib/api/hooks/useEquipmentRentalInvoices";
@@ -32,6 +37,7 @@ export interface EquipmentLinksCardProps {
  */
 export function EquipmentLinksCard({ equipment, latestInvoice }: EquipmentLinksCardProps) {
   const isRented = equipment.ownership === "rented";
+  const isPaymentHidden = useCategoryHidden(EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES);
 
   return (
     <section className="makine-det__card" aria-label="Mali Bağlantılar">
@@ -62,6 +68,7 @@ export function EquipmentLinksCard({ equipment, latestInvoice }: EquipmentLinksC
               {latestInvoice.payable_total === null
                 ? EQUIPMENT_EMPTY_VALUE
                 : formatCurrencyTight(latestInvoice.payable_total)}
+              <MaskedMark isHidden={isPaymentHidden} values={[latestInvoice.payable_total]} />
             </span>
           </Link>
         ) : (

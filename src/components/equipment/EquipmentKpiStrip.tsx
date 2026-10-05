@@ -1,3 +1,8 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrency } from "@/lib/format";
 import type { EquipmentSummaryResponse } from "@/lib/api/hooks/useEquipmentSummary";
 
@@ -24,10 +29,13 @@ const EMPTY_VALUE = "—";
  * mockup'ın kendi aritmetik hatasıdır (§0), kopyalanmaz. Bedeli bilinmeyen
  * makine varsa (`monthly_cost_unknown_count > 0`) bu GÖRÜNÜR bir notla
  * bildirilir — sessizce eksik bir tutar basılmaz.
+ *
+ * IZN-F4d.2 — maskeli rolde `monthly_cost` `null`: "—" + kilit; "bedeli tanımlı değil" notu BASILMAZ (yalan olurdu).
  */
 export function EquipmentKpiStrip({ summary }: EquipmentKpiStripProps) {
+  const isHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const hasUnknownCost =
-    summary !== undefined && summary.monthly_cost_unknown_count > 0;
+    summary !== undefined && summary.monthly_cost !== null && summary.monthly_cost_unknown_count > 0;
 
   return (
     <div className="makine-kpi" data-testid="makine-kpi-strip">
@@ -59,6 +67,7 @@ export function EquipmentKpiStrip({ summary }: EquipmentKpiStripProps) {
       <div className="makine-kpi__card">
         <div className="makine-kpi__value makine-kpi__value--mono">
           {summary ? formatCompactCurrency(summary.monthly_cost) : EMPTY_VALUE}
+          <MaskedMark isHidden={isHidden} values={[summary?.monthly_cost]} />
         </div>
         <div className="makine-kpi__label">Aylık Maliyet</div>
         {hasUnknownCost && (

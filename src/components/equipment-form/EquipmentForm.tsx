@@ -19,6 +19,8 @@ import {
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -49,7 +51,7 @@ import {
   equipmentFormValuesFromDetail,
   type EquipmentFormValues,
 } from "./form-state";
-import { omittedEquipmentFields } from "./omit-fields";
+import { maskedEquipmentMoneyFields, omittedEquipmentFields } from "./omit-fields";
 import { OwnershipCard } from "./OwnershipCard";
 import { equipmentSubmitErrorMessage } from "./submit-errors";
 import { UsageCard } from "./UsageCard";
@@ -88,6 +90,9 @@ export function EquipmentForm(props: EquipmentFormProps) {
   const detailQuery = useEquipmentDetail(isEdit ? props.equipmentId : "");
   const detail = isEdit ? detailQuery.data : undefined;
   const isSaving = createEquipment.isPending || updateEquipment.isPending;
+  // IZN-F4d.2: maliyet kategorisi gizli + sunucu değeri `null` → para alanları salt okunur + gövdeden çıkar (dolu → 403).
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
+  const maskedMoney = maskedEquipmentMoneyFields(detail, isCostHidden);
 
   // Seçicilerin TEK kaynağı — mockup'ın sabit adları DEĞİL.
   const siteOptionsState = useSiteOptions();
@@ -151,6 +156,7 @@ export function EquipmentForm(props: EquipmentFormProps) {
   function submit() {
     const nextErrors = validateEquipmentForm(values, {
       hasSiteOptions: siteOptions.length > 0,
+      isPurchaseAmountMasked: maskedMoney.includes("purchase_amount"),
     });
     setErrors(nextErrors);
 
@@ -179,6 +185,7 @@ export function EquipmentForm(props: EquipmentFormProps) {
     updateEquipment.mutate(
       buildEquipmentUpdateBody(submittable, {
         omitFields: omittedEquipmentFields(detail, touched),
+        maskedMoneyFields: maskedMoney,
       }),
       {
         onSuccess: () => router.push(EQUIPMENT_LIST_HREF),
@@ -261,6 +268,7 @@ export function EquipmentForm(props: EquipmentFormProps) {
             values={values}
             onChange={handleChange}
             errors={errors}
+            maskedMoney={maskedMoney}
             suppliers={{
               items: supplierItems,
               isLoading: suppliersQuery.isLoading,

@@ -22,6 +22,8 @@ import { STOCK_LIST_MAX_LIMIT } from "@/lib/api/hooks/useStockItems";
 import { useStockSummary } from "@/lib/api/hooks/useStockSummary";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PURCHASE_REQUEST_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -131,6 +133,9 @@ export function PurchaseRequestForm() {
   const requestId = createdRequest?.id ?? "";
   const updateRequest = useUpdatePurchaseRequest(requestId);
   const submitRequest = useSubmitPurchaseRequest(requestId);
+  // IZN-F4d.2: kayıtlı talebin fiyatı maskeli rolde `null`; PATCH'te dolu fiyat 403 → fiyat alanı salt okunur + gövdeden çıkar.
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
+  const isPriceMasked = isCostHidden && createdRequest !== null;
 
   const shouldFocusRef = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -222,7 +227,7 @@ export function PurchaseRequestForm() {
    */
   async function persist(): Promise<PurchaseRequestResponse> {
     if (createdRequest) {
-      return updateRequest.mutateAsync(buildPurchaseRequestUpdateBody(values));
+      return updateRequest.mutateAsync(buildPurchaseRequestUpdateBody(values, { omitPrices: isPriceMasked }));
     }
     return createRequest.mutateAsync(buildPurchaseRequestCreateBody(values));
   }
@@ -329,6 +334,7 @@ export function PurchaseRequestForm() {
 
           <PurchaseRequestFormLinesCard
             values={values}
+            isPriceMasked={isPriceMasked}
             errors={errors}
             stockRows={stockQuery.data?.items ?? []}
             stockIsLoading={stockQuery.isLoading}
@@ -355,7 +361,7 @@ export function PurchaseRequestForm() {
           />
 
           {/* 156-168 */}
-          <PurchaseRequestApprovalBox lines={values.lines} />
+          <PurchaseRequestApprovalBox lines={values.lines} isPriceMasked={isPriceMasked} />
         </div>
 
         {formError && (
