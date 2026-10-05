@@ -35,6 +35,7 @@ import { PurchaseRequestFormSupplierCard } from "./PurchaseRequestFormSupplierCa
 import {
   buildPurchaseRequestCreateBody,
   buildPurchaseRequestUpdateBody,
+  sentLineKeys,
 } from "./purchase-request-body";
 import {
   DRAFT_SAVE_ERROR_FALLBACK,
@@ -49,7 +50,9 @@ import {
 } from "./purchase-request-form-constants";
 import {
   addPurchaseRequestLine,
+  attachSavedLines,
   emptyPurchaseRequestFormValues,
+  purchaseRequestLineKey,
   removePurchaseRequestLine,
   selectPurchaseRequestProject,
   selectPurchaseRequestSite,
@@ -133,9 +136,10 @@ export function PurchaseRequestForm() {
   const requestId = createdRequest?.id ?? "";
   const updateRequest = useUpdatePurchaseRequest(requestId);
   const submitRequest = useSubmitPurchaseRequest(requestId);
-  // IZN-F4d.2: kayıtlı talebin fiyatı maskeli rolde `null`; PATCH'te dolu fiyat 403 → fiyat alanı salt okunur + gövdeden çıkar.
+  // IZN-F4d.2/F4d.3: maliyet gizli rol PATCH'te fiyat yazamaz (dolu da `null` da 403). Fiyatı gizli satırlar `line.isPriceMasked`
+  // taşır (`attachSavedLines`); satır `serverId` ile geri gider ve sunucu mevcut fiyatı korur.
   const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
-  const isPriceMasked = isCostHidden && createdRequest !== null;
+  const isPriceLockedForNewLines = isCostHidden && createdRequest !== null;
 
   const shouldFocusRef = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -186,7 +190,14 @@ export function PurchaseRequestForm() {
   }
 
   function handleAddLine() {
-    setValues((prev) => addPurchaseRequestLine(prev, lineSeqRef.current));
+    const seq = lineSeqRef.current;
+    setValues((prev) => {
+      const next = addPurchaseRequestLine(prev, seq);
+      // Kayıttan sonra eklenen yeni satırın fiyatı da gizli rolde PATCH'e konamaz.
+      return isPriceLockedForNewLines
+        ? updatePurchaseRequestLine(next, purchaseRequestLineKey(seq), { isPriceMasked: true })
+        : next;
+    });
     lineSeqRef.current += 1;
   }
 
@@ -225,19 +236,25 @@ export function PurchaseRequestForm() {
    * ⚠️ `PATCH`in `lines` alanı TAM DEĞİŞTİRMEDİR — gövde kurucusu diziyi her
    * zaman eksiksiz gönderir (bkz. `purchase-request-body.ts`).
    */
-  async function persist(): Promise<PurchaseRequestResponse> {
-    if (createdRequest) {
-      return updateRequest.mutateAsync(buildPurchaseRequestUpdateBody(values, { omitPrices: isPriceMasked }));
-    }
-    return createRequest.mutateAsync(buildPurchaseRequestCreateBody(values));
+  async function persist(): Promise<{ saved: PurchaseRequestResponse; savedValues: PurchaseRequestFormValues }> {
+    const mode = createdRequest ? "update" : "create";
+    const sentKeys = sentLineKeys(values, mode);
+    const saved = createdRequest
+      ? await updateRequest.mutateAsync(buildPurchaseRequestUpdateBody(values))
+      : await createRequest.mutateAsync(buildPurchaseRequestCreateBody(values));
+    // IZN-F4d.3: sunucu satır kimlikleri forma işlenir → sonraki PATCH satırları `id` ile geri gönderir.
+    const attach = (target: PurchaseRequestFormValues) =>
+      attachSavedLines(target, sentKeys, saved.lines, isCostHidden);
+    setValues(attach);
+    return { saved, savedValues: attach(values) };
   }
 
   function handleSaveDraft() {
     if (!guard("draft")) return;
     persist()
-      .then((saved) => {
+      .then(({ saved, savedValues }) => {
         setCreatedRequest(saved);
-        setBaseline(values);
+        setBaseline(savedValues);
         setSavedNotice(
           `Talep ${saved.request_no} taslak olarak kaydedildi. Düzenlemeye devam edebilir ya da “Onaya Gönder”e basabilirsiniz.`,
         );
@@ -251,9 +268,9 @@ export function PurchaseRequestForm() {
   function handleSubmit() {
     if (!guard("submit")) return;
     persist()
-      .then((saved) => {
+      .then(({ saved, savedValues }) => {
         setCreatedRequest(saved);
-        setBaseline(values);
+        setBaseline(savedValues);
         setPendingSubmit(true);
       })
       .catch((error: unknown) => {
@@ -334,7 +351,6 @@ export function PurchaseRequestForm() {
 
           <PurchaseRequestFormLinesCard
             values={values}
-            isPriceMasked={isPriceMasked}
             errors={errors}
             stockRows={stockQuery.data?.items ?? []}
             stockIsLoading={stockQuery.isLoading}
@@ -361,7 +377,10 @@ export function PurchaseRequestForm() {
           />
 
           {/* 156-168 */}
-          <PurchaseRequestApprovalBox lines={values.lines} isPriceMasked={isPriceMasked} />
+          <PurchaseRequestApprovalBox
+            lines={values.lines}
+            isPriceMasked={values.lines.some((line) => line.isPriceMasked === true)}
+          />
         </div>
 
         {formError && (

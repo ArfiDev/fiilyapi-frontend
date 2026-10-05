@@ -40,6 +40,18 @@ export interface PurchaseRequestLineValues {
   freeTextUnit: string;
   quantity: string;
   unitPrice: string;
+  /**
+   * IZN-F4d.3 — sunucudaki satır kimliği (kayıttan sonra `attachSavedLines` doldurur). PATCH gövdesinde `id` olarak GERİ
+   * gönderilir (id'li = yerinde güncelle, id'siz = yeni, gövdede olmayan = silinir); satır yeniden sıralansa/düzenlense
+   * de korunur. POST gövdesine ASLA girmez.
+   */
+  serverId?: string;
+  /**
+   * IZN-F4d.3 — bu satırın fiyatı bu rolde GİZLİ (maliyet kategorisi gizli + sunucu fiyatı `null`; ya da kayıttan sonra
+   * eklenen yeni satır — gizli rol PATCH'te fiyat yazamaz). Fiyat girişi kilitli, `estimated_unit_price` gövdede YOK;
+   * `serverId` sayesinde sunucu mevcut fiyatı korur.
+   */
+  isPriceMasked?: boolean;
 }
 
 export interface PurchaseRequestFormValues {
@@ -159,4 +171,38 @@ export function purchaseRequestLineTotal(line: PurchaseRequestLineValues): strin
 /** Kalemin tahmini birim FİYATI girilmiş mi (sunucudaki `estimated_unit_price is None` ikizi). */
 export function isPurchaseRequestLinePriced(line: PurchaseRequestLineValues): boolean {
   return normalizeDecimalInput(line.unitPrice) !== null;
+}
+
+/** Kayıt yanıtındaki satırdan formun ihtiyacı olan kısım. */
+export interface SavedRequestLine {
+  id: string;
+  sort_order: number;
+  estimated_unit_price: string | null;
+}
+
+/**
+ * IZN-F4d.3 — kayıttan sonra sunucu satır kimliklerini forma işler. `sentKeys`, gövdeye giren satırların form anahtarları
+ * (gövde sırasıyla); sunucu `sort_order`u dizinin indeksinden üretir, yani `sentKeys[i]` ↔ `sort_order i`. Eşleşmeyen satıra
+ * dokunulmaz. Maliyet gizli ve sunucu fiyatı `null` ise satır `isPriceMasked` olur.
+ */
+export function attachSavedLines(
+  values: PurchaseRequestFormValues,
+  sentKeys: readonly string[],
+  saved: readonly SavedRequestLine[],
+  isCostHidden: boolean,
+): PurchaseRequestFormValues {
+  const ordered = [...saved].sort((a, b) => a.sort_order - b.sort_order);
+  const byKey = new Map(sentKeys.flatMap((key, index) => (ordered[index] ? [[key, ordered[index]] as const] : [])));
+  return {
+    ...values,
+    lines: values.lines.map((line) => {
+      const savedLine = byKey.get(line.key);
+      if (!savedLine) return line;
+      return {
+        ...line,
+        serverId: savedLine.id,
+        isPriceMasked: isCostHidden && savedLine.estimated_unit_price === null,
+      };
+    }),
+  };
 }

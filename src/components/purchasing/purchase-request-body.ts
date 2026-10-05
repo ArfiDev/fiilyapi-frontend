@@ -34,11 +34,16 @@ import type {
   PurchaseRequestLineValues,
 } from "./purchase-request-form-state";
 
-function buildLine(line: PurchaseRequestLineValues, omitPrice = false): PurchaseRequestLineCreate {
-  // IZN-F4d.2: maskeli rolde kayıtlı talebin fiyatı `null` döner ve PATCH'te DOLU fiyat 403 (çağrı hiç koşmaz) →
-  // fiyat anahtarı gövdeye HİÇ konmaz. POST (ilk kayıt) serbesttir.
-  const unitPrice = omitPrice ? null : normalizeDecimalInput(line.unitPrice);
+/** POST satırı + PATCH'te opsiyonel `id` (`PurchaseRequestLineUpdate` ile uyumlu). */
+type BuiltLine = PurchaseRequestLineCreate & { id?: string };
+
+function buildLine(line: PurchaseRequestLineValues, forUpdate = false): BuiltLine {
+  // IZN-F4d.2/F4d.3: maskeli satırın fiyatı PATCH'te HİÇ gönderilmez (dolu da `null` da 403); satır `id` ile geri gider
+  // ve sunucu mevcut fiyatı KORUR. POST (ilk kayıt) serbesttir ve `id` taşımaz.
+  const unitPrice = forUpdate && line.isPriceMasked === true ? null : normalizeDecimalInput(line.unitPrice);
   return {
+    // `id`li satır = yerinde güncelleme; `id`siz = yeni satır. Yalnız PATCH'te.
+    ...(forUpdate && line.serverId !== undefined ? { id: line.serverId } : {}),
     ...(line.source === "stock"
       ? { stock_item_id: line.stockItemId }
       : {
@@ -59,6 +64,15 @@ export function buildPurchaseRequestLines(
   lines: readonly PurchaseRequestLineValues[],
 ): PurchaseRequestLineCreate[] {
   return lines.map((line) => buildLine(line));
+}
+
+/**
+ * Gövdeye giren satırların form anahtarları (gövde sırasıyla) — kayıt yanıtındaki `sort_order` ile eşleşir
+ * (`attachSavedLines`). POST tam boş satırı eler, PATCH hepsini gönderir.
+ */
+export function sentLineKeys(values: PurchaseRequestFormValues, mode: "create" | "update"): string[] {
+  const sent = mode === "create" ? values.lines.filter((line) => !isLineEmpty(line)) : values.lines;
+  return sent.map((line) => line.key);
 }
 
 /**
@@ -111,7 +125,6 @@ export function buildPurchaseRequestCreateBody(
  */
 export function buildPurchaseRequestUpdateBody(
   values: PurchaseRequestFormValues,
-  options: { omitPrices?: boolean } = {},
 ): PurchaseRequestUpdate {
   const justification = values.justification.trim();
   return {
@@ -124,6 +137,6 @@ export function buildPurchaseRequestUpdateBody(
     justification: justification || null,
     quote_deadline: values.quoteDeadline || null,
     // TAM DEĞİŞTİRME — dizi her zaman eksiksiz gider.
-    lines: values.lines.map((line) => buildLine(line, options.omitPrices === true)),
+    lines: values.lines.map((line) => buildLine(line, true)),
   };
 }

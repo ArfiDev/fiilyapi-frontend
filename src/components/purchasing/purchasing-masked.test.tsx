@@ -17,7 +17,7 @@ import { PurchaseRequestsTable } from "./PurchaseRequestsTable";
 import { PurchasingKpiStrip } from "./PurchasingKpiStrip";
 import { QuoteComparisonCard } from "./QuoteComparisonCard";
 import { QuoteComparisonSummary } from "./QuoteComparisonSummary";
-import { buildPurchaseRequestUpdateBody } from "./purchase-request-body";
+import { buildPurchaseRequestCreateBody, buildPurchaseRequestUpdateBody } from "./purchase-request-body";
 import {
   createPurchaseRequestLine,
   emptyPurchaseRequestFormValues,
@@ -148,23 +148,21 @@ describe("liste / KPI — tutarlar", () => {
   });
 });
 
-describe("talep formu — maskeli fiyat PATCH gövdesinde YOK", () => {
-  const values: PurchaseRequestFormValues = {
-    ...emptyPurchaseRequestFormValues("2026-08-13"),
-    projectId: "p-1",
-    lines: [{ ...createPurchaseRequestLine(0), stockItemId: "s-1", quantity: "15", unitPrice: "21500" }],
-  };
+describe("talep formu — satır bazlı maskeli fiyat", () => {
+  const masked = { ...createPurchaseRequestLine(0), stockItemId: "s-1", quantity: "15", unitPrice: "21500", serverId: "l-1", isPriceMasked: true };
+  const values: PurchaseRequestFormValues = { ...emptyPurchaseRequestFormValues("2026-08-13"), projectId: "p-1", lines: [masked] };
 
-  it("omitPrices: estimated_unit_price anahtarı HİÇ yok; varsayılan hâlde gider", () => {
-    expect(buildPurchaseRequestUpdateBody(values, { omitPrices: true }).lines?.[0]).not.toHaveProperty("estimated_unit_price");
-    expect(buildPurchaseRequestUpdateBody(values).lines?.[0]).toHaveProperty("estimated_unit_price", "21500");
+  it("PATCH: maskeli satır id'li gider, estimated_unit_price anahtarı HİÇ yok; POST id taşımaz", () => {
+    const [sent] = buildPurchaseRequestUpdateBody(values).lines ?? [];
+    expect(sent).toHaveProperty("id", "l-1");
+    expect(sent).not.toHaveProperty("estimated_unit_price");
+    expect(buildPurchaseRequestCreateBody(values).lines?.[0]).not.toHaveProperty("id");
   });
 
-  it("satır kartı (isPriceMasked): fiyat girişi YOK ('—' + kilit), tutar/toplam '—', eksiklik notu yok", () => {
+  it("satır kartı: yalnız maskeli satırın fiyatı '—' + kilit; toplam/eksiklik notu '—'", () => {
     render(
       <PurchaseRequestFormLinesCard
         values={values}
-        isPriceMasked
         errors={{ lineErrors: {} } as never}
         stockRows={[]}
         stockIsLoading={false}
@@ -180,6 +178,23 @@ describe("talep formu — maskeli fiyat PATCH gövdesinde YOK", () => {
     expect(screen.getByTestId("talep-toplam")).toHaveTextContent("—");
     expect(screen.queryByTestId("talep-toplam-eksik")).not.toBeInTheDocument();
     expect(screen.getAllByTestId("hidden-mark")).toHaveLength(1);
+  });
+
+  it("fiyatı maskeli OLMAYAN satır normal giriş kutusunu korur", () => {
+    render(
+      <PurchaseRequestFormLinesCard
+        values={{ ...values, lines: [{ ...masked, isPriceMasked: false }] }}
+        errors={{ lineErrors: {} } as never}
+        stockRows={[]}
+        stockIsLoading={false}
+        stockIsError={false}
+        onAddLine={vi.fn()}
+        onRemoveLine={vi.fn()}
+        onChangeLine={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("talep-fiyat-0")).toBeInTheDocument();
+    expect(screen.queryByTestId("hidden-mark")).not.toBeInTheDocument();
   });
 
   it("onay kutusu (isPriceMasked): '₺0' hüküm cümlesi basılmaz; zincir görünür", () => {

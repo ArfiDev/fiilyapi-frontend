@@ -19343,6 +19343,31 @@ export interface components {
             /** Unit */
             unit: string | null;
         };
+        /**
+         * PurchaseRequestLineUpdate
+         * @description `PATCH` kalem girdisi (IZN-B4d onarimi): satir bazinda KISMI birlestirme.
+         *
+         *     GECE KARARI: `lines` gonderilince tam degistirme semantigi surer (govdede OLMAYAN eski
+         *     satir silinir) AMA satir `id` ile eslesirse GONDERILMEYEN alan (`model_fields_set` disi)
+         *     eski degerden KORUNUR ve satir kimligi degismez. Boylece `maliyet_kar` gizli rolun formu
+         *     (fiyat gelmez) yalniz miktari duzeltince tahmini fiyati SILMEZ. `id`siz satir YENIDIR ve
+         *     `PurchaseRequestLineCreate` kurallarina (XOR, miktar zorunlu) tabidir. POST girdisi
+         *     (`PurchaseRequestLineCreate`) degismedi.
+         */
+        PurchaseRequestLineUpdate: {
+            /** Estimated Unit Price */
+            estimated_unit_price?: number | string | null;
+            /** Free Text Name */
+            free_text_name?: string | null;
+            /** Free Text Unit */
+            free_text_unit?: string | null;
+            /** Id */
+            id?: string | null;
+            /** Quantity */
+            quantity?: number | string | null;
+            /** Stock Item Id */
+            stock_item_id?: string | null;
+        };
         /** PurchaseRequestListResponse */
         PurchaseRequestListResponse: {
             /** Items */
@@ -19510,7 +19535,8 @@ export interface components {
          *
          *     **`lines` gondermek REPLACE'tir:** gelen liste eskisinin YERINE gecer (tek
          *     atomik islem). Hic GONDERMEMEK kalemlere DOKUNMAZ, BOS liste gondermek
-         *     hepsini SILER — iki durum `model_fields_set` ile ayrilir. Satir bazli
+         *     hepsini SILER — iki durum `model_fields_set` ile ayrilir. Satir `id` tasirsa
+         *     o satirla KISMI birlestirilir (bkz. `PurchaseRequestLineUpdate`). Satir bazli
          *     ekle/cikar ucu ACILMAZ: FST kalem tablosu tek "Kaydet" ile gonderilir ve
          *     parcali uclar yarim kaydedilmis bir tablo birakabilirdi.
          */
@@ -19518,7 +19544,7 @@ export interface components {
             /** Justification */
             justification?: string | null;
             /** Lines */
-            lines?: components["schemas"]["PurchaseRequestLineCreate"][] | null;
+            lines?: components["schemas"]["PurchaseRequestLineUpdate"][] | null;
             /** Needed By */
             needed_by?: string | null;
             priority?: components["schemas"]["PurchasePriority"] | null;
