@@ -1,3 +1,5 @@
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import { Field, Input, Select } from "@/components/ui";
 import type { UnitResponse } from "@/lib/api/hooks/useProjectUnits";
 import { formatAmount } from "@/lib/format";
@@ -38,7 +40,7 @@ export function SalePriceCard({
   locked,
 }: SalePriceCardProps) {
   const listPrice = selectedUnit?.list_price ?? null;
-  const cost = selectedUnit ? deriveUnitCost(selectedUnit) : { available: false, text: null, rawValue: null, pendingModule: null };
+  const cost = selectedUnit ? deriveUnitCost(selectedUnit) : { available: false, text: null, rawValue: null, pendingModule: null, isRestricted: false };
   const profit = deriveSaleProfit(salePriceNumber(values), cost);
 
   return (
@@ -118,12 +120,13 @@ export function SalePriceCard({
         <div>
           <div className="sf-profit__label">Bu Satıştan Kâr</div>
           <div className="sf-profit__formula">
-            {profit.available ? SALE_PROFIT_FORMULA : SALE_PROFIT_UNKNOWN_REASON}
+            {profit.available ? SALE_PROFIT_FORMULA : cost.isRestricted ? HIDDEN_FIELD_HINT : SALE_PROFIT_UNKNOWN_REASON}
           </div>
         </div>
         <div>
           <div className="sf-profit__amount">
             {profit.available ? `₺${profit.amountText}` : EMPTY_METRIC}
+            {!profit.available && cost.isRestricted && <HiddenMark />}
           </div>
           {profit.available && profit.marginPct !== null && (
             <div className="sf-profit__margin">%{profit.marginPct} marj</div>

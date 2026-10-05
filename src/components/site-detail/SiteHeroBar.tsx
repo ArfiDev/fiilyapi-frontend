@@ -4,6 +4,9 @@ import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButt
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import type { SiteDetail } from "@/lib/api/hooks/useSites";
 import { routes, routeKeyOf } from "@/lib/routes";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
@@ -56,10 +59,15 @@ function metaParts(site: SiteDetail): string[] {
 }
 
 // Yer tutucu KPI değeri — düzeni korur, "—" basar, title'da açıklama verir (spec §7.1).
-function PlaceholderValue({ pendingModule }: { pendingModule: PendingModuleKey }) {
+// IZN-F4.2: 3. hâl (rolün izni yok) → kilit + "Bu bilgi rolünüz için gizli".
+function PlaceholderValue({ pendingModule, isRestricted = false }: { pendingModule: PendingModuleKey; isRestricted?: boolean }) {
   return (
-    <div className="site-hero__kpi-value site-hero__kpi-value--pending" title={pendingModuleHint(pendingModule)}>
+    <div
+      className="site-hero__kpi-value site-hero__kpi-value--pending"
+      title={isRestricted ? HIDDEN_FIELD_HINT : pendingModuleHint(pendingModule)}
+    >
       —
+      {isRestricted && <HiddenMark />}
     </div>
   );
 }
@@ -78,7 +86,7 @@ function ProgressCell({ progress }: { progress: SiteDetail["progress_pct"] }) {
         // SiteDetailResponse.progress_pct) — kaçış YOK.
         <div className="site-hero__kpi-value">{formatPercent(progress.value ?? "0")}</div>
       ) : (
-        <PlaceholderValue pendingModule={progress.pending_module} />
+        <PlaceholderValue pendingModule={progress.pending_module} isRestricted={isRestrictedEnvelope(progress)} />
       )}
       <div className="site-hero__kpi-track">
         {isReal && (
@@ -102,7 +110,7 @@ function WorkerCell({ worker }: { worker: SiteDetail["worker_count"] }) {
       {isReal ? (
         <div className="site-hero__kpi-value">{worker.count}</div>
       ) : (
-        <PlaceholderValue pendingModule={worker.pending_module} />
+        <PlaceholderValue pendingModule={worker.pending_module} isRestricted={isRestrictedEnvelope(worker)} />
       )}
     </div>
   );
@@ -128,7 +136,7 @@ function PaymentCell({
           {formatCompactCurrency(payment.value as string)}
         </div>
       ) : (
-        <PlaceholderValue pendingModule={payment.pending_module} />
+        <PlaceholderValue pendingModule={payment.pending_module} isRestricted={isRestrictedEnvelope(payment)} />
       )}
       {hasNote && (
         <div className="site-hero__kpi-note">/ {formatCompactCurrency(contractAmount.value as string)}</div>

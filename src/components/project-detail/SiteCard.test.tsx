@@ -155,7 +155,7 @@ describe("SiteCard — yer tutucu hucreler (spec §7.1)", () => {
   // O hâlde `pendingModuleLabel(null)`ın döndürdüğü "İlgili modülle birlikte
   // gelir" cümlesi YALANDIR — modül vardır, izin yoktur. Aynı ekranın alt
   // şeridi (SiteTotalsStrip) bunu doğru yapıyor; kart da title basmamalı.
-  it("UCUNCU HAL: Ilerleme available:false + pending_module null → '—' basar ama title VERILMEZ", () => {
+  it("UCUNCU HAL: Ilerleme available:false + pending_module null → '—' + gizli ipucu (modül gerekçesi YOK)", () => {
     const restricted: SiteListItem = {
       ...ACTIVE_SITE,
       progress_pct: { available: false, value: null, pending_module: null },
@@ -166,7 +166,7 @@ describe("SiteCard — yer tutucu hucreler (spec §7.1)", () => {
     expect(progress).not.toBeNull();
     expect(progress).toHaveTextContent("—");
     expect(progress?.className).toContain("site-card__kpi-value--pending");
-    expect(progress).not.toHaveAttribute("title");
+    expect(progress).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
 
     // KARŞIT KANIT: 2. hâl (gerekçe BİLİNİYOR) ipucunu vermeye DEVAM eder.
     expect(screen.getByTitle("Puantaj verisi bu yüzeye henüz bağlanmadı")).toHaveTextContent("—");

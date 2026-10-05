@@ -18,6 +18,7 @@ import {
   generalProfitResetBody,
   isCatalogResetAllowed,
   isOfferPriceEnabled,
+  isRateMasked,
   isUnpriced,
   offerPriceHint,
   type CellContext,
@@ -49,7 +50,7 @@ function CatalogHints({ catalogItem }: { catalogItem: WorkItemRead | undefined }
   return (
     <span className="oit-hints">
       <span>{`Ref ${ref}`}</span>
-      <span>{`Son ${last === undefined ? EMPTY_CELL : `₺${formatPrice(last)}`}`}</span>
+      <span>{`Son ${last === undefined || last === null ? EMPTY_CELL : `₺${formatPrice(last)}`}`}</span>
     </span>
   );
 }
@@ -129,11 +130,23 @@ export function OfferItemRow({ ctx, catalogItem, isQuantityMissing, editor, canE
         </OfferItemCell>
       </td>
       <td>
-        <OfferItemCell field="overheadPct" ctx={ctx} editor={editor} ariaSuffix="gider %" isDisabled={disabled} />
+        <OfferItemCell
+          field="overheadPct"
+          ctx={ctx}
+          editor={editor}
+          ariaSuffix="gider %"
+          isDisabled={disabled || isRateMasked("overheadPct", ctx)}
+        />
       </td>
       <td>
-        <OfferItemCell field="profitPct" ctx={ctx} editor={editor} ariaSuffix="kâr %" isDisabled={disabled}>
-          {profitOverridden && canEdit && (
+        <OfferItemCell
+          field="profitPct"
+          ctx={ctx}
+          editor={editor}
+          ariaSuffix="kâr %"
+          isDisabled={disabled || isRateMasked("profitPct", ctx)}
+        >
+          {profitOverridden && canEdit && !isRateMasked("profitPct", ctx) && (
             <OfferResetButton onClick={() => editor.applyBody(item.id, "profitPct", generalProfitResetBody())}>
               genel
             </OfferResetButton>

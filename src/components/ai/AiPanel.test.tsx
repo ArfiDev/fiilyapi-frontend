@@ -587,7 +587,7 @@ describe("AiPanel · Sohbet Bağlamı (AI-BAĞLAM)", () => {
     expect(isci).toHaveAttribute("title");
   });
 
-  it("🔴 3. HAL (`restricted`): ipucu VERILMEZ — 'modul yok' demek yalan olurdu", async () => {
+  it("🔴 3. HAL (`restricted`): modül yok demek YALAN → ipucu: Bu bilgi rolünüz için gizli (IZN-F4.2)", async () => {
     baglamStub([SANTIYE_YASAK]);
     ciz(<AiPanel />);
     const panel = screen.getByLabelText("Sohbet bağlamı");
@@ -598,7 +598,7 @@ describe("AiPanel · Sohbet Bağlamı (AI-BAĞLAM)", () => {
       ),
     );
     // İlerleme satırı `restricted()` — `pending_module: null` → ipucu YOK.
-    expect(within(panel).getByTestId("ai-baglam-ilerleme")).not.toHaveAttribute("title");
+    expect(within(panel).getByTestId("ai-baglam-ilerleme")).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     // Kardeş satır 2. hâlde ve ipucunu TAŞIR — ayrım gerçekten yapılıyor.
     expect(within(panel).getByTestId("ai-baglam-isci")).toHaveAttribute("title");
   });

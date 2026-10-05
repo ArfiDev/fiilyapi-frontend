@@ -1,4 +1,5 @@
 import { missingFieldsText, pctToInputText } from "@/components/offers/offer-form";
+import { EMPTY_CELL } from "@/lib/format";
 import type { OfferListItem } from "@/lib/api/hooks/useOffers";
 import type { OfferTemplateListItem } from "@/lib/api/hooks/useOfferTemplates";
 
@@ -145,7 +146,9 @@ export { missingFieldsText };
 /** TS:285 "Oluşacak şablon: N grup · M kalem · GG %a · Kâr %b" (teklif kaynağında sayı bilinmez → yalnız oranlar). */
 export function previewText(state: CreateFormState, context: CreateContext, defaults: RateDefaultTexts): string {
   const rates = effectiveRates(state, defaults);
-  const ratePart = `GG %${rates.overhead} · Kâr %${rates.profit}`;
+  // Boş oran (ayar maskeli/belirsiz) → "—"; sahte "%" basılmaz.
+  const pct = (text: string) => (text === "" ? EMPTY_CELL : `%${text}`);
+  const ratePart = `GG ${pct(rates.overhead)} · Kâr ${pct(rates.profit)}`;
   if (state.source === "offer") return ratePart;
   if (state.source === "template") {
     const template = resolveTemplate(state, context);

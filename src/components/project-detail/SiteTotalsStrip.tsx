@@ -1,5 +1,6 @@
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatPercent } from "@/lib/format";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { countCell, metricCell, type PlaceholderCell } from "@/lib/placeholder-cell";
 import type { SiteListResponse } from "@/lib/api/hooks/useSites";
 
@@ -74,10 +75,11 @@ export function SiteTotalsStrip({ totals }: SiteTotalsStripProps) {
               // Soluk hâl YALNIZ boş zarfta; dolu zarfta mockup rengi geri gelir.
               card.text === null && "site-totals__value--pending",
             )}
-            // 3. hâl (rolün izni yok) `hint` taşımaz → `title` HİÇ basılmaz.
+            // 3. hâl (rolün izni yok, IZN-F4.2): `hint` = "Bu bilgi rolünüz için gizli" + kilit.
             title={card.hint}
           >
             {card.text ?? "—"}
+            {card.isHidden && <HiddenMark />}
           </div>
         </div>
       ))}

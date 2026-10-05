@@ -1,3 +1,5 @@
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { cx } from "@/lib/cx";
 import { EMPTY_CELL } from "@/lib/format";
 
@@ -25,6 +27,8 @@ export interface LastPriceCellProps {
 }
 
 const READ_ONLY_PREFIX = "salt okunur · ";
+/** Son fiyat = birim fiyat bilgisi: bu kategorilerden biri gizliyse backend `price`ı null döndürür (IZN-B4a). */
+const LAST_PRICE_CATEGORIES = ["sozlesme_fiyat", "tum_tutarlar"] as const;
 
 /**
  * KIK:138-141, 252-256 — "Son fiyat" hücresinin içeriği (dış `role="cell"` çağıranda).
@@ -33,17 +37,35 @@ const READ_ONLY_PREFIX = "salt okunur · ";
  */
 export function LastPriceCell({ lastPrice, refPrice, isNewItem = false, readOnly = false }: LastPriceCellProps) {
   const prefix = readOnly ? READ_ONLY_PREFIX : "";
+  const isPriceHidden = useCategoryHidden(LAST_PRICE_CATEGORIES);
   if (lastPrice === null || lastPrice === undefined) {
     const isMasked = !isNewItem && isLastPriceMasked(lastPrice, refPrice);
     return (
       <div className="wik-lastbox">
-        <span className="wik-last wik-last--empty">{EMPTY_CELL}</span>
+        <span className="wik-last wik-last--empty">
+          {EMPTY_CELL}
+          {isMasked && isPriceHidden && <HiddenMark />}
+        </span>
         {!isMasked && <span className="wik-sub wik-sub--nowrap">{`${prefix}${NO_LAST_PRICE_SOURCE}`}</span>}
       </div>
     );
   }
-  const diff = lastPriceDiff(lastPrice.price, refPrice);
   const source = formatLastPriceSource(lastPrice);
+  // Maskeli fiyat (`price: null`): "—"; kaynak/belge bilgisi maskelenmez. Kilit + ipucu YALNIZ kategori gerçekten gizliyse.
+  if (lastPrice.price === null) {
+    return (
+      <div className="wik-lastbox">
+        <span className="wik-last wik-last--empty">
+          {EMPTY_CELL}
+          {isPriceHidden && <HiddenMark />}
+        </span>
+        <span className="wik-sub wik-sub--nowrap" title={`${prefix}${source}`}>
+          {`${prefix}${source}`}
+        </span>
+      </div>
+    );
+  }
+  const diff = lastPriceDiff(lastPrice.price, refPrice);
   return (
     <div className="wik-lastbox">
       <span className="wik-last">

@@ -1,5 +1,8 @@
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import { formatCompactCurrency } from "@/lib/format";
 import { pendingModuleHint } from "@/lib/pending-modules";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
 import type { StockSummaryKpis } from "@/lib/api/hooks/useStockSummary";
 
 import "./stock.css";
@@ -31,7 +34,9 @@ export function StockKpiStrip({ kpis }: StockKpiStripProps) {
   const pending = kpis?.pending_orders;
   const isPendingOrdersReal =
     pending !== undefined && pending.available && pending.value !== null && pending.value !== undefined;
-  const pendingReason = pendingModuleHint(pending?.pending_module);
+  // IZN-F4.2: 3. hâl (rolün izni yok) → kilit + "Bu bilgi rolünüz için gizli"; 2. hâl (modül bekleniyor) aynen.
+  const isPendingOrdersHidden = isRestrictedEnvelope(pending);
+  const pendingReason = isPendingOrdersHidden ? HIDDEN_FIELD_HINT : pendingModuleHint(pending?.pending_module);
 
   return (
     <div className="stok-kpi" data-testid="stok-kpi-strip">
@@ -64,6 +69,7 @@ export function StockKpiStrip({ kpis }: StockKpiStripProps) {
               data-testid="stok-kpi-pending-orders"
             >
               {EMPTY_VALUE}
+              {isPendingOrdersHidden && <HiddenMark />}
             </div>
             {/* `title` görünmez olduğu için gerekçe METNE de basılır. */}
             <p className="stok-kpi__pending-hint">{pendingReason}</p>

@@ -52,8 +52,9 @@ export interface InternalSourceGroup {
   items: readonly InternalSourceItem[];
 }
 export interface InternalSourceRevision extends PrintRevisionSource {
-  overhead_pct: string;
-  profit_pct: string;
+  /** `null` = maskeli (`maliyet_kar`): baskıda "—". */
+  overhead_pct: string | null;
+  profit_pct: string | null;
   groups: readonly InternalSourceGroup[];
   totals: {
     unpriced_count: number;

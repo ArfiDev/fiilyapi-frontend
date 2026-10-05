@@ -309,8 +309,15 @@ describe("PageAccessScreen · hassas alanlar", () => {
     expect(within(section).getByRole("checkbox", { name: /Tüm tutarlar/ })).not.toBeChecked();
   });
 
-  it("hidden_fields_effective alanı yokken ya da false iken 'sonraki güncellemede devreye girer' notu görünür", async () => {
+  it("IZN-B4a: fixture varsayılanı (hidden_fields_effective true) → 'devreye girer' notu görünmez", async () => {
     stubFetch();
+    renderScreen();
+    await screen.findByRole("heading", { name: "Şantiye Şefi" });
+    expect(screen.queryByText("Gizleme bir sonraki güncellemede devreye girer")).toBeNull();
+  });
+
+  it("hidden_fields_effective alanı YOKKEN (eski yük) not görünür — dal korunur", async () => {
+    stubFetch({ pagesByRole: { "r-chief": buildRolePagesFixture("r-chief", { extra: { hidden_fields_effective: undefined } }) } });
     renderScreen();
     expect(await screen.findByText("Gizleme bir sonraki güncellemede devreye girer")).toBeInTheDocument();
   });

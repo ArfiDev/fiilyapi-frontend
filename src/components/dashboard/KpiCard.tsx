@@ -1,6 +1,8 @@
 import type { components } from "@/lib/api/schema";
 import { formatCompactCurrency } from "@/lib/format";
 
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
+
 import { CardEmptyState } from "./CardEmptyState";
 import "./dashboard.css";
 import type { DeepScale } from "@/lib/api/scale";
@@ -25,7 +27,7 @@ export function KpiCard({
       {metric.available && metric.value !== null && metric.value !== undefined ? (
         <p className="dash-kpi__value">{formatCompactCurrency(metric.value)}</p>
       ) : (
-        <CardEmptyState title={emptyTitle} pendingModule={metric.pending_module} />
+        <CardEmptyState title={emptyTitle} pendingModule={metric.pending_module} isHidden={isRestrictedEnvelope(metric)} />
       )}
       <div className="dash-bar dash-bar--kpi">
         <div className="dash-bar__fill" style={{ width: "0%" }} />

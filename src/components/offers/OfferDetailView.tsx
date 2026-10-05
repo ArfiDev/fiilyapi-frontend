@@ -8,6 +8,7 @@ import { EmployerFormModal } from "@/components/project-form/EmployerFormModal";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { confirmDiscardIfDirty } from "@/components/settings/Modal";
 import { LockIcon } from "@/components/ui/icons";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useEmployers, type EmployerListItem } from "@/lib/api/hooks/useEmployers";
 import { offerRevisionKey } from "@/lib/api/hooks/offer-query-keys";
@@ -38,6 +39,7 @@ import {
   buildOfferPatchBodies,
   changedFormFields,
   detailFormValuesFromServer,
+  maskedRatesOf,
   validateDetailForm,
   type OfferDetailFormField,
   type OfferDetailFormValues,
@@ -137,8 +139,11 @@ export function OfferDetailView(props: OfferDetailViewProps) {
   );
   const isDirty = changed.size > 0;
   useUnsavedChanges(isDirty, "Teklif taslağı");
+  // IZN-F4.2: sunucunun maskelediği oranlar salt okunur "—"; doğrulanmaz, gövdeye girmez. İpucu yalnız kategori gizliyse.
+  const maskedRates = useMemo(() => maskedRatesOf(revision), [revision]);
+  const isMaliyetKarHidden = useCategoryHidden("maliyet_kar");
 
-  const errors = useMemo(() => (attempted ? validateDetailForm(values) : {}), [attempted, values]);
+  const errors = useMemo(() => (attempted ? validateDetailForm(values, maskedRates) : {}), [attempted, values, maskedRates]);
   const formRef = useRef<HTMLDivElement>(null);
   const shouldFocusRef = useRef(false);
   useEffect(() => {
@@ -194,7 +199,7 @@ export function OfferDetailView(props: OfferDetailViewProps) {
     if (isSaving) return;
     setSaveError(null);
     setAttempted(true);
-    if (Object.keys(validateDetailForm(values)).length > 0) {
+    if (Object.keys(validateDetailForm(values, maskedRates)).length > 0) {
       shouldFocusRef.current = true;
       return;
     }
@@ -349,6 +354,8 @@ export function OfferDetailView(props: OfferDetailViewProps) {
             errors={errors}
             onChange={change}
             disabled={!canEdit}
+            masked={maskedRates}
+            isHiddenHintShown={isMaliyetKarHidden}
             title="Oranlar"
             subtitle="Teklif geneli · kalemde değiştirilebilir"
             note={RATE_FORMULA_NOTE}

@@ -1,6 +1,8 @@
 import { Field, Input } from "@/components/ui";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { EMPTY_CELL } from "@/lib/format";
 
-import { type OfferFormErrors, type OfferFormField, type OfferFormValues } from "./offer-form";
+import { NO_MASKED_RATES, type MaskedRates, type OfferFormErrors, type OfferFormField, type OfferFormValues } from "./offer-form";
 import "./offer-create.css";
 
 /** Ekranda izin verilen karakterler: rakam, virgül ve nokta (noktalı girdi doğrulamada "belirsiz" diye reddedilir, sessizce silinmez). */
@@ -30,10 +32,25 @@ interface OfferRateFieldsProps {
   note?: string;
   /** Detay: eski revizyon / taslak olmayan teklif → salt okunur (TKL-F3.5). */
   disabled?: boolean;
+  /** IZN-F4.2 · sunucunun maskelediği oranlar: salt okunur "—" (doğrulanmaz, gövdeye girmez). */
+  masked?: MaskedRates;
+  /** IZN-F4.2 · oturumda `maliyet_kar` gizli → maskeli alanın altında kilit + "Bu bilgi rolünüz için gizli". */
+  isHiddenHintShown?: boolean;
 }
 
 /** TY:158-169 — GG % · Kâr % · KDV %. KDV DÜZENLENEBİLİR (T32: mockup'ın "Sabit" kutusunu karar ezer). Detay ile ORTAK. */
-export function OfferRateFields({ values, errors, onChange, defaults, disabled = false, title = DEFAULT_TITLE, subtitle = DEFAULT_SUBTITLE, note }: OfferRateFieldsProps) {
+export function OfferRateFields({
+  values,
+  errors,
+  onChange,
+  defaults,
+  disabled = false,
+  title = DEFAULT_TITLE,
+  subtitle = DEFAULT_SUBTITLE,
+  note,
+  masked = NO_MASKED_RATES,
+  isHiddenHintShown = false,
+}: OfferRateFieldsProps) {
   return (
     <section className="offer-create__card" aria-labelledby="offer-rates-title">
       <div>
@@ -43,7 +60,15 @@ export function OfferRateFields({ values, errors, onChange, defaults, disabled =
         <span className="offer-create__card-sub">{subtitle}</span>
       </div>
       <div className="offer-create__grid3">
-        {RATES.map(({ field, label }) => (
+        {RATES.map(({ field, label }) => {
+          if ((masked as ReadonlySet<string>).has(field)) {
+            return (
+              <Field key={field} label={label} hint={isHiddenHintShown ? <HiddenMark withText /> : undefined}>
+                {(control) => <Input {...control} numeric value={EMPTY_CELL} disabled readOnly />}
+              </Field>
+            );
+          }
+          return (
           <Field key={field} label={label} error={errors[field]} hint={defaults ? `Teklif ayarı varsayılanı %${defaults[field]}` : undefined}>
             {(control) => (
               <Input
@@ -58,7 +83,8 @@ export function OfferRateFields({ values, errors, onChange, defaults, disabled =
               />
             )}
           </Field>
-        ))}
+          );
+        })}
       </div>
       {note && <p className="offer-create__card-sub">{note}</p>}
     </section>

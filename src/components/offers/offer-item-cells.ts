@@ -38,10 +38,13 @@ export type ItemCellField = "quantity" | "unitMhr" | "costUnitPrice" | "overhead
 
 export interface CellContext {
   item: OfferItem;
-  /** Revizyon geneli GG % ("12.00"): kalem değeri null iken gösterilen/uygulanan. */
-  revisionOverheadPct: string;
-  /** Revizyon geneli kâr % ("15.00"). */
-  revisionProfitPct: string;
+  /**
+   * Revizyon geneli GG % ("12.00"): kalem değeri null iken gösterilen/uygulanan. `null` = MASKELİ (`maliyet_kar`):
+   * etkin oran bilinmez → hücre salt okunur "—" (`isRateMasked`).
+   */
+  revisionOverheadPct: string | null;
+  /** Revizyon geneli kâr % ("15.00"); `null` = maskeli. */
+  revisionProfitPct: string | null;
   /** Katalogdaki standart a-s (`standard_unit_mhr`); katalogda bulunamayan kalemde null (karşılaştırma yok). */
   catalogUnitMhr: string | null;
 }
@@ -86,9 +89,20 @@ function signedDisplay(raw: string | null, format: (unsigned: string | null) => 
   return trimmed.startsWith("-") ? `-${format(trimmed.slice(1))}` : format(trimmed);
 }
 
+/**
+ * IZN-F4.2 · GG/kâr hücresi MASKELİ mi? Revizyon geneli oran `null` ise `maliyet_kar` gizlidir ve kalemdeki `null`
+ * "genel uygulanır" mı yoksa "maskeli" mi AYIRT EDİLEMEZ → etkin değer bilinmez: hücre "—", düzenlenemez (yazım 403).
+ */
+export function isRateMasked(field: ItemCellField, ctx: CellContext): boolean {
+  if (field === "overheadPct") return ctx.revisionOverheadPct === null;
+  if (field === "profitPct") return ctx.revisionProfitPct === null;
+  return false;
+}
+
 /** Hücrede GÖSTERİLEN metin (kayıt kararı bununla kıyaslanır). */
 export function cellText(field: ItemCellField, ctx: CellContext): string {
   const { item } = ctx;
+  if (isRateMasked(field, ctx)) return EMPTY_CELL;
   switch (field) {
     case "quantity":
       return trQuantityInputValue(item.quantity);
@@ -109,7 +123,7 @@ export function cellText(field: ItemCellField, ctx: CellContext): string {
 function profitPctShown(ctx: CellContext): string | null {
   const { item } = ctx;
   if (item.offer_unit_price !== null) return item.internal.profit_pct;
-  return item.profit_pct ?? ctx.revisionProfitPct;
+  return item.profit_pct ?? ctx.revisionProfitPct; // maskeliyse null → türev "—"
 }
 
 /** Teklif B.F. YALNIZ maliyet doluyken yazılabilir (SO-4: elle B.F. kâr % geri hesabı için maliyet ister). */
@@ -219,7 +233,7 @@ function sameNumber(a: string | null, b: string | null): boolean {
  * `noop`: istek UÇMAZ · `error`: korkuluk ihlali, istek UÇMAZ · `patch`: kısmi gövde (yalnız ilgili alanlar).
  */
 export function commitCell(field: ItemCellField, draft: string | undefined, ctx: CellContext): CellCommit {
-  if (draft === undefined) return { kind: "noop" };
+  if (draft === undefined || isRateMasked(field, ctx)) return { kind: "noop" }; // maskeli oran ASLA yazılmaz
   const text = draft.trim();
   if (text === cellText(field, ctx)) return { kind: "noop" };
   switch (field) {

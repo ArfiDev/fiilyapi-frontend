@@ -52,8 +52,32 @@ export const OFFER_FORM_MESSAGES = {
   pctRangeProfit: "0–999,99 arasında olmalı",
 } as const;
 
-/** "12.00" → "12", "15.50" → "15,5": ekran metni (Türkçe virgül, sondaki sıfırlar atılır). */
-export function pctToInputText(value: string): string {
+/**
+ * IZN-F4.2 · `maliyet_kar` maskesi: backend GG/kâr %'yi `null` döndürür (ya da rol yazamaz). Bu alanlar formda SALT OKUNUR "—"
+ * gösterilir, doğrulanmaz ve gövdeye KONMAZ (gizli kategoride dolu değer gönderimi 403'tür). Karar sunucu değerinin
+ * `null`lığındandır — FE kendi başına gizlemez.
+ */
+export type MaskedRateField = Extract<OfferFormField, "overheadPct" | "profitPct">;
+export type MaskedRates = ReadonlySet<MaskedRateField>;
+export const NO_MASKED_RATES: MaskedRates = new Set();
+export const BOTH_RATES_MASKED: MaskedRates = new Set<MaskedRateField>(["overheadPct", "profitPct"]);
+
+/**
+ * IZN-F4.3 · ayar varsayılan oranı `null` (`maliyet_kar` gizli) → başlangıç değeri bilinmez: alan salt okunur "—",
+ * doğrulanmaz, gövdeye girmez (sunucu kendi ayarını uygular).
+ */
+export function maskedRatesOfSettings(
+  settings: Pick<OfferSettingsRead, "default_overhead_pct" | "default_profit_pct">,
+): MaskedRates {
+  const masked = new Set<MaskedRateField>();
+  if (settings.default_overhead_pct === null) masked.add("overheadPct");
+  if (settings.default_profit_pct === null) masked.add("profitPct");
+  return masked;
+}
+
+/** "12.00" → "12", "15.50" → "15,5": ekran metni (Türkçe virgül, sondaki sıfırlar atılır). Maskeli (`null`) → boş metin. */
+export function pctToInputText(value: string | null): string {
+  if (value === null) return "";
   const [whole = "", fraction = ""] = value.split(".");
   const trimmed = fraction.replace(/0+$/, "");
   return trimmed === "" ? whole : `${whole},${trimmed}`;
@@ -119,12 +143,13 @@ const PCT_FIELDS = [
   ["vatPct", MAX_PCT, OFFER_FORM_MESSAGES.pctRange100],
 ] as const;
 
-export function validateOfferForm(values: OfferFormValues): OfferFormErrors {
+export function validateOfferForm(values: OfferFormValues, masked: MaskedRates = NO_MASKED_RATES): OfferFormErrors {
   const errors: { -readonly [K in OfferFormField]?: string } = {};
   if (values.employerId === "") errors.employerId = OFFER_FORM_MESSAGES.employerRequired;
   if (values.title.trim() === "") errors.title = OFFER_FORM_MESSAGES.titleRequired;
   if (parseValidity(values.validityDays) === null) errors.validityDays = OFFER_FORM_MESSAGES.validityRange;
   for (const [field, max, rangeMessage] of PCT_FIELDS) {
+    if ((masked as ReadonlySet<string>).has(field)) continue;
     const parsed = parsePct(values[field], max, rangeMessage);
     if ("error" in parsed) errors[field] = parsed.error;
   }
@@ -155,6 +180,7 @@ function pctBodyValue(text: string): string {
 export function buildOfferCreateBody(
   values: OfferFormValues,
   start: OfferBodyStart = { kind: "blank" },
+  masked: MaskedRates = NO_MASKED_RATES,
 ): OfferCreateBody {
   const validityDays = parseValidity(values.validityDays);
   if (validityDays === null) throw new Error("buildOfferCreateBody: doğrulanmamış geçerlilik");
@@ -164,8 +190,9 @@ export function buildOfferCreateBody(
     title: values.title.trim(),
     ...(values.offerDate === "" ? {} : { offer_date: values.offerDate }),
     validity_days: validityDays,
-    overhead_pct: pctBodyValue(values.overheadPct),
-    profit_pct: pctBodyValue(values.profitPct),
+    // Maskeli oran gönderilmez: sunucu ayardan / kaynak revizyondan kendisi alır (gizli kategoriye yazmak 403).
+    ...(masked.has("overheadPct") ? {} : { overhead_pct: pctBodyValue(values.overheadPct) }),
+    ...(masked.has("profitPct") ? {} : { profit_pct: pctBodyValue(values.profitPct) }),
     vat_pct: pctBodyValue(values.vatPct),
     ...(scope === "" ? {} : { scope_summary: scope }),
     ...sourceBodyFields(start),

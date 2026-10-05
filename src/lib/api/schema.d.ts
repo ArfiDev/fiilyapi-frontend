@@ -10902,6 +10902,11 @@ export interface components {
             is_draft: boolean;
             /** Progress Pct */
             progress_pct?: string | null;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
             /** Start Date */
             start_date: string | null;
             status: components["schemas"]["ContractStatus"];
@@ -11221,7 +11226,7 @@ export interface components {
              */
             id: string;
             /** Name */
-            name: string;
+            name: string | null;
             /** National Id */
             national_id: string | null;
             /** Phone */
@@ -12851,7 +12856,7 @@ export interface components {
          */
         ExpiredReservation: {
             /** Customer Name */
-            customer_name: string;
+            customer_name: string | null;
             /** Days Expired */
             days_expired: number;
             /** Reservation Deposit */
@@ -14986,7 +14991,7 @@ export interface components {
             /** Doc No */
             doc_no: string;
             /** Price */
-            price: string;
+            price: string | null;
             /** Source */
             source: string;
         };
@@ -16122,13 +16127,13 @@ export interface components {
             /** Offer No */
             offer_no: string;
             /** Overhead Pct */
-            overhead_pct: string;
+            overhead_pct: string | null;
             /** Payment Terms */
             payment_terms: string | null;
             price_escalation: components["schemas"]["OfferPriceEscalation"];
             price_index_type: components["schemas"]["PriceIndexType"] | null;
             /** Profit Pct */
-            profit_pct: string;
+            profit_pct: string | null;
             /** Rev No */
             rev_no: number;
             /** Sent At */
@@ -16238,11 +16243,11 @@ export interface components {
         /** OfferSettingsRead */
         OfferSettingsRead: {
             /** Default Overhead Pct */
-            default_overhead_pct: string;
+            default_overhead_pct: string | null;
             /** Default Payment Terms */
             default_payment_terms: string;
             /** Default Profit Pct */
-            default_profit_pct: string;
+            default_profit_pct: string | null;
             /** Default Validity Days */
             default_validity_days: number;
             /** Default Vat Pct */
@@ -18100,24 +18105,14 @@ export interface components {
          *     sekmesi + SHK kartları, spec §9.6). Eksik sözleşme bedeli → `progress_pct`/
          *     `remaining` `None` (zarif düşüş, §8 deseninin aynısı).
          *
-         *     ## 🔴 Bu şema İKİ uçtan döner ve İKİNCİSİ KAPSAM KISITLIDIR
+         *     ## 🔴 Bu şema İKİ uçtan döner ve İKİNCİSİ MASKELİDİR
          *
-         *     Kendi ucunun yanında `contracts.schemas.EmployerContractDetail.
-         *     progress_payment_summary` olarak E14 detayına GÖMÜLÜR. `contracts` kapsam
-         *     kısıtlı bir modüldür; `field_scope.maskele()` iç içe `BaseModel`lere İNER,
-         *     yani maske buraya ULAŞIR. 2026-09-19 denetimine kadar alanlar ETİKETSİZDİ ve
-         *     etiketsiz alan `kimlik` sayıldığı için (fail-OPEN, gerekçe
-         *     `core/field_scope.py`) hiçbir kapsamda gizlenmiyordu: `limited` kapsamda
-         *     `EmployerContractDetail.amount` `null` dönerken AYNI sözleşme bedeli gömülü
-         *     `contract_amount`ta AÇIKTA kalıyordu. Bekçisi
-         *     `tests/modules/test_kapsam_capraz_sizinti.py`.
-         *
-         *     🔴 **Etiketler KENDİ ucunu DEĞİŞTİRMEZ** ve bu ölçüldü: `progress_payments`
-         *     matriste kısıtlı değildir (bütün hücreleri `Scope.all`) ve routerı
-         *     `kapsam_rotasi`ya bağlı değildir — o uçta maske hiç koşmaz. Yani etiketler
-         *     burada ATIL durur, yalnız gömüldükleri bağlamda iş görürler. Bağlamdan
-         *     bağımsız olarak doğrudurlar da: `contract_amount`/`net_total` HER iki uçta
-         *     da paradır, `progress_pct` HER iki uçta da ilerlemedir.
+         *     Kendi ucunun yanında `contracts.schemas.EmployerContractDetail.progress_payment_summary`
+         *     olarak E14 detayına GÖMÜLÜR. IZN-B4: alanlar `Hassas` etiketlidir (`contract_amount`/tutarlar
+         *     = `sozlesme_fiyat`; `progress_pct` bedelden türediği için `sozlesme_fiyat`, fail-closed) ve
+         *     gömüldüğü `contracts` yanıtında `MaskeRotasi` ile maskelenir. Kendi ucu (`progress_payments`
+         *     router) B4b'ye kadar maskelenmez; bekçide yalnız bu şema ZORUNLU, kalanı RAPOR modundadır
+         *     (`tests/core/test_hassas_alan_bekcisi.py`).
          *
          *     ## 🔴 Neden dört alan `| None` OLDU (şema değişikliği)
          *
@@ -25449,7 +25444,7 @@ export interface components {
              */
             customer_id: string;
             /** Customer Name */
-            customer_name: string;
+            customer_name: string | null;
             /** Customer National Id */
             customer_national_id: string | null;
             /** Customer Tax Number */
@@ -25734,7 +25729,7 @@ export interface components {
             /** Amount */
             amount: string | null;
             /** Customer Name */
-            customer_name: string;
+            customer_name: string | null;
             /** Days Overdue */
             days_overdue: number;
             /**

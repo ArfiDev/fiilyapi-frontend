@@ -1,4 +1,6 @@
 import { Field, Input, Select, Textarea } from "@/components/ui";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import type { CustomerResponse } from "@/lib/api/hooks/useCustomers";
 import { userOptionLabel, type UserOption } from "@/lib/api/hooks/useUserOptions";
 
@@ -12,11 +14,15 @@ import type { SaleFormErrors } from "./validate";
 
 const PLACEHOLDER = "Seçiniz...";
 const NEW_CUSTOMER_OPTION = "Yeni müşteri gir";
+/** IZN-F4.3 GECE KARARI: ad maskeli (`null`) müşterinin seçenek metni; seçim yine id iledir. */
+export const HIDDEN_CUSTOMER_OPTION = "Gizli müşteri";
 
 interface BuyerCardProps {
   values: SaleFormValues;
   errors: SaleFormErrors;
   customers: readonly CustomerResponse[];
+  /** Proje bağlamı: `satis_alici` gizliliği ekip rolünden okunur; yoksa ana rol. */
+  projectId?: string;
   customersDisabled: boolean;
   advisors: readonly UserOption[];
   advisorsDisabled: boolean;
@@ -43,6 +49,7 @@ export function BuyerCard({
   values,
   errors,
   customers,
+  projectId,
   customersDisabled,
   advisors,
   advisorsDisabled,
@@ -51,6 +58,8 @@ export function BuyerCard({
   onSelectCustomer,
   locked,
 }: BuyerCardProps) {
+  const isBuyerHidden = useCategoryHidden("satis_alici", projectId);
+  const hasHiddenCustomer = customers.some((customer) => customer.name === null);
   const isExisting = values.customerMode === "existing";
   const readOnlyInline = isExisting || locked;
   const idLabel = values.buyerType === "person" ? "TCKN" : "VKN";
@@ -63,7 +72,12 @@ export function BuyerCard({
       <div className="pf-grid">
         <Field
           label="Kayıtlı Müşteri"
-          hint="Kayıtlı bir müşteri seçin ya da “Yeni müşteri gir” ile aşağıdan girin."
+          hint={
+            <>
+              Kayıtlı bir müşteri seçin ya da “Yeni müşteri gir” ile aşağıdan girin.
+              {hasHiddenCustomer && isBuyerHidden && <HiddenMark withText />}
+            </>
+          }
           error={errors.existingCustomerId}
         >
           {(control) => (
@@ -77,7 +91,7 @@ export function BuyerCard({
               <option value="">{NEW_CUSTOMER_OPTION}</option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
-                  {customer.name}
+                  {customer.name ?? HIDDEN_CUSTOMER_OPTION}
                   {customer.national_id ? ` · ${customer.national_id}` : ""}
                   {customer.tax_number ? ` · ${customer.tax_number}` : ""}
                 </option>

@@ -3,6 +3,9 @@ import Link from "next/link";
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatMonthYear, formatPercent } from "@/lib/format";
 import { pendingModuleHint, type PendingModuleKey } from "@/lib/pending-modules";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { SECTION_STATUS_CLASS_SUFFIX, SECTION_STATUS_LABELS } from "@/lib/section-labels";
 import type { components } from "@/lib/api/schema";
 import { routes, routeKeyOf } from "@/lib/routes";
@@ -91,10 +94,23 @@ const PLANNED_WORKER_STATUSES: ReadonlySet<SectionStatus> = new Set<SectionStatu
 
 // Yer tutucu metrik hucresi — duzeni korur, "—" basar, title'da aciklama verir
 // (spec §7.1, SiteHeroBar/SiteCard'daki PlaceholderValue deseniyle ayni).
-function PlaceholderValue({ valueClassName, pendingModule }: { valueClassName: string; pendingModule: PendingModuleKey }) {
+// IZN-F4.2: 3. hâl (rolün izni yok) → kilit + "Bu bilgi rolünüz için gizli".
+function PlaceholderValue({
+  valueClassName,
+  pendingModule,
+  isRestricted = false,
+}: {
+  valueClassName: string;
+  pendingModule: PendingModuleKey;
+  isRestricted?: boolean;
+}) {
   return (
-    <div className={cx(valueClassName, "section-card__metric-value--pending")} title={pendingModuleHint(pendingModule)}>
+    <div
+      className={cx(valueClassName, "section-card__metric-value--pending")}
+      title={isRestricted ? HIDDEN_FIELD_HINT : pendingModuleHint(pendingModule)}
+    >
       —
+      {isRestricted && <HiddenMark />}
     </div>
   );
 }
@@ -128,7 +144,11 @@ function MetricCell({ label, valueClassName = "section-card__metric-value", plac
       {hasRealValue(placeholder) ? (
         <div className={valueClassName}>{children}</div>
       ) : (
-        <PlaceholderValue valueClassName={valueClassName} pendingModule={placeholder.pending_module} />
+        <PlaceholderValue
+          valueClassName={valueClassName}
+          pendingModule={placeholder.pending_module}
+          isRestricted={isRestrictedEnvelope(placeholder)}
+        />
       )}
     </div>
   );
@@ -227,6 +247,7 @@ function ProgressMetricCell({
         <PlaceholderValue
           valueClassName="section-card__metric-value section-card__metric-value--progress"
           pendingModule={progress.pending_module}
+          isRestricted={isRestrictedEnvelope(progress)}
         />
       )}
       <div

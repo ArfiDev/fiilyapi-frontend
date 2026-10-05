@@ -16,6 +16,7 @@
 
 import type { UnitResponse } from "@/lib/api/hooks/useProjectUnits";
 import { formatAmount } from "@/lib/format";
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
 
 export interface UnitCostInfo {
   available: boolean;
@@ -25,6 +26,8 @@ export interface UnitCostInfo {
   rawValue: number | null;
   /** Sunucunun bildirdiği eksik modül (varsa) — gerekçe gösterimi için. */
   pendingModule: string | null;
+  /** IZN-F4.2 · zarfın 3. hâli (rolün izni yok): kart "—" + kilit + "Bu bilgi rolünüz için gizli". */
+  isRestricted: boolean;
 }
 
 export interface UnitInfoBoxes {
@@ -45,6 +48,7 @@ export function deriveUnitCost(unit: UnitResponse): UnitCostInfo {
       text: null,
       rawValue: null,
       pendingModule: metric.pending_module ?? null,
+      isRestricted: isRestrictedEnvelope(metric),
     };
   }
   return {
@@ -52,6 +56,7 @@ export function deriveUnitCost(unit: UnitResponse): UnitCostInfo {
     text: formatAmount(metric.value),
     rawValue: Number(metric.value),
     pendingModule: null,
+    isRestricted: false,
   };
 }
 

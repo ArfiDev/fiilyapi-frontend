@@ -113,3 +113,19 @@ describe("iç döküm modeli — Bakanlık poz no'su (KAT-F2.2)", () => {
     expect(items.map((row) => row.sourceCode)).toEqual(["15.250.1011", null]);
   });
 });
+
+describe("iç döküm modeli — maskeli oranlar (IZN-F4.2)", () => {
+  it("revizyon GG/kâr % null → toplam etiketleri '—' (sıfır/uydurma yüzde basılmaz)", () => {
+    const base = makePrintRevision();
+    const revision = makePrintRevision({
+      overhead_pct: null,
+      profit_pct: null,
+      totals: { ...base.totals, internal: { ...base.totals.internal, overhead: null, profit: null, profit_pct: null } },
+    });
+    const built = buildInternalPrintModel({ offer: makePrintOffer(), revision, company: makeCompany() });
+    const labels = built.totals.map((row) => row.label);
+    expect(labels).toContain("Genel gider (—)");
+    expect(labels).toContain("Kâr (—)");
+    expect(built.totals.find((row) => row.label === "Kâr (—)")?.value).toBe("—");
+  });
+});

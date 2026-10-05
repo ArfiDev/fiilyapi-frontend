@@ -550,7 +550,8 @@ describe("TKL-B3 son fiyat + toplu ekleme tip üretimi (TKL-F2.1 kapısı)", () 
   });
 
   it("LastPriceRead alanları kaynaktan gelir", () => {
-    expectTypeOf<LastPrice["price"]>().toEqualTypeOf<string>();
+    // IZN-B4a: `sozlesme_fiyat` gizli rolde fiyat null gelir (kaynak/belge bilgisi kalır).
+    expectTypeOf<LastPrice["price"]>().toEqualTypeOf<string | null>();
     expectTypeOf<LastPrice["at"]>().toEqualTypeOf<string>();
     expectTypeOf<LastPrice["source"]>().toEqualTypeOf<string>();
     expectTypeOf<LastPrice["doc_no"]>().toEqualTypeOf<string>();

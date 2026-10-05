@@ -1,3 +1,4 @@
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import { pendingModuleLabel, type PendingModuleKey } from "@/lib/pending-modules";
 import type { MetricPlaceholder } from "@/lib/api/scale";
 
@@ -13,7 +14,8 @@ import type { MetricPlaceholder } from "@/lib/api/scale";
  *   1. `available:true` + değer dolu → gerçek değer; soluk sınıf YOK, ipucu YOK.
  *   2. `available:false` + `pending_module` dolu → "—" + soluk sınıf + ipucu.
  *   3. `available:false` + `pending_module:null` → **rolün izni yok**
- *      (`restricted()`); "—" + soluk sınıf ama **ipucu VERİLMEZ**.
+ *      (`restricted()`); "—" + soluk sınıf + küçük kilit + ipucu "Bu bilgi rolünüz
+ *      için gizli" (IZN-F4.2 GECE KARARI; `isHidden`). Zarf hiç yokken (yük gelmedi) ipucu YOK.
  *
  * 3. hâlde `pendingModuleLabel(null)` "İlgili modülle birlikte gelir" döndürür
  * ve bu cümle O HÂLDE YALANDIR — modül vardır, izin yoktur. `pendingModuleLabel`
@@ -41,13 +43,23 @@ export interface CountEnvelope {
 export interface PlaceholderCell {
   /** Dolu zarfın biçimlenmiş metni; zarf boşsa `null` — ekran "—" basar. */
   text: string | null;
-  /** YALNIZ 2. hâlde dolu. 3. hâlde ve zarf hiç yokken `undefined`. */
+  /** 2. hâlde modül gerekçesi; 3. hâlde (IZN-F4.2) "Bu bilgi rolünüz için gizli"; zarf hiç yokken `undefined`. */
   hint?: string;
+  /**
+   * IZN-F4.2 · GECE KARARI — 3. hâl (`available:false` + `pending_module:null` = rolün izni yok): kart değeri "—" +
+   * küçük kilit simgesi (`HiddenMark`) + ipucu. `true` iken `hint` = `HIDDEN_FIELD_HINT`. 2. hâlin "modül
+   * bekleniyor" görünümü AYNEN kalır.
+   */
+  isHidden?: boolean;
 }
 
-/** 2. ve 3. hâl: metin yok; ipucu yalnız gerekçe BİLİNİYORSA verilir. */
-function pendingCell(pendingModule: PendingModuleKey): PlaceholderCell {
-  return pendingModule ? { text: null, hint: pendingModuleLabel(pendingModule) } : { text: null };
+/**
+ * 2. hâl: gerekçe modül ipucu. 3. hâl: zarf VAR, `available:false`, anahtar yok → gizli (kilit). Zarf hiç yoksa
+ * (yük gelmeden basılan şerit) ipucu UYDURULMAZ.
+ */
+function pendingCell(pendingModule: PendingModuleKey, isRestricted: boolean): PlaceholderCell {
+  if (pendingModule) return { text: null, hint: pendingModuleLabel(pendingModule) };
+  return isRestricted ? { text: null, hint: HIDDEN_FIELD_HINT, isHidden: true } : { text: null };
 }
 
 /**
@@ -64,7 +76,7 @@ export function metricCell<V extends string | number>(
   if (metric?.available === true && value !== null && value !== undefined) {
     return { text: format(value) };
   }
-  return pendingCell(metric?.pending_module);
+  return pendingCell(metric?.pending_module, metric?.available === false);
 }
 
 /** `CountPlaceholder` okuması — dolu zarfın `pending_module` taşıması NORMALDİR. */
@@ -76,5 +88,13 @@ export function countCell(
   if (counter?.available === true && count !== null && count !== undefined) {
     return { text: format(count) };
   }
-  return pendingCell(counter?.pending_module);
+  return pendingCell(counter?.pending_module, counter?.available === false);
+}
+
+/**
+ * IZN-F4.2 · 3. hâl tespiti (zarf VAR + `available:false` + modül anahtarı yok = rolün izni yok). Hücre okuyucusu
+ * (`metricCell`/`countCell`) yerine zarfı KENDİ yazan yüzeyler (hero/kart/şerit) için: aynı karar, tek yer.
+ */
+export function isRestrictedEnvelope(envelope: { available: boolean; pending_module?: PendingModuleKey } | undefined | null): boolean {
+  return envelope !== undefined && envelope !== null && envelope.available === false && !envelope.pending_module;
 }

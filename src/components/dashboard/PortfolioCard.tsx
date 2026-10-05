@@ -1,6 +1,8 @@
 import type { components } from "@/lib/api/schema";
 import { formatCurrency } from "@/lib/format";
 
+import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
+
 import { CardEmptyState } from "./CardEmptyState";
 import "./dashboard.css";
 import type { DeepScale } from "@/lib/api/scale";
@@ -20,6 +22,7 @@ export function PortfolioCard({ metric }: { metric: MetricPlaceholder }) {
         <CardEmptyState
           title="Henüz hakediş verisi yok"
           pendingModule={metric.pending_module}
+          isHidden={isRestrictedEnvelope(metric)}
         />
       )}
       {/* Mockup'taki alan grafigi kutusu; veri gelene kadar bos cizim alani. */}

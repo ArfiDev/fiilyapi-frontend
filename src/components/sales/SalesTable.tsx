@@ -1,7 +1,9 @@
 import { Badge, Select } from "@/components/ui";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { WarningTriangleIcon, inlineSymbolProps } from "@/components/ui/icons";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { cx } from "@/lib/cx";
-import { formatAmount } from "@/lib/format";
+import { EMPTY_CELL, formatAmount } from "@/lib/format";
 
 import {
   customerLine,
@@ -36,6 +38,8 @@ export interface SalesTableProps {
    * TÜRETİLMEZ.
    */
   hasSelectedProject?: boolean;
+  /** IZN-F4.2 · proje bağlamı: gizli alan kategorisi ekip rolünden okunur (`useProjectScopeId`); yoksa ana rol. */
+  projectId?: string;
 }
 
 function emptyMessage(options: {
@@ -79,7 +83,9 @@ export function SalesTable({
   isError,
   errorMessage,
   hasSelectedProject = true,
+  projectId,
 }: SalesTableProps) {
+  const isBuyerHidden = useCategoryHidden("satis_alici", projectId);
   const visibleRows = filterSales(rows ?? [], statusFilter);
   const isFiltered = statusFilter !== undefined;
   const totals = resolveSalesTotals({ visibleRows, serverTotals, isFiltered });
@@ -163,7 +169,10 @@ export function SalesTable({
                 <td className="satis-table__td satis-table__unit">{row.unit_label}</td>
                 {/* 161 */}
                 <td className="satis-table__td">
-                  <div className="satis-table__customer">{row.customer_name}</div>
+                  <div className="satis-table__customer">
+                    {row.customer_name ?? EMPTY_CELL}
+                    {row.customer_name === null && isBuyerHidden && <HiddenMark />}
+                  </div>
                   {line && (
                     <div
                       className={cx("satis-table__note", `satis-table__note--${line.tone}`)}

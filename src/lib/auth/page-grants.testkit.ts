@@ -1,4 +1,4 @@
-import type { PageGrant, PageKey } from "@/lib/api/models";
+import type { HiddenCategory, PageGrant, PageKey } from "@/lib/api/models";
 import type { MeResponse } from "@/lib/auth/types";
 
 /** IZN-F2.x test yardımcıları — sayfa izni (`me.pages`) taşıyan sahte oturum yükü. */
@@ -17,6 +17,10 @@ export interface MeFixtureOptions {
   projects?: ReadonlyArray<{ project_id: string; role_key: string }>;
   /** IZN-F3.2 · ekip rolü anahtarı → o rolün sayfa izinleri. */
   rolePages?: Record<string, Partial<Record<PageKey, PageGrant>>>;
+  /** IZN-F4.2 · ana rolün gizli hassas alan kategorileri (`me.hidden_fields`). */
+  hiddenFields?: readonly HiddenCategory[];
+  /** IZN-F4.2 · ekip rolü anahtarı → o rolün gizli kategorileri (`rolePages` ile birlikte verilir). */
+  roleHiddenFields?: Record<string, readonly HiddenCategory[]>;
 }
 
 /** `useSession().me` için kısmi yük; `pages` verilmezse alan HİÇ yoktur (eski oturum). */
@@ -27,6 +31,8 @@ export function meFixture({
   allProjects,
   projects,
   rolePages,
+  hiddenFields,
+  roleHiddenFields,
 }: MeFixtureOptions = {}): MeResponse {
   return {
     id: "11111111-1111-1111-1111-111111111111",
@@ -37,6 +43,7 @@ export function meFixture({
     status: "active",
     is_system_admin: isSystemAdmin,
     ...(pages === undefined ? {} : { pages }),
+    ...(hiddenFields === undefined ? {} : { hidden_fields: hiddenFields }),
     ...(permissions === undefined ? {} : { permissions }),
     ...(allProjects === undefined ? {} : { all_projects: allProjects }),
     ...(projects === undefined ? {} : { projects: projects.map((project) => ({ ...project, discipline_ids: [] })) }),
@@ -44,7 +51,7 @@ export function meFixture({
       ? {}
       : {
           role_pages: Object.fromEntries(
-            Object.entries(rolePages).map(([roleKey, pages]) => [roleKey, { pages, hidden_fields: [] }]),
+            Object.entries(rolePages).map(([roleKey, pages]) => [roleKey, { pages, hidden_fields: roleHiddenFields?.[roleKey] ?? [] }]),
           ),
         }),
   } as unknown as MeResponse;

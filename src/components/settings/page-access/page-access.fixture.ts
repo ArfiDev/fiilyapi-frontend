@@ -75,7 +75,8 @@ export function buildRolePagesFixture(
     is_locked: overrides.is_locked ?? false,
     pages,
     hidden_fields: overrides.hidden_fields ?? ["maas_kisisel"],
-    hidden_fields_effective: false,
+    // IZN-B4a: maske artık backend'de UYGULANIYOR → alan her zaman true (not görünmez).
+    hidden_fields_effective: true,
     ...overrides.extra,
   };
 }

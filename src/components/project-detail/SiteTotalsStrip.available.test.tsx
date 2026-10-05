@@ -93,7 +93,7 @@ describe("SiteTotalsStrip · karşıt kanıt (boş zarf)", () => {
     }
   });
 
-  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → — basar ama title VERİLMEZ", () => {
+  it("ÜÇÜNCÜ HÂL: available:false + pending_module null → — + gizli ipucu (modül gerekçesi YOK)", () => {
     render(
       <SiteTotalsStrip
         totals={{ ...EMPTY, average_margin: { available: false, value: null, pending_module: null } }}
@@ -102,7 +102,7 @@ describe("SiteTotalsStrip · karşıt kanıt (boş zarf)", () => {
     const value = valueOf("Ortalama Marj");
     expect(value).toHaveTextContent("—");
     expect(value).toHaveClass("site-totals__value--pending");
-    expect(value).not.toHaveAttribute("title");
+    expect(value).toHaveAttribute("title", "Bu bilgi rolünüz için gizli");
     // Yalan cümle EKRANDA HİÇBİR YERDE olmamalı.
     expect(screen.queryByTitle("İlgili modülle birlikte gelir")).not.toBeInTheDocument();
   });

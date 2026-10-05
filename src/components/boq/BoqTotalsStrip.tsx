@@ -1,5 +1,6 @@
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency } from "@/lib/format";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { metricCell, type PlaceholderCell } from "@/lib/placeholder-cell";
 import type { BoqTotals } from "@/lib/api/hooks/useBoq";
 
@@ -73,7 +74,11 @@ export function BoqTotalsStrip({ totals }: BoqTotalsStripProps) {
               title={card.hint}
             >
               {card.text ?? "—"}
-              {card.hint !== undefined && <span className="sr-only">{card.hint}</span>}
+              {card.isHidden ? (
+                <HiddenMark />
+              ) : (
+                card.hint !== undefined && <span className="sr-only">{card.hint}</span>
+              )}
             </div>
           </div>
         );
