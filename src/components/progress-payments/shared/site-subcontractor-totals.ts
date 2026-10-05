@@ -7,8 +7,8 @@ import type { SiteSubcontractorPaymentItem } from "@/lib/api/hooks/useSiteSubcon
  * karşılığı — saf fonksiyon, bileşenden ayrı test edilir).
  */
 export interface SiteSubcontractorTotals {
-  /** Kuruş hassasiyetli brüt toplam (`sumDecimalStrings`, `Number` toplamı YASAK). */
-  grossTotal: string;
+  /** Kuruş hassasiyetli brüt toplam (`sumDecimalStrings`, `Number` toplamı YASAK). `null` = bir kalem gizli (IZN-F4b.2). */
+  grossTotal: string | null;
   /** Mockup satır 84 alt metni "12 taşeron" — `contract_id` DEĞİL, taşeron
    * KİMLİĞİNE (`subcontractorName`) göre tekilleştirilir (aynı taşeronun
    * birden çok sözleşmesi tek taşeron sayılır). */

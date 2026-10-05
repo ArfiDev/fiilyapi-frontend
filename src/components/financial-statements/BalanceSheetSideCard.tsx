@@ -1,4 +1,7 @@
 import type { BalanceSheetSide } from "@/lib/api/hooks/useBalanceSheet";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount } from "@/lib/format";
 
 /** BL:44-63 mavi (AKTİF) · BL:66-88 yeşil (PASİF). Ton ÇAĞIRANIN kararıdır. */
@@ -33,6 +36,12 @@ interface BalanceSheetSideCardProps {
  * Bu yüzden `formatCurrency` (₺ önekli) DEĞİL `formatAmount` kullanılır.
  */
 export function BalanceSheetSideCard({ side, tone, testId }: BalanceSheetSideCardProps) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
+  // IZN-F4b.2 — gizli tutarlar için kart başlığında TEK kilit; satırlar `—`.
+  const values = [
+    side.total,
+    ...side.sections.flatMap((section) => [section.subtotal, ...section.lines.map((line) => line.amount)]),
+  ];
   return (
     <section
       className={`fs-side fs-side--${tone}`}
@@ -41,7 +50,10 @@ export function BalanceSheetSideCard({ side, tone, testId }: BalanceSheetSideCar
     >
       {/* BL:45-47 · BL:67-69 — başlık şeridi, altında 2px vurgu çizgisi. */}
       <header className="fs-side__head">
-        <h2 className="fs-side__title">{side.title}</h2>
+        <h2 className="fs-side__title">
+          {side.title}
+          <MaskedMark isHidden={isHidden} values={values} />
+        </h2>
       </header>
 
       <table className="fs-side__table">

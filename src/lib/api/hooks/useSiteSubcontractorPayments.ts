@@ -78,8 +78,9 @@ export interface SiteSubcontractorPaymentItem {
    * `contractSiteId === null` "sözleşme şantiyeye kırılmamış" demektir.
    */
   contractSiteId: string | null;
-  grossTotal: string;
-  netTotal: string;
+  /** `null` = rol için gizli (IZN-F4b.2, `maliyet_kar`); toplamlara 0 olarak GİRMEZ — toplam bilinmez olur. */
+  grossTotal: string | null;
+  netTotal: string | null;
   status: SubcontractorPaymentStatus;
   isRevisionRequired: boolean;
 }

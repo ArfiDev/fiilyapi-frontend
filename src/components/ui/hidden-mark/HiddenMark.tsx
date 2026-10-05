@@ -1,5 +1,6 @@
 import { cx } from "@/lib/cx";
 import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { shouldShowHiddenMark } from "@/lib/auth/masked-values";
 
 import { LockIcon, inlineSymbolProps } from "../icons";
 import "./hidden-mark.css";
@@ -22,5 +23,35 @@ export function HiddenMark({ withText = false, className }: HiddenMarkProps) {
       <LockIcon {...inlineSymbolProps} aria-hidden="true" />
       <span className={withText ? "hidden-mark__text" : "sr-only"}>{HIDDEN_FIELD_HINT}</span>
     </span>
+  );
+}
+
+export interface MaskedMarkProps {
+  /** `useCategoryHidden(...)` sonucu. */
+  isHidden: boolean;
+  /** Bu işaretin açıkladığı değer(ler); en az biri `null` ise (maskeli) kilit basılır. */
+  values: readonly (string | number | null | undefined)[];
+  withText?: boolean;
+}
+
+/**
+ * IZN-F4b.2 — başlık/kart için TEK kilit: kategori gizli VE değerlerden biri `null` ise basılır;
+ * değer doluysa ya da kategori gizli değilse (`null` = veri yok) hiçbir şey basmaz.
+ */
+export function MaskedMark({ isHidden, values, withText = false }: MaskedMarkProps) {
+  if (!shouldShowHiddenMark(isHidden, values)) return null;
+  return <HiddenMark withText={withText} />;
+}
+
+/**
+ * IZN-F4b.2 — başlıksız listeler (satır kartları) için TEK kilit notu: kategori gizli VE değerlerden
+ * biri `null` ise listenin üstünde "Bu bilgi rolünüz için gizli" basılır; her satıra kilit konmaz.
+ */
+export function MaskedNote({ isHidden, values }: Omit<MaskedMarkProps, "withText">) {
+  if (!shouldShowHiddenMark(isHidden, values)) return null;
+  return (
+    <p className="hidden-mark-note" data-testid="hidden-mark-note">
+      <HiddenMark withText />
+    </p>
   );
 }

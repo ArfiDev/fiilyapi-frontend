@@ -1,5 +1,6 @@
 import { computeGrossProfit } from "@/components/progress-payments/shared/margin";
 import { computeSiteSubcontractorTotals } from "@/components/progress-payments/shared/site-subcontractor-totals";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import { sumDecimalStrings } from "@/lib/decimal";
 import { listTruncationMessage, type ListTruncation } from "@/lib/list-truncation";
 import type { ProgressPaymentListItem } from "@/lib/api/hooks/useProgressPayments";
@@ -37,7 +38,8 @@ export interface DiaryAccrualInput {
 export interface DiaryAccrualSubcontractorRow {
   /** GK395: "Taşeron — Akın İnşaat". */
   name: string;
-  grossTotal: string;
+  /** `null` = taşeronun en az bir hakedişi rol için gizli (IZN-F4b.2) — toplam bilinmez, 0 sayılmaz. */
+  grossTotal: string | null;
 }
 
 export interface DiaryAccrual {
@@ -68,15 +70,18 @@ function isInPeriod(
 }
 
 export function computeDiaryAccrual(input: DiaryAccrualInput): DiaryAccrual {
-  const employerPendingReason = employerReason(input);
+  const loadReason = employerReason(input);
   const employerTotal =
-    employerPendingReason !== null
+    loadReason !== null
       ? null
       : sumDecimalStrings(
           input.employerItems
             .filter((item) => isInPeriod(input.year, input.month, item.period_year, item.period_month))
             .map((item) => item.gross_total),
         );
+  // 🔴 IZN-F4b.2: toplam `null` ise (yükleme/hata YOKKEN) bir hakediş tutarı rol için gizlidir.
+  const employerPendingReason =
+    loadReason ?? (employerTotal === null ? HIDDEN_FIELD_HINT : null);
 
   const subcontractorPendingReason = subcontractorReason(input);
   if (subcontractorPendingReason !== null) {
@@ -114,7 +119,7 @@ export function computeDiaryAccrual(input: DiaryAccrualInput): DiaryAccrual {
 function groupBySubcontractor(
   items: readonly SiteSubcontractorPaymentItem[],
 ): DiaryAccrualSubcontractorRow[] {
-  const byName = new Map<string, string[]>();
+  const byName = new Map<string, (string | null)[]>();
   for (const item of items) {
     byName.set(item.subcontractorName, [
       ...(byName.get(item.subcontractorName) ?? []),
@@ -124,8 +129,13 @@ function groupBySubcontractor(
   return [...byName.entries()]
     .map(([name, totals]) => ({ name, grossTotal: sumDecimalStrings(totals) }))
     .sort(
-      (a, b) => Number(b.grossTotal) - Number(a.grossTotal) || a.name.localeCompare(b.name, "tr"),
+      (a, b) => amountForSort(b.grossTotal) - amountForSort(a.grossTotal) || a.name.localeCompare(b.name, "tr"),
     );
+}
+
+/** Gizli (null) tutar sıralamada SONA düşer; `Number(null)` 0 olup gerçek sıfırla karışırdı. */
+function amountForSort(value: string | null): number {
+  return value === null ? Number.NEGATIVE_INFINITY : Number(value);
 }
 
 function employerReason(input: DiaryAccrualInput): string | null {

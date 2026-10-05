@@ -1,4 +1,7 @@
 import type { BankAccountResponse } from "@/lib/api/hooks/useBankAccounts";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { TREASURY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency } from "@/lib/format";
 
 import {
@@ -24,10 +27,11 @@ export interface BankAccountCardsProps {
  * içermez, kart "bugünkü para"yı gösterir (`BankAccountResponse` şema notu K2).
  */
 export function BankAccountCards({ accounts }: BankAccountCardsProps) {
+  const isHidden = useCategoryHidden(TREASURY_HIDDEN_CATEGORIES);
   return (
     <div className="hazine-cards" data-testid="hazine-cards">
       {accounts.map((account, index) => {
-        const identity = bankAccountIdentityLine(account);
+        const identity = bankAccountIdentityLine(account, isHidden);
         return (
           <div
             key={account.id}
@@ -40,7 +44,10 @@ export function BankAccountCards({ accounts }: BankAccountCardsProps) {
             <div className="hazine-card__label">
               {account.bank_name} · {BANK_ACCOUNT_TYPE_LABELS[account.account_type]}
             </div>
-            <div className="hazine-card__balance">{formatCurrency(account.balance)}</div>
+            <div className="hazine-card__balance">
+              {formatCurrency(account.balance)}
+              <MaskedMark isHidden={isHidden} values={[account.balance]} />
+            </div>
             <div
               className="hazine-card__identity"
               {...(identity.isMissing ? { title: BANK_ACCOUNT_IDENTITY_HINT } : {})}

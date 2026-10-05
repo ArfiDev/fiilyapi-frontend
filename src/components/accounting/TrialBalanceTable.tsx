@@ -1,4 +1,8 @@
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import type { TrialBalanceRow, TrialBalanceTotals } from "@/lib/api/hooks/useTrialBalance";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { shouldShowHiddenMark } from "@/lib/auth/masked-values";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { isZeroDecimalString } from "@/lib/decimal";
 import { formatAmount } from "@/lib/format";
 
@@ -45,6 +49,23 @@ export function TrialBalanceTable({
   isLoading,
   errorMessage,
 }: TrialBalanceTableProps) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
+  // IZN-F4b.2 — gizli sütunun BAŞLIĞINDA tek kilit; hücreler `—`. Her satıra kilit basılmaz.
+  const openingMark = shouldShowHiddenMark(isHidden, [
+    ...(rows ?? []).flatMap((row) => [row.opening_debit, row.opening_credit]),
+    totals?.opening_debit,
+    totals?.opening_credit,
+  ]);
+  const periodMark = shouldShowHiddenMark(isHidden, [
+    ...(rows ?? []).flatMap((row) => [row.period_debit, row.period_credit]),
+    totals?.period_debit,
+    totals?.period_credit,
+  ]);
+  const closingMark = shouldShowHiddenMark(isHidden, [
+    ...(rows ?? []).flatMap((row) => [row.closing_debit, row.closing_credit]),
+    totals?.closing_debit,
+    totals?.closing_credit,
+  ]);
   return (
     // Sekiz sütun dar pencerede taşar → yatay kaydırma KENDİ kabındadır.
     <div className="mu-table-scroll">
@@ -58,12 +79,15 @@ export function TrialBalanceTable({
             <th scope="col">Hesap Adı</th>
             <th scope="col" colSpan={2} className="is-right">
               Açılış Bakiyesi
+              {openingMark && <HiddenMark />}
             </th>
             <th scope="col" colSpan={2} className="is-right">
               Dönem Hareketi
+              {periodMark && <HiddenMark />}
             </th>
             <th scope="col" colSpan={2} className="is-right">
               Kapanış Bakiyesi
+              {closingMark && <HiddenMark />}
             </th>
           </tr>
           {/* MZ:69-77 — alt katman: kimlik sütunları BOŞ, altı taraf adı. */}
@@ -160,7 +184,7 @@ export function TrialBalanceTable({
 
 /**
  * TEK bir para hücresi. Sıfır → `—` (MZ:84/94/123 — `0` YAZILMAZ); dolu →
- * `formatAmount`.
+ * `formatAmount`. `null` (IZN-F4b.2 — rol için gizli) → `—`, ton/ağırlık basılmaz.
  *
  * `tone` verilmezse hücre NÖTRdür (2. katman: açılış + dönem, MZ:83/85-86).
  * `foot` `tfoot`un `700` ağırlığını, `closing` de kapanış ikilisinin 1px
@@ -172,7 +196,7 @@ function Money({
   foot = false,
   closing = false,
 }: {
-  value: string;
+  value: string | null;
   tone?: "debit" | "credit";
   foot?: boolean;
   closing?: boolean;
@@ -180,7 +204,7 @@ function Money({
   const cellClass = ["is-right", "is-mono", "mu-tb__cell", closing ? "mu-tb__cell--closing" : null]
     .filter((part) => part !== null)
     .join(" ");
-  if (isZeroDecimalString(value)) {
+  if (value === null || isZeroDecimalString(value)) {
     return (
       <td className={cellClass}>
         <span className="mu-table__empty-cell">{EMPTY_SIDE}</span>

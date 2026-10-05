@@ -1,3 +1,6 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { EMPLOYER_PAYMENT_HIDDEN_CATEGORIES, SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { cx } from "@/lib/cx";
 import type { ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
 import { buildPaymentCalculationRows, type PaymentCalculationLabels } from "./shared/payment-calculation-rows";
@@ -13,6 +16,8 @@ export interface PaymentCalculationCardProps {
    * detail={detail} />`) DEĞİŞMEDEN çalışır.
    */
   labels?: PaymentCalculationLabels;
+  /** IZN-F4b.2 — hangi hakediş türü (gizli kategori kümesi): işveren `sozlesme_fiyat`, taşeron `maliyet_kar`. */
+  kind?: "employer" | "subcontractor";
 }
 
 // E15 149-174 "Ödeme Hesabı" kartı (spec §6.2-§6.4). Satır etiketleri
@@ -24,11 +29,21 @@ export interface PaymentCalculationCardProps {
 // GÖRÜNEN davranışı/metinleri DEĞİŞMEDİ, yalnız iç yapı ortaklaştı.
 const DEFAULT_LABELS: PaymentCalculationLabels = { grossLabel: "Brüt Hakediş", netLabel: "Net Tahsil" };
 
-export function PaymentCalculationCard({ detail, labels = DEFAULT_LABELS }: PaymentCalculationCardProps) {
+export function PaymentCalculationCard({
+  detail,
+  labels = DEFAULT_LABELS,
+  kind = "employer",
+}: PaymentCalculationCardProps) {
+  const isHidden = useCategoryHidden(
+    kind === "employer" ? EMPLOYER_PAYMENT_HIDDEN_CATEGORIES : SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES,
+  );
   const rows = buildPaymentCalculationRows(detail.calculation, detail, labels);
   return (
     <section className="pp-calc-card">
-      <h2 className="pp-calc-card__title">Ödeme Hesabı</h2>
+      <h2 className="pp-calc-card__title">
+        Ödeme Hesabı
+        <MaskedMark isHidden={isHidden} values={Object.values(detail.calculation)} />
+      </h2>
       <div className="pp-calc-card__rows">
         {rows.slice(0, 4).map((row) => (
           <CalcRow key={row.key} label={row.label} value={row.value} tone={row.tone} />

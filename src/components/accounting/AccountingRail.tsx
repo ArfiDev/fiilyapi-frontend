@@ -1,4 +1,7 @@
 import type { TrialBalanceResponse } from "@/lib/api/hooks/useTrialBalance";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
@@ -16,6 +19,7 @@ const SIDE_TONE: Record<AccountBalanceSide, string> = {
   credit: "mu-pro-rail__amount--danger",
   debit: "mu-pro-rail__amount--strong",
   flat: "mu-pro-rail__amount--flat",
+  hidden: "mu-pro-rail__amount--flat",
 };
 
 /**
@@ -49,13 +53,18 @@ export function AccountBalancesPanel({
   isLoading,
   errorMessage,
 }: AccountBalancesPanelProps) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   const rows = data === undefined ? undefined : accountBalanceRailRows(data.rows);
 
   return (
     <section className="mu-pro-rail" aria-label="Hesap Bakiyeleri">
       <div className="mu-pro-rail__head">
         {/* MP:166 */}
-        <span className="mu-pro-rail__title">Hesap Bakiyeleri</span>
+        {/* IZN-F4b.2 — gizli bakiyeler için panel başlığında TEK kilit; satırlar `—`. */}
+        <span className="mu-pro-rail__title">
+          Hesap Bakiyeleri
+          <MaskedMark isHidden={isHidden} values={rows?.map((row) => row.amount) ?? []} />
+        </span>
         {rows !== undefined && (
           <span className="mu-pro-rail__count" data-testid="mu-rail-count">
             {rows.length} hesap

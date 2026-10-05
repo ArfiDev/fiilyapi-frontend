@@ -1,4 +1,4 @@
-import { formatAmount, formatCurrencyPrecise, formatPercent } from "@/lib/format";
+import { EMPTY_CELL, formatAmount, formatCurrencyPrecise, formatPercent } from "@/lib/format";
 import type { Percent } from "@/lib/api/scale";
 
 // F-TH T3 · İşveren `PaymentCalculationCard`in tfoot/kart mantığı BURAYA
@@ -11,11 +11,12 @@ import type { Percent } from "@/lib/api/scale";
 // Teminat satırlarının etiket kalıbı ve ton'u (positive/negative) HER İKİ
 // ekranda da birebir aynı, tek yerde üretilir.
 export interface PaymentCalculationAmounts {
-  gross: string;
-  vat: string;
-  advance_deduction: string;
-  retention: string;
-  net: string;
+  // 🔴 IZN-F4b.2: rol için gizli tutar `null` gelir; satır değeri düz "—" olur ("+ —"/"- —" basılmaz).
+  gross: string | null;
+  vat: string | null;
+  advance_deduction: string | null;
+  retention: string | null;
+  net: string | null;
 }
 
 export interface PaymentCalculationPercents {
@@ -47,6 +48,11 @@ export interface PaymentCalculationRow {
  * `calculation` + `*_pct` + ekrana özel etiketler → beş satırlık liste
  * (Brüt/KDV/Avans/Teminat/Net). Sıra mockup'lara göre SABİT.
  */
+/** "+ 1.200" / "- 300" biçimi; gizli (null) tutar işaretsiz "—" basar. */
+function signedAmount(sign: "+" | "-", value: string | null): string {
+  return value === null ? EMPTY_CELL : `${sign} ${formatAmount(value)}`;
+}
+
 export function buildPaymentCalculationRows(
   amounts: PaymentCalculationAmounts,
   percents: PaymentCalculationPercents,
@@ -57,19 +63,19 @@ export function buildPaymentCalculationRows(
     {
       key: "vat",
       label: `KDV (${formatPercent(percents.vat_pct)})`,
-      value: `+ ${formatAmount(amounts.vat)}`,
+      value: signedAmount("+", amounts.vat),
       tone: "positive",
     },
     {
       key: "advance",
       label: `Avans Kesintisi (${formatPercent(percents.advance_pct)})`,
-      value: `- ${formatAmount(amounts.advance_deduction)}`,
+      value: signedAmount("-", amounts.advance_deduction),
       tone: "negative",
     },
     {
       key: "retention",
       label: `Teminat Kesintisi (${formatPercent(percents.retainage_pct)})`,
-      value: `- ${formatAmount(amounts.retention)}`,
+      value: signedAmount("-", amounts.retention),
       tone: "negative",
     },
     {

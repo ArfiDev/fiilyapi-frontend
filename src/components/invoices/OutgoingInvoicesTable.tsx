@@ -1,9 +1,15 @@
+"use client";
+
 import Link from "next/link";
 
 import { Badge } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { INVOICE_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatDateDots } from "@/lib/format";
 import type { InvoiceResponse } from "@/lib/api/hooks/useInvoices";
 
+import { InvoicePartyName } from "./InvoicePartyName";
 import { InvoiceSourceChip } from "./InvoiceSourceChip";
 import { invoiceDetailUrl, invoiceStatusLabel, invoiceStatusVariant, REASONS } from "./invoice-labels";
 
@@ -28,6 +34,7 @@ export function OutgoingInvoicesTable({
   isLoading: boolean;
   errorMessage: string | undefined;
 }) {
+  const isHidden = useCategoryHidden(INVOICE_HIDDEN_CATEGORIES);
   if (isLoading) return <p className="fat-notice">Yükleniyor…</p>;
   if (errorMessage !== undefined) {
     return (
@@ -58,12 +65,15 @@ export function OutgoingInvoicesTable({
             </th>
             <th scope="col" className="is-right">
               Matrah
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.tax_base)} />
             </th>
             <th scope="col" className="is-right">
               KDV
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.vat_amount)} />
             </th>
             <th scope="col" className="is-right">
               Toplam
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.total)} />
             </th>
             <th scope="col" className="is-center">
               GİB
@@ -84,7 +94,9 @@ export function OutgoingInvoicesTable({
               </td>
               <td>
                 {/* FY:112 — ad + VKN alt satırı. */}
-                <div className="fat-table__party">{invoice.party_name}</div>
+                <div className="fat-table__party">
+                  <InvoicePartyName name={invoice.party_name} />
+                </div>
                 <div className="fat-table__muted">
                   {invoice.party_tax_number !== null
                     ? `VKN: ${invoice.party_tax_number}`

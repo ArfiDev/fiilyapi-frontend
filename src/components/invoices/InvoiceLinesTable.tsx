@@ -1,4 +1,7 @@
-import { formatAmount, formatPercent, formatQuantity } from "@/lib/format";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { INVOICE_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
+import { EMPTY_CELL, formatAmount, formatPercent, formatQuantity } from "@/lib/format";
 import type { InvoiceDetailResponse } from "@/lib/api/hooks/useInvoiceDetail";
 
 import { REASONS } from "./invoice-labels";
@@ -42,6 +45,20 @@ function FootRow({
  * Sıfır olan kesinti satırı BASILMAZ (mockup da yalnız var olanı yazar);
  * gizlenmesi bir eksiklik DEĞİLDİR — o faturada gerçekten yoktur.
  */
+/**
+ * Kesinti satırı gösterilsin mi? Tutar DOLUysa sıfır olmayan, tutar gizliyse (`null`, IZN-F4b.2) oranı
+ * sıfır olmayan satır gösterilir: `Number(null)` 0'dır ve "kesinti yok" demek gizli kesintiyi yok sayardı.
+ */
+function isDeductionShown(amount: string | null, rate: string | null): boolean {
+  if (amount !== null) return Number(amount) !== 0;
+  return rate !== null && Number(rate) !== 0;
+}
+
+/** "– 1.000" biçimi; gizli (null) tutar "–" önekiyle basılmaz, düz "—". */
+function minusAmount(value: string | null): string {
+  return value === null ? EMPTY_CELL : `– ${formatAmount(value)}`;
+}
+
 export function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetailResponse }) {
   const isIncoming = invoice.direction === "incoming";
   // Sıra sütunu YALNIZ giden detayda vardır (FGI:116); FGE onu çizmez.
@@ -49,9 +66,10 @@ export function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetailResponse 
   const columnCount = showSeq ? 7 : 6;
   const footSpan = columnCount - 1;
 
-  const hasAdvance = Number(invoice.advance_amount) !== 0;
-  const hasRetention = Number(invoice.retention_amount) !== 0;
-  const hasWithholding = Number(invoice.withholding_amount) !== 0;
+  const isHidden = useCategoryHidden(INVOICE_HIDDEN_CATEGORIES);
+  const hasAdvance = isDeductionShown(invoice.advance_amount, invoice.advance_rate);
+  const hasRetention = isDeductionShown(invoice.retention_amount, invoice.retention_rate);
+  const hasWithholding = isDeductionShown(invoice.withholding_amount, invoice.withholding_rate);
 
   return (
     <section className="fat-panel" aria-label="Fatura Kalemleri">
@@ -74,12 +92,14 @@ export function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetailResponse 
               </th>
               <th scope="col" className="is-right">
                 Birim Fiyat
+                <MaskedMark isHidden={isHidden} values={invoice.lines.map((line) => line.unit_price)} />
               </th>
               <th scope="col" className="is-center">
                 KDV %
               </th>
               <th scope="col" className="is-right">
                 Tutar
+                <MaskedMark isHidden={isHidden} values={invoice.lines.map((line) => line.line_total)} />
               </th>
             </tr>
           </thead>
@@ -126,7 +146,7 @@ export function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetailResponse 
                 // `?? 0` gerçek oranı SIFIRA düşürüp yalan söylerdi;
                 // `formatPercent`in kendi maskeleme dalı ("—") kullanılır.
                 label={`Avans Kesintisi (${formatPercent(invoice.advance_rate)})`}
-                value={`– ${formatAmount(invoice.advance_amount)}`}
+                value={minusAmount(invoice.advance_amount)}
               />
             )}
             {hasRetention && (
@@ -134,7 +154,7 @@ export function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetailResponse 
                 colSpan={footSpan}
                 tone="danger"
                 label={`Teminat Kesintisi (${formatPercent(invoice.retention_rate)})`}
-                value={`– ${formatAmount(invoice.retention_amount)}`}
+                value={minusAmount(invoice.retention_amount)}
               />
             )}
             <FootRow
@@ -152,7 +172,7 @@ export function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetailResponse 
                 colSpan={footSpan}
                 tone="danger"
                 label={`Tevkifat (${formatPercent(invoice.withholding_rate)})`}
-                value={`– ${formatAmount(invoice.withholding_amount)}`}
+                value={minusAmount(invoice.withholding_amount)}
               />
             )}
             <tr
@@ -162,7 +182,10 @@ export function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetailResponse 
               <td colSpan={footSpan} className="is-right">
                 ÖDENECEK TOPLAM
               </td>
-              <td className="is-right fat-total-row__amount">{formatAmount(invoice.total)}</td>
+              <td className="is-right fat-total-row__amount">
+                {formatAmount(invoice.total)}
+                <MaskedMark isHidden={isHidden} values={[invoice.total]} />
+              </td>
             </tr>
           </tfoot>
         </table>

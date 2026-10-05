@@ -4,8 +4,9 @@ import type { ProgressPaymentListItem } from "@/lib/api/hooks/useProgressPayment
 export interface ProgressPaymentsTotals {
   /** Kuruş hassasiyetli toplam (ondalık string) — `formatCompactCurrency`
    * BURADA çağrılmaz, çağıran taraf biçimlendirir. `Number()` toplama ile
-   * karıştırılmaz: bkz. `sumDecimalStrings` (spec: kuruş hassasiyeti). */
-  grossTotal: string;
+   * karıştırılmaz: bkz. `sumDecimalStrings` (spec: kuruş hassasiyeti).
+   * 🔴 IZN-F4b.2: kalemlerden biri gizliyse (`null`) toplam `null` — eksik toplam basılmaz. */
+  grossTotal: string | null;
   pendingApprovalCount: number;
 }
 

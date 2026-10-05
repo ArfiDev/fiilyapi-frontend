@@ -28,8 +28,13 @@ export interface PivotCell {
    * kapalı hücrede "".
    */
   quantity: string;
-  /** Var olan kaydedilmiş satırın `line_total`'ı (salt okunur gösterim) — yoksa null. */
+  /** Var olan kaydedilmiş satırın `line_total`'ı (salt okunur gösterim) — yoksa null. 🔴 IZN-F4b.2: rol için gizliyse de null. */
   lineTotal: string | null;
+  /**
+   * Hücrenin sunucuda KAYITLI satırı var mı? `lineTotal !== null` bunun yerine KULLANILMAZ: `line_total`
+   * rol için gizliyken (`null`) kayıtlı satır "kayıt yok" sanılır ve yetim-tahsis uyarısı sessizce kaybolurdu.
+   */
+  isSaved: boolean;
   /** Var olan kaydedilmiş satırın `is_price_stale`'i — yoksa null (satır hiç yok). */
   isPriceStale: boolean | null;
   /**
@@ -93,6 +98,7 @@ export function buildPivotRows(
           editable,
           quantity: existing ? trQuantityInputValue(existing.quantity) : editable ? "0" : "",
           lineTotal: existing ? existing.line_total : null,
+          isSaved: existing !== undefined,
           isPriceStale: existing ? (existing.is_price_stale ?? null) : null,
           quantitySource: existing ? existing.quantity_source : DEFAULT_QUANTITY_SOURCE,
         };
@@ -188,9 +194,10 @@ export function rowQuantityTotal(row: PivotRow): string {
  * satır yoksa `null` (henüz hesaplanmadı, "—" basılır).
  */
 export function rowAmountTotal(row: PivotRow): string | null {
-  const totals = row.cells.filter((c) => c.lineTotal !== null).map((c) => c.lineTotal as string);
-  if (totals.length === 0) return null;
-  return sumDecimalStrings(totals);
+  const saved = row.cells.filter((c) => c.isSaved);
+  if (saved.length === 0) return null;
+  // 🔴 IZN-F4b.2: kayıtlı hücrelerden biri gizliyse (`line_total` null) toplam BİLİNMEZ — eksik toplam basılmaz.
+  return sumDecimalStrings(saved.map((c) => c.lineTotal));
 }
 
 export interface OrphanedAllocationCell {
@@ -222,7 +229,7 @@ export function findOrphanedAllocationCells(
   const orphaned: OrphanedAllocationCell[] = [];
   for (const row of rows) {
     for (const cell of row.cells) {
-      if (cell.editable || cell.lineTotal === null) continue;
+      if (cell.editable || !cell.isSaved) continue;
       orphaned.push({
         item: row.item,
         groupName: row.groupName,

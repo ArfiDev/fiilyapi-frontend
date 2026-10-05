@@ -1,5 +1,8 @@
 "use client";
 
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -35,6 +38,7 @@ export function SubcontractorProgressPaymentsTable({
   data,
   newActionLabel = null,
 }: SubcontractorProgressPaymentsTableProps) {
+  const isAmountHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   if (isError) return <p className="thk-message">Taşeron hakedişleri yüklenemedi</p>;
   if (isLoading || !data) return <p className="thk-message">Yükleniyor…</p>;
   if (data.items.length === 0) {
@@ -58,9 +62,15 @@ export function SubcontractorProgressPaymentsTable({
             <th className="thk-table__th thk-table__th--left">Taşeron</th>
             <th className="thk-table__th thk-table__th--left">Hakediş No</th>
             <th className="thk-table__th thk-table__th--left">Dönem</th>
-            <th className="thk-table__th thk-table__th--right">Brüt Tutar</th>
+            <th className="thk-table__th thk-table__th--right">
+              Brüt Tutar
+              <MaskedMark isHidden={isAmountHidden} values={data.items.map((item) => item.gross_total)} />
+            </th>
             <th className="thk-table__th thk-table__th--right">KDV</th>
-            <th className="thk-table__th thk-table__th--right">Net Ödeme</th>
+            <th className="thk-table__th thk-table__th--right">
+              Net Ödeme
+              <MaskedMark isHidden={isAmountHidden} values={data.items.map((item) => item.net_total)} />
+            </th>
             <th className="thk-table__th thk-table__th--center">Durum</th>
             <th className="thk-table__th thk-table__th--center">İlerleme</th>
           </tr>

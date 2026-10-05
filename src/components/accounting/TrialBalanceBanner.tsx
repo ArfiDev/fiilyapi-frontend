@@ -1,5 +1,8 @@
 import type { TrialBalanceTotals } from "@/lib/api/hooks/useTrialBalance";
 import { CheckCircleIcon, WarningTriangleIcon } from "@/components/ui/icons";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency } from "@/lib/format";
 
 import { trialBalanceImbalance } from "./trial-balance";
@@ -25,6 +28,11 @@ interface TrialBalanceBannerProps {
  * göstermek olurdu; ayrı bir yüzey icat etmek ise mockup'ın kendi dilinden
  * sapmak olurdu — iskelet KORUNUR, yalnız ton/ikon/metin döner.
  *
+ * 🔴 IZN-F4b.2 · GECE KARARI — kapanış toplamlarından biri `null` (rol için gizli) ise
+ * denge DOĞRULANAMAZ: "Dengede Değil" uyarısı VERİLMEZ (sunucunun `is_balanced`ı gizli
+ * tutarlara dayanır, kullanıcı fark göremez) ve sahte "Dengede" de basılmaz. Nötr bir not
+ * ("doğrulanamıyor") + kilit ipucu gösterilir.
+ *
  * Sembol bekçisi (F-SEM): çıplak `✓`/`⚠` YAZILMAZ, ikonlar `ui/icons`in
  * inline SVG'leridir.
  *
@@ -38,6 +46,15 @@ interface TrialBalanceBannerProps {
  * ta kendisidir. Anlam korunur, glif riski alınmaz.
  */
 export function TrialBalanceBanner({ isBalanced, totals }: TrialBalanceBannerProps) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
+  if (totals.closing_debit === null || totals.closing_credit === null) {
+    return (
+      <p className="mu-notice" data-testid="mz-banner-unverifiable">
+        <span>Mizan dengesi doğrulanamıyor — tutarlar bu görünümde yok</span>
+        {isHidden && <HiddenMark />}
+      </p>
+    );
+  }
   if (isBalanced) {
     return (
       <p className="mu-banner mu-banner--ok" data-testid="mz-banner">

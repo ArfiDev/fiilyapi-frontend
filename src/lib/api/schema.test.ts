@@ -236,8 +236,8 @@ describe("Hakediş (progress-payments) tip üretimi (P7 T1 kapısı)", () => {
     expectTypeOf<ListItem>().toHaveProperty("status");
     expectTypeOf<ListItem>().toHaveProperty("gross_total");
     expectTypeOf<ListItem>().toHaveProperty("net_total");
-    // Tutarlar Decimal — string olarak gelir (hassasiyet korunur).
-    expectTypeOf<ListItem["gross_total"]>().toEqualTypeOf<string>();
+    // Tutarlar Decimal — string olarak gelir (hassasiyet korunur). IZN-B4b: rol için gizliyse `null`.
+    expectTypeOf<ListItem["gross_total"]>().toEqualTypeOf<string | null>();
     expect(true).toBe(true);
   });
 

@@ -4,6 +4,8 @@ import type {
 } from "@/lib/api/hooks/useCashFlowStatement";
 import { formatAmount } from "@/lib/format";
 
+import { MaskedStatementNote } from "./MaskedStatementNote";
+
 import { cashFlowDirection, formatSignedAmount, sectionTone } from "./cash-flow-statement";
 
 interface CashFlowTableProps {
@@ -26,6 +28,14 @@ interface CashFlowTableProps {
 export function CashFlowTable({ data }: CashFlowTableProps) {
   return (
     <div className="fs-cf-card" data-testid="na-table">
+      <MaskedStatementNote
+        values={[
+          data.opening_cash,
+          data.net_change,
+          data.closing_cash,
+          ...data.sections.flatMap((section) => [section.subtotal, ...section.lines.map((line) => line.amount)]),
+        ]}
+      />
       <table className="fs-cf-table">
         <tbody>
           {data.sections.map((section) => (

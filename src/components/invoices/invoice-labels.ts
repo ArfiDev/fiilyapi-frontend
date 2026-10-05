@@ -38,7 +38,9 @@ export function invoiceDetailUrl(invoiceId: string): string {
  * ve sıfıra KIRPILMAZ. Sabit "Ödenecek KDV" metni negatifken YALAN söyler —
  * kullanıcı borcu olmadığı hâlde ödeyecek sanır.
  */
-export function vatDifferenceHint(vatDifference: string): string {
+export function vatDifferenceHint(vatDifference: string | null): string {
+  // IZN-F4b.2 — gizli (null) fark yönsüzdür; `Number(null)` 0 → sahte "Ödenecek KDV" derdi.
+  if (vatDifference === null) return "KDV farkı";
   return Number(vatDifference) < 0 ? "Devreden KDV" : "Ödenecek KDV";
 }
 

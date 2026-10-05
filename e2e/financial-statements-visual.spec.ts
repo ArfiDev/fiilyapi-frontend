@@ -329,3 +329,54 @@ test("mali tablolar gelir tablosu ayrisik gorsel", async ({ page }) => {
     fullPage: true,
   });
 });
+
+// ---------------------------------------------------------------------------
+// 6) IZN-F4b.2 · Gelir Tablosu — rol için GİZLİ tutarlar (maliyet_kar)
+// ---------------------------------------------------------------------------
+// `/auth/me.hidden_fields = ["maliyet_kar"]` ve `GET /income-statement` yanıtındaki TÜM tutarlar `null`
+// YALNIZ bu testte (`page.route`; paylaşılan mock backend'e YAZILMAZ). Beklenen: hücreler `—`, tabloda TEK
+// kilit notu, mutabakat şeridi "doğrulanamıyor" (kırmızı "eşit değil" YOK, sahte "Mutabık" YOK).
+function maskIncomeStatement(body: Record<string, unknown>): Record<string, unknown> {
+  const sections = (body.sections as Array<Record<string, unknown>>).map((section) => ({
+    ...section,
+    subtotal: null,
+    lines: (section.lines as Array<Record<string, unknown>>).map((line) => ({ ...line, amount: null })),
+  }));
+  return { ...body, sections, total_revenue: null, total_expense: null, period_profit: null };
+}
+
+test("muhasebe gelir tablosu gizli gorsel", async ({ page }) => {
+  await page.setViewportSize({ ...VISUAL_VIEWPORT });
+  await page.route("**/api/auth/me", async (route) => {
+    const response = await route.fetch();
+    const me = (await response.json()) as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...me, hidden_fields: ["maliyet_kar"] }),
+    });
+  });
+  await page.route("**/api/backend/income-statement**", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(maskIncomeStatement(body)),
+    });
+  });
+  await openFinancialStatementsHome(page);
+
+  await expect(page.getByRole("heading", { level: 1, name: "Mali Tablolar" })).toBeVisible();
+  await expect(page.getByTestId("mt-is-profit")).toContainText("—");
+  await expect(page.getByTestId("mt-is-section-revenue-subtotal")).toContainText("—");
+  await expect(page.getByTestId("mt-is-table").locator("tbody tr")).toHaveCount(11);
+  await expect(page.getByTestId("fs-masked-note")).toBeVisible();
+  await expect(page.getByTestId("mt-is-banner-unverifiable")).toBeVisible();
+  await expect(page.getByTestId("mt-is-banner")).toHaveCount(0);
+  await expect(page.getByTestId("mt-error")).toHaveCount(0);
+  await expectNoLoadingText(page);
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("muhasebe-gelir-tablosu-gizli.png", { fullPage: true });
+});

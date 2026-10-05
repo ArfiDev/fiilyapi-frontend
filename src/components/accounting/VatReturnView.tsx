@@ -5,10 +5,13 @@ import { useState } from "react";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { VatReturnResponse } from "@/lib/api/hooks/useVatReturn";
 import { useVatReturn } from "@/lib/api/hooks/useVatReturn";
 import { isForbidden } from "@/lib/api/unwrap";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -124,6 +127,7 @@ export function VatReturnView() {
  * söylemesini sağlar (isteğe bağlı zincir yerine).
  */
 function VatReturnBody({ data }: { data: VatReturnResponse }) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   const outcome = vatOutcome(data);
   const taxableRows = buildVatTaxableRows(data);
   const taxableBaseTotal = vatTaxableBaseTotal(taxableRows);
@@ -138,6 +142,7 @@ function VatReturnBody({ data }: { data: VatReturnResponse }) {
           <div className="mu-vat-card__label">Hesaplanan KDV</div>
           <div className="mu-vat-card__value mu-vat-card__value--danger">
             {formatCurrency(data.calculated_vat)}
+            <MaskedMark isHidden={isHidden} values={[data.calculated_vat]} />
           </div>
           <div className="mu-vat-card__note">Satışlardan doğan</div>
         </div>
@@ -146,6 +151,7 @@ function VatReturnBody({ data }: { data: VatReturnResponse }) {
           <div className="mu-vat-card__label">İndirilecek KDV</div>
           <div className="mu-vat-card__value mu-vat-card__value--success">
             {formatCurrency(data.deductible_vat)}
+            <MaskedMark isHidden={isHidden} values={[data.deductible_vat]} />
           </div>
           <div className="mu-vat-card__note">Alımlardan doğan</div>
         </div>
@@ -159,6 +165,7 @@ function VatReturnBody({ data }: { data: VatReturnResponse }) {
           <div className="mu-vat-card__label">{outcome.cardTitle}</div>
           <div className="mu-vat-card__value" data-testid="kdv-outcome-amount">
             {formatCurrency(outcome.amount)}
+            <MaskedMark isHidden={isHidden} values={[outcome.amount]} />
           </div>
           <div className="mu-vat-card__note">{outcome.cardNote}</div>
         </div>
@@ -183,9 +190,11 @@ function VatReturnBody({ data }: { data: VatReturnResponse }) {
                   </th>
                   <th scope="col" className="is-right">
                     Matrah
+                    <MaskedMark isHidden={isHidden} values={taxableRows.map((row) => row.base)} />
                   </th>
                   <th scope="col" className="is-right">
                     Vergi
+                    <MaskedMark isHidden={isHidden} values={taxableRows.map((row) => row.vat)} />
                   </th>
                 </tr>
               </thead>
@@ -242,9 +251,11 @@ function VatReturnBody({ data }: { data: VatReturnResponse }) {
                   <th scope="col">Kaynak</th>
                   <th scope="col" className="is-right">
                     Matrah
+                    <MaskedMark isHidden={isHidden} values={data.deductions.map((row) => row.base)} />
                   </th>
                   <th scope="col" className="is-right">
                     KDV
+                    <MaskedMark isHidden={isHidden} values={data.deductions.map((row) => row.vat)} />
                   </th>
                 </tr>
               </thead>

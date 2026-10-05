@@ -45,8 +45,10 @@ export function trialBalanceRangeLabel(period: Period): string {
  * (istemci onu YENİDEN HESAPLAMAZ) — burada üretilen yalnız kullanıcıya
  * gösterilecek büyüklüktür.
  */
-export function trialBalanceImbalance(totals: TrialBalanceTotals): string {
+export function trialBalanceImbalance(totals: TrialBalanceTotals): string | null {
   const difference = subtractDecimalStrings(totals.closing_debit, totals.closing_credit);
+  // IZN-F4b.2 — girdi maskeliyse (null) fark BİLİNMEZ; null'ı 0 sayıp "fark 0" basmak YASAK.
+  if (difference === null) return null;
   // Mutlak değer: işaret STRING düzeyinde atılır. `Math.abs(Number(...))`
   // yukarıdaki taşma tuzağını geri getirirdi.
   return difference.startsWith("-") ? difference.slice(1) : difference;

@@ -1,4 +1,7 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import type { LedgerRow } from "@/lib/api/hooks/useLedger";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatDateDots } from "@/lib/format";
 
 interface LedgerTableProps {
@@ -25,6 +28,13 @@ const EMPTY_SIDE = "—";
  * SÜZMEZ (sunucunun `POSTING_STATUSES` kararı tek sahiptir).
  */
 export function LedgerTable({ rows, isLoading, errorMessage }: LedgerTableProps) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
+  // IZN-F4b.2 — gizli sütun başlığında TEK kilit; hücreler `—`.
+  const marks = {
+    debit: (rows ?? []).map((row) => row.debit),
+    credit: (rows ?? []).map((row) => row.credit),
+    balance: (rows ?? []).map((row) => row.running_balance),
+  };
   return (
     <div className="mu-table-scroll">
       <table className="mu-table">
@@ -36,12 +46,15 @@ export function LedgerTable({ rows, isLoading, errorMessage }: LedgerTableProps)
             <th scope="col">Açıklama</th>
             <th scope="col" className="is-right">
               Borç
+              <MaskedMark isHidden={isHidden} values={marks.debit} />
             </th>
             <th scope="col" className="is-right">
               Alacak
+              <MaskedMark isHidden={isHidden} values={marks.credit} />
             </th>
             <th scope="col" className="is-right">
               Bakiye
+              <MaskedMark isHidden={isHidden} values={marks.balance} />
             </th>
           </tr>
         </thead>
@@ -88,14 +101,14 @@ export function LedgerTable({ rows, isLoading, errorMessage }: LedgerTableProps)
                   )}
                 </td>
                 <td className="is-right is-mono">
-                  {isZero(row.debit) ? (
+                  {row.debit === null || isZero(row.debit) ? (
                     <span className="mu-table__empty-cell">{EMPTY_SIDE}</span>
                   ) : (
                     <span className="mu-amount--debit">{formatAmount(row.debit)}</span>
                   )}
                 </td>
                 <td className="is-right is-mono">
-                  {isZero(row.credit) ? (
+                  {row.credit === null || isZero(row.credit) ? (
                     <span className="mu-table__empty-cell">{EMPTY_SIDE}</span>
                   ) : (
                     <span className="mu-amount--credit">{formatAmount(row.credit)}</span>

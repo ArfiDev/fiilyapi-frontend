@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button, Select } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import {
   CHART_ACCOUNTS_MAX_LIMIT,
@@ -13,6 +14,8 @@ import {
 import { LEDGER_MAX_LIMIT, useLedger } from "@/lib/api/hooks/useLedger";
 import { useTrialBalance } from "@/lib/api/hooks/useTrialBalance";
 import { isForbidden } from "@/lib/api/unwrap";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -77,6 +80,7 @@ export function BankReconciliationView() {
 
   const [period, setPeriod] = useState<Period>(() => currentPeriod(new Date()));
   const [accountId, setAccountId] = useState("");
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
 
   const accountsQuery = useChartOfAccounts({ limit: CHART_ACCOUNTS_MAX_LIMIT });
   const trialBalanceQuery = useTrialBalance(period.year, period.month);
@@ -200,6 +204,7 @@ export function BankReconciliationView() {
           <div className="bm-card__label">Muhasebe Kayıt Bakiyesi</div>
           <div className="bm-card__value" data-testid="bm-card-book-value">
             {closing === undefined ? "—" : formatAmount(closing)}
+            <MaskedMark isHidden={isHidden} values={[closing]} />
           </div>
           <div className="bm-card__note">
             {!hasAccount
@@ -280,6 +285,7 @@ export function BankReconciliationView() {
               Kapanış Bakiyesi:{" "}
               <strong className="mu-pro-foot__value">
                 {closing === undefined ? "—" : formatAmount(closing)}
+                <MaskedMark isHidden={isHidden} values={[closing]} />
               </strong>
             </span>
           </div>

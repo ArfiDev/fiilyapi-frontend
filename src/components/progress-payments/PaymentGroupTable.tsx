@@ -1,3 +1,6 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { EMPLOYER_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { sumDecimalStrings } from "@/lib/decimal";
 import { formatAmount } from "@/lib/format";
 import type { ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
@@ -19,6 +22,14 @@ export interface PaymentGroupTableProps {
 // yapılır — `Number()` ile toplama float yuvarlama hatası riski taşır.
 // `groups` boşken satır basılmaz (boş dizi toplamı anlamsız).
 export function PaymentGroupTable({ groups }: PaymentGroupTableProps) {
+  const isHidden = useCategoryHidden(EMPLOYER_PAYMENT_HIDDEN_CATEGORIES);
+  // IZN-F4b.2 — gizli sütun başlığında TEK kilit; hücreler `—`, "Ara Toplam" da `—` (null 0 sayılmaz).
+  const marks = {
+    contract: groups.map((group) => group.contract_amount),
+    previous: groups.map((group) => group.previous_amount),
+    this: groups.map((group) => group.this_amount),
+    cumulative: groups.map((group) => group.cumulative_amount),
+  };
   return (
     <section className="pp-table-card">
       <div className="pp-table-card__head">Hakediş Kalemleri</div>
@@ -26,10 +37,10 @@ export function PaymentGroupTable({ groups }: PaymentGroupTableProps) {
         <thead>
           <tr>
             <th className="pp-table__th pp-table__col--item">İş Kalemi</th>
-            <th className="pp-table__th pp-table__col--amount">Sözleşme</th>
-            <th className="pp-table__th pp-table__col--amount">Önceki</th>
-            <th className="pp-table__th pp-table__col--amount">Bu Ay</th>
-            <th className="pp-table__th pp-table__col--amount">Toplam</th>
+            <th className="pp-table__th pp-table__col--amount">Sözleşme<MaskedMark isHidden={isHidden} values={marks.contract} /></th>
+            <th className="pp-table__th pp-table__col--amount">Önceki<MaskedMark isHidden={isHidden} values={marks.previous} /></th>
+            <th className="pp-table__th pp-table__col--amount">Bu Ay<MaskedMark isHidden={isHidden} values={marks.this} /></th>
+            <th className="pp-table__th pp-table__col--amount">Toplam<MaskedMark isHidden={isHidden} values={marks.cumulative} /></th>
           </tr>
         </thead>
         <tbody>

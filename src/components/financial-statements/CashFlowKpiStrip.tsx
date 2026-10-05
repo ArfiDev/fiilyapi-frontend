@@ -1,4 +1,7 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import type { CashFlowStatementResponse } from "@/lib/api/hooks/useCashFlowStatement";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 
 import type { CashFlowTone } from "./cash-flow-statement";
 import {
@@ -66,11 +69,12 @@ function KpiCard({
   testId,
 }: {
   label: string;
-  amount: string;
+  amount: string | null;
   tone: CashFlowTone;
   highlighted?: boolean;
   testId: string;
 }) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   // NÖTR ton (net kart) rengini tutarın YÖNÜNDEN alır: net artış yeşil, net
   // azalış kırmızı. NA:58 pozitif dalı çizer; negatif dal mockup'ta YOKTUR
   // ama gerçek bir sonuçtur ve yeşil basılamaz.
@@ -85,7 +89,10 @@ function KpiCard({
       {/* NA:45 — 11px, BÜYÜK HARF, harf aralıklı. */}
       <h2 className="fs-cf-kpi__label">{label}</h2>
       {/* NA:46 — 20/700 MONO, işaretli. */}
-      <p className="fs-cf-kpi__value">{formatSignedAmount(amount)}</p>
+      <p className="fs-cf-kpi__value">
+        {formatSignedAmount(amount)}
+        <MaskedMark isHidden={isHidden} values={[amount]} />
+      </p>
     </article>
   );
 }

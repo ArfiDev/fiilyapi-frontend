@@ -1,5 +1,8 @@
 "use client";
 
+import { MaskedNote } from "@/components/ui/hidden-mark/HiddenMark";
+import { EMPLOYER_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge/Badge";
@@ -82,6 +85,7 @@ export function ProgressPaymentsListBody({
    */
   newActionLabel?: string | null;
 }) {
+  const isAmountHidden = useCategoryHidden(EMPLOYER_PAYMENT_HIDDEN_CATEGORIES);
   if (isError) return <p className="pp-message">Hakedişler yüklenemedi</p>;
   if (isLoading || !data) return <p className="pp-message">Yükleniyor…</p>;
   if (data.items.length === 0) {
@@ -94,6 +98,8 @@ export function ProgressPaymentsListBody({
   }
   return (
     <section className="pp-card">
+      {/* IZN-F4b.2 — gizli tutarlar için listenin üstünde TEK kilit; satır tutarları `—`. */}
+      <MaskedNote isHidden={isAmountHidden} values={data.items.map((item) => item.gross_total)} />
       <ul className="pp-list">
         {data.items.map((item) => (
           <ProgressPaymentRow key={item.id} item={item} showProjectName={showProjectName} />

@@ -75,6 +75,13 @@ export interface SubcontractorRow {
   paidTotal: PendingMoney;
   /** 61 · `paid` OLMAYAN hakedişlerin net toplamı. Kırpılmada `null`. */
   pendingTotal: PendingMoney;
+  /**
+   * 🔴 IZN-F4b.2 — `paidTotal`/`pendingTotal` `null` ise NEDEN: hakedişlerden en az birinin `net_total`ı
+   * rol için gizli (`null`) mi? Gizliyse toplam BİLİNMEZ (null'ı 0 sayıp eksik toplam basmak YASAK) ve
+   * ekran kırpılma gerekçesi yerine "gizli" ipucunu gösterir.
+   */
+  isPaidMasked: boolean;
+  isPendingMasked: boolean;
   /** 63 "Detay →" hedefi; firmanın hiç sözleşmesi yoksa `null` (devre dışı). */
   detailContractId: string | null;
 }
@@ -86,6 +93,8 @@ export interface SubcontractorSummary {
   activeContractCount: number;
   /** 37 · içinde bulunulan DÖNEME ait hakedişlerin net toplamı; kırpılmada `null`. */
   monthPaymentTotal: PendingMoney;
+  /** IZN-F4b.2 — `monthPaymentTotal` `null`sa nedeni gizli `net_total` mı (kırpılma DEĞİL). */
+  isMonthPaymentMasked: boolean;
   /** 38 · `pending_approval` hakediş sayısı; kırpılmada `null`. */
   pendingApprovalCount: number | null;
 }
@@ -134,6 +143,8 @@ interface Accumulator {
   contractTotal: number;
   paidTotal: number;
   pendingTotal: number;
+  isPaidMasked: boolean;
+  isPendingMasked: boolean;
   contracts: ContractListItem[];
 }
 
@@ -143,6 +154,8 @@ function emptyAccumulator(): Accumulator {
     contractTotal: 0,
     paidTotal: 0,
     pendingTotal: 0,
+    isPaidMasked: false,
+    isPendingMasked: false,
     contracts: [],
   };
 }
@@ -231,6 +244,7 @@ export function buildSubcontractorDirectory({
   }
 
   let monthPaymentTotal = 0;
+  let isMonthPaymentMasked = false;
   let pendingApprovalCount = 0;
 
   for (const payment of payments) {
@@ -245,7 +259,9 @@ export function buildSubcontractorDirectory({
       payment.period_year === currentYear &&
       payment.period_month === currentMonth
     ) {
-      monthPaymentTotal += toNumber(payment.net_total);
+      // 🔴 IZN-F4b.2: gizli (null) net tutar toplama GİRMEZ ve 0 sayılmaz — toplam BİLİNMEZ olur.
+      if (payment.net_total === null) isMonthPaymentMasked = true;
+      else monthPaymentTotal += toNumber(payment.net_total);
     }
     const mapped = firmIdByContractId.get(payment.contract_id);
     const firmId =
@@ -254,13 +270,15 @@ export function buildSubcontractorDirectory({
     const bucket = byId.get(firmId);
     if (!bucket) continue;
     if (payment.status === "paid") {
-      bucket.paidTotal += toNumber(payment.net_total);
+      if (payment.net_total === null) bucket.isPaidMasked = true;
+      else bucket.paidTotal += toNumber(payment.net_total);
     } else if (payment.status !== "draft") {
       // 🔴 KAYIT NO 342 — taslak hakediş, taslak SÖZLEŞMENİN eşi (satır
       // ~213 `if (contract.is_draft) continue;`): henüz sunulmamış bir
       // hakediş "Bekleyen Hak." toplamına giremez, aksi hâlde hiç onaya
       // girmemiş bir taslak "bekliyor" gibi görünür.
-      bucket.pendingTotal += toNumber(payment.net_total);
+      if (payment.net_total === null) bucket.isPendingMasked = true;
+      else bucket.pendingTotal += toNumber(payment.net_total);
     }
   }
 
@@ -276,8 +294,10 @@ export function buildSubcontractorDirectory({
         category: firm.category,
         activeContractCount: bucket.activeContractCount,
         contractTotal: bucket.contractTotal,
-        paidTotal: isPaymentTruncated ? null : bucket.paidTotal,
-        pendingTotal: isPaymentTruncated ? null : bucket.pendingTotal,
+        paidTotal: isPaymentTruncated || bucket.isPaidMasked ? null : bucket.paidTotal,
+        pendingTotal: isPaymentTruncated || bucket.isPendingMasked ? null : bucket.pendingTotal,
+        isPaidMasked: !isPaymentTruncated && bucket.isPaidMasked,
+        isPendingMasked: !isPaymentTruncated && bucket.isPendingMasked,
         detailContractId: detail?.id ?? null,
       };
     })
@@ -298,7 +318,8 @@ export function buildSubcontractorDirectory({
       activeContractCount: contracts.filter(
         (contract) => !contract.is_draft && contract.status === "active",
       ).length,
-      monthPaymentTotal: isPaymentTruncated ? null : monthPaymentTotal,
+      monthPaymentTotal: isPaymentTruncated || isMonthPaymentMasked ? null : monthPaymentTotal,
+      isMonthPaymentMasked: !isPaymentTruncated && isMonthPaymentMasked,
       pendingApprovalCount: isPaymentTruncated ? null : pendingApprovalCount,
     },
     categories,

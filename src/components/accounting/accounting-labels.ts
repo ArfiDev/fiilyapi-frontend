@@ -104,7 +104,9 @@ export type AmountTone = "success" | "danger" | "neutral";
  * basmak sayının işaretini GİZLERDİ. Şef kararı: negatif kırmızı, pozitif
  * yeşil, tam sıfır nötr.
  */
-export function netBalanceTone(value: string): AmountTone {
+export function netBalanceTone(value: string | null): AmountTone {
+  // IZN-F4b.2 — `null` (gizli) işaretsizdir → nötr.
+  if (value === null) return "neutral";
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount === 0) return "neutral";
   return amount > 0 ? "success" : "danger";
@@ -115,8 +117,9 @@ export function netBalanceTone(value: string): AmountTone {
  * `running_balance`ı sıfırdan başlamaz ve açıklanamaz görünür. Bu yüzden
  * tablonun ÜSTÜNDE görünür bir devir satırı basılır.
  */
-export function hasCarriedBalance(value: string | undefined): boolean {
-  if (value === undefined) return false;
+export function hasCarriedBalance(value: string | null | undefined): boolean {
+  // `null` (IZN-F4b.2, rol için gizli) devir satırı BASILMAZ; sütun zaten `—` gösterir.
+  if (value === undefined || value === null) return false;
   const amount = Number(value);
   return Number.isFinite(amount) && amount !== 0;
 }

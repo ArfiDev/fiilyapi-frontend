@@ -3,6 +3,9 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge/Badge";
+import { MaskedNote } from "@/components/ui/hidden-mark/HiddenMark";
+import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrencyPrecise } from "@/lib/format";
 import type { SiteSubcontractorPaymentItem } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 
@@ -43,6 +46,7 @@ export function SiteSubcontractorPaymentsPanel({
   // ekranda duran YALAN buydu.
   const isTrulyEmpty = items.length === 0 && projectWideItems.length === 0;
   const note = projectWideNote(projectWideItems.length);
+  const isAmountHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   return (
     <section className="spp__panel spp__panel--subcontractor">
       <div className="spp__panel-head">
@@ -63,6 +67,11 @@ export function SiteSubcontractorPaymentsPanel({
         </section>
       ) : (
         <>
+          {/* IZN-F4b.2 — gizli tutarlar için listenin üstünde TEK kilit; satır tutarları `—`. */}
+          <MaskedNote
+            isHidden={isAmountHidden}
+            values={[...items, ...projectWideItems].map((item) => item.grossTotal)}
+          />
           {items.length > 0 && (
             <ul className="pp-list">
               {items.map((item) => (

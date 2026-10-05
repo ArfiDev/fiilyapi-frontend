@@ -75,8 +75,10 @@ export function defaultBalanceSheetAsOf(today: Date): string {
  * Bu fark YALNIZ GÖSTERİMDİR. Denge KARARININ tek sahibi sunucunun
  * `is_balanced` alanıdır — istemci onu YENİDEN HESAPLAMAZ.
  */
-export function balanceSheetImbalance(data: BalanceSheetResponse): string {
+export function balanceSheetImbalance(data: BalanceSheetResponse): string | null {
   const difference = subtractDecimalStrings(data.assets.total, data.liabilities.total);
+  // IZN-F4b.2 — toplamlardan biri gizliyse (null) fark BİLİNMEZ; 0 sayılmaz.
+  if (difference === null) return null;
   // Mutlak değer: işaret STRING düzeyinde atılır (`Math.abs(Number(...))`
   // yukarıdaki taşma tuzağını geri getirirdi).
   return difference.startsWith("-") ? difference.slice(1) : difference;

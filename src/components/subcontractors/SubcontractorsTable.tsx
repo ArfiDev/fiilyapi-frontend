@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge/Badge";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatCurrency } from "@/lib/format";
 
@@ -50,6 +54,7 @@ export function SubcontractorsTable({
   hasAnyRow,
   paymentPendingReason = PAYMENT_PENDING_REASON,
 }: SubcontractorsTableProps) {
+  const isHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   if (isError) return <p className="tl-message">Taşeron listesi yüklenemedi</p>;
   if (isLoading || !rows) return <p className="tl-message">Yükleniyor…</p>;
   if (rows.length === 0) {
@@ -76,8 +81,14 @@ export function SubcontractorsTable({
             <th className="tl-table__th tl-table__th--left">Kategori</th>
             <th className="tl-table__th tl-table__th--center">Aktif Sözl.</th>
             <th className="tl-table__th tl-table__th--right">Toplam Sözl. Bedeli</th>
-            <th className="tl-table__th tl-table__th--right">Ödenen</th>
-            <th className="tl-table__th tl-table__th--right">Bekleyen Hak.</th>
+            <th className="tl-table__th tl-table__th--right">
+              Ödenen
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => (row.isPaidMasked ? null : 0))} />
+            </th>
+            <th className="tl-table__th tl-table__th--right">
+              Bekleyen Hak.
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => (row.isPendingMasked ? null : 0))} />
+            </th>
             <th className="tl-table__th tl-table__th--center">Puan</th>
             <th className="tl-table__th tl-table__th--center" />
           </tr>
@@ -148,11 +159,14 @@ function SubcontractorTableRow({
         <PendingAwareMoney
           value={row.paidTotal}
           format={formatCompactCurrency}
-          reason={paymentPendingReason}
+          reason={row.isPaidMasked ? HIDDEN_FIELD_HINT : paymentPendingReason}
         />
       </td>
       <td className="tl-table__td tl-table__td--right">
-        <PendingBadge value={row.pendingTotal} reason={paymentPendingReason} />
+        <PendingBadge
+          value={row.pendingTotal}
+          reason={row.isPendingMasked ? HIDDEN_FIELD_HINT : paymentPendingReason}
+        />
       </td>
       {/* 62 · ONAYLI KARAR S4: kolon basılır, yıldız İCAT EDİLMEZ. */}
       <td className="tl-table__td tl-table__td--center">

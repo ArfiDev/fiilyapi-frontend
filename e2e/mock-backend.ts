@@ -14877,7 +14877,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         rows = rows.filter(
           (row) =>
             row.invoice_no.toLocaleLowerCase("tr").includes(q) ||
-            row.party_name.toLocaleLowerCase("tr").includes(q),
+            (row.party_name ?? "").toLocaleLowerCase("tr").includes(q),
         );
       }
       // `total` SÜZÜLMÜŞ kümenin tamamıdır, sayfanın DEĞİL (TB3 kanonu).
@@ -17762,8 +17762,9 @@ function trialBalanceRow(seed: TrialBalanceSeed): MockTrialBalanceRow {
 
 /** Altı kolonun AYRI toplamı (MZ:161-171 `GENEL TOPLAM`). */
 function trialBalanceTotals(rows: readonly MockTrialBalanceRow[]): MockTrialBalanceTotals {
-  const sum = (pick: (row: MockTrialBalanceRow) => string) =>
-    rows.reduce((total, row) => total + Number(pick(row)), 0).toFixed(2);
+  // IZN-F4b.2: şema artık `string | null`; mock'un varsayılan satırları HEP dolu (maske yalnız testte page.route ile).
+  const sum = (pick: (row: MockTrialBalanceRow) => string | null) =>
+    rows.reduce((total, row) => total + Number(pick(row) ?? 0), 0).toFixed(2);
   return {
     opening_debit: sum((row) => row.opening_debit),
     opening_credit: sum((row) => row.opening_credit),

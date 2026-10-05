@@ -8,3 +8,5 @@
   vertical-align: middle;
 }
 .hidden-mark--text { margin-inline-start: 0; font-size: var(--text-small); }
+/* IZN-F4b.2 · başlıksız listelerin üstündeki tek kilit notu. */
+.hidden-mark-note { margin: 0 0 var(--space-2); }

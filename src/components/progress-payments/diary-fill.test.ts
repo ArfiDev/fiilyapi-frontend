@@ -33,6 +33,7 @@ function pivotRow(itemId: string, cells: { siteId: string; editable: boolean; qu
     cells: cells.map((cell) => ({
       ...cell,
       lineTotal: null,
+      isSaved: false,
       isPriceStale: null,
       quantitySource: "manual" as const,
     })),

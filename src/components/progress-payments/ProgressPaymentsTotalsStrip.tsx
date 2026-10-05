@@ -1,3 +1,7 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { EMPLOYER_PAYMENT_HIDDEN_CATEGORIES, SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { cx } from "@/lib/cx";
 import { formatCompactCurrency, formatPercent } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -47,15 +51,23 @@ export interface ProgressPaymentsTotalsSubcontractor {
   /** Sözleşme detaylarının bir kısmı/tamamı hata verdi — toplam VE marj
    * GÜVENİLMEZ, ikisi de pending gösterilir (brief §Kısmi hata). */
   isPartial: boolean;
-  /** Şantiyeye süzülmüş taşeron hakedişlerinin brüt toplamı. */
-  grossTotal: string;
+  /** Şantiyeye süzülmüş taşeron hakedişlerinin brüt toplamı. `null` = bir kalem rol için gizli (IZN-F4b.2). */
+  grossTotal: string | null;
   /** Mockup satır 84 alt metni "12 taşeron". */
   distinctSubcontractorCount: number;
   /** "Onay Bekleyen" KPI'ına eklenecek taşeron payı. */
   pendingApprovalCount: number;
   /** `computeGrossMargin` çıktısı — `null` ise marj BASILMAZ (pending). */
   marginPct: Percent | null;
+  /**
+   * IZN-F4b.2 — marj/toplam `null` olmasının nedeni GİZLİ tutar mı (işveren ya da taşeron brüt toplamı `null`)?
+   * Gizliyse marj kartı "eksik veri" gerekçesi yerine "Bu bilgi rolünüz için gizli" ipucunu basar.
+   */
+  isMasked?: boolean;
 }
+
+/** IZN-F4b.2 — kartın bağlı olduğu gizli kategori kümesi (marj: iki küme birden). */
+type MaskedKind = "employer" | "subcontractor" | "margin";
 
 interface RealCard {
   label: string;
@@ -68,6 +80,8 @@ interface RealCard {
   subtitleTestId?: string;
   /** Mockup satır 83/86: taşeron toplamı kırmızı, kâr marjı yeşil basılır. */
   tone?: "danger" | "success";
+  /** IZN-F4b.2 — değer rol için gizli (`null`) → hangi kategori kümesiyle kilit ipucu basılır. */
+  masked?: MaskedKind;
   pendingModule?: undefined;
   isLoadingCard?: undefined;
 }
@@ -82,6 +96,8 @@ interface PendingCard {
    * metin — F-TH T5 kısmi hata durumunda "gelecek modül" metni yerine
    * "bazı sözleşme detayları yüklenemedi" gibi duruma özel bir ipucu için. */
   pendingTitle?: string;
+  /** IZN-F4b.2 — "—" nedeni rol için gizli tutar ise kilit ipucu. */
+  masked?: MaskedKind;
   isLoadingCard?: undefined;
 }
 interface LoadingKpiCard {
@@ -132,6 +148,7 @@ function taseronTotalCard(subcontractor?: ProgressPaymentsTotalsSubcontractor): 
     subtitle: `${subcontractor.distinctSubcontractorCount} taşeron`,
     subtitleTestId: "pp-kpi-subcontractor-subtitle",
     tone: "danger",
+    masked: subcontractor.grossTotal === null ? "subcontractor" : undefined,
   };
 }
 
@@ -140,6 +157,10 @@ function grossMarginCard(subcontractor?: ProgressPaymentsTotalsSubcontractor): T
   if (!subcontractor) return { label, pendingModule: "subcontracts" };
   if (subcontractor.isLoading) return { label, isLoadingCard: true };
   if (subcontractor.isPartial || subcontractor.marginPct === null) {
+    // 🔴 IZN-F4b.2: marj gizli toplamlardan hesaplanamıyorsa (kısmi hata YOKKEN) neden "gizli"dir.
+    if (!subcontractor.isPartial && subcontractor.isMasked === true) {
+      return { label, pendingModule: "subcontracts", pendingTitle: HIDDEN_FIELD_HINT, masked: "margin" };
+    }
     return {
       label,
       pendingModule: "subcontracts",
@@ -170,6 +191,7 @@ function cardsFrom(
       label: "Toplam İşveren Hakedişi",
       value: formatCompactCurrency(grossTotal),
       subtitle: paymentsSubtitle(items.length, summary),
+      masked: grossTotal === null ? "employer" : undefined,
     },
     taseronTotalCard(subcontractor),
     { label: "Onay Bekleyen", value: String(combinedPendingApproval) },
@@ -182,7 +204,15 @@ export function ProgressPaymentsTotalsStrip({
   summary,
   subcontractor,
 }: ProgressPaymentsTotalsStripProps) {
+  const isEmployerHidden = useCategoryHidden(EMPLOYER_PAYMENT_HIDDEN_CATEGORIES);
+  const isSubcontractorHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   if (!items) return null;
+  const isMaskedHidden = (kind: MaskedKind | undefined): boolean => {
+    if (kind === "employer") return isEmployerHidden;
+    if (kind === "subcontractor") return isSubcontractorHidden;
+    if (kind === "margin") return isEmployerHidden || isSubcontractorHidden;
+    return false;
+  };
 
   return (
     <div className="ppt" data-testid="pp-totals-strip">
@@ -200,6 +230,7 @@ export function ProgressPaymentsTotalsStrip({
               title={card.pendingTitle ?? pendingModuleLabel(card.pendingModule)}
             >
               —<span className="sr-only">{card.pendingTitle ?? pendingModuleLabel(card.pendingModule)}</span>
+              <MaskedMark isHidden={isMaskedHidden(card.masked)} values={card.masked ? [null] : []} />
             </div>
           ) : (
             <>
@@ -208,6 +239,7 @@ export function ProgressPaymentsTotalsStrip({
                 data-testid="pp-kpi-value"
               >
                 {card.value}
+                <MaskedMark isHidden={isMaskedHidden(card.masked)} values={card.masked ? [null] : []} />
               </div>
               {card.subtitle && (
                 <div className="ppt__subtitle" data-testid={card.subtitleTestId ?? "pp-kpi-subtitle"}>
