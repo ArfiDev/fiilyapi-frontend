@@ -123,29 +123,3 @@ export function useCreateInvoicePayment(
     },
   });
 }
-
-/**
- * `DELETE /payments/{payment_id}` — **YALNIZ `admin`** (şema notu: `full`
- * seviyesi 403 alır). Silme fatura durumunu YENİDEN TÜRETİR (`collected →
- * sent` düşebilir), bu yüzden detay da tazelenir.
- *
- * ⚠️ `GET /payments/{payment_id}` YOKTUR — bu kökte yalnız silme ucu vardır.
- */
-export function useDeleteInvoicePayment(
-  invoiceId: string,
-): UseMutationResult<void, Error, string> {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (paymentId) => {
-      unwrap(
-        await backendClient.DELETE("/payments/{payment_id}", {
-          params: { path: { payment_id: paymentId } },
-        }),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [INVOICE_PAYMENTS_QUERY_KEY, invoiceId] });
-      invalidateInvoiceScope(queryClient, invoiceId);
-    },
-  });
-}

@@ -411,7 +411,7 @@ const KASTEN_DISARIDA: Record<string, Muafiyet> = {
   "section-form-visual.spec.ts": { kadraj: 2, gerekce: ROUTE_GRAPH_CLEAN },
   "settings-visual.spec.ts": { kadraj: 8, gerekce: "OZEL: iki tarih yeri ULASILABILIR ama HICBIRI kadraja BASILMAZ. (a) `src/lib/settings/audit-query.ts` yalnizca ISTEK parametresi (`date_from`) uretir; ikiz onu YOK SAYAR ve satirlar sabittir, ekrandaki saat `occurred_at` fikstur alanindan gelir (`audit-format.ts`, kendi `new Date()`i yok). (b) Rol Yonetimi (IZN-F2) kart izgarasinda tarih yeri YOK: eski `Date.now()` 'Kopyala' anahtari `POST /roles/{id}/copy` ile kalkti" },
   "shell-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
-  "site-detail-visual.spec.ts": { kadraj: 2, gerekce: ROUTE_GRAPH_CLEAN },
+  "site-detail-visual.spec.ts": { kadraj: 3, gerekce: ROUTE_GRAPH_CLEAN },
   "site-form-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
   "site-planning-visual.spec.ts": { kadraj: 4, gerekce: "OLCULDU (ileri damga kadraj mutasyonu): damga 2031-06-15 yapildiginda dort karenin dordu de BAYT AYNI. URL `?week=` ile SABIT ve GECMIS bir haftayi pinler; `site-planning/week.ts:61 currentWeekStart()` yalniz parametre gecersizken devreye girer. KIRILGAN: pin kaldirilirsa ekran ICINDE BULUNULAN haftaya duser" },
   "site-progress-payments-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButton";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Alert } from "@/components/ui/alert/Alert";
 import { Badge } from "@/components/ui/badge/Badge";
@@ -96,6 +97,13 @@ export function ProgressPaymentDetailView({ paymentId }: ProgressPaymentDetailVi
             </Link>
           )}
           <ProgressPaymentStatusActions detail={detail} />
+          {/* SIL-F2.2 — yalnız Sistem Yöneticisi görür; silince işveren hakedişleri listesine döner. */}
+          <DeleteRecordButton
+            kind="progress_payment"
+            recordId={detail.id}
+            redirectTo={routes.progressPayments.list()}
+            className="btn btn--danger btn--md"
+          />
         </div>
       </div>
 

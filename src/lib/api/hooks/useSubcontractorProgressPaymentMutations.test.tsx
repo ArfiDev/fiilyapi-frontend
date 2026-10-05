@@ -7,7 +7,6 @@ import {
   useCreateSubcontractorProgressPayment,
   useUpdateSubcontractorProgressPayment,
   useReplaceSubcontractorProgressPaymentLines,
-  useDeleteSubcontractorProgressPayment,
   useSubmitSubcontractorProgressPayment,
   useApproveSubcontractorProgressPayment,
   useRejectSubcontractorProgressPayment,
@@ -140,35 +139,6 @@ describe("useReplaceSubcontractorProgressPaymentLines", () => {
       body: { lines: [{ contract_item_id: "sci-1", quantity: "10.000" }] },
     });
     expectStandardInvalidation();
-  });
-});
-
-describe("useDeleteSubcontractorProgressPayment", () => {
-  function noContentResponse() {
-    return { data: undefined, error: undefined, response: new Response(null, { status: 204 }) } as never;
-  }
-
-  it("başarıda liste + detay + özet sorgularını geçersiz kılar", async () => {
-    vi.mocked(backendClient.DELETE).mockResolvedValue(noContentResponse());
-
-    const { result } = renderHook(() => useDeleteSubcontractorProgressPayment(), { wrapper });
-    act(() => result.current.mutate(PAYMENT_ID));
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(backendClient.DELETE).toHaveBeenCalledWith("/subcontractor-progress-payments/{payment_id}", {
-      params: { path: { payment_id: PAYMENT_ID } },
-    });
-    expectStandardInvalidation();
-  });
-
-  it("404'te hiçbir sorgu geçersiz kılınmaz", async () => {
-    vi.mocked(backendClient.DELETE).mockResolvedValue(errorResponse(404, "kayıt bulunamadı"));
-
-    const { result } = renderHook(() => useDeleteSubcontractorProgressPayment(), { wrapper });
-    act(() => result.current.mutate(PAYMENT_ID));
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });
 

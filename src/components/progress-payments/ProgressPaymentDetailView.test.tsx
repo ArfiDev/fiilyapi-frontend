@@ -23,6 +23,11 @@ vi.mock("@/lib/api/hooks/useProgressPayments", async (importOriginal) => ({
 // (`{ me: null }`) kullanilir, bu da bilinmezlik kurali geregi HER ZAMAN
 // gorunur demektir (asagidaki mevcut testlerin varsaydigi davranis).
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
+// SIL-F2.2 · yalnız Sistem Yöneticisi için çizilen "Sil" düğmesi `useRouter` kullanır.
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 const BASE_ME = {
   id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -409,5 +414,35 @@ describe("ProgressPaymentDetailView", () => {
         expect(screen.queryByRole("link", { name: "Düzenle" })).not.toBeInTheDocument();
       },
     );
+  });
+});
+
+// SIL-F2.2 · "Sil" düğmesi YALNIZ Sistem Yöneticisi (fail-closed).
+describe("ProgressPaymentDetailView — Sil düğmesi (SIL-F2.2)", () => {
+  function mockAdmin(flag: boolean | undefined) {
+    const me = { ...BASE_ME, ...(flag === undefined ? {} : { is_system_admin: flag }) } as MeResponse;
+    vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
+    mockDetailQuery({ data: baseDetail });
+    mockSummaryQuery({ data: baseSummary, isSuccess: true });
+  }
+
+  it("is_system_admin=true iken Sil düğmesi görünür", () => {
+    mockAdmin(true);
+    renderDetail();
+    expect(screen.getByRole("button", { name: "Sil" })).toBeInTheDocument();
+  });
+
+  it.each([false, undefined])("is_system_admin=%s iken Sil düğmesi YOKTUR", (flag) => {
+    mockAdmin(flag);
+    renderDetail();
+    expect(screen.queryByRole("button", { name: "Sil" })).not.toBeInTheDocument();
+  });
+
+  it("oturum bilinmezken (me=null) Sil düğmesi YOKTUR (fail-closed)", () => {
+    vi.mocked(useSession).mockReturnValue({ me: null, isLoading: true });
+    mockDetailQuery({ data: baseDetail });
+    mockSummaryQuery({ data: baseSummary, isSuccess: true });
+    renderDetail();
+    expect(screen.queryByRole("button", { name: "Sil" })).not.toBeInTheDocument();
   });
 });

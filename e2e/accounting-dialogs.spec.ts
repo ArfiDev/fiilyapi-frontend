@@ -203,6 +203,10 @@ test.describe("yevmiye fişi diyaloğu — yazma akışları (HAZİRAN adası)",
 
     await expect(page.getByTestId("mu-draft-row-je-2606-mut-delete")).toBeVisible();
     await page.getByTestId("mu-draft-delete-je-2606-mut-delete").click();
+    // SIL-F2.2 — silme ortak onay penceresinden (önizleme + token) geçer.
+    const dialog = page.getByRole("dialog", { name: "Muhasebe fişi silinsin mi?" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Sil", exact: true }).click();
     await expect(page.getByTestId("mu-draft-row-je-2606-mut-delete")).toHaveCount(0);
   });
 

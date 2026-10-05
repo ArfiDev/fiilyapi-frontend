@@ -630,8 +630,8 @@ export interface paths {
          *     ONIZLEME ZORUNLU.
          *
          *     Once `GET /admin/silme/block/{id}/onizleme`, onay, sonra bu uc `preview_token` ile: eksikse 428
-         *     `preview_required`; agac degistiyse 409 `preview_stale`; mali kayit varsa 409
-         *     `financial_pending`. Yetki kapisi her seyden ONCE calisir.
+         *     `preview_required`; agac degistiyse 409 `preview_stale`. Mali kayit silmeyi ENGELLEMEZ.
+         *     Yetki kapisi her seyden ONCE calisir.
          */
         delete: operations["delete_block_endpoint_blocks__block_id__delete"];
         options?: never;
@@ -2267,10 +2267,14 @@ export interface paths {
         post?: never;
         /**
          * Delete Financial Instrument Endpoint
-         * @description Çek/senet kaydını siler. YALNIZ Sistem Yöneticisi.
+         * @description Çek/senedi bağlı kayıtlarıyla birlikte siler. Yalnız Sistem Yöneticisi.
          *
-         *     Yalnız portföydeki kayıt silinir; terminal durumdaki ya da bağlı ödemesi olan evrak **409**
-         *     (iş kuralı). Tahsil edilmiş bir çekin kaydı hiçbir koşulda silinemez.
+         *     ÖNİZLEME ZORUNLU.
+         *     Durumdan bağımsız (tahsil edilmiş çek de silinir). Çekin muhasebe fişi ve stornosu ile çeke
+         *     bağlı ödemeler (onların fişleri) birlikte gider (K2; kapalı dönem durdurmaz). Ödemelerin
+         *     faturalarının durumu kalan ödemelerden yeniden türetilir. Önce
+         *     `GET /admin/silme/financial_instrument/{id}/onizleme`, sonra bu uç `preview_token` ile:
+         *     eksikse 428 `preview_required`; ağaç değiştiyse 409 `preview_stale`. Yanıt `204`.
          */
         delete: operations["delete_financial_instrument_endpoint_financial_instruments__instrument_id__delete"];
         options?: never;
@@ -2539,10 +2543,13 @@ export interface paths {
         post?: never;
         /**
          * Delete Invoice Endpoint
-         * @description Faturayı siler. YALNIZ Sistem Yöneticisi.
+         * @description Faturayı bağlı kayıtlarıyla birlikte siler. Yalnız Sistem Yöneticisi.
          *
-         *     Yalnız `draft` fatura silinir; başka durum **409** (iş kuralı). Kalemler birlikte gider.
-         *     Yanıt gövdesizdir.
+         *     ÖNİZLEME ZORUNLU.
+         *     Durumdan bağımsız (taslak olmayan fatura da silinir). Kalemleri, ödemeleri, faturanın ve
+         *     ödemelerinin muhasebe fişleri ile stornoları birlikte gider (K2; kapalı dönem durdurmaz).
+         *     Önce `GET /admin/silme/invoice/{id}/onizleme`, sonra bu uç `preview_token` ile: eksikse 428
+         *     `preview_required`; ağaç değiştiyse 409 `preview_stale`. Yanıt `204`, gövdesiz.
          */
         delete: operations["delete_invoice_endpoint_invoices__invoice_id__delete"];
         options?: never;
@@ -2864,11 +2871,14 @@ export interface paths {
         post?: never;
         /**
          * Delete Journal Entry Endpoint
-         * @description Yevmiye fişini siler. YALNIZ Sistem Yöneticisi.
+         * @description Yevmiye fişini stornosu ve satırlarıyla birlikte siler. Yalnız Sistem Yöneticisi.
          *
-         *     Yalnız `draft` fiş silinir; `posted`/`reversed` fiş **409**. Kapalı muhasebe döneminde de
-         *     **409** (engel yetki değil DÖNEMDİR: silinebilseydi kapalı dönemin mizanı geçmişe dönük
-         *     değişirdi). Bacaklar fişle birlikte silinir. Yanıt gövdesizdir.
+         *     ÖNİZLEME ZORUNLU.
+         *     Durumdan bağımsız (`posted`/`reversed` fiş de silinir) ve KAPALI DÖNEM durdurmaz: dönem
+         *     kilidi bu yolda atlanır, mizan geriye dönük değişir; denetim satırı bunu ayrıca yazar (K2).
+         *     Fiş ile stornosu çifti birlikte gider. Fişi doğuran belge (fatura, ödeme…) SİLİNMEZ.
+         *     Önce `GET /admin/silme/journal_entry/{id}/onizleme`, sonra bu uç `preview_token` ile:
+         *     eksikse 428 `preview_required`; ağaç değiştiyse 409 `preview_stale`. Yanıt `204`.
          */
         delete: operations["delete_journal_entry_endpoint_journal_entries__entry_id__delete"];
         options?: never;
@@ -3816,11 +3826,14 @@ export interface paths {
         post?: never;
         /**
          * Delete Payment Endpoint
-         * @description Ödeme/tahsilat kaydını siler. YALNIZ Sistem Yöneticisi.
+         * @description Ödeme/tahsilat kaydını bağlı kayıtlarıyla birlikte siler. Yalnız Sistem Yöneticisi.
          *
-         *     Yanlış tahsilat geri alınabilmelidir; ama bağlı çek/senet portföyden çıkmışsa ya da ödeme
-         *     ödenmiş hakedişe aitse **409** (iş kuralı). Silme AYNI kilidi alır (K7) ve fatura durumunu
-         *     YENİDEN TÜRETİR.
+         *     ÖNİZLEME ZORUNLU.
+         *     Ödemenin muhasebe fişi ve stornosu birlikte silinir (yeni storno YAZILMAZ; kapalı dönem
+         *     durdurmaz). Bağlı çek/senet portföy dışıysa o da fişiyle silinir; portföydeki çek aynen kalır.
+         *     Faturanın durumu kalan ödemelerden yeniden türetilir. Önce
+         *     `GET /admin/silme/payment/{id}/onizleme`, sonra bu uç `preview_token` ile: eksikse 428
+         *     `preview_required`; ağaç değiştiyse 409 `preview_stale`. Yanıt `204`.
          */
         delete: operations["delete_payment_endpoint_payments__payment_id__delete"];
         options?: never;
@@ -4505,11 +4518,15 @@ export interface paths {
         post?: never;
         /**
          * Delete Progress Payment Endpoint
-         * @description İşveren hakedişini siler. YALNIZ Sistem Yöneticisi.
+         * @description İşveren hakedişini bağlı kayıtlarıyla birlikte siler. Yalnız Sistem Yöneticisi.
          *
-         *     `approved`/`paid` hakediş **409** (iş kuralı, Sistem Yöneticisi'ni de durdurur): önce
-         *     `unapprove` ile geri çekilir. Taslağı açan kişi kendi taslağını da silemez. Satırlar birlikte
-         *     gider. Disiplin kısıtı DELETE'te uygulanmaz.
+         *     ÖNİZLEME ZORUNLU.
+         *     Durumdan bağımsız: onaylı/ödenmiş hakediş de silinir. Satırları, onay zinciri, hakediş
+         *     faturası ve ödemeleri, onların muhasebe fişleri ve stornoları birlikte gider (K2; kapalı
+         *     dönem durdurmaz, mizan geriye dönük değişir). Önce
+         *     `GET /admin/silme/progress_payment/{id}/onizleme`, sonra bu uç `preview_token` ile: eksikse
+         *     428 `preview_required`; ağaç değiştiyse 409 `preview_stale`.
+         *     Disiplin kısıtı DELETE'te uygulanmaz. Yanıt `204 No Content`.
          */
         delete: operations["delete_progress_payment_endpoint_progress_payments__payment_id__delete"];
         options?: never;
@@ -6274,7 +6291,7 @@ export interface paths {
          *     Bagi kopan kayitlar (personel, puantaj, satinalma talebi…) SILINMEZ, yalniz bolum bagi
          *     kopar; onizlemede `detached` olarak gorunur. Once `GET /admin/silme/section/{id}/onizleme`,
          *     sonra bu uc `preview_token` ile: eksikse 428 `preview_required`; agac degistiyse 409
-         *     `preview_stale`; mali kayit varsa 409 `financial_pending`. Kalan bolumlerin `sort_order`
+         *     `preview_stale`. Kalan bolumlerin `sort_order`
          *     degerleri yeniden numaralanmaz. Yanit `204 No Content`, govdesiz.
          */
         delete: operations["delete_section_endpoint_sections__section_id__delete"];
@@ -6399,8 +6416,8 @@ export interface paths {
          *
          *     Bolum, poz, blok, unite, puantaj, gunluk, belge, plan, sozlesme ve diger bagli kayitlar
          *     birlikte silinir. Once `GET /admin/silme/site/{id}/onizleme`, onay, sonra bu uc `preview_token`
-         *     ile cagrilir: eksikse 428 `preview_required`; agac degistiyse 409 `preview_stale`; agacta
-         *     mali kayit varsa 409 `financial_pending` (mali silme sonraki surumde acilacak).
+         *     ile cagrilir: eksikse 428 `preview_required`; agac degistiyse 409 `preview_stale`.
+         *     Mali kayitlar (hakedis, fis, puantaj-bordro…) silmeyi ENGELLEMEZ, birlikte silinir.
          *
          *     Gorunmeyen ve var olmayan santiye ayni yaniti verir. Yanit `204 No Content`, govdesiz. Denetim
          *     satirina silinen ve bagi kopan kayitlarin tam dokumu yazilir.
@@ -7912,10 +7929,13 @@ export interface paths {
         post?: never;
         /**
          * Delete Subcontractor Progress Payment Endpoint
-         * @description Taşeron hakedişini siler. YALNIZ Sistem Yöneticisi.
+         * @description Taşeron hakedişini bağlı kayıtlarıyla birlikte siler. Yalnız Sistem Yöneticisi.
          *
-         *     `approved`/`paid` hakediş **409** (iş kuralı, Sistem Yöneticisi'ni de durdurur). Taslağı açan
-         *     kişi kendi taslağını da silemez. Disiplin kısıtı DELETE'te uygulanmaz.
+         *     ÖNİZLEME ZORUNLU.
+         *     Durumdan bağımsız: onaylı/ödenmiş hakediş de silinir. Satırlar, onay zinciri, hakediş faturası
+         *     ve ödemeleri, onların fişleri ve stornoları birlikte gider (K2; kapalı dönem durdurmaz). Önce
+         *     `GET /admin/silme/subcontractor_progress_payment/{id}/onizleme`, sonra bu uç `preview_token`
+         *     ile: eksikse 428 `preview_required`; ağaç değiştiyse 409 `preview_stale`. Yanıt `204`.
          */
         delete: operations["delete_subcontractor_progress_payment_endpoint_subcontractor_progress_payments__payment_id__delete"];
         options?: never;
@@ -8394,8 +8414,8 @@ export interface paths {
          *     ONIZLEME ZORUNLU.
          *
          *     Once `GET /admin/silme/unit/{id}/onizleme`, onay, sonra bu uc `preview_token` ile: eksikse 428
-         *     `preview_required`; agac degistiyse 409 `preview_stale`; mali kayit (kaporali rezervasyon,
-         *     tahsilatli taksit, sozlesmeli satis…) varsa 409 `financial_pending`.
+         *     `preview_required`; agac degistiyse 409 `preview_stale`. Mali kayit (kaporali rezervasyon,
+         *     tahsilatli taksit, sozlesmeli satis…) silmeyi ENGELLEMEZ, birlikte silinir.
          */
         delete: operations["delete_unit_endpoint_units__unit_id__delete"];
         options?: never;
@@ -11437,12 +11457,33 @@ export interface components {
          */
         DeedCondition: "full_payment" | "after_down_payment" | "at_contract";
         /**
+         * DeleteClosedPayrollPeriod
+         * @description Silinecek puantajın düştüğü, bordrosu KAPANMIŞ ay (bordro yerinde kalır).
+         */
+        DeleteClosedPayrollPeriod: {
+            /** Month */
+            month: number;
+            /**
+             * Status
+             * @description `pending_approval` | `approved` | `paid`.
+             */
+            status: string;
+            /** Year */
+            year: number;
+        };
+        /**
          * DeleteDetachedGroup
          * @description SilinMEYEN ama köke bağı KOPACAK kayıtların bir türü (SET NULL).
          */
         DeleteDetachedGroup: {
             /** Count */
             count: number;
+            /**
+             * Is Financial
+             * @description Bağı kopan kayıt MALİ bir kayıttır (ör. şantiyesi silinen fatura): kayıt ve fişi KALIR, yalnız şantiye bağı kopar. Onay penceresi bunu açıkça yazar.
+             * @default false
+             */
+            is_financial: boolean;
             /** Label */
             label: string;
             /** Table */
@@ -11451,25 +11492,66 @@ export interface components {
         /**
          * DeleteErrorResponse
          * @description 409 ve 428 gövdesi. `code` yalnız silme önkoşullarında dolar: 428 `preview_required`,
-         *     409 `preview_stale` (önizleme eskidi) ya da `financial_pending` (ağaçta mali kayıt var; mali
-         *     silme sonraki sürümde açılacak). Başka 409'lar (ör. beklenmeyen veri bütünlüğü hatası)
-         *     yalnız `detail` taşır, `code` boştur.
+         *     409 `preview_stale` (önizleme eskidi). Başka 409'lar (ör. beklenmeyen veri bütünlüğü hatası)
+         *     yalnız `detail` taşır, `code` boştur. (`financial_pending` SIL-B2'de KALDIRILDI: mali kayıt
+         *     silmeyi artık engellemez.)
          */
         DeleteErrorResponse: {
             /** Code */
-            code?: ("preview_required" | "preview_stale" | "financial_pending") | null;
+            code?: ("preview_required" | "preview_stale") | null;
             /** Detail */
             detail: string;
         };
         /**
+         * DeleteJournalEntry
+         * @description Ağaçta silinecek bir muhasebe fişi (önizleme dökümü; aynı liste denetim satırına yazılır).
+         */
+        DeleteJournalEntry: {
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /**
+             * Entry No
+             * @description Fiş numarası (ör. `YEV-2026-0214`).
+             */
+            entry_no: string;
+            /**
+             * Is Reversal
+             * @description Bu fiş bir STORNO fişidir (`reversal_of_id` dolu).
+             */
+            is_reversal: boolean;
+            /**
+             * Period Closed
+             * @description Fişin muhasebe dönemi KAPALI: silinince dönem kilidi atlanır, mizan geriye dönük değişir (K2). Denetim satırına ayrıca yazılır.
+             */
+            period_closed: boolean;
+            /**
+             * Source Type
+             * @description Fişi doğuran belge ailesi; elle fişte boş.
+             */
+            source_type: string | null;
+            /**
+             * Status
+             * @description `draft` | `posted` | `reversed`.
+             */
+            status: string;
+            /**
+             * Total
+             * @description Fişin borç toplamı (= alacak toplamı).
+             */
+            total: string;
+        };
+        /**
          * DeleteKind
-         * @description Önizleme/silme motorunun tanıdığı kayıt türleri. Her dilim yeni üye ekler (SIL-B2…).
+         * @description Önizleme/silme motorunun tanıdığı kayıt türleri. Her dilim yeni üye ekler.
          *
          *     Üye adı = URL parçası. Motorun kayıt defteri (`core/silme`) ile üye kümesi birebir eşit
          *     olmak ZORUNDADIR; `tests/modules/silme/test_silme_tur_bekcisi.py` çakar.
          * @enum {string}
          */
-        DeleteKind: "site" | "section" | "block" | "unit";
+        DeleteKind: "site" | "section" | "block" | "unit" | "progress_payment" | "subcontractor_progress_payment" | "invoice" | "payment" | "journal_entry" | "financial_instrument";
         /**
          * DeletePreviewGroup
          * @description Silinecek bağlı kayıtların bir türü.
@@ -11479,7 +11561,7 @@ export interface components {
             count: number;
             /**
              * Is Financial
-             * @description Mali kayıt (hakediş, fatura, ödeme, muhasebe fişi): onay penceresi vurgular.
+             * @description Mali kayıt (hakediş, fatura, ödeme, muhasebe fişi): onay penceresi vurgular. Mali kayıt silmeyi ENGELLEMEZ (SIL-B2); yalnız kullanıcıya açıkça gösterilir.
              */
             is_financial: boolean;
             /**
@@ -11502,6 +11584,26 @@ export interface components {
         /** DeletePreviewResponse */
         DeletePreviewResponse: {
             /**
+             * Closed Payroll Message
+             * @description Hazır uyarı: `Bordrosu kapanmış ayda N puantaj satırı siliniyor; bordro değişmez`. Sayı 0 ise boş.
+             */
+            closed_payroll_message: string | null;
+            /**
+             * Closed Payroll Periods
+             * @description Bu puantajların düştüğü kapanmış bordro dönemleri (yıl, ay artan).
+             */
+            closed_payroll_periods: components["schemas"]["DeleteClosedPayrollPeriod"][];
+            /**
+             * Closed Payroll Timesheet Count
+             * @description Bordrosu KAPANMIŞ aya düşen silinecek puantaj satırı sayısı. Yalnız puantaj gider; bordro dönemi, satırları ve fişi yerinde kalır, mizan değişmez.
+             */
+            closed_payroll_timesheet_count: number;
+            /**
+             * Closed Period Entry Count
+             * @description Bu fişlerden kaçının muhasebe dönemi KAPALI (dönem kilidi atlanacak).
+             */
+            closed_period_entry_count: number;
+            /**
              * Dependent Count
              * @description Kök HARİÇ, birlikte silinecek toplam kayıt sayısı (`groups` toplamı).
              */
@@ -11512,6 +11614,11 @@ export interface components {
              */
             detached: components["schemas"]["DeleteDetachedGroup"][];
             /**
+             * Documents Left Without Entry
+             * @description Fişi silinecek ama kendisi KALACAK kaynak belgeler (yalnız `journal_entry` kökünde dolar): belge–fiş tutarsızlığı bilinçlidir ve burada açıkça gösterilir.
+             */
+            documents_left_without_entry: components["schemas"]["DeleteSourceWithoutEntry"][];
+            /**
              * Groups
              * @description Birlikte silinecek kayıtlar: `count` azalan, sonra `label`. Boş = bağlı yok.
              */
@@ -11521,6 +11628,16 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Journal Entries
+             * @description Silinecek fişlerin dökümü: fiş no artan, en çok 200 satır. Kalan sayı `journal_entry_count`tan okunur; denetim satırı TAM listeyi taşır.
+             */
+            journal_entries: components["schemas"]["DeleteJournalEntry"][];
+            /**
+             * Journal Entry Count
+             * @description Ağaçtaki TÜM muhasebe fişi sayısı (kök fiş dahil; storno fişleri dahil).
+             */
+            journal_entry_count: number;
             kind: components["schemas"]["DeleteKind"];
             /**
              * Kind Label
@@ -11545,6 +11662,29 @@ export interface components {
          * @enum {string}
          */
         DeleteRelation: "cascade" | "restrict" | "linked";
+        /**
+         * DeleteSourceWithoutEntry
+         * @description Fişi silinecek ama KENDİSİ silinmeyecek kaynak belge (yalnız kök fiş silmede).
+         */
+        DeleteSourceWithoutEntry: {
+            /**
+             * Label
+             * @description Türkçe tür adı (ör. `Fatura`).
+             */
+            label: string;
+            /**
+             * Message
+             * @description Hazır uyarı metni: `Kaynak belge fişsiz kalacak: Fatura F-1`.
+             */
+            message: string;
+            /**
+             * Ref
+             * @description Belgenin görünen adı (ör. fatura no); bulunamazsa boş.
+             */
+            ref: string;
+            /** Table */
+            table: string;
+        };
         /**
          * DiaryStatus
          * @description Günlük kaydın durumu (spec §2). İKİ durum: hakediş evrakının dört durumlu
@@ -26893,7 +27033,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -28015,7 +28155,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -32667,7 +32807,10 @@ export interface operations {
     };
     delete_financial_instrument_endpoint_financial_instruments__instrument_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 instrument_id: string;
@@ -32697,12 +32840,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yalnızca portföydeki ve ödemesiz çek/senet silinebilir */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -32711,6 +32856,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -33165,7 +33319,10 @@ export interface operations {
     };
     delete_invoice_endpoint_invoices__invoice_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 invoice_id: string;
@@ -33195,12 +33352,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yalnızca taslak fatura silinebilir */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -33209,6 +33368,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -33857,7 +34025,10 @@ export interface operations {
     };
     delete_journal_entry_endpoint_journal_entries__entry_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 entry_id: string;
@@ -33887,12 +34058,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Yalnızca taslak fiş silinebilir; kapalı dönemdeki fiş de silinemez */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -33901,6 +34074,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -36364,7 +36546,10 @@ export interface operations {
     };
     delete_payment_endpoint_payments__payment_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 payment_id: string;
@@ -36394,12 +36579,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Portföy dışı çek/senede ya da ödenmiş hakedişe bağlı ödeme silinemez */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -36408,6 +36595,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -37865,7 +38061,10 @@ export interface operations {
     };
     delete_progress_payment_endpoint_progress_payments__payment_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 payment_id: string;
@@ -37888,19 +38087,21 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Kayıt bulunamadı */
+            /** @description Hakediş bulunamadı */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Onaylanmış veya ödenmiş hakediş silinemez */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -37909,6 +38110,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -42423,7 +42633,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -42839,7 +43049,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -46605,7 +46815,10 @@ export interface operations {
     };
     delete_subcontractor_progress_payment_endpoint_subcontractor_progress_payments__payment_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `GET /admin/silme/{kind}/{id}/onizleme` yanıtındaki `preview_token`, AYNEN. Eksikse 428 `preview_required`; silme anındaki ağaçla uyuşmazsa 409 `preview_stale`. */
+                preview_token?: string | null;
+            };
             header?: never;
             path: {
                 payment_id: string;
@@ -46628,19 +46841,21 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Kayıt bulunamadı */
+            /** @description Hakediş bulunamadı */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Onaylanmış veya ödenmiş hakediş silinemez */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -46649,6 +46864,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `code=preview_required`: `Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın` */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteErrorResponse"];
                 };
             };
         };
@@ -47811,7 +48035,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin`. `code=financial_pending`: `Bu kaydın bağlı mali kayıtları var; mali kayıt silme bir sonraki sürümde açılacak` (ağaçta `is_financial` grup var; HİÇBİR ŞEY silinmez). */
+            /** @description `code=preview_stale`: `Silinecek kayıtlar değişti; önizlemeyi yenileyin` (HİÇBİR ŞEY silinmez). */
             409: {
                 headers: {
                     [name: string]: unknown;

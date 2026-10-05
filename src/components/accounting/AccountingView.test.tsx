@@ -13,7 +13,6 @@ import type {
 } from "@/lib/api/hooks/useJournalEntries";
 import { useJournalEntries } from "@/lib/api/hooks/useJournalEntries";
 import {
-  useDeleteJournalEntry,
   usePostJournalEntry,
   useReverseJournalEntry,
 } from "@/lib/api/hooks/useJournalEntryMutations";
@@ -57,7 +56,15 @@ vi.mock("@/lib/api/hooks/useChartOfAccounts", async (importOriginal) => ({
 vi.mock("@/lib/api/hooks/useJournalEntryMutations", () => ({
   usePostJournalEntry: vi.fn(),
   useReverseJournalEntry: vi.fn(),
-  useDeleteJournalEntry: vi.fn(),
+}));
+vi.mock("@/components/delete-confirm/DeleteRecordDialog", () => ({
+  DeleteRecordDialog: ({ kind, recordId, onClose }: { kind: string; recordId: string; onClose: () => void }) => (
+    <div data-testid="delete-dialog-stub" data-kind={kind} data-record-id={recordId}>
+      <button type="button" onClick={onClose}>
+        stub-kapat
+      </button>
+    </div>
+  ),
 }));
 vi.mock("@/lib/api/hooks/useJournalEntry", () => ({ useJournalEntry: vi.fn() }));
 vi.mock("@/lib/api/hooks/useJournalEntryFormMutations", () => ({
@@ -204,7 +211,6 @@ function queryError<T>(error: Error): UseQueryResult<T, Error> {
 const mutateSpies = {
   post: vi.fn(),
   reverse: vi.fn(),
-  remove: vi.fn(),
 };
 
 /** T4 diyaloğu `mutateAsync` kullanır (düzenlemede iki adımlı yazma sırası var). */
@@ -348,9 +354,6 @@ beforeEach(() => {
   vi.mocked(useVatReturn).mockReturnValue(queryOk(VAT));
   vi.mocked(usePostJournalEntry).mockReturnValue(mutationStub(mutateSpies.post));
   vi.mocked(useReverseJournalEntry).mockReturnValue(mutationStub(mutateSpies.reverse));
-  vi.mocked(useDeleteJournalEntry).mockReturnValue(
-    mutationStub(mutateSpies.remove) as unknown as UseMutationResult<void, Error, string>,
-  );
   formSpies.create.mockResolvedValue(undefined);
   formSpies.update.mockResolvedValue(undefined);
   formSpies.replaceLines.mockResolvedValue(undefined);
@@ -614,12 +617,21 @@ describe("Taslak Fişler paneli (onaylı sapma adayı)", () => {
     expect(mutateSpies.post).toHaveBeenCalledWith("entry-draft", expect.anything());
   });
 
-  it("'Sil' mutation'i FIS KIMLIGIYLE cagirir", async () => {
+  // SIL-F2.2 · taslak fiş silme ARTIK doğrudan DELETE atmaz (sunucu preview_token ister, yoksa 428):
+  // satır "Sil"i ortak silme penceresini FİŞ KİMLİĞİYLE açar.
+  it("'Sil' ortak silme penceresini FIS KIMLIGIYLE acar (dogrudan DELETE YOK)", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<AccountingView />);
+    expect(screen.queryByTestId("delete-dialog-stub")).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId("mu-draft-delete-entry-draft"));
-    expect(mutateSpies.remove).toHaveBeenCalledWith("entry-draft", expect.anything());
+
+    const dialog = screen.getByTestId("delete-dialog-stub");
+    expect(dialog).toHaveAttribute("data-kind", "journal_entry");
+    expect(dialog).toHaveAttribute("data-record-id", "entry-draft");
+
+    await user.click(screen.getByRole("button", { name: "stub-kapat" }));
+    expect(screen.queryByTestId("delete-dialog-stub")).not.toBeInTheDocument();
   });
 
   /**

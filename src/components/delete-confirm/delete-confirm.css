@@ -78,3 +78,29 @@
   font-weight: var(--weight-semibold);
   color: var(--color-danger-strong);
 }
+
+/* SIL-F2.2 — mali aileler: fiş listesi + uyarı bantları. */
+.delete-confirm__entries {
+  margin-top: var(--space-4);
+}
+.delete-confirm__entries-summary {
+  cursor: pointer;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+.delete-confirm__entries-warning {
+  margin: var(--space-2) 0;
+  font-size: var(--text-small);
+  color: var(--color-warning-strong);
+}
+.delete-confirm__entries .delete-confirm__table {
+  margin-top: var(--space-2);
+}
+.delete-confirm__plain-list {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+}
+.delete-confirm__alert-text {
+  margin: 0;
+}

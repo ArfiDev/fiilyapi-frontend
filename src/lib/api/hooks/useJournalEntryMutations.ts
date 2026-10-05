@@ -61,22 +61,3 @@ export function useReverseJournalEntry(): UseMutationResult<
     onSuccess: () => invalidateAccountingScope(queryClient),
   });
 }
-
-/**
- * `DELETE /journal-entries/{id}` — **204**, yalnız `draft` fişte anlamlıdır
- * (aksi **409**). Ekran düğmeyi zaten yalnız `draft` satırda basar; hook
- * matrisi İKİNCİ KEZ doğrulamaz — tek sahibi sunucudur.
- */
-export function useDeleteJournalEntry(): UseMutationResult<void, Error, string> {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (entryId) => {
-      unwrap(
-        await backendClient.DELETE("/journal-entries/{entry_id}", {
-          params: { path: { entry_id: entryId } },
-        }),
-      );
-    },
-    onSuccess: () => invalidateAccountingScope(queryClient),
-  });
-}

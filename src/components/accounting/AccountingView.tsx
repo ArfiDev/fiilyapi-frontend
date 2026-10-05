@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { DeleteRecordDialog } from "@/components/delete-confirm/DeleteRecordDialog";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button, Select } from "@/components/ui";
 import { downloadJournalExport } from "@/lib/api/accounting-export-client";
@@ -15,7 +16,6 @@ import {
   useJournalEntries,
 } from "@/lib/api/hooks/useJournalEntries";
 import {
-  useDeleteJournalEntry,
   usePostJournalEntry,
   useReverseJournalEntry,
 } from "@/lib/api/hooks/useJournalEntryMutations";
@@ -86,6 +86,8 @@ export function AccountingView() {
   const [entryDialog, setEntryDialog] = useState<JournalEntryDialogState | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyEntryId, setBusyEntryId] = useState<string | null>(null);
+  // SIL-F2.2 · fiş silme ortak onay penceresinden (önizleme + token) geçer.
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -141,7 +143,6 @@ export function AccountingView() {
 
   const postMutation = usePostJournalEntry();
   const reverseMutation = useReverseJournalEntry();
-  const deleteMutation = useDeleteJournalEntry();
 
   if (
     !canViewAccounting ||
@@ -397,8 +398,16 @@ export function AccountingView() {
         onReverse={(entryId) =>
           runEntryAction(entryId, reverseMutation.mutate, "Storno fişi oluşturulamadı.")
         }
-        onDelete={(entryId) => runEntryAction(entryId, deleteMutation.mutate, "Fiş silinemedi.")}
+        onDelete={(entryId) => setDeletingEntryId(entryId)}
       />
+
+      {deletingEntryId !== null && (
+        <DeleteRecordDialog
+          kind="journal_entry"
+          recordId={deletingEntryId}
+          onClose={() => setDeletingEntryId(null)}
+        />
+      )}
 
       {entryDialog !== null && (
         <JournalEntryFormModal
