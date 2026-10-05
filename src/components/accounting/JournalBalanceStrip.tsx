@@ -2,6 +2,9 @@
 
 import { AlertIcon, CheckCircleIcon } from "@/components/ui/icons";
 import { cx } from "@/lib/cx";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount } from "@/lib/format";
 
 import { balanceNarration, type JournalTotals } from "./journal-entry-form";
@@ -30,14 +33,21 @@ import { balanceNarration, type JournalTotals } from "./journal-entry-form";
  * DENGELİYKEN nötr koyudur — renk burada dekorasyon değil DURUM taşır.
  */
 export function JournalBalanceStrip({ totals }: { totals: JournalTotals }) {
-  const narration = balanceNarration(totals.isBalanced);
-  const StateIcon = totals.isBalanced ? CheckCircleIcon : AlertIcon;
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
+  // IZN-F4b.2 — gizli bacak varsa denge DOĞRULANAMAZ: nötr "doğrulanamıyor", "dengede değil" DEĞİL.
+  const narration = totals.isVerifiable
+    ? balanceNarration(totals.isBalanced)
+    : { title: "Denge doğrulanamıyor", detail: "Bazı satır tutarları rolünüz için gizli" };
+  const StateIcon = totals.isVerifiable && totals.isBalanced ? CheckCircleIcon : AlertIcon;
   const valueTone = (side: "debit" | "credit") =>
     totals.isBalanced ? "mu-balance__value--neutral" : `mu-amount--${side}`;
 
   return (
     <div
-      className={cx("mu-balance", totals.isBalanced ? "mu-balance--ok" : "mu-balance--off")}
+      className={cx(
+        "mu-balance",
+        totals.isVerifiable && (totals.isBalanced ? "mu-balance--ok" : "mu-balance--off"),
+      )}
       data-testid="mu-balance-strip"
     >
       {/* `M:197-203` — ikon + iki satırlık anlatı, ızgaranın esneyen ilk hücresi. */}
@@ -59,6 +69,7 @@ export function JournalBalanceStrip({ totals }: { totals: JournalTotals }) {
           data-testid="mu-balance-debit"
         >
           {formatAmount(totals.totalDebit)}
+          <MaskedMark isHidden={isHidden} values={[totals.totalDebit]} />
         </span>
       </div>
       <div className="mu-balance__cell">
@@ -68,6 +79,7 @@ export function JournalBalanceStrip({ totals }: { totals: JournalTotals }) {
           data-testid="mu-balance-credit"
         >
           {formatAmount(totals.totalCredit)}
+          <MaskedMark isHidden={isHidden} values={[totals.totalCredit]} />
         </span>
       </div>
       {/* `M:212-215` / `M:240-243` — Fark VURGULU kutudadır; ızgaranın öteki

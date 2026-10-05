@@ -6,6 +6,9 @@ import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButt
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Alert } from "@/components/ui/alert/Alert";
 import { Badge } from "@/components/ui/badge/Badge";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { Button } from "@/components/ui";
 import {
   useSubcontractorContract,
@@ -53,6 +56,7 @@ export function SubcontractorProgressPaymentDetailView({
   paymentId,
 }: SubcontractorProgressPaymentDetailViewProps) {
   const detailQuery = useSubcontractorProgressPayment(paymentId);
+  const isAmountHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   const detail = detailQuery.data;
   // Şantiye adı yalnız sözleşme üzerinden gelir (`SubcontractorProgressPayment
   // Detail` site_id/site_name TAŞIMAZ) — `SubcontractorProgressPaymentForm`
@@ -144,7 +148,11 @@ export function SubcontractorProgressPaymentDetailView({
       )}
 
       <div className="pp-detail__kpi-strip">
-        <KpiCard label="Bu Hakediş" value={formatCurrencyPrecise(detail.calculation.gross)} />
+        <KpiCard
+          label="Bu Hakediş"
+          value={formatCurrencyPrecise(detail.calculation.gross)}
+          masked={isAmountHidden && detail.calculation.gross === null}
+        />
         {/* "Toplam Hakediş"/"Kalan" — sözleşme kümülatifi ister
             (`SubcontractorContractDetail.progress_payment_summary`), o alan
             şemada HER ZAMAN `null` döner (brief §Sol sütun) — kart SİLİNMEZ,
@@ -166,6 +174,7 @@ export function SubcontractorProgressPaymentDetailView({
           <PaymentCalculationCard
             detail={detail}
             labels={{ grossLabel: "Brüt Hakediş", netLabel: "Net Ödenecek" }}
+            kind="subcontractor"
           />
           <SubcontractorContractProgressCard />
         </div>
@@ -224,10 +233,13 @@ function KpiCard({
   label,
   value,
   pending,
+  masked = false,
 }: {
   label: string;
   value?: string;
   pending?: boolean;
+  /** IZN-F4b.2 — değer rol için gizli: "—" yanında kilit ipucu. */
+  masked?: boolean;
 }) {
   return (
     <div className="pp-kpi" data-testid="th-detail-kpi">
@@ -237,7 +249,10 @@ function KpiCard({
           —<span className="sr-only">{pendingModuleLabel("contract_progress")}</span>
         </div>
       ) : (
-        <div className="pp-kpi__value">{value}</div>
+        <div className="pp-kpi__value">
+          {value}
+          <MaskedMark isHidden={masked} values={[null]} />
+        </div>
       )}
     </div>
   );

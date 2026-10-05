@@ -38,6 +38,11 @@ export interface JournalLineDraft {
   readonly accountId: string;
   readonly debit: string;
   readonly credit: string;
+  /**
+   * 🔴 IZN-F4b.2 — sunucu bu bacağın tutarını GİZLEDİ (`debit`/`credit` `null`). Satır salt okunurdur:
+   * tutarı bilinmeyen satır gövdeye KONMAZ ve boş/`0` sanılıp denge hesabına katılmaz.
+   */
+  readonly isMasked?: boolean;
 }
 
 export interface JournalEntryFormState {
@@ -181,14 +186,25 @@ export function initialJournalLines(): readonly JournalLineDraft[] {
 export function draftsFromEntry(
   entry: Pick<JournalEntryDetailResponse, "lines">,
 ): readonly JournalLineDraft[] {
-  return entry.lines.map((line) => ({
-    key: line.id,
-    accountId: line.account_id,
-    // Sunucu iki tarafı da basar; SIFIR olan taraf formda BOŞ görünür ki
-    // tek-taraf kısıtı ekranda kendini anlatsın.
-    debit: isZeroDecimalString(String(line.debit)) ? "" : String(line.debit),
-    credit: isZeroDecimalString(String(line.credit)) ? "" : String(line.credit),
-  }));
+  return entry.lines.map((line) => {
+    // 🔴 IZN-F4b.2: `String(null)` = "null" olurdu; gizli bacak boş + `isMasked` taşır.
+    if (line.debit === null || line.credit === null) {
+      return { key: line.id, accountId: line.account_id, debit: "", credit: "", isMasked: true };
+    }
+    return {
+      key: line.id,
+      accountId: line.account_id,
+      // Sunucu iki tarafı da basar; SIFIR olan taraf formda BOŞ görünür ki
+      // tek-taraf kısıtı ekranda kendini anlatsın.
+      debit: isZeroDecimalString(String(line.debit)) ? "" : String(line.debit),
+      credit: isZeroDecimalString(String(line.credit)) ? "" : String(line.credit),
+    };
+  });
+}
+
+/** Satırlardan en az birinin tutarı gizli mi? Öyleyse satır kümesi TÜMÜYLE salt okunurdur (PUT bütün kümeyi değiştirir). */
+export function hasMaskedLines(lines: readonly JournalLineDraft[]): boolean {
+  return lines.some((line) => line.isMasked === true);
 }
 
 /**
@@ -237,11 +253,14 @@ export function isSideLocked(line: JournalLineDraft, side: LineSide): boolean {
 // --- Denge ---------------------------------------------------------------
 
 export interface JournalTotals {
-  readonly totalDebit: string;
-  readonly totalCredit: string;
-  /** `Σ borç − Σ alacak`. */
-  readonly difference: string;
+  /** `null` = en az bir bacağın tutarı gizli (IZN-F4b.2); toplam BİLİNMEZ, 0 sayılmaz. */
+  readonly totalDebit: string | null;
+  readonly totalCredit: string | null;
+  /** `Σ borç − Σ alacak`; gizli bacak varsa `null`. */
+  readonly difference: string | null;
   readonly isBalanced: boolean;
+  /** `false` = denge doğrulanamaz (gizli bacak): "dengesiz" uyarısı/engeli ÜRETİLMEZ. */
+  readonly isVerifiable: boolean;
 }
 
 /**
@@ -257,12 +276,21 @@ export interface JournalTotals {
  * göstergeyi tamamen okunmaz yapardı.
  */
 export function journalTotals(lines: readonly JournalLineDraft[]): JournalTotals {
+  if (hasMaskedLines(lines)) {
+    return { totalDebit: null, totalCredit: null, difference: null, isBalanced: true, isVerifiable: false };
+  }
   const totalDebit = sumDecimalStrings(lines.map((line) => normalizeDecimalInput(line.debit) ?? "0"));
   const totalCredit = sumDecimalStrings(
     lines.map((line) => normalizeDecimalInput(line.credit) ?? "0"),
   );
   const difference = subtractDecimalStrings(totalDebit, totalCredit);
-  return { totalDebit, totalCredit, difference, isBalanced: isZeroDecimalString(difference) };
+  return {
+    totalDebit,
+    totalCredit,
+    difference,
+    isBalanced: isZeroDecimalString(difference),
+    isVerifiable: true,
+  };
 }
 
 // --- Kaydet kapısı -------------------------------------------------------
@@ -282,10 +310,13 @@ export function journalFormBlockers(state: JournalEntryFormState): readonly stri
   if (state.lines.length < MINIMUM_LINE_COUNT) blockers.push(JOURNAL_FORM_BLOCKERS.minLines);
   if (state.lines.some((line) => line.accountId.length === 0))
     blockers.push(JOURNAL_FORM_BLOCKERS.account);
-  if (state.lines.some((line) => hasInvalidAmount(line))) blockers.push(JOURNAL_FORM_BLOCKERS.amount);
-  if (state.lines.some((line) => lineFilledSide(line) === null))
+  // Gizli (maskeli) bacak tutar engellerine TAKILMAZ: tutarı kullanıcıya gösterilmez/gönderilmez.
+  const visible = state.lines.filter((line) => line.isMasked !== true);
+  if (visible.some((line) => hasInvalidAmount(line))) blockers.push(JOURNAL_FORM_BLOCKERS.amount);
+  if (visible.some((line) => lineFilledSide(line) === null))
     blockers.push(JOURNAL_FORM_BLOCKERS.singleSide);
-  if (!journalTotals(state.lines).isBalanced) blockers.push(JOURNAL_FORM_BLOCKERS.unbalanced);
+  const totals = journalTotals(state.lines);
+  if (totals.isVerifiable && !totals.isBalanced) blockers.push(JOURNAL_FORM_BLOCKERS.unbalanced);
   return blockers;
 }
 

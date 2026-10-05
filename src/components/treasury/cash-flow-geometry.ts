@@ -29,8 +29,12 @@ export interface CashFlowGeometry {
   inflowArea: string;
   outflowLine: string;
   outflowArea: string;
+  /** Yalnız SAYISAL (null olmayan) noktalar; gizli (`null`) kova için nokta ÇİZİLMEZ. */
   inflowPoints: readonly ChartPoint[];
   outflowPoints: readonly ChartPoint[];
+  /** Kesintisiz parçalar: `null` kova çizgiyi BÖLER (boşluk), 0'a düşürülmez. */
+  inflowSegments: readonly (readonly ChartPoint[])[];
+  outflowSegments: readonly (readonly ChartPoint[])[];
 }
 
 /** `YYYY-MM-DD` → ayın günü. `new Date()` KULLANILMAZ (UTC kayması, TB5 sınıfı). */
@@ -66,19 +70,40 @@ export function scaleY(value: number, maxValue: number): number {
   return Math.round(CHART_BASELINE - ratio * (CHART_BASELINE - CHART_TOP));
 }
 
-function toPoints(
+/**
+ * Seriyi kesintisiz parçalara böler. 🔴 IZN-F4b.2: `pick` `null` döndürürse (rol için gizli) o kova
+ * için nokta ÜRETİLMEZ ve çizgi orada kesilir — `Number(null)` = 0 olduğundan nokta "0'a düşerdi"
+ * ve eğri sahte bir sıfır hareketi gösterirdi.
+ */
+function toSegments(
   series: readonly CashFlowBucket[],
-  pick: (bucket: CashFlowBucket) => string,
+  pick: (bucket: CashFlowBucket) => string | null,
   monthLength: number,
   maxValue: number,
-): ChartPoint[] {
-  return series.map((bucket) => ({
-    x: scaleX(dayOfMonth(bucket.day), monthLength),
+): ChartPoint[][] {
+  const segments: ChartPoint[][] = [];
+  let current: ChartPoint[] | null = null;
+  for (const bucket of series) {
+    const raw = pick(bucket);
+    if (raw === null) {
+      current = null;
+      continue;
+    }
     // M5_3 #363 — `Number()` sayıya çevrilemeyen bir değerde `NaN` üretirdi
     // ve SVG path dizesine "NaN" yazılırdı; `maxValue` hesabı zaten `amount()`
     // ile korunuyordu, y-koordinatı KORUNMUYORDU. Aynı savunmacı yardımcı.
-    y: scaleY(amount(pick(bucket)), maxValue),
-  }));
+    const point = {
+      x: scaleX(dayOfMonth(bucket.day), monthLength),
+      y: scaleY(amount(raw), maxValue),
+    };
+    if (current === null) {
+      current = [point];
+      segments.push(current);
+    } else {
+      current.push(point);
+    }
+  }
+  return segments;
 }
 
 /**
@@ -111,7 +136,8 @@ export function toAreaPath(points: readonly ChartPoint[]): string {
 }
 
 /** Sunucu `Decimal`i string gönderir; sayıya çevrilemeyen değer 0 sayılır. */
-function amount(raw: string): number {
+function amount(raw: string | null): number {
+  if (raw === null) return 0;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -122,19 +148,23 @@ export function buildCashFlowGeometry(
   month: number,
 ): CashFlowGeometry {
   const monthLength = daysInMonth(year, month);
-  const maxValue = series.reduce(
-    (max, bucket) => Math.max(max, amount(bucket.inflow), amount(bucket.outflow)),
-    0,
-  );
-  const inflowPoints = toPoints(series, (bucket) => bucket.inflow, monthLength, maxValue);
-  const outflowPoints = toPoints(series, (bucket) => bucket.outflow, monthLength, maxValue);
+  // Eksen ölçeği YALNIZ sayısal değerlerden kurulur (gizli `null` tavanı etkilemez).
+  const maxValue = series.reduce((max, bucket) => {
+    const inflow = bucket.inflow === null ? 0 : amount(bucket.inflow);
+    const outflow = bucket.outflow === null ? 0 : amount(bucket.outflow);
+    return Math.max(max, inflow, outflow);
+  }, 0);
+  const inflowSegments = toSegments(series, (bucket) => bucket.inflow, monthLength, maxValue);
+  const outflowSegments = toSegments(series, (bucket) => bucket.outflow, monthLength, maxValue);
 
   return {
-    inflowPoints,
-    outflowPoints,
-    inflowLine: toLinePath(inflowPoints),
-    inflowArea: toAreaPath(inflowPoints),
-    outflowLine: toLinePath(outflowPoints),
-    outflowArea: toAreaPath(outflowPoints),
+    inflowPoints: inflowSegments.flat(),
+    outflowPoints: outflowSegments.flat(),
+    inflowSegments,
+    outflowSegments,
+    inflowLine: inflowSegments.map(toLinePath).join(""),
+    inflowArea: inflowSegments.map(toAreaPath).join(""),
+    outflowLine: outflowSegments.map(toLinePath).join(""),
+    outflowArea: outflowSegments.map(toAreaPath).join(""),
   };
 }

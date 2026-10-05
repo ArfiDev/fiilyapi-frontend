@@ -7,6 +7,7 @@ import { pendingModuleLabel } from "@/lib/pending-modules";
 import { toDecimalString } from "@/lib/decimal";
 import { asPercent } from "@/lib/api/scale";
 
+import { MaskedStatementNote } from "./MaskedStatementNote";
 import { INCOME_STATEMENT_TREND_REASON, revenueSharePercent } from "./income-statement";
 
 /**
@@ -30,6 +31,14 @@ import { INCOME_STATEMENT_TREND_REASON, revenueSharePercent } from "./income-sta
 export function IncomeStatementTable({ data }: { data: IncomeStatementResponse }) {
   return (
     <>
+      <MaskedStatementNote
+        values={[
+          data.total_revenue,
+          data.total_expense,
+          data.period_profit,
+          ...data.sections.flatMap((section) => [section.subtotal, ...section.lines.map((line) => line.amount)]),
+        ]}
+      />
       <table className="fs-is-table" data-testid="mt-is-table">
         <tbody>
           {data.sections.map((section) => (
@@ -76,7 +85,7 @@ function IncomeSectionRows({
   totalRevenue,
 }: {
   section: IncomeStatementSection;
-  totalRevenue: string;
+  totalRevenue: string | null;
 }) {
   const testId = `mt-is-section-${section.key}`;
   const showsShare = section.key === EXPENSE_SECTION_KEY;

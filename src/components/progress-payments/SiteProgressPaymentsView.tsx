@@ -165,6 +165,7 @@ export function SiteProgressPaymentsView() {
           distinctSubcontractorCount: subcontractorTotals.distinctSubcontractorCount,
           pendingApprovalCount: subcontractorTotals.pendingApprovalCount,
           marginPct,
+          isMasked: employerTotals.grossTotal === null || subcontractorTotals.grossTotal === null,
         }}
       />
 

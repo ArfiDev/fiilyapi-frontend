@@ -23,8 +23,9 @@ export interface VatTaxableTableRow {
   readonly label: string;
   /** KDV:79 `KDV %`; istisna satırında `NO_RATE`. */
   readonly rate: string;
-  readonly base: string;
-  readonly vat: string;
+  /** `null` = rol için gizli (IZN-F4b.2). */
+  readonly base: string | null;
+  readonly vat: string | null;
   /** KDV:91-95 — italik/gri çizilen satır. */
   readonly isExempt: boolean;
 }
@@ -68,7 +69,8 @@ export function buildVatTaxableRows(
       base: response.exempt_base,
       // İstisnanın vergisi TANIM GEREĞİ sıfırdır — sunucudan gelen bir alan
       // değildir, bu yüzden sabit yazılır (KDV:94 de `0` çizer).
-      vat: "0",
+      // 🔴 IZN-F4b.2: matrah gizliyse (null) satırın tamamı maskelidir; yanında sahte "0" basılmaz.
+      vat: response.exempt_base === null ? null : "0",
       isExempt: true,
     },
   ];
@@ -87,21 +89,22 @@ export function buildVatTaxableRows(
  * örneğinde `exempt_base = 0` olduğu için iki okuma da 4.120.000 verir, yani
  * mockup bu soruyu AYIRT ETMEZ; ayırt eden ilke budur.
  */
-export function vatTaxableBaseTotal(rows: readonly VatTaxableTableRow[]): string {
+export function vatTaxableBaseTotal(rows: readonly VatTaxableTableRow[]): string | null {
   return sumDecimalStrings(rows.map((row) => row.base));
 }
 
 /** KDV:128 — `Toplam İndirim`in MATRAH hücresi; aynı gerekçe. */
-export function vatDeductionBaseTotal(deductions: readonly VatDeductionRow[]): string {
+export function vatDeductionBaseTotal(deductions: readonly VatDeductionRow[]): string | null {
   return sumDecimalStrings(deductions.map((row) => row.base));
 }
 
-export type VatOutcomeKind = "payable" | "carried";
+/** `unknown` (IZN-F4b.2): ödenecek/devreden tutarlar gizli — hangi dal olduğu BİLİNMEZ. */
+export type VatOutcomeKind = "payable" | "carried" | "unknown";
 
 export interface VatOutcome {
   readonly kind: VatOutcomeKind;
   /** KDV:67 · :141 — kartın ve sonuç şeridinin tutarı. */
-  readonly amount: string;
+  readonly amount: string | null;
   /** KDV:66 — üçüncü kartın başlığı (BÜYÜK harf mockup'ın CSS'inden gelir). */
   readonly cardTitle: string;
   /** KDV:68 — kartın alt notu. */
@@ -138,10 +141,24 @@ export interface VatOutcome {
 export function vatOutcome(response: VatReturnResponse): VatOutcome {
   const paid = formatAmount(response.calculated_vat);
   const deducted = formatAmount(response.deductible_vat);
-  if (!isZeroDecimalString(response.carried_forward)) {
+  // 🔴 IZN-F4b.2: devreden/ödenecek gizliyse dal KARARI verilemez (null'ı 0 sayıp "Ödenecek ₺0"
+  // basmak kullanıcıya sahte "borç yok" derdi). Nötr "sonuç" kartı + tutar `—`.
+  const carried = response.carried_forward;
+  const isCarriedUnknown = carried === null && (response.payable === null || isZeroDecimalString(response.payable));
+  if (isCarriedUnknown) {
+    return {
+      kind: "unknown",
+      amount: null,
+      cardTitle: "KDV Sonucu",
+      cardNote: "Sonuç hesaplanamıyor",
+      resultTitle: "KDV Sonucu",
+      resultDate: null,
+    };
+  }
+  if (carried !== null && !isZeroDecimalString(carried)) {
     return {
       kind: "carried",
-      amount: response.carried_forward,
+      amount: carried,
       cardTitle: "Devreden KDV",
       cardNote: "Gelecek döneme devreder",
       // Fark TERS yöndedir; parantez de tersine yazılır (B − A).

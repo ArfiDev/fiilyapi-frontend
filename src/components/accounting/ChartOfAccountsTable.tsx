@@ -1,4 +1,7 @@
 import { Badge, Button } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 
 import {
   accountStatusLabel,
@@ -53,6 +56,7 @@ export function ChartOfAccountsTable({
   onDeactivate,
   onDelete,
 }: ChartOfAccountsTableProps) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   return (
     <div className="mu-table-scroll">
       <table className="mu-table mu-chart">
@@ -66,6 +70,7 @@ export function ChartOfAccountsTable({
             </th>
             <th scope="col" className="is-right">
               Bakiye (₺)
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => (row.kind === "account" ? row.account.balance : undefined))} />
             </th>
             <th scope="col" className="is-center">
               Durum

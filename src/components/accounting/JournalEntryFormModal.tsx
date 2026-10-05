@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Modal } from "@/components/settings/Modal";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { Button, DateInput, Field, Input, Textarea } from "@/components/ui";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { WarningTriangleIcon } from "@/components/ui/icons";
 import { formatAmount } from "@/lib/format";
 import { backendErrorMessage } from "@/lib/api/error-message";
@@ -27,6 +28,7 @@ import {
   changedEntryFields,
   differenceWarning,
   draftsFromEntry,
+  hasMaskedLines,
   emptyJournalLine,
   initialJournalLines,
   journalFormBlockers,
@@ -184,6 +186,9 @@ function JournalEntryFormBody({
   const isPending =
     createMutation.isPending || updateMutation.isPending || replaceLinesMutation.isPending;
   const canSave = blockers.length === 0 && isEditable && !isPending;
+  // IZN-F4b.2 — bir bacağın tutarı gizliyse satır kümesi TÜMÜYLE salt okunur (PUT bütün kümeyi
+  // değiştirir; bilinmeyen tutarı gövdeye koyamayız) ve `PUT …/lines` HİÇ atılmaz.
+  const areLinesLocked = hasMaskedLines(form.lines);
 
   function updateLine(key: string, map: (line: JournalLineDraft) => JournalLineDraft) {
     setForm((current) => ({
@@ -214,7 +219,7 @@ function JournalEntryFormBody({
   async function handleSubmit() {
     if (!canSave) return;
     setFormError(null);
-    const lines = toJournalLineInputs(form.lines);
+    const lines = areLinesLocked ? [] : toJournalLineInputs(form.lines);
 
     if (entry === undefined) {
       try {
@@ -235,8 +240,8 @@ function JournalEntryFormBody({
 
     const fieldBody = changedEntryFields(form, entry);
     const hasFieldChanges = Object.keys(fieldBody).length > 0;
-    const previousLines = toJournalLineInputs(draftsFromEntry(entry));
-    const hasLineChanges = linesChanged(lines, previousLines);
+    const previousLines = areLinesLocked ? [] : toJournalLineInputs(draftsFromEntry(entry));
+    const hasLineChanges = !areLinesLocked && linesChanged(lines, previousLines);
 
     if (!hasFieldChanges && !hasLineChanges) {
       onClose();
@@ -283,7 +288,7 @@ function JournalEntryFormBody({
           {/* `M:249-251` — kapalı düğmenin GEREKÇESİ alt şeridin solundadır.
               `M:250`deki `⚠` (U+26A0) `fonts.css` unicode-range'lerinde YOKTUR
               → ikon (F-SEM kanonu). */}
-          {!totals.isBalanced && (
+          {totals.isVerifiable && !totals.isBalanced && (
             <p className="mu-entry-form__diff-warning" data-testid="mu-entry-dialog-diff-warning">
               <WarningTriangleIcon className="mu-entry-form__diff-icon" width={13} height={13} />
               <span>{differenceWarning(formatAmount(totals.difference))}</span>
@@ -398,11 +403,17 @@ function JournalEntryFormBody({
         </p>
       )}
 
+      {areLinesLocked && (
+        <p className="mu-notice" data-testid="mu-entry-lines-masked">
+          <HiddenMark withText /> Satır tutarları rolünüz için gizli; satırlar düzenlenemez.
+        </p>
+      )}
+
       <JournalLinesEditor
         lines={form.lines}
         accounts={accounts}
         labelOf={(accountId) => knownLabels.get(accountId)}
-        disabled={!isEditable || isPending}
+        disabled={!isEditable || isPending || areLinesLocked}
         onAccountChange={(key, accountId) => updateLine(key, (line) => ({ ...line, accountId }))}
         onAmountChange={handleAmount}
         onAdd={handleAdd}

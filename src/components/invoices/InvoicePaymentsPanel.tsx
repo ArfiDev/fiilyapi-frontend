@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { DeleteRecordDialog } from "@/components/delete-confirm/DeleteRecordDialog";
 import { Button, DateInput, Field, Input, Select } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { isoDate } from "@/components/site-diary/derive";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import {
@@ -12,6 +13,8 @@ import {
 } from "@/lib/api/hooks/useBankAccounts";
 import { useInvoicePayments } from "@/lib/api/hooks/useInvoiceDetail";
 import { useCreateInvoicePayment } from "@/lib/api/hooks/useInvoiceMutations";
+import { TREASURY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatDateDots } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -56,6 +59,7 @@ export function InvoicePaymentsPanel({
   const [amount, setAmount] = useState("");
   const [paidOn, setPaidOn] = useState(() => isoDate(today));
   const [error, setError] = useState<string | null>(null);
+  const isAmountHidden = useCategoryHidden(TREASURY_HIDDEN_CATEGORIES);
   // SEKME-F1.3b · yalnız `amount` `onSuccess`te sıfırlanır (bilinen kısmi
   // reset borcu, envanter notu) — diğer alanlar (hesap/şekil/tarih) KALIR.
   // Baseline bu davranışı AYNEN izler: kaydetme başarılı olunca yalnız
@@ -112,12 +116,14 @@ export function InvoicePaymentsPanel({
           <span className="fat-summary-row__label">Tahsil Edilen</span>
           <span className="fat-summary-row__value" data-testid="fat-paid-total">
             {paymentsQuery.data ? formatAmount(paymentsQuery.data.paid_total) : "—"}
+            <MaskedMark isHidden={isAmountHidden} values={[paymentsQuery.data?.paid_total]} />
           </span>
         </div>
         <div className="fat-summary-row">
           <span className="fat-summary-row__label">Kalan</span>
           <span className="fat-summary-row__value" data-testid="fat-remaining">
             {paymentsQuery.data ? formatAmount(paymentsQuery.data.remaining) : "—"}
+            <MaskedMark isHidden={isAmountHidden} values={[paymentsQuery.data?.remaining]} />
           </span>
         </div>
 
@@ -141,6 +147,7 @@ export function InvoicePaymentsPanel({
                   <th scope="col">Şekil</th>
                   <th scope="col" className="is-right">
                     Tutar
+                    <MaskedMark isHidden={isAmountHidden} values={(rows ?? []).map((row) => row.amount)} />
                   </th>
                   <th scope="col">
                     <span className="sr-only">Sil</span>

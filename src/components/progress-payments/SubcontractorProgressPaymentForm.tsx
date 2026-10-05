@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { CalendarCheckIcon } from "@/components/ui/icons";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useSubcontractorDiarySuggestion } from "@/lib/api/hooks/useDiarySuggestion";
@@ -22,6 +23,8 @@ import {
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
+import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -88,6 +91,7 @@ const PENDING_SEQUENCE_HINT = "Sıra numarası ilk kayıtta backend tarafından 
 export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPaymentFormProps) {
   const router = useRouter();
   const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
+  const isAmountHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   const isEdit = props.mode === "edit";
   const detailQuery = useSubcontractorProgressPayment(isEdit ? props.paymentId : "");
   const detail = isEdit ? detailQuery.data : undefined;
@@ -684,6 +688,11 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
                             sr-only, kolon SİLİNMEZ). */}
                         {row.contractUnitPrice !== null ? (
                           formatAmount(row.contractUnitPrice)
+                        ) : isAmountHidden ? (
+                          // IZN-F4b.2 — fiyat rol için GİZLİ: "eksik fiyat" iddiası YALAN olurdu; "—" + kilit.
+                          <span data-testid="thf-masked-price-cell">
+                            —<MaskedMark isHidden values={[null]} />
+                          </span>
                         ) : (
                           <span
                             className="thf-table__td--pending"

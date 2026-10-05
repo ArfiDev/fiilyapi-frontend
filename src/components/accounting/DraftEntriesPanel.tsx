@@ -1,6 +1,9 @@
 "use client";
 
 import { Badge, Button } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import type { JournalEntryResponse } from "@/lib/api/hooks/useJournalEntries";
 import { formatAmount, formatDateDots } from "@/lib/format";
 
@@ -58,6 +61,7 @@ export function DraftEntriesPanel({
   // IZN-F2.x · Kayıtlaştır = mali.yevmiye Onaylar; Sil = yalnız SA (`canWrite` Düzenle/Storno için E kararıdır).
   const canPostEntry = useButtonGate({ pages: JOURNAL_APPROVE, need: "approve", fallback: canWrite });
   const canDeleteEntry = useButtonGate({ pages: ACCOUNTING_EDIT, need: "sa", fallback: canWrite });
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   return (
     <section className="mu-panel" aria-label="Dönem Fişleri">
       <div className="mu-panel__head">
@@ -80,9 +84,11 @@ export function DraftEntriesPanel({
                 <th scope="col">Açıklama</th>
                 <th scope="col" className="is-right">
                   Borç Toplamı
+                  <MaskedMark isHidden={isHidden} values={(entries ?? []).map((entry) => entry.total_debit)} />
                 </th>
                 <th scope="col" className="is-right">
                   Alacak Toplamı
+                  <MaskedMark isHidden={isHidden} values={(entries ?? []).map((entry) => entry.total_credit)} />
                 </th>
                 <th scope="col">Durum</th>
                 <th scope="col" className="is-right">

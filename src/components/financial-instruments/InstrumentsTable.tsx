@@ -1,4 +1,7 @@
 import { Badge } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { TREASURY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency, formatDateDots } from "@/lib/format";
 import type { FinancialInstrumentResponse } from "@/lib/api/hooks/useFinancialInstruments";
 
@@ -35,6 +38,7 @@ export function InstrumentsTable({
   isLoading: boolean;
   errorMessage: string | undefined;
 }) {
+  const isHidden = useCategoryHidden(TREASURY_HIDDEN_CATEGORIES);
   if (isLoading) {
     return (
       <p className="fin-notice" data-testid="fin-loading">
@@ -74,6 +78,7 @@ export function InstrumentsTable({
             </th>
             <th scope="col" className="is-right">
               Tutar
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.amount)} />
             </th>
             <th scope="col" className="is-center">
               Durum

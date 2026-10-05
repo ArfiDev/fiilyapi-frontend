@@ -83,10 +83,10 @@ export const PROJECT_PROFITABILITY_REASON = "project_profitability";
  * `income-statement.test.ts`tedir.
  */
 export function incomeStatementDifference(
-  totalRevenue: string,
-  totalExpense: string,
-  periodProfit: string,
-): string {
+  totalRevenue: string | null,
+  totalExpense: string | null,
+  periodProfit: string | null,
+): string | null {
   return subtractDecimalStrings(subtractDecimalStrings(totalRevenue, totalExpense), periodProfit);
 }
 
@@ -95,11 +95,15 @@ export function incomeStatementDifference(
  * dönemde `"0"`, ötekinde `"0.00"` yazılır (`isZeroDecimalString` kanonu).
  */
 export function isIncomeStatementReconciled(
-  totalRevenue: string,
-  totalExpense: string,
-  periodProfit: string,
-): boolean {
-  return isZeroDecimalString(incomeStatementDifference(totalRevenue, totalExpense, periodProfit));
+  totalRevenue: string | null,
+  totalExpense: string | null,
+  periodProfit: string | null,
+): boolean | null {
+  const difference = incomeStatementDifference(totalRevenue, totalExpense, periodProfit);
+  // 🔴 IZN-F4b.2: girdilerden biri gizli (`null`) ise mutabakat DOĞRULANAMAZ — `null` döner;
+  // "uyuşmuyor" da "uyuşuyor" da denmez (null'ı 0 sayıp sahte "Mutabık" basmak YASAK).
+  if (difference === null) return null;
+  return isZeroDecimalString(difference);
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,7 +129,12 @@ export function isIncomeStatementReconciled(
  * (~1e-16) o çözünürlüğün on üç basamak altındadır. Mutabakat farkı ise
  * yukarıda KAYIPSIZ alınır — para kararı orada verilir, burada değil.
  */
-export function revenueSharePercent(amount: string, totalRevenue: string): number | null {
+export function revenueSharePercent(
+  amount: string | null,
+  totalRevenue: string | null,
+): number | null {
+  // IZN-F4b.2 — pay ya da payda gizliyse oran YOK (`Number(null)` = 0 tuzağı → sahte %0).
+  if (amount === null || totalRevenue === null) return null;
   if (isZeroDecimalString(totalRevenue)) return null;
   const numerator = Number(amount);
   const denominator = Number(totalRevenue);

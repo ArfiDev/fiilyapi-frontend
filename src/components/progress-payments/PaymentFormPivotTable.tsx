@@ -137,12 +137,12 @@ export function PaymentFormPivotTable({
                           <span
                             className="pp-form-table__locked-cell"
                             title={
-                              cell.lineTotal !== null
+                              cell.isSaved
                                 ? "Bu pozun bu şantiyeye tahsisi kaldırıldı; kaydedince bu miktar SİLİNECEK."
                                 : "Bu poz seçilen şantiyeye dağıtılmadı; önce poz dağılımını yapın."
                             }
                           >
-                            {cell.lineTotal !== null ? formatTrQuantityText(cell.quantity) : "—"}
+                            {cell.isSaved ? formatTrQuantityText(cell.quantity) : "—"}
                           </span>
                         )}
                       </td>

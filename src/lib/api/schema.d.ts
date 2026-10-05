@@ -9098,6 +9098,8 @@ export interface components {
             gross_amount: string | null;
             /** Net Amount */
             net_amount: string | null;
+            /** Project Id */
+            project_id?: string | null;
             /** Reason */
             reason: string | null;
             /** Steps */
@@ -9172,6 +9174,8 @@ export interface components {
             gross_amount: string | null;
             /** Net Amount */
             net_amount: string | null;
+            /** Project Id */
+            project_id?: string | null;
             /** Steps */
             steps: components["schemas"]["ApprovalStepRead"][];
             /** Subtitle */
@@ -9347,7 +9351,7 @@ export interface components {
             /** Account Codes */
             account_codes: string[];
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Group Codes */
             group_codes: string[];
             /** Key */
@@ -9406,7 +9410,7 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["BalanceSheetLine"][];
             /** Subtotal */
-            subtotal: string;
+            subtotal: string | null;
             /** Subtotal Label */
             subtotal_label: string;
             /** Title */
@@ -9427,7 +9431,7 @@ export interface components {
             /** Title */
             title: string;
             /** Total */
-            total: string;
+            total: string | null;
             /** Total Label */
             total_label: string;
         };
@@ -9490,7 +9494,7 @@ export interface components {
         BankAccountResponse: {
             account_type: components["schemas"]["BankAccountType"];
             /** Balance */
-            balance: string;
+            balance: string | null;
             /** Bank Name */
             bank_name: string;
             /**
@@ -9510,7 +9514,7 @@ export interface components {
             /** Is Active */
             is_active: boolean;
             /** Opening Balance */
-            opening_balance: string;
+            opening_balance: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -10135,9 +10139,9 @@ export interface components {
              */
             day: string;
             /** Inflow */
-            inflow: string;
+            inflow: string | null;
             /** Outflow */
-            outflow: string;
+            outflow: string | null;
         };
         /**
          * CashFlowResponse
@@ -10152,11 +10156,11 @@ export interface components {
          */
         CashFlowResponse: {
             /** Inflow Total */
-            inflow_total: string;
+            inflow_total: string | null;
             /** Month */
             month: number;
             /** Outflow Total */
-            outflow_total: string;
+            outflow_total: string | null;
             /** Series */
             series: components["schemas"]["CashFlowBucket"][];
             /** Year */
@@ -10178,7 +10182,7 @@ export interface components {
             /** Account Codes */
             account_codes: string[];
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Key */
             key: string;
             /** Label */
@@ -10214,15 +10218,15 @@ export interface components {
          */
         CashFlowStatementResponse: {
             /** Closing Cash */
-            closing_cash: string;
+            closing_cash: string | null;
             /** Month */
             month: number;
             /** Monthly Cash */
             monthly_cash: components["schemas"]["MonthlyCashPoint"][];
             /** Net Change */
-            net_change: string;
+            net_change: string | null;
             /** Opening Cash */
-            opening_cash: string;
+            opening_cash: string | null;
             /** Sections */
             sections: components["schemas"]["CashFlowStatementSection"][];
             /** Year */
@@ -10244,7 +10248,7 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["CashFlowStatementLine"][];
             /** Subtotal */
-            subtotal: string;
+            subtotal: string | null;
             /** Subtotal Label */
             subtotal_label: string;
             /** Title */
@@ -10447,7 +10451,7 @@ export interface components {
         ChartAccountResponse: {
             account_type: components["schemas"]["ChartAccountType"];
             /** Balance */
-            balance: string;
+            balance: string | null;
             /** Class Code */
             class_code: string;
             /** Code */
@@ -13202,7 +13206,7 @@ export interface components {
          */
         FinancialInstrumentResponse: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Bank Account Id */
             bank_account_id: string | null;
             /** Bank Name */
@@ -13278,7 +13282,7 @@ export interface components {
          */
         FinancialInstrumentSummaryCard: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Count */
             count: number;
         };
@@ -13853,7 +13857,7 @@ export interface components {
             /** Account Codes */
             account_codes: string[];
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Key */
             key: string;
             /** Label */
@@ -13893,15 +13897,15 @@ export interface components {
             /** Month */
             month: number;
             /** Period Profit */
-            period_profit: string;
+            period_profit: string | null;
             /** Profit Label */
             profit_label: string;
             /** Sections */
             sections: components["schemas"]["IncomeStatementSection"][];
             /** Total Expense */
-            total_expense: string;
+            total_expense: string | null;
             /** Total Revenue */
-            total_revenue: string;
+            total_revenue: string | null;
             /** Year */
             year: number;
         };
@@ -13920,7 +13924,7 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["IncomeStatementLine"][];
             /** Subtotal */
-            subtotal: string;
+            subtotal: string | null;
             /** Subtotal Label */
             subtotal_label: string;
             /** Title */
@@ -14041,7 +14045,7 @@ export interface components {
          */
         InvoiceDetailResponse: {
             /** Advance Amount */
-            advance_amount: string;
+            advance_amount: string | null;
             /** Advance Rate */
             advance_rate: string | null;
             /**
@@ -14083,7 +14087,7 @@ export interface components {
             /** Party Address */
             party_address: string | null;
             /** Party Name */
-            party_name: string;
+            party_name: string | null;
             /** Party Tax Number */
             party_tax_number: string | null;
             /** Party Tax Office */
@@ -14096,7 +14100,7 @@ export interface components {
             /** Purchase Order Id */
             purchase_order_id: string | null;
             /** Retention Amount */
-            retention_amount: string;
+            retention_amount: string | null;
             /** Retention Rate */
             retention_rate: string | null;
             /** Site Id */
@@ -14123,22 +14127,22 @@ export interface components {
             /** Subcontractor Progress Payment Id */
             subcontractor_progress_payment_id: string | null;
             /** Subtotal */
-            subtotal: string;
+            subtotal: string | null;
             /** Supplier Id */
             supplier_id: string | null;
             /** Tax Base */
-            tax_base: string;
+            tax_base: string | null;
             /** Total */
-            total: string;
+            total: string | null;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
             /** Vat Amount */
-            vat_amount: string;
+            vat_amount: string | null;
             /** Withholding Amount */
-            withholding_amount: string;
+            withholding_amount: string | null;
             /** Withholding Rate */
             withholding_rate: string | null;
         };
@@ -14206,7 +14210,7 @@ export interface components {
              */
             id: string;
             /** Line Total */
-            line_total: string;
+            line_total: string | null;
             /** Quantity */
             quantity: string;
             /** Sort Order */
@@ -14214,7 +14218,7 @@ export interface components {
             /** Unit */
             unit: string | null;
             /** Unit Price */
-            unit_price: string;
+            unit_price: string | null;
             /** Vat Rate */
             vat_rate: string;
         };
@@ -14266,7 +14270,7 @@ export interface components {
          */
         InvoiceResponse: {
             /** Advance Amount */
-            advance_amount: string;
+            advance_amount: string | null;
             /** Advance Rate */
             advance_rate: string | null;
             /**
@@ -14306,7 +14310,7 @@ export interface components {
             /** Party Address */
             party_address: string | null;
             /** Party Name */
-            party_name: string;
+            party_name: string | null;
             /** Party Tax Number */
             party_tax_number: string | null;
             /** Party Tax Office */
@@ -14319,7 +14323,7 @@ export interface components {
             /** Purchase Order Id */
             purchase_order_id: string | null;
             /** Retention Amount */
-            retention_amount: string;
+            retention_amount: string | null;
             /** Retention Rate */
             retention_rate: string | null;
             /** Site Id */
@@ -14346,22 +14350,22 @@ export interface components {
             /** Subcontractor Progress Payment Id */
             subcontractor_progress_payment_id: string | null;
             /** Subtotal */
-            subtotal: string;
+            subtotal: string | null;
             /** Supplier Id */
             supplier_id: string | null;
             /** Tax Base */
-            tax_base: string;
+            tax_base: string | null;
             /** Total */
-            total: string;
+            total: string | null;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
             /** Vat Amount */
-            vat_amount: string;
+            vat_amount: string | null;
             /** Withholding Amount */
-            withholding_amount: string;
+            withholding_amount: string | null;
             /** Withholding Rate */
             withholding_rate: string | null;
         };
@@ -14398,7 +14402,7 @@ export interface components {
          */
         InvoiceSummaryMetric: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Count */
             count: number;
         };
@@ -14420,7 +14424,7 @@ export interface components {
             receivable: components["schemas"]["InvoiceSummaryMetric"];
             received_this_month: components["schemas"]["InvoiceSummaryMetric"];
             /** Vat Difference */
-            vat_difference: string;
+            vat_difference: string | null;
         };
         /**
          * InvoiceUpdate
@@ -14615,11 +14619,12 @@ export interface components {
             period_year: number;
             /** Reversal Of Id */
             reversal_of_id: string | null;
+            source_type?: components["schemas"]["JournalSourceType"] | null;
             status: components["schemas"]["JournalEntryStatus"];
             /** Total Credit */
-            total_credit: string;
+            total_credit: string | null;
             /** Total Debit */
-            total_debit: string;
+            total_debit: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -14678,11 +14683,12 @@ export interface components {
             period_year: number;
             /** Reversal Of Id */
             reversal_of_id: string | null;
+            source_type?: components["schemas"]["JournalSourceType"] | null;
             status: components["schemas"]["JournalEntryStatus"];
             /** Total Credit */
-            total_credit: string;
+            total_credit: string | null;
             /** Total Debit */
-            total_debit: string;
+            total_debit: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -14770,9 +14776,9 @@ export interface components {
             /** Account Name */
             account_name: string;
             /** Credit */
-            credit: string;
+            credit: string | null;
             /** Debit */
-            debit: string;
+            debit: string | null;
             /**
              * Id
              * Format: uuid
@@ -14780,6 +14786,7 @@ export interface components {
             id: string;
             /** Sort Order */
             sort_order: number;
+            source_type?: components["schemas"]["JournalSourceType"] | null;
         };
         /**
          * JournalLinesReplace
@@ -14793,6 +14800,58 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["JournalLineInput"][];
         };
+        /**
+         * JournalSourceType
+         * @description 🔴 MU-3A — otomatik fişi DOĞURAN belgenin AİLESİ (`journal_entries.source_type`).
+         *
+         *     ## Neden PG enum, neden METİN DEĞİL
+         *
+         *     Depo deseni ÖLÇÜLDÜ: `app/modules/*\/models.py` altında **91** adet
+         *     `Enum(..., name=...)` kolonu var, çok biçimli bir referansı serbest metinle
+         *     tutan TEK BİR tablo YOK. Desen burada da doğrudur ve gerekçesi bu dilime
+         *     özeldir: bu kolon `uq_journal_entries_source`un YARISIDIR. Metin olsaydı
+         *     `"invoice"` ile `"invoices"` (ya da `"Invoice"`) AYRI iki tekillik uzayı açar
+         *     ve aynı fatura İKİ KEZ fişlenebilirdi — yani idempotanlığın kendisi bir yazım
+         *     hatasına dayanırdı. Enum'da böyle bir değer DB'ye HİÇ GİREMEZ.
+         *
+         *     Bedeli bilinerek alınmıştır: her yeni aile bir `ALTER TYPE … ADD VALUE`
+         *     migration'ı ister (MT-1'in `equity` emsali). Bu bedel, sessiz bir çift fişten
+         *     ucuzdur.
+         *
+         *     ## Üye = TABLO, üye ≠ KAVRAM
+         *
+         *     Her üye TEK BİR tabloya karşılık gelir ve `source_id` O TABLONUN birincil
+         *     anahtarıdır. "Hakediş" tek bir üye olsaydı `source_id` iki farklı tablonun
+         *     (`progress_payments` / `subcontractor_progress_payments`) kimliğini birden
+         *     taşır ve "bu kimlik hangi tabloda?" sorusu kolonlardan CEVAPLANAMAZDI.
+         *
+         *     ## 🔴 FK YOKTUR ve olamaz
+         *
+         *     Çok biçimli referansta tek bir `source_id` beş tabloya birden bakamaz. Bu bir
+         *     zayıflıktır ve bilinçlidir: alternatif beş nullable FK kolonu + bir
+         *     "yalnız biri dolu" CHECK'iydi (`invoices.ck_invoices_single_source` deseni),
+         *     ki o da beş kolonu UNIQUE'e sokmayı ve her yeni ailede ŞEMA değiştirmeyi
+         *     gerektirirdi. Bütünlüğü ayakta tutan şey `post_document`in TEK GİRİŞ
+         *     NOKTASI olmasıdır (`app/modules/posting/service.py`).
+         *
+         *     ## Bugün YOKLAR ve neden
+         *
+         *     * **`purchase_order` / stok hareketi** — KARAR-7: satınalma ve stok fiş
+         *       ATMAZ. Stokta değerleme yöntemi yoktur, sarf fişinin tutarı hesaplanamaz.
+         *     * ~~`equipment_rental_invoice`~~ — **MU-3D'de EKLENDİ** (`b7c8d9e0f1a2`).
+         *       MU-3A'da "üye ICAT EDILMEZ, fişlendiği dilimde `ALTER TYPE` ile eklenir"
+         *       diye bırakılmıştı; fişlendiği dilim budur.
+         *     * ~~`financial_instrument`~~ — **ODM-1'de EKLENDİ** (`f5a6b7c8d9e0`).
+         *       MU-3C üyeyi açmamıştı çünkü nakdin tanımı `Σ payments`tı; ODM-1 o tanımı
+         *       değiştirdi (bağlı ödeme yalnız `collected`/`paid` iken nakit) ve
+         *       MU-3C'nin *"bu bir ÜRÜN KARARIDIR"* diye beklettiği kararı verdi.
+         *       Gerekçenin tamamı `treasury/instruments/posting.py` docstring'indedir.
+         *
+         *     Üye SIRASI kilitlidir: `ALTER TYPE … ADD VALUE` üyeyi SONA ekler ve
+         *     `enum_range` o sırayı döner (migration testi bunu ölçer).
+         * @enum {string}
+         */
+        JournalSourceType: "invoice" | "payment" | "payroll_period" | "progress_payment" | "subcontractor_progress_payment" | "equipment_rental_invoice" | "financial_instrument";
         /**
          * JournalSummaryResponse
          * @description E8:79-88 KPI şeridi — ÜÇ kart.
@@ -14808,11 +14867,11 @@ export interface components {
             /** Month */
             month: number;
             /** Net Balance */
-            net_balance: string;
+            net_balance: string | null;
             /** Total Credit */
-            total_credit: string;
+            total_credit: string | null;
             /** Total Debit */
-            total_debit: string;
+            total_debit: string | null;
             /** Year */
             year: number;
         };
@@ -15570,7 +15629,7 @@ export interface components {
          */
         LedgerResponse: {
             /** Carried Balance */
-            carried_balance: string;
+            carried_balance: string | null;
             /** Items */
             items: components["schemas"]["LedgerRow"][];
             /** Limit */
@@ -15600,9 +15659,9 @@ export interface components {
             /** Account Name */
             account_name: string;
             /** Credit */
-            credit: string;
+            credit: string | null;
             /** Debit */
-            debit: string;
+            debit: string | null;
             /** Description */
             description: string;
             /** Detail Note */
@@ -15619,7 +15678,8 @@ export interface components {
             entry_id: string;
             entry_status: components["schemas"]["JournalEntryStatus"];
             /** Running Balance */
-            running_balance: string;
+            running_balance: string | null;
+            source_type?: components["schemas"]["JournalSourceType"] | null;
         };
         /**
          * ListPlaceholder
@@ -15797,7 +15857,7 @@ export interface components {
          */
         MonthlyCashPoint: {
             /** Closing Cash */
-            closing_cash: string;
+            closing_cash: string | null;
             /** Month */
             month: number;
             /** Year */
@@ -16730,15 +16790,15 @@ export interface components {
          */
         PaymentCalculationBlock: {
             /** Advance Deduction */
-            advance_deduction: string;
+            advance_deduction: string | null;
             /** Gross */
-            gross: string;
+            gross: string | null;
             /** Net */
-            net: string;
+            net: string | null;
             /** Retention */
-            retention: string;
+            retention: string | null;
             /** Vat */
-            vat: string;
+            vat: string | null;
         };
         /**
          * PaymentCreate
@@ -16790,9 +16850,9 @@ export interface components {
             /** Offset */
             offset: number;
             /** Paid Total */
-            paid_total: string;
+            paid_total: string | null;
             /** Remaining */
-            remaining: string;
+            remaining: string | null;
             /** Total */
             total: number;
         };
@@ -16845,7 +16905,7 @@ export interface components {
          */
         PaymentResponse: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /**
              * Bank Account Id
              * Format: uuid
@@ -18118,15 +18178,15 @@ export interface components {
          */
         ProgressPaymentGroupSummary: {
             /** Contract Amount */
-            contract_amount: string;
+            contract_amount: string | null;
             /** Cumulative Amount */
-            cumulative_amount: string;
+            cumulative_amount: string | null;
             /** Group Name */
             group_name: string | null;
             /** Previous Amount */
-            previous_amount: string;
+            previous_amount: string | null;
             /** This Amount */
-            this_amount: string;
+            this_amount: string | null;
         };
         /**
          * ProgressPaymentLineDetail
@@ -18140,7 +18200,7 @@ export interface components {
          */
         ProgressPaymentLineDetail: {
             /** Adjusted Unit Price */
-            adjusted_unit_price: string;
+            adjusted_unit_price: string | null;
             /** Code */
             code: string;
             /** Coefficient */
@@ -18148,9 +18208,9 @@ export interface components {
             /** Contract Item Id */
             contract_item_id: string | null;
             /** Contract Unit Price */
-            contract_unit_price: string;
+            contract_unit_price: string | null;
             /** Cumulative Amount */
-            cumulative_amount: string;
+            cumulative_amount: string | null;
             /** Cumulative Quantity */
             cumulative_quantity: string;
             /** Description */
@@ -18165,9 +18225,9 @@ export interface components {
             /** Is Price Stale */
             is_price_stale: boolean | null;
             /** Line Total */
-            line_total: string;
+            line_total: string | null;
             /** Previous Amount */
-            previous_amount: string;
+            previous_amount: string | null;
             /** Previous Quantity */
             previous_quantity: string;
             /** Quantity */
@@ -18256,14 +18316,14 @@ export interface components {
             /** Description */
             description: string | null;
             /** Gross Total */
-            gross_total: string;
+            gross_total: string | null;
             /**
              * Id
              * Format: uuid
              */
             id: string;
             /** Net Total */
-            net_total: string;
+            net_total: string | null;
             /** Period Month */
             period_month: number | null;
             /** Period Year */
@@ -23783,15 +23843,15 @@ export interface components {
          */
         SubcontractorPaymentCalculation: {
             /** Advance Deduction */
-            advance_deduction: string;
+            advance_deduction: string | null;
             /** Gross */
-            gross: string;
+            gross: string | null;
             /** Net */
-            net: string;
+            net: string | null;
             /** Retention */
-            retention: string;
+            retention: string | null;
             /** Vat */
-            vat: string;
+            vat: string | null;
         };
         /**
          * SubcontractorPaymentStatus
@@ -23974,7 +24034,7 @@ export interface components {
          */
         SubcontractorProgressPaymentLineRead: {
             /** Adjusted Unit Price */
-            adjusted_unit_price: string;
+            adjusted_unit_price: string | null;
             /** Code */
             code: string;
             /** Coefficient */
@@ -23982,7 +24042,7 @@ export interface components {
             /** Contract Item Id */
             contract_item_id: string | null;
             /** Contract Unit Price */
-            contract_unit_price: string;
+            contract_unit_price: string | null;
             /** Description */
             description: string;
             /** Group Name */
@@ -23993,7 +24053,7 @@ export interface components {
              */
             id: string;
             /** Line Total */
-            line_total: string;
+            line_total: string | null;
             /** Quantity */
             quantity: string;
             quantity_source: components["schemas"]["QuantitySource"];
@@ -24035,7 +24095,7 @@ export interface components {
             /** Description */
             description: string | null;
             /** Gross Total */
-            gross_total: string;
+            gross_total: string | null;
             /**
              * Id
              * Format: uuid
@@ -24044,7 +24104,7 @@ export interface components {
             /** Is Revision Required */
             is_revision_required: boolean;
             /** Net Total */
-            net_total: string;
+            net_total: string | null;
             /** Period Month */
             period_month: number | null;
             /** Period Year */
@@ -24093,15 +24153,15 @@ export interface components {
             /** Active Subcontractor Count */
             active_subcontractor_count: number;
             /** Paid Period Gross */
-            paid_period_gross: string;
+            paid_period_gross: string | null;
             /** Pending Gross */
-            pending_gross: string;
+            pending_gross: string | null;
             /** Period Month */
             period_month: number;
             /** Period Year */
             period_year: number;
             /** Total Gross */
-            total_gross: string;
+            total_gross: string | null;
         };
         /**
          * SubcontractorProgressPaymentUpdate
@@ -25048,17 +25108,17 @@ export interface components {
             /** Account Name */
             account_name: string;
             /** Closing Credit */
-            closing_credit: string;
+            closing_credit: string | null;
             /** Closing Debit */
-            closing_debit: string;
+            closing_debit: string | null;
             /** Opening Credit */
-            opening_credit: string;
+            opening_credit: string | null;
             /** Opening Debit */
-            opening_debit: string;
+            opening_debit: string | null;
             /** Period Credit */
-            period_credit: string;
+            period_credit: string | null;
             /** Period Debit */
-            period_debit: string;
+            period_debit: string | null;
         };
         /**
          * TrialBalanceTotals
@@ -25073,17 +25133,17 @@ export interface components {
          */
         TrialBalanceTotals: {
             /** Closing Credit */
-            closing_credit: string;
+            closing_credit: string | null;
             /** Closing Debit */
-            closing_debit: string;
+            closing_debit: string | null;
             /** Opening Credit */
-            opening_credit: string;
+            opening_credit: string | null;
             /** Opening Debit */
-            opening_debit: string;
+            opening_debit: string | null;
             /** Period Credit */
-            period_credit: string;
+            period_credit: string | null;
             /** Period Debit */
-            period_debit: string;
+            period_debit: string | null;
         };
         /**
          * UICurrency
@@ -25985,7 +26045,7 @@ export interface components {
          */
         UpcomingPaymentItem: {
             /** Amount */
-            amount: string;
+            amount: string | null;
             /** Counterparty */
             counterparty: string | null;
             /** Days Remaining */
@@ -25997,6 +26057,8 @@ export interface components {
              * Format: date
              */
             due_date: string;
+            /** Project Id */
+            project_id?: string | null;
             /**
              * Source Id
              * Format: uuid
@@ -26213,11 +26275,11 @@ export interface components {
          */
         VatDeductionRow: {
             /** Base */
-            base: string;
+            base: string | null;
             /** Source */
             source: string;
             /** Vat */
-            vat: string;
+            vat: string | null;
         };
         /**
          * VatReturnResponse
@@ -26238,11 +26300,11 @@ export interface components {
          */
         VatReturnResponse: {
             /** Calculated Vat */
-            calculated_vat: string;
+            calculated_vat: string | null;
             /** Carried Forward */
-            carried_forward: string;
+            carried_forward: string | null;
             /** Deductible Vat */
-            deductible_vat: string;
+            deductible_vat: string | null;
             /** Deductions */
             deductions: components["schemas"]["VatDeductionRow"][];
             /**
@@ -26251,11 +26313,11 @@ export interface components {
              */
             due_date: string;
             /** Exempt Base */
-            exempt_base: string;
+            exempt_base: string | null;
             /** Month */
             month: number;
             /** Payable */
-            payable: string;
+            payable: string | null;
             /** Taxable Rows */
             taxable_rows: components["schemas"]["VatTaxableRow"][];
             /** Year */
@@ -26272,11 +26334,11 @@ export interface components {
          */
         VatTaxableRow: {
             /** Base */
-            base: string;
+            base: string | null;
             /** Rate */
             rate: string;
             /** Vat */
-            vat: string;
+            vat: string | null;
         };
         /**
          * WageType

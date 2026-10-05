@@ -19,14 +19,17 @@ import { isZeroDecimalString } from "@/lib/decimal";
  * basmak, kullanıcıya hesabın HİÇ HAREKET GÖRMEDİĞİNİ söylerdi — muhasebede
  * bu doğrudan bir para hatasıdır.
  */
-export type AccountBalanceSide = "debit" | "credit" | "flat";
+export type AccountBalanceSide = "debit" | "credit" | "flat" | "hidden";
 
 export interface AccountBalanceRailRow {
   readonly accountId: string;
   readonly code: string;
   readonly name: string;
-  /** HER ZAMAN bir dize; `flat` hâlde `"0"` DEĞİL, sunucunun kendi sıfırı. */
-  readonly amount: string;
+  /**
+   * `flat` hâlde `"0"` DEĞİL, sunucunun kendi sıfırı. 🔴 IZN-F4b.2: `hidden` hâlde `null`
+   * (kapanış tutarları rol için gizli) — `flat` ile KARIŞTIRILMAZ: gizli bakiye "sıfır" değildir.
+   */
+  readonly amount: string | null;
   readonly side: AccountBalanceSide;
 }
 
@@ -54,13 +57,16 @@ export function accountBalanceRailRows(
   rows: readonly TrialBalanceRow[],
 ): readonly AccountBalanceRailRow[] {
   return rows.map((row) => {
-    const creditZero = isZeroDecimalString(row.closing_credit);
-    const debitZero = isZeroDecimalString(row.closing_debit);
-    if (!creditZero) {
-      return railRow(row, row.closing_credit, "credit");
+    const { closing_credit: credit, closing_debit: debit } = row;
+    if (credit !== null && !isZeroDecimalString(credit)) {
+      return railRow(row, credit, "credit");
     }
-    if (!debitZero) {
-      return railRow(row, row.closing_debit, "debit");
+    if (debit !== null && !isZeroDecimalString(debit)) {
+      return railRow(row, debit, "debit");
+    }
+    // Taraflardan biri `null` ise bakiye BİLİNMEZ; "gerçek sıfır" (flat) dalına düşmez.
+    if (credit === null || debit === null) {
+      return railRow(row, null, "hidden");
     }
     // Gerçek sıfır — sunucunun kendi dizesi korunur ("0" · "0.00" · …).
     return railRow(row, row.closing_debit, "flat");
@@ -69,7 +75,7 @@ export function accountBalanceRailRows(
 
 function railRow(
   row: TrialBalanceRow,
-  amount: string,
+  amount: string | null,
   side: AccountBalanceSide,
 ): AccountBalanceRailRow {
   return {

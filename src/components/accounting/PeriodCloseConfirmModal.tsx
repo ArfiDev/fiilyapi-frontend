@@ -92,6 +92,10 @@ export function PeriodCloseConfirmModal({
           <div className="dkap-confirm-cell__value">
             {trialBalanceQuery.data === undefined ? (
               "Yükleniyor…"
+            ) : trialBalanceQuery.data.totals.closing_debit === null ||
+              trialBalanceQuery.data.totals.closing_credit === null ? (
+              // IZN-F4b.2 — kapanış toplamları rol için gizli: denge doğrulanamaz, "Dengede değil" DENMEZ.
+              "Doğrulanamıyor"
             ) : trialBalanceQuery.data.is_balanced ? (
               <>
                 <CheckIcon {...inlineSymbolProps} /> Dengede

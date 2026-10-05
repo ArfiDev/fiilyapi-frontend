@@ -17,6 +17,11 @@ import type {
   ApprovalRole,
   ApprovalStepRead,
 } from "@/lib/api/hooks/useApprovals";
+import type { HiddenCategory } from "@/lib/api/models";
+import {
+  EMPLOYER_PAYMENT_HIDDEN_CATEGORIES,
+  SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES,
+} from "@/lib/auth/finance-hidden";
 import { formatCurrencyTight, formatDateTimeDots, formatPeriodLabel } from "@/lib/format";
 import { routes } from "@/lib/routes";
 
@@ -346,6 +351,17 @@ export function approvalSubtitleLabel(subtitle: string | null): string | null {
  */
 export function approvalAmountLabel(amount: string | null): string {
   return amount === null ? UNKNOWN_VALUE : formatCurrencyTight(amount);
+}
+
+/**
+ * IZN-F4b.2 — kart tutarı `null` iken "NEDEN" için bakılacak hassas alan kategorileri (evrak tipine göre).
+ * `null` artık iki anlam taşır: fiyatsız kalem (eksik veri) VEYA rol için gizli tutar; kilit ipucu yalnız
+ * kategori gerçekten gizliyse basılır (`isCategoryHidden`), aksi hâlde düz "—" kalır.
+ */
+export function approvalAmountCategories(documentType: string): readonly HiddenCategory[] {
+  if (documentType === "progress_payment") return EMPLOYER_PAYMENT_HIDDEN_CATEGORIES;
+  if (documentType === "subcontractor_progress_payment") return SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES;
+  return ["tum_tutarlar"];
 }
 
 /* --- Sekme şeridi (`:71-76`) --------------------------------------------- */

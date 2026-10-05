@@ -3,7 +3,7 @@ import type {
   ChartAccountResponse,
   ChartAccountType,
 } from "@/lib/api/hooks/useChartOfAccounts";
-import { formatAmount } from "@/lib/format";
+import { EMPTY_CELL, formatAmount } from "@/lib/format";
 
 /**
  * F-MU1 T3 · Hesap Planı ekranının SAF katmanı.
@@ -92,7 +92,9 @@ export type BalanceTone = "success" | "danger";
  * `formatAmount` ile yazılır (F-FAT2 kanonu — aynı para formülü iki yerde
  * yaşamaz), parantez yalnızca işaretin GÖSTERİMİdir.
  */
-export function formatBalance(value: string): string {
+export function formatBalance(value: string | null): string {
+  // IZN-F4b.2 — `null` = rol için gizli → "—" (Number(null) === 0 tuzağı: "0" BASILMAZ).
+  if (value === null) return EMPTY_CELL;
   const amount = Number(value);
   if (Number.isFinite(amount) && amount < 0) return `(${formatAmount(Math.abs(amount))})`;
   return formatAmount(value);
@@ -114,8 +116,9 @@ export function formatBalance(value: string): string {
  *     emrin "pozitif yeşil"i tam olarak bu satırlarda doğrudur),
  *     `liability`/`expense` kırmızı (HP:167/200).
  */
-export function balanceTone(value: string, accountType: ChartAccountType): BalanceTone {
-  const amount = Number(value);
+export function balanceTone(value: string | null, accountType: ChartAccountType): BalanceTone {
+  // IZN-F4b.2 — `null` (gizli) işaretsizdir: negatif sayılmaz, `Tür` rengini izler.
+  const amount = value === null ? Number.NaN : Number(value);
   if (Number.isFinite(amount) && amount < 0) return "danger";
   return accountTypeVariant(accountType) === "success" ? "success" : "danger";
 }

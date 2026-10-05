@@ -42,12 +42,17 @@ export const BANK_ACCOUNT_IDENTITY_HINT =
  * dalı E9:83'ün ta kendisidir ("Merkez Kasa" bir kasa hesabının adıdır, IBAN'ı
  * yoktur). İkisi de yoksa sessizce boş bırakılmaz.
  */
-export function bankAccountIdentityLine(account: {
-  iban: string | null;
-  display_name: string | null;
-}): { text: string; isMissing: boolean } {
+export function bankAccountIdentityLine(
+  account: {
+    iban: string | null;
+    display_name: string | null;
+  },
+  isIbanHidden = false,
+): { text: string; isMissing: boolean } {
   if (account.iban) return { text: account.iban, isMissing: false };
   if (account.display_name) return { text: account.display_name, isMissing: false };
+  // 🔴 IZN-F4b.2: `iban` rol için GİZLİyse (banka_kasa) "künye eksik" iddiası YALANdır; düz "—".
+  if (isIbanHidden) return { text: "—", isMissing: false };
   return { text: BANK_ACCOUNT_IDENTITY_EMPTY, isMissing: true };
 }
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DeleteRecordDialog } from "@/components/delete-confirm/DeleteRecordDialog";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button, Select } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { downloadJournalExport } from "@/lib/api/accounting-export-client";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import {
@@ -24,6 +25,8 @@ import { useTrialBalance } from "@/lib/api/hooks/useTrialBalance";
 import { useVatReturn } from "@/lib/api/hooks/useVatReturn";
 import { LEDGER_MAX_LIMIT, useLedger } from "@/lib/api/hooks/useLedger";
 import { isForbidden } from "@/lib/api/unwrap";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ACCOUNTING_EDIT, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -74,6 +77,7 @@ export type JournalEntryDialogState =
  */
 export function AccountingView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
   // IZN-F2.x · fiş oluştur/düzenle/Ters Kayıt = mali.yevmiye/hesap_plani/donem_kapanisi Düzenler (VEYA).
   const canEditAccounting = useButtonGate({ pages: ACCOUNTING_EDIT, need: "edit", fallback: permission.canWrite });
@@ -342,6 +346,7 @@ export function AccountingView() {
               {summaryQuery.data === undefined
                 ? "—"
                 : formatCurrency(summaryQuery.data.total_debit)}
+              <MaskedMark isHidden={isHidden} values={[summaryQuery.data?.total_debit]} />
             </strong>
           </span>
           <span className="mu-pro-foot__cell">
@@ -350,6 +355,7 @@ export function AccountingView() {
               {summaryQuery.data === undefined
                 ? "—"
                 : formatCurrency(summaryQuery.data.total_credit)}
+              <MaskedMark isHidden={isHidden} values={[summaryQuery.data?.total_credit]} />
             </strong>
           </span>
         </div>

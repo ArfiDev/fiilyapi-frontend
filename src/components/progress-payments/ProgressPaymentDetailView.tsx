@@ -6,6 +6,9 @@ import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButt
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Alert } from "@/components/ui/alert/Alert";
 import { Badge } from "@/components/ui/badge/Badge";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { EMPLOYER_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import {
   useProgressPayment,
   useProgressPaymentSummary,
@@ -39,6 +42,7 @@ export interface ProgressPaymentDetailViewProps {
 // ile durum makinesinden türetildi (P7 T4 brief §Bağlam).
 export function ProgressPaymentDetailView({ paymentId }: ProgressPaymentDetailViewProps) {
   const detailQuery = useProgressPayment(paymentId);
+  const isAmountHidden = useCategoryHidden(EMPLOYER_PAYMENT_HIDDEN_CATEGORIES);
   // Özet sorgusu detay yüklenmeden ağa çıkmaz — hook'un `enabled` kapısı bos
   // id'yi zaten engelliyor (brief §Belirsizlik çözümü).
   const summaryQuery = useProgressPaymentSummary(detailQuery.data?.project_id ?? "");
@@ -118,12 +122,24 @@ export function ProgressPaymentDetailView({ paymentId }: ProgressPaymentDetailVi
           label="Bu Hakediş"
           value={formatCurrencyPrecise(detail.calculation.gross)}
           variant="primary"
+          masked={isAmountHidden && detail.calculation.gross === null}
         />
         {summary && (
-          <KpiCard label="Toplam Hakediş" value={formatCurrencyPrecise(summary.cumulative_gross)} />
+          <KpiCard
+            label="Toplam Hakediş"
+            value={formatCurrencyPrecise(summary.cumulative_gross)}
+            masked={isAmountHidden && summary.cumulative_gross === null}
+          />
         )}
-        {remaining !== null && (
-          <KpiCard label="Kalan" value={formatCurrencyPrecise(remaining)} variant="warning" />
+        {/* IZN-F4b.2: `remaining` gizliyse (null + kategori gizli) kart "—" + kilitle KALIR; aksi hâlde
+            null = sözleşme bedeli yok → kart basılmaz (eski davranış). */}
+        {(remaining !== null || (isAmountHidden && summary !== undefined)) && (
+          <KpiCard
+            label="Kalan"
+            value={formatCurrencyPrecise(remaining)}
+            variant="warning"
+            masked={isAmountHidden && remaining === null}
+          />
         )}
       </div>
 
@@ -152,15 +168,21 @@ function KpiCard({
   label,
   value,
   variant,
+  masked = false,
 }: {
   label: string;
   value: string;
   variant?: "primary" | "warning";
+  /** IZN-F4b.2 — değer rol için gizli: "—" yanında kilit ipucu. */
+  masked?: boolean;
 }) {
   return (
     <div className="pp-kpi" data-testid="pp-detail-kpi">
       <div className="pp-kpi__label">{label}</div>
-      <div className={cx("pp-kpi__value", variant && `pp-kpi__value--${variant}`)}>{value}</div>
+      <div className={cx("pp-kpi__value", variant && `pp-kpi__value--${variant}`)}>
+        {value}
+        <MaskedMark isHidden={masked} values={[null]} />
+      </div>
     </div>
   );
 }

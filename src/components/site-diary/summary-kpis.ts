@@ -1,4 +1,5 @@
 import { computeGrossMargin } from "@/components/progress-payments/shared/margin";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import { sumDecimalStrings } from "@/lib/decimal";
 import { asPercent, type Percent } from "@/lib/api/scale";
 
@@ -39,7 +40,8 @@ export interface DiarySummaryKpiInput {
 /** HÖ190-204 · taşeron başına bir satır + altındaki çubuk. */
 export interface DiarySummarySubcontractorBar {
   name: string;
-  grossTotal: string;
+  /** `null` = gizli (IZN-F4b.2). */
+  grossTotal: string | null;
   /** Çubuk genişliği (0-100 arası, CSS `width`). Oran hesaplanamazsa `0`. */
   widthPct: number;
 }
@@ -136,7 +138,12 @@ export function computeDiarySummaryKpis(input: DiarySummaryKpiInput): DiarySumma
     subcontractorTotal,
     subcontractorCount: accrual.subcontractorRows?.length ?? null,
     subcontractorSharePct,
-    subcontractorPendingReason: accrual.subcontractorPendingReason,
+    // 🔴 IZN-F4b.2: satırlar var ama toplam null ise bir taşeron tutarı rol için gizlidir.
+    subcontractorPendingReason:
+      accrual.subcontractorPendingReason ??
+      (subcontractorTotal === null && accrual.subcontractorRows !== null && accrual.subcontractorRows.length > 0
+        ? HIDDEN_FIELD_HINT
+        : null),
     subcontractorBars: buildBars(accrual, accrual.employerTotal),
 
     grossProfit: accrual.grossProfit,
@@ -168,7 +175,9 @@ function buildBars(
     name: row.name,
     grossTotal: row.grossTotal,
     widthPct:
-      employerTotal === null ? 0 : clampWidthPct(ratioPct(row.grossTotal, employerTotal)),
+      employerTotal === null || row.grossTotal === null
+        ? 0
+        : clampWidthPct(ratioPct(row.grossTotal, employerTotal)),
   }));
 }
 

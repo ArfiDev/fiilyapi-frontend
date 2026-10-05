@@ -1,3 +1,6 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { sumDecimalStrings } from "@/lib/decimal";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import type { SubcontractorProgressPaymentLineRead } from "@/lib/api/hooks/useSubcontractorProgressPayments";
@@ -43,6 +46,7 @@ export interface SubcontractorPaymentLineTableProps {
  * grup adı doluyken bir bölüm başlığı satırı basılır.
  */
 export function SubcontractorPaymentLineTable({ lines }: SubcontractorPaymentLineTableProps) {
+  const isHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   const sorted = [...lines].sort((a, b) => a.sort_order - b.sort_order);
   const total = sumDecimalStrings(lines.map((line) => line.line_total));
 
@@ -61,11 +65,14 @@ export function SubcontractorPaymentLineTable({ lines }: SubcontractorPaymentLin
         <thead>
           <tr>
             <th className="pp-table__th pp-table__col--item">İş Kalemi</th>
-            <th className="pp-table__th pp-table__col--amount">Sözleşme B.F.</th>
+            <th className="pp-table__th pp-table__col--amount">Sözleşme B.F.<MaskedMark isHidden={isHidden} values={lines.map((line) => line.contract_unit_price)} /></th>
             <th className="pp-table__th pp-table__col--amount">Katsayı</th>
             <th className="pp-table__th pp-table__col--amount">Miktar</th>
-            <th className="pp-table__th pp-table__col--amount">Düzeltilmiş B.F.</th>
-            <th className="pp-table__th pp-table__col--amount">Toplam</th>
+            <th className="pp-table__th pp-table__col--amount">Düzeltilmiş B.F.<MaskedMark isHidden={isHidden} values={lines.map((line) => line.adjusted_unit_price)} /></th>
+            <th className="pp-table__th pp-table__col--amount">
+              Toplam
+              <MaskedMark isHidden={isHidden} values={lines.map((line) => line.line_total)} />
+            </th>
           </tr>
         </thead>
         <tbody>

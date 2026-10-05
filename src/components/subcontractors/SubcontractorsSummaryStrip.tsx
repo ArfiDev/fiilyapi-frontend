@@ -1,3 +1,7 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrency } from "@/lib/format";
 
 import type { SubcontractorSummary } from "./subcontractor-aggregate";
@@ -31,6 +35,7 @@ export function SubcontractorsSummaryStrip({
   summary,
   isPending = false,
 }: SubcontractorsSummaryStripProps) {
+  const isHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   return (
     <div className="tl-kpi" data-testid="tl-kpi-strip">
       <div className="tl-kpi__card">
@@ -56,7 +61,11 @@ export function SubcontractorsSummaryStrip({
       <div className="tl-kpi__card">
         <div className="tl-kpi__label">Bu Ay Ödeme</div>
         {summary.monthPaymentTotal === null ? (
-          <PendingValue testId="tl-kpi-month-payment" />
+          <PendingValue
+            testId="tl-kpi-month-payment"
+            reason={summary.isMonthPaymentMasked ? HIDDEN_FIELD_HINT : undefined}
+            mark={summary.isMonthPaymentMasked && isHidden}
+          />
         ) : (
           <div
             className="tl-kpi__value tl-kpi__value--danger tl-kpi__value--mono"
@@ -87,13 +96,17 @@ export function SubcontractorsSummaryStrip({
 function PendingValue({
   testId,
   reason = PAYMENT_PENDING_REASON,
+  mark = false,
 }: {
   testId: string;
   reason?: string;
+  /** IZN-F4b.2 — gizli (rol maskesi) nedeniyle bilinmiyorsa kilit ipucu. */
+  mark?: boolean;
 }) {
   return (
     <div className="tl-kpi__value tl-kpi__value--pending" title={reason} data-testid={testId}>
       —<span className="sr-only">{reason}</span>
+      <MaskedMark isHidden={mark} values={[null]} />
     </div>
   );
 }

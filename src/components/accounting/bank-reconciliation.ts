@@ -55,6 +55,9 @@ export function bankLedgerAccounts(
  * credit` bu yüzden dize aritmetiğiyle alınır (`Number` taşması: mizan
  * notundaki 2⁵³ tuzağı).
  *
+ * 🔴 IZN-F4b.2: kapanış taraflarından biri `null` (rol için gizli) ise `null` döner
+ * (`subtractDecimalStrings` null'ı 0 saymaz) — "bakiye 0" değil "bakiye bilinmiyor".
+ *
  * Hesap mizanda HİÇ YOKSA `undefined` döner — bu "sıfır" DEĞİLDİR
  * (K-MKD3): `include_empty=false` hareketsiz hesabı eler, yani cevap
  * "bu hesap bu dönemde hiç hareket görmedi"dir ve ekran öyle yazar.
@@ -62,7 +65,7 @@ export function bankLedgerAccounts(
 export function ledgerClosingBalance(
   trialBalance: TrialBalanceResponse | undefined,
   accountId: string,
-): string | undefined {
+): string | null | undefined {
   const row = trialBalance?.rows.find((item) => item.account_id === accountId);
   if (row === undefined) return undefined;
   return subtractDecimalStrings(row.closing_debit, row.closing_credit);

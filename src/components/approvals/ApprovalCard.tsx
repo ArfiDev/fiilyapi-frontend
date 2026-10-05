@@ -3,6 +3,8 @@
 import Link from "next/link";
 
 import { Badge, Button } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { cx } from "@/lib/cx";
 import { formatDateLong, toIstanbulDateOnly } from "@/lib/format";
 import type {
@@ -16,6 +18,7 @@ import {
   APPROVAL_REJECT_LABEL,
   APPROVAL_UNKNOWN_TYPE_REASON,
   UNKNOWN_VALUE,
+  approvalAmountCategories,
   approvalAmountLabel,
   approvalDecisionBadge,
   approvalDecisionLine,
@@ -101,6 +104,7 @@ function ApprovalDecisionNote({ item }: { item: ApprovalHistoryItem }) {
  */
 export function ApprovalCard(props: ApprovalCardProps) {
   const { item } = props;
+  const isAmountHidden = useCategoryHidden(approvalAmountCategories(item.document_type), item.project_id);
   const presentation = approvalDocumentPresentation(item.document_type);
   const detail = approvalDetailTarget(item.document_type, item.document_id);
   const chip = approvalLinkChip(item.document_type, item.document_id);
@@ -168,12 +172,18 @@ export function ApprovalCard(props: ApprovalCardProps) {
           <div className="ok-amounts">
             <span className="ok-amount" data-testid="ok-card-gross">
               <span className="ok-amount__label">{presentation.grossLabel}</span>
-              <span className="ok-amount__value">{approvalAmountLabel(item.gross_amount)}</span>
+              <span className="ok-amount__value">
+                {approvalAmountLabel(item.gross_amount)}
+                <MaskedMark isHidden={isAmountHidden} values={[item.gross_amount]} />
+              </span>
             </span>
             {presentation.netLabel !== null && (
               <span className="ok-amount" data-testid="ok-card-net">
                 <span className="ok-amount__label">{presentation.netLabel}</span>
-                <span className="ok-amount__value">{approvalAmountLabel(item.net_amount)}</span>
+                <span className="ok-amount__value">
+                  {approvalAmountLabel(item.net_amount)}
+                  <MaskedMark isHidden={isAmountHidden} values={[item.net_amount]} />
+                </span>
               </span>
             )}
             {chip !== null && (

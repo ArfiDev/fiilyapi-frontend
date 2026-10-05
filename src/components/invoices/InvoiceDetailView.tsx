@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButton";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Badge, Button } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { remainingDays } from "@/components/section-detail/remainingDays";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useCompany } from "@/lib/api/hooks/useCompany";
@@ -15,12 +16,15 @@ import {
 } from "@/lib/api/hooks/useInvoiceDetail";
 import { useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { isForbidden } from "@/lib/api/unwrap";
+import { INVOICE_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { INVOICE_APPROVE, INVOICING_EDIT, INVOICING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrencyTight, formatDateDots } from "@/lib/format";
 
 import { InvoiceLinesTable } from "./InvoiceLinesTable";
+import { InvoicePartyName } from "./InvoicePartyName";
 import { InvoicePaymentsPanel } from "./InvoicePaymentsPanel";
 import { InvoiceSourceChip } from "./InvoiceSourceChip";
 import { RentalMatchCard } from "./RentalMatchCard";
@@ -45,7 +49,7 @@ function PartyBlock({
   testId,
 }: {
   label: string;
-  name: string;
+  name: string | null;
   taxNumber: string | null;
   taxOffice: string | null;
   address: string | null;
@@ -58,7 +62,9 @@ function PartyBlock({
   return (
     <div data-testid={testId}>
       <div className="fat-party__label">{label}</div>
-      <div className="fat-party__name">{name}</div>
+      <div className="fat-party__name">
+        <InvoicePartyName name={name} />
+      </div>
       <div className="fat-party__meta">
         {identity.length > 0 ? identity.join(" · ") : "Vergi künyesi girilmemiş"}
         {address !== null && address.length > 0 ? `\n${address}` : ""}
@@ -86,6 +92,7 @@ function PartyBlock({
  */
 export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
   const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
+  const isAmountHidden = useCategoryHidden(INVOICE_HIDDEN_CATEGORIES);
   const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view", fallback: permission.canView });
   const canEditInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
   const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve", fallback: permission.canWrite });
@@ -241,6 +248,7 @@ export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
               data-testid="fat-hero-total"
             >
               {formatCurrencyTight(invoice.total)}
+              <MaskedMark isHidden={isAmountHidden} values={[invoice.total]} />
             </div>
             {/* FGI:68 "Vade: 18.08.2026 (24 gün)" — gün farkı YEREL takvimden. */}
             <div className="fat-hero__due" data-testid="fat-hero-due">

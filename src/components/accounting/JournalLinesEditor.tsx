@@ -2,6 +2,7 @@
 
 import { Button, Input, Select } from "@/components/ui";
 import { cx } from "@/lib/cx";
+import { EMPTY_CELL } from "@/lib/format";
 import type { ChartAccountResponse } from "@/lib/api/hooks/useChartOfAccounts";
 
 import {
@@ -165,6 +166,7 @@ export function JournalLinesEditor({
                       )}
                       aria-label={`${rowNo}. satır borç tutarı`}
                       value={line.debit}
+                      placeholder={line.isMasked === true ? EMPTY_CELL : undefined}
                       disabled={disabled || isSideLocked(line, "debit")}
                       data-testid={`mu-line-debit-${index}`}
                       onChange={(event) => onAmountChange(line.key, "debit", event.target.value)}
@@ -183,6 +185,7 @@ export function JournalLinesEditor({
                       )}
                       aria-label={`${rowNo}. satır alacak tutarı`}
                       value={line.credit}
+                      placeholder={line.isMasked === true ? EMPTY_CELL : undefined}
                       disabled={disabled || isSideLocked(line, "credit")}
                       data-testid={`mu-line-credit-${index}`}
                       onChange={(event) => onAmountChange(line.key, "credit", event.target.value)}

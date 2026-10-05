@@ -16,11 +16,13 @@ import { sumDecimalStrings } from "@/lib/decimal";
 import { asPercent, type Percent } from "@/lib/api/scale";
 
 export function computeGrossMargin(
-  employerGrossTotal: string,
-  subcontractorGrossTotal: string,
+  employerGrossTotal: string | null,
+  subcontractorGrossTotal: string | null,
   isSubcontractorTotalComplete: boolean,
 ): Percent | null {
   if (!isSubcontractorTotalComplete) return null;
+  // 🔴 IZN-F4b.2: toplamlardan biri gizli (null) ise marj BİLİNMEZ — `Number(null)` 0 → sahte %100 marj.
+  if (employerGrossTotal === null || subcontractorGrossTotal === null) return null;
 
   const employer = Number(employerGrossTotal);
   if (!Number.isFinite(employer) || employer === 0) return null;
@@ -48,11 +50,13 @@ export function computeGrossMargin(
  * hassasiyeti korunur (`decimal.ts`in gerekçesi).
  */
 export function computeGrossProfit(
-  employerGrossTotal: string,
-  subcontractorGrossTotal: string,
+  employerGrossTotal: string | null,
+  subcontractorGrossTotal: string | null,
   isSubcontractorTotalComplete: boolean,
 ): string | null {
   if (!isSubcontractorTotalComplete) return null;
+  // 🔴 IZN-F4b.2: gizli (null) toplam → kâr BİLİNMEZ (null'ı 0 sayıp "kâr = işveren toplamı" basmak YASAK).
+  if (employerGrossTotal === null || subcontractorGrossTotal === null) return null;
   if (!Number.isFinite(Number(employerGrossTotal))) return null;
   if (!Number.isFinite(Number(subcontractorGrossTotal))) return null;
   return sumDecimalStrings([employerGrossTotal, negateDecimalString(subcontractorGrossTotal)]);

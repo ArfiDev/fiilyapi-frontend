@@ -1,4 +1,7 @@
 import type { UpcomingPaymentsResponse } from "@/lib/api/hooks/useUpcomingPayments";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { TREASURY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrencyTight, formatDayMonth } from "@/lib/format";
 
 import {
@@ -36,6 +39,7 @@ export function UpcomingPaymentsPanel({
   isLoading,
   errorMessage,
 }: UpcomingPaymentsPanelProps) {
+  const isHidden = useCategoryHidden(TREASURY_HIDDEN_CATEGORIES);
   const items = upcoming?.items ?? [];
   const missingCounterpartyCount = items.filter(isUpcomingCounterpartyMissing).length;
 
@@ -46,6 +50,8 @@ export function UpcomingPaymentsPanel({
         {upcoming === undefined
           ? "Yaklaşan Ödemeler"
           : `Yaklaşan Ödemeler (${upcoming.days} Gün)`}
+        {/* IZN-F4b.2 — gizli tutarlar için başlıkta TEK kilit; satır tutarları `—`. */}
+        <MaskedMark isHidden={isHidden} values={items.map((item) => item.amount)} />
       </h2>
 
       {isLoading && <p className="hazine-notice">Yükleniyor…</p>}

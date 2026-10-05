@@ -1,4 +1,7 @@
 import type { CashFlowResponse } from "@/lib/api/hooks/useCashFlow";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { TREASURY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrencyTight, formatMonthName } from "@/lib/format";
 
 import {
@@ -28,17 +31,25 @@ const OUTFLOW_GRADIENT_ID = "hazineNakitCikis";
  * arasında bir önceki ayı yazabilirdi.
  */
 export function CashFlowPanel({ cashFlow, isLoading, errorMessage }: CashFlowPanelProps) {
+  const isHidden = useCategoryHidden(TREASURY_HIDDEN_CATEGORIES);
   const title =
     cashFlow === undefined ? "Nakit Akışı" : `${formatMonthName(cashFlow.month)} Nakit Akışı`;
   const hasSeries = cashFlow !== undefined && cashFlow.series.length > 0;
   const geometry = hasSeries
     ? buildCashFlowGeometry(cashFlow.series, cashFlow.year, cashFlow.month)
     : undefined;
+  // IZN-F4b.2 — hiç sayısal nokta yoksa (tüm kovalar gizli) eğri ÇİZİLMEZ.
+  const isChartHidden =
+    geometry !== undefined && geometry.inflowPoints.length === 0 && geometry.outflowPoints.length === 0;
+  const legendValues = [cashFlow?.inflow_total, cashFlow?.outflow_total];
 
   return (
     <section className="hazine-panel" data-testid="hazine-cashflow-panel">
       {/* 91 */}
-      <h2 className="hazine-panel__title">{title}</h2>
+      <h2 className="hazine-panel__title">
+        {title}
+        <MaskedMark isHidden={isHidden} values={legendValues} />
+      </h2>
 
       {isLoading && <p className="hazine-notice">Yükleniyor…</p>}
       {errorMessage !== undefined && (
@@ -55,7 +66,13 @@ export function CashFlowPanel({ cashFlow, isLoading, errorMessage }: CashFlowPan
         </p>
       )}
 
-      {geometry !== undefined && (
+      {isChartHidden && (
+        <p className="hazine-notice" data-testid="hazine-cashflow-hidden">
+          Nakit akışı tutarları bu görünümde yok.
+        </p>
+      )}
+
+      {geometry !== undefined && !isChartHidden && (
         // 92 — `preserveAspectRatio="none"`, genişlik %100, yükseklik 100px.
         <svg
           className="hazine-chart"

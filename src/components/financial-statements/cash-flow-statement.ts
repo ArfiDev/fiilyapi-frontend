@@ -4,7 +4,7 @@ import type {
   MonthlyCashPoint,
 } from "@/lib/api/hooks/useCashFlowStatement";
 import { isZeroDecimalString, subtractDecimalStrings } from "@/lib/decimal";
-import { formatAmount, formatMonthName, formatPeriod } from "@/lib/format";
+import { EMPTY_CELL, formatAmount, formatMonthName, formatPeriod } from "@/lib/format";
 
 /**
  * F-MT T3 · Nakit Akış Tablosu ekranının SAF katmanı. Kanonik mockup
@@ -109,7 +109,7 @@ export function parseCashFlowPeriod(value: string, fallback: Period): Period {
 /* ------------------------------------------------------------------ */
 
 /** `in` = nakit GİRİŞİ (NA:71 yeşil `+`) · `out` = ÇIKIŞ (NA:72 kırmızı `-`). */
-export type CashFlowDirection = "in" | "out" | "zero";
+export type CashFlowDirection = "in" | "out" | "zero" | "hidden";
 
 /**
  * Ondalık string'in MUTLAK değeri — işaret STRING düzeyinde atılır.
@@ -132,7 +132,9 @@ export function absDecimalString(value: string): string {
  * SIFIR bir yön DEĞİLDİR: `+ 0` ya da `- 0` basmak, olmayan bir hareket
  * yönü iddia etmek olurdu.
  */
-export function cashFlowDirection(amount: string): CashFlowDirection {
+export function cashFlowDirection(amount: string | null): CashFlowDirection {
+  // IZN-F4b.2 — `null` (rol için gizli) yön DEĞİLDİR: ne giriş ne çıkış ne sıfır.
+  if (amount === null) return "hidden";
   if (isZeroDecimalString(amount)) return "zero";
   return amount.trim().startsWith("-") ? "out" : "in";
 }
@@ -142,7 +144,8 @@ export function cashFlowDirection(amount: string): CashFlowDirection {
  * mutlak tutar. `₺` YOK, ondalık YOK (mockup öyle yazıyor) ⇒ `formatCurrency`
  * değil `formatAmount` kullanılır.
  */
-export function formatSignedAmount(amount: string): string {
+export function formatSignedAmount(amount: string | null): string {
+  if (amount === null) return EMPTY_CELL;
   const direction = cashFlowDirection(amount);
   const magnitude = formatAmount(absDecimalString(amount));
   if (direction === "zero") return magnitude;
@@ -240,7 +243,10 @@ export interface MonthlyCashLabel {
 }
 
 export interface MonthlyCashChartGeometry {
+  /** Yalnız SAYISAL (null olmayan) aylar; `null` ay için nokta ÇİZİLMEZ. */
   readonly points: readonly ChartPoint[];
+  /** Ardışık sayısal ayların kesintisiz parçaları; `null` ay parçayı BÖLER (çizgide boşluk). */
+  readonly segments: readonly (readonly ChartPoint[])[];
   readonly linePath: string;
   readonly areaPath: string;
   /** NA:139 uç nokta; seri boşsa `null` (uydurma bir nokta basılmaz). */
@@ -266,20 +272,8 @@ export function buildMonthlyCashGeometry(
   series: readonly MonthlyCashPoint[],
 ): MonthlyCashChartGeometry {
   if (series.length === 0) {
-    return { points: [], linePath: "", areaPath: "", endDot: null, labels: [] };
+    return { points: [], segments: [], linePath: "", areaPath: "", endDot: null, labels: [] };
   }
-
-  const values = series.map((entry) => entry.closing_cash);
-  const min = values.reduce((low, value) => (compareDecimalStrings(value, low) < 0 ? value : low));
-  const max = values.reduce((high, value) => (compareDecimalStrings(value, high) > 0 ? value : high));
-  // Fark KAYIPSIZ alınır; float yalnız PİKSEL oranında devreye girer (ekran
-  // çözünürlüğü zaten tamsayıdır, orada kuruş hassasiyetinin anlamı yoktur).
-  const span = Number(subtractDecimalStrings(max, min));
-
-  const points = series.map((entry, index) => ({
-    x: trackX(index, series.length, CHART_WIDTH),
-    y: scaleY(Number(subtractDecimalStrings(entry.closing_cash, min)), span),
-  }));
 
   const labels = series.map((entry, index) => ({
     key: `${entry.year}-${String(entry.month).padStart(2, "0")}`,
@@ -289,10 +283,41 @@ export function buildMonthlyCashGeometry(
     text: formatMonthName(entry.month).slice(0, 3),
   }));
 
+  // 🔴 IZN-F4b.2 — `closing_cash === null` (rol için gizli) ay: nokta ÇİZİLMEZ, 0'a düşürülmez ve
+  // eksen ölçeği YALNIZ sayısal değerlerden kurulur. Etiketler tüm aylar için basılır (zaman ekseni bozulmaz).
+  const known = series.flatMap((entry, index) =>
+    entry.closing_cash === null ? [] : [{ index, value: entry.closing_cash }],
+  );
+  if (known.length === 0) {
+    return { points: [], segments: [], linePath: "", areaPath: "", endDot: null, labels };
+  }
+
+  const values = known.map((entry) => entry.value);
+  const min = values.reduce((low, value) => (compareDecimalStrings(value, low) < 0 ? value : low));
+  const max = values.reduce((high, value) => (compareDecimalStrings(value, high) > 0 ? value : high));
+  // Fark KAYIPSIZ alınır; float yalnız PİKSEL oranında devreye girer (ekran
+  // çözünürlüğü zaten tamsayıdır, orada kuruş hassasiyetinin anlamı yoktur).
+  const span = Number(subtractDecimalStrings(max, min));
+
+  const segments: ChartPoint[][] = [];
+  let previousIndex: number | null = null;
+  for (const entry of known) {
+    const point = {
+      x: trackX(entry.index, series.length, CHART_WIDTH),
+      y: scaleY(Number(subtractDecimalStrings(entry.value, min)), span),
+    };
+    const current = segments[segments.length - 1];
+    if (current !== undefined && previousIndex === entry.index - 1) current.push(point);
+    else segments.push([point]);
+    previousIndex = entry.index;
+  }
+  const points = segments.flat();
+
   return {
     points,
-    linePath: toLinePath(points),
-    areaPath: toAreaPath(points),
+    segments,
+    linePath: segments.map(toLinePath).join(""),
+    areaPath: segments.map(toAreaPath).join(""),
     endDot: points[points.length - 1] ?? null,
     labels,
   };

@@ -1,5 +1,8 @@
 import { CheckCircleIcon, WarningTriangleIcon } from "@/components/ui/icons";
 import type { BalanceSheetResponse } from "@/lib/api/hooks/useBalanceSheet";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency } from "@/lib/format";
 
 import { balanceSheetImbalance } from "./balance-sheet";
@@ -20,6 +23,10 @@ import { balanceSheetImbalance } from "./balance-sheet";
  * gerekçelendiriyor: dengesiz bir `reversed` fiş DB'ye GİREBİLİR, uç bu yüzden
  * `is_balanced`i ÖLÇER).
  *
+ * 🔴 IZN-F4b.2 · GECE KARARI — aktif/pasif toplamlarından biri `null` (rol için gizli) ise
+ * denge DOĞRULANAMAZ: "Dengede Değil" uyarısı VERİLMEZ, sahte "Dengede" de basılmaz; nötr
+ * "doğrulanamıyor" notu + kilit ipucu gösterilir.
+ *
  * Sembol bekçisi (F-SEM): çıplak `✓`/`⚠` YAZILMAZ, ikonlar `ui/icons`in inline
  * SVG'leridir. 🔴 `≠` (U+2260) KULLANILMAZ — `src/styles/fonts.css`teki
  * `unicode-range`lerin HİÇBİRİ onu kapsamaz ve kapsanmayan bir glif tarayıcıyı
@@ -27,6 +34,15 @@ import { balanceSheetImbalance } from "./balance-sheet";
  * YAZILIR; anlam korunur, glif riski alınmaz.
  */
 export function BalanceSheetBanner({ data }: { data: BalanceSheetResponse }) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
+  if (data.assets.total === null || data.liabilities.total === null) {
+    return (
+      <p className="fs-notice" data-testid="bl-banner-unverifiable">
+        <span>Bilanço dengesi doğrulanamıyor — tutarlar bu görünümde yok</span>
+        {isHidden && <HiddenMark />}
+      </p>
+    );
+  }
   if (data.is_balanced) {
     return (
       <p className="fs-banner fs-banner--ok" data-testid="bl-banner">

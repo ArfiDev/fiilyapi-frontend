@@ -1,3 +1,6 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { TREASURY_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrency } from "@/lib/format";
 import type {
   FinancialInstrumentSummaryCard,
@@ -40,6 +43,7 @@ export function InstrumentSummaryCards({
 }: {
   summary: FinancialInstrumentSummaryResponse | undefined;
 }) {
+  const isHidden = useCategoryHidden(TREASURY_HIDDEN_CATEGORIES);
   return (
     <div className="fin-cards" data-testid="fin-cards">
       {CARDS.map((card) => {
@@ -49,6 +53,7 @@ export function InstrumentSummaryCards({
             <div className="fin-card__label">{card.label}</div>
             <div className={`fin-card__value fin-card__value--${card.tone}`}>
               {metric ? formatCompactCurrency(metric.amount) : DASH}
+              <MaskedMark isHidden={isHidden} values={[metric?.amount]} />
             </div>
             <div className="fin-card__hint">{metric ? `${metric.count} adet` : DASH}</div>
           </div>

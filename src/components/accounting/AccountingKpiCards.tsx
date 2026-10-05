@@ -1,5 +1,8 @@
 import type { JournalSummaryResponse } from "@/lib/api/hooks/useJournalSummary";
 import type { VatReturnResponse } from "@/lib/api/hooks/useVatReturn";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency, formatDayMonthShort, formatPeriod } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
@@ -50,6 +53,7 @@ const AWAITING = "—";
  * ekranda gerçekmiş gibi göstermek olurdu.
  */
 export function AccountingKpiCards({ summary, vat, vatPeriod }: AccountingKpiCardsProps) {
+  const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   const netTone = summary === undefined ? "neutral" : netBalanceTone(summary.net_balance);
 
   return (
@@ -59,6 +63,7 @@ export function AccountingKpiCards({ summary, vat, vatPeriod }: AccountingKpiCar
         <div className="mu-pro-kpi__label">Toplam Borç</div>
         <div className="mu-pro-kpi__value mu-pro-kpi__value--danger">
           {summary === undefined ? AWAITING : formatCurrency(summary.total_debit)}
+          <MaskedMark isHidden={isHidden} values={[summary?.total_debit]} />
         </div>
       </div>
 
@@ -67,6 +72,7 @@ export function AccountingKpiCards({ summary, vat, vatPeriod }: AccountingKpiCar
         <div className="mu-pro-kpi__label">Toplam Alacak</div>
         <div className="mu-pro-kpi__value mu-pro-kpi__value--success">
           {summary === undefined ? AWAITING : formatCurrency(summary.total_credit)}
+          <MaskedMark isHidden={isHidden} values={[summary?.total_credit]} />
         </div>
       </div>
 
@@ -84,6 +90,7 @@ export function AccountingKpiCards({ summary, vat, vatPeriod }: AccountingKpiCar
           data-testid="mu-kpi-net-value"
         >
           {summary === undefined ? AWAITING : formatCurrency(summary.net_balance)}
+          <MaskedMark isHidden={isHidden} values={[summary?.net_balance]} />
         </div>
       </div>
 
@@ -97,6 +104,7 @@ export function AccountingKpiCards({ summary, vat, vatPeriod }: AccountingKpiCar
         <div className="mu-pro-kpi__label">KDV Borcu</div>
         <div className="mu-pro-kpi__value mu-pro-kpi__value--warning">
           {vat === undefined ? AWAITING : formatCurrency(vat.payable)}
+          <MaskedMark isHidden={isHidden} values={[vat?.payable]} />
         </div>
         <div className="mu-pro-kpi__note" data-testid="mu-kpi-vat-due">
           {/* 🔴 MOCKUP SAPMASI 3 (bildirildi): MP:131 YALNIZ `28 Tem vadeli`

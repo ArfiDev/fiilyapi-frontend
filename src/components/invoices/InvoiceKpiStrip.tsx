@@ -1,3 +1,6 @@
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { INVOICE_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrencyTight } from "@/lib/format";
 import type { InvoiceSummaryResponse } from "@/lib/api/hooks/useInvoices";
 
@@ -15,6 +18,7 @@ import { vatDifferenceHint } from "./invoice-labels";
  */
 export function InvoiceKpiStrip({ summary }: { summary: InvoiceSummaryResponse | undefined }) {
   const dash = "—";
+  const isHidden = useCategoryHidden(INVOICE_HIDDEN_CATEGORIES);
   return (
     <div className="fat-kpis" data-testid="fat-kpis">
       {/* FY:70 */}
@@ -22,6 +26,7 @@ export function InvoiceKpiStrip({ summary }: { summary: InvoiceSummaryResponse |
         <div className="fat-kpi__label">Kesilen (Bu Ay)</div>
         <div className="fat-kpi__value fat-kpi__value--success">
           {summary ? formatCompactCurrencyTight(summary.issued_this_month.amount) : dash}
+          <MaskedMark isHidden={isHidden} values={[summary?.issued_this_month.amount]} />
         </div>
         <div className="fat-kpi__hint">
           {summary ? `${summary.issued_this_month.count} fatura` : dash}
@@ -33,6 +38,7 @@ export function InvoiceKpiStrip({ summary }: { summary: InvoiceSummaryResponse |
         <div className="fat-kpi__label">Gelen (Bu Ay)</div>
         <div className="fat-kpi__value fat-kpi__value--danger">
           {summary ? formatCompactCurrencyTight(summary.received_this_month.amount) : dash}
+          <MaskedMark isHidden={isHidden} values={[summary?.received_this_month.amount]} />
         </div>
         <div className="fat-kpi__hint">
           {summary ? `${summary.received_this_month.count} fatura` : dash}
@@ -44,6 +50,7 @@ export function InvoiceKpiStrip({ summary }: { summary: InvoiceSummaryResponse |
         <div className="fat-kpi__label">Tahsil Edilecek</div>
         <div className="fat-kpi__value fat-kpi__value--warning">
           {summary ? formatCompactCurrencyTight(summary.receivable.amount) : dash}
+          <MaskedMark isHidden={isHidden} values={[summary?.receivable.amount]} />
         </div>
         <div className="fat-kpi__hint">
           {summary ? `${summary.receivable.count} fatura vadeli` : dash}
@@ -55,6 +62,7 @@ export function InvoiceKpiStrip({ summary }: { summary: InvoiceSummaryResponse |
         <div className="fat-kpi__label">KDV Farkı</div>
         <div className="fat-kpi__value fat-kpi__value--primary">
           {summary ? formatCompactCurrencyTight(summary.vat_difference) : dash}
+          <MaskedMark isHidden={isHidden} values={[summary?.vat_difference]} />
         </div>
         <div className="fat-kpi__hint">
           {summary ? vatDifferenceHint(summary.vat_difference) : "Ödenecek KDV"}
