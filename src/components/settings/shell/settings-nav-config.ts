@@ -37,7 +37,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       // (👍, U+1F44D) ikame edildi. Literal yazılır (kaçış dizisi DEĞİL) ki
       // symbol-subset-guard kod noktasını görebilsin; onay guard'ın ALLOWED
       // listesindedir (bkz. kalan-3 #438 — kaçış dizisi bekçiyi kör bırakır).
-      { label: "Onay Rolleri ve Eşik", pageKey: "ayarlar.onay_rolleri", href: routes.settings.approvalRoles(), emoji: "👍" },
+      { label: "Onay Eşiği", pageKey: "ayarlar.onay_rolleri", href: routes.settings.approvalRoles(), emoji: "👍" },
     ],
   },
   {

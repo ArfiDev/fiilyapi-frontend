@@ -1,67 +1,15 @@
 import { test, expect } from "@playwright/test";
 
-import { WRITE_TARGET_USER_ID, login } from "./onay-rolleri-helpers";
+import { login } from "./onay-rolleri-helpers";
 
-// F-OKROL · Onay Rolleri YAZMA uçlarının ALTYAPI e2e'si (ekran DEĞİL).
+// F-OKROL · Onay Eşiği YAZMA ucunun ALTYAPI e2e'si (ekran DEĞİL).
+// IZN-B3b: rol atama uçları KALKTI (backend 410) — bu dosyada yalnız eşik kaldı.
 //
-// Neden UI'sız: `PUT /approvals/roles/{user_id}` ve `PUT /approvals/settings`
-// PAYLAŞILAN mock durumunu değiştirir. Ekrandan tıklanan bir çip, aynı
-// sunucuya bakan `onay-rolleri-visual.spec.ts` karesini `fullyParallel`
-// altında SESSİZCE oynatırdı (F-UNIT2 dersi). Bu yüzden:
-//   · rol yazması YALNIZ `WRITE_TARGET_USER_ID`ye yapılır — o kullanıcı
-//     `GET /users`ta da `GET /approvals/roles`ta da YAPISAL olarak yoktur,
-//     hiçbir kare onu görmez;
-//   · eşik ucunda yalnız REDDEDİLEN gövde denenir — durum değişmez.
+// Neden UI'sız: `PUT /approvals/settings` PAYLAŞILAN mock durumunu değiştirir;
+// yalnız REDDEDİLEN gövde denenir — durum değişmez, hiçbir kare oynamaz.
 //
-// 🔴 BFF KÖKÜ: `approvals` kökü `ALLOWED_ROOTS`ta (route.ts:281). Bu dosya
-// PUT metodunun da o kökten geçtiğini kanıtlar — GET'in geçmesi PUT hakkında
-// hiçbir şey söylemez.
-
-test("rol atamasi TAM KUME yazar ve tekrarlari tekillestirir", async ({ page }) => {
-  await login(page);
-
-  const put = await page.request.put(
-    `/api/backend/approvals/roles/${WRITE_TARGET_USER_ID}`,
-    { data: { approval_roles: ["patron", "patron", "accounting"] } },
-  );
-  expect(put.status()).toBe(200);
-  expect(await put.json()).toMatchObject({
-    user_id: WRITE_TARGET_USER_ID,
-    approval_roles: ["patron", "accounting"],
-  });
-
-  // TAM KÜME semantiği: gönderilmeyen rol KALKAR (kısmi ekleme ucu YOKTUR).
-  const ikinci = await page.request.put(
-    `/api/backend/approvals/roles/${WRITE_TARGET_USER_ID}`,
-    { data: { approval_roles: ["site_chief"] } },
-  );
-  expect(ikinci.status()).toBe(200);
-  expect((await ikinci.json()).approval_roles).toEqual(["site_chief"]);
-
-  // 🔒 GERİ ALMA: hedef yeniden rolsüz bırakılır.
-  const geri = await page.request.put(
-    `/api/backend/approvals/roles/${WRITE_TARGET_USER_ID}`,
-    { data: { approval_roles: [] } },
-  );
-  expect(geri.status()).toBe(200);
-});
-
-test("bilinmeyen rol degeri 422 alir — enum sozlesmesi bekcilenir", async ({ page }) => {
-  await login(page);
-  const res = await page.request.put(
-    `/api/backend/approvals/roles/${WRITE_TARGET_USER_ID}`,
-    { data: { approval_roles: ["muhasebe_seflik"] } },
-  );
-  expect(res.status()).toBe(422);
-});
-
-test("bilinmeyen kullanici 404 alir", async ({ page }) => {
-  await login(page);
-  const res = await page.request.put("/api/backend/approvals/roles/u-yok-boyle", {
-    data: { approval_roles: [] },
-  });
-  expect(res.status()).toBe(404);
-});
+// 🔴 BFF KÖKÜ: `approvals` kökü `ALLOWED_ROOTS`ta. Bu dosya PUT metodunun da o
+// kökten geçtiğini kanıtlar — GET'in geçmesi PUT hakkında hiçbir şey söylemez.
 
 /**
  * 🔴 KONTROL SORUSU: "bu mock, gerçek backend'in REDDEDECEĞİ bir isteği

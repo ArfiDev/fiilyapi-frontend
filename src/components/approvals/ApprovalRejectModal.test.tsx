@@ -27,6 +27,7 @@ function item(partial: Partial<ApprovalInboxItem> = {}): ApprovalInboxItem {
     created_at: "2026-01-01T00:00:00Z",
     threshold_snapshot: "1000.00",
     amount_snapshot: "500.00",
+    can_decide: true,
     current_step_no: 1,
     steps: [step({})],
     title: "Satınalma #1",
@@ -45,6 +46,22 @@ function renderModal(onClose = vi.fn()) {
     </QueryClientProvider>,
   );
 }
+
+describe("ApprovalRejectModal — 403", () => {
+  it("rol yok 403 metni OLDUĞU GİBİ görünür", async () => {
+    const user = userEvent.setup();
+    const detail = "Bu projede bu onay adimi icin gereken role sahip degilsiniz";
+    vi.mocked(backendClient.POST).mockResolvedValue({
+      data: undefined,
+      error: { detail },
+      response: { ok: false, status: 403 } as Response,
+    } as never);
+    renderModal();
+    await user.type(screen.getByTestId("ok-reject-reason"), "Belge eksik");
+    await user.click(screen.getByTestId("ok-reject-submit"));
+    expect(await screen.findByTestId("ok-reject-error")).toHaveTextContent(detail);
+  });
+});
 
 describe("ApprovalRejectModal — kaydedilmemiş değişiklik kaydı", () => {
   it("açıldı, dokunulmadı → temiz", () => {

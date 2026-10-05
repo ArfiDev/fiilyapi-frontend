@@ -109,7 +109,6 @@ export function ApprovalsView() {
 
   const items = activeQuery.data?.items;
   const total = inboxQuery.data?.total;
-  const myRoles = activeQuery.data?.my_approval_roles ?? [];
   const truncation = buildListTruncation(items?.length ?? 0, activeQuery.data?.total);
   const tabCounts: Partial<Record<ApprovalTabKey, number>> = {
     benim: total,
@@ -203,13 +202,12 @@ export function ApprovalsView() {
         <div className="ok-list" data-testid="ok-list">
           {isHistoryTab
             ? historyQuery?.data?.items.map((item) => (
-                <ApprovalCard key={item.chain_id} mode="history" item={item} myRoles={myRoles} />
+                <ApprovalCard key={item.chain_id} mode="history" item={item} />
               ))
             : inboxQuery.data?.items.map((item) => (
                 <ApprovalCard
                   key={item.chain_id}
                   item={item}
-                  myRoles={myRoles}
                   isPending={approveItem.isPending}
                   onApprove={handleApprove}
                   onReject={(target) => {

@@ -81,6 +81,7 @@ function item(partial: Partial<ApprovalInboxItem> = {}): ApprovalInboxItem {
     created_at: "2026-07-20T08:52:00Z",
     threshold_snapshot: THRESHOLD,
     amount_snapshot: "1240000.00",
+    can_decide: true,
     current_step_no: 3,
     steps: [
       step({ step_no: 1, approval_role: "site_chief", decided_at: "2026-07-19T08:00:00Z" }),
@@ -107,7 +108,6 @@ function mockInbox(partial: Partial<ApprovalInboxResponse> | null, extra: Record
           total: 1,
           limit: 200,
           offset: 0,
-          my_approval_roles: ["patron"],
           ...partial,
         } satisfies ApprovalInboxResponse);
   vi.mocked(useApprovalInbox).mockReturnValue({
@@ -353,6 +353,26 @@ describe("ApprovalsView — kart içeriği (mockup :118-148)", () => {
     expect(screen.getByTestId("ok-steps").textContent ?? "").not.toMatch(/[✓✗●○→⚠ℹ]/);
   });
 
+  it("IZN-B3b: sıradaki adım 'Siz' yalnız can_decide true iken; false iken '(bekliyor)'", () => {
+    mockInbox({
+      items: [item({ chain_id: "c-mine" }), item({ chain_id: "c-other", can_decide: false })],
+      total: 2,
+    });
+    mockSettings(THRESHOLD);
+    renderView();
+    const [mine, other] = screen.getAllByTestId("ok-card");
+    const mineCurrent = within(mine)
+      .getAllByTestId("ok-step")
+      .find((node) => node.dataset.state !== "decided");
+    const otherCurrent = within(other)
+      .getAllByTestId("ok-step")
+      .find((node) => node.dataset.state !== "decided");
+    expect(mineCurrent).toHaveTextContent("Patron(Siz)");
+    expect(mineCurrent?.dataset.state).toBe("current-mine");
+    expect(otherCurrent).toHaveTextContent("Patron(bekliyor)");
+    expect(otherCurrent?.dataset.state).toBe("current-other");
+  });
+
   it("🔴 mockup'ın karşılıksız parçaları BASILMAZ (ACİL rozeti, oluşturan ROLÜ)", () => {
     mockInbox({});
     mockSettings(THRESHOLD);
@@ -464,6 +484,37 @@ describe("ApprovalsView — ret diyaloğunun ZORUNLU gerekçe kapısı", () => {
 });
 
 describe("ApprovalsView — onay", () => {
+  it("IZN-B3b: can_decide false → Onayla/Reddet YOK (kart ve Detay kalır)", () => {
+    mockInbox({ items: [item({ can_decide: false })] });
+    mockSettings(THRESHOLD);
+    renderView();
+    const card = screen.getByTestId("ok-card");
+    expect(within(card).queryByTestId("ok-card-approve")).not.toBeInTheDocument();
+    expect(within(card).queryByTestId("ok-card-reject")).not.toBeInTheDocument();
+    expect(within(card).getByTestId("ok-card-detail")).toBeInTheDocument();
+  });
+
+  it("IZN-B3b: can_decide true → Onayla/Reddet VAR", () => {
+    mockInbox({ items: [item({ can_decide: true })] });
+    mockSettings(THRESHOLD);
+    renderView();
+    const card = screen.getByTestId("ok-card");
+    expect(within(card).getByTestId("ok-card-approve")).toBeInTheDocument();
+    expect(within(card).getByTestId("ok-card-reject")).toBeInTheDocument();
+  });
+
+  it("rol yok 403 metni OLDUĞU GİBİ görünür (AccessDenied'e düşmez)", async () => {
+    mockInbox({});
+    mockSettings(THRESHOLD);
+    const detail = "Bu projede bu onay adimi icin gereken role sahip degilsiniz";
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ detail }, 403)));
+
+    renderView();
+    await userEvent.click(screen.getByTestId("ok-card-approve"));
+
+    await waitFor(() => expect(screen.getByTestId("ok-action-error")).toHaveTextContent(detail));
+  });
+
   it("'Onayla' evrak ailesinin KENDİ ucuna GÖVDESİZ POST atar", async () => {
     mockInbox({});
     mockSettings(THRESHOLD);
@@ -542,7 +593,6 @@ function stubHistoryFetch(
         total: 0,
         limit: 200,
         offset: 0,
-        my_approval_roles: ["patron"],
         ...body,
       });
     }),
@@ -704,6 +754,9 @@ describe("ApprovalsView — geçmiş sekmeleri (OKT-F1.2)", () => {
     expect(cards).toHaveLength(2);
     expect(within(cards[0]).getByTestId("ok-card-decision-badge")).toHaveTextContent("Bekliyor · 2. adım");
     expect(within(cards[0]).queryByTestId("ok-card-decision-by")).not.toBeInTheDocument();
+    // GECE KARARI: can_decide true olsa da geçmiş kartında eylem YOK.
+    expect(within(cards[0]).queryByTestId("ok-card-approve")).not.toBeInTheDocument();
+    expect(within(cards[0]).queryByTestId("ok-card-reject")).not.toBeInTheDocument();
     expect(within(cards[1]).getByTestId("ok-card-decision-badge")).toHaveTextContent("Onaylandı");
   });
 

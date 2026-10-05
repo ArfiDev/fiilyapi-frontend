@@ -158,5 +158,7 @@ export const SUBMIT_ERROR_FALLBACK = "Talep onaya gönderilemedi.";
  * bir sonraki denemede `PATCH` + `submit` yolunu kullanır).
  */
 export function submitAfterCreateNotice(requestNo: string, detail: string): string {
-  return `Talep ${requestNo} TASLAK olarak kaydedildi ama onaya gönderilemedi: ${detail} Talebiniz kaybolmadı — düzeltip “Onaya Gönder”e yeniden basabilir ya da taslak olarak bırakabilirsiniz.`;
+  // Sunucu metni (`detail`) OLDUĞU GİBİ taşınır; yalnız cümle sonu noktası eksikse eklenir.
+  const sentence = /[.!?]$/.test(detail) ? detail : `${detail}.`;
+  return `Talep ${requestNo} TASLAK olarak kaydedildi ama onaya gönderilemedi: ${sentence} Talebiniz kaybolmadı — düzeltip “Onaya Gönder”e yeniden basabilir ya da taslak olarak bırakabilirsiniz.`;
 }

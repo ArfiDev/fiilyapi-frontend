@@ -8,7 +8,6 @@ import { formatDateLong, toIstanbulDateOnly } from "@/lib/format";
 import type {
   ApprovalHistoryItem,
   ApprovalInboxItem,
-  ApprovalRole,
 } from "@/lib/api/hooks/useApprovals";
 
 import { ApprovalStepStrip } from "./ApprovalStepStrip";
@@ -31,12 +30,8 @@ import {
 } from "./approval-labels";
 import "./approvals.css";
 
-interface ApprovalCardBaseProps {
-  myRoles: readonly ApprovalRole[];
-}
-
 /** Bekleyen kart (Benim Onayım) — Onayla/Reddet düğmeleri var. */
-interface PendingApprovalCardProps extends ApprovalCardBaseProps {
+interface PendingApprovalCardProps {
   item: ApprovalInboxItem;
   mode?: "pending";
   isPending: boolean;
@@ -48,7 +43,7 @@ interface PendingApprovalCardProps extends ApprovalCardBaseProps {
  * OKT-F1.2 · Geçmiş kartı — AYNI iskelet, Onayla/Reddet yerine karar rozeti
  * (`decision` + `decided_by` + `decided_at` + ret `reason`). Kopya kart YOK.
  */
-interface HistoryApprovalCardProps extends ApprovalCardBaseProps {
+interface HistoryApprovalCardProps {
   item: ApprovalHistoryItem;
   mode: "history";
 }
@@ -105,15 +100,17 @@ function ApprovalDecisionNote({ item }: { item: ApprovalHistoryItem }) {
  * MUTLAK tarih basılır (`formatDateLong`). Onaylı sapma, raporlanır.
  */
 export function ApprovalCard(props: ApprovalCardProps) {
-  const { item, myRoles } = props;
+  const { item } = props;
   const presentation = approvalDocumentPresentation(item.document_type);
   const detail = approvalDetailTarget(item.document_type, item.document_id);
   const chip = approvalLinkChip(item.document_type, item.document_id);
   const needsPatron = approvalNeedsPatron(item.steps);
   const subtitle = approvalSubtitleLabel(item.subtitle);
   const isHistory = props.mode === "history";
-  // Bilinmeyen tip yalnız onay/ret düğmelerini kapatır; geçmişte karar zaten verilmiştir.
+  // Bilinmeyen tip onay/ret düğmelerini devre dışı bırakır; geçmişte karar zaten verilmiştir.
   const canDecide = isHistory || isKnownApprovalDocumentType(item.document_type);
+  // IZN-B3b: Onayla/Reddet GÖRÜNÜRLÜĞÜ sunucunun `can_decide`ındadır (projedeki
+  // rol ataması). GECE KARARI: geçmiş kartı rozet modunda kalır, eylem YOK.
   const { Icon } = presentation;
 
   return (
@@ -164,7 +161,7 @@ export function ApprovalCard(props: ApprovalCardProps) {
           <ApprovalStepStrip
             steps={item.steps}
             currentStepNo={item.current_step_no}
-            myRoles={myRoles}
+            canDecide={item.can_decide}
           />
 
           {/* :137-141 */}
@@ -199,28 +196,30 @@ export function ApprovalCard(props: ApprovalCardProps) {
           {props.mode === "history" ? (
             <ApprovalDecisionNote item={props.item} />
           ) : (
-            <>
-              <Button
-                variant={item.document_type === "subcontractor_progress_payment" ? "success" : "primary"}
-                className={cx("ok-btn", presentation.approveClassName)}
-                disabled={props.isPending || !canDecide}
-                title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
-                onClick={() => props.onApprove(item)}
-                data-testid="ok-card-approve"
-              >
-                {APPROVAL_APPROVE_LABEL}
-              </Button>
-              <Button
-                variant="secondary"
-                className="ok-btn ok-btn--reject"
-                disabled={props.isPending || !canDecide}
-                title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
-                onClick={() => props.onReject(item)}
-                data-testid="ok-card-reject"
-              >
-                {APPROVAL_REJECT_LABEL}
-              </Button>
-            </>
+            item.can_decide && (
+              <>
+                <Button
+                  variant={item.document_type === "subcontractor_progress_payment" ? "success" : "primary"}
+                  className={cx("ok-btn", presentation.approveClassName)}
+                  disabled={props.isPending || !canDecide}
+                  title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
+                  onClick={() => props.onApprove(item)}
+                  data-testid="ok-card-approve"
+                >
+                  {APPROVAL_APPROVE_LABEL}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="ok-btn ok-btn--reject"
+                  disabled={props.isPending || !canDecide}
+                  title={canDecide ? undefined : APPROVAL_UNKNOWN_TYPE_REASON}
+                  onClick={() => props.onReject(item)}
+                  data-testid="ok-card-reject"
+                >
+                  {APPROVAL_REJECT_LABEL}
+                </Button>
+              </>
+            )
           )}
           {/* :145 · Detay — hedef rota `document_type`+`document_id`den kurulur.
               Rotası OLMAYAN (`purchase_request`) hedef SİLİNMEZ, devre-dışı +

@@ -6,8 +6,8 @@ export default function OnayRolleriPage() {
     <>
       <SettingsHeader
         variant="sub"
-        title="Onay Rolleri ve Eşik"
-        subtitle="Kimin neyi onaylayacağını ve hangi tutarın üstünde Patron onayı gerektiğini belirle"
+        title="Onay Eşiği"
+        subtitle="Hangi tutarın üstünde Patron onayı gerektiğini belirle"
       />
       <ApprovalRolesScreen />
     </>

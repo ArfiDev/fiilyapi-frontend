@@ -2,7 +2,7 @@ import { Fragment } from "react";
 
 import { cx } from "@/lib/cx";
 import { CheckIcon } from "@/components/ui/icons";
-import type { ApprovalRole, ApprovalStepRead } from "@/lib/api/hooks/useApprovals";
+import type { ApprovalStepRead } from "@/lib/api/hooks/useApprovals";
 
 import {
   approvalRoleLabel,
@@ -14,7 +14,8 @@ import {
 export interface ApprovalStepStripProps {
   steps: readonly ApprovalStepRead[];
   currentStepNo: number;
-  myRoles: readonly ApprovalRole[];
+  /** Kalemin `can_decide`ı — sıradaki adımın benim olup olmadığı. */
+  canDecide: boolean;
 }
 
 /**
@@ -28,11 +29,11 @@ export interface ApprovalStepStripProps {
  *
  * Durum TÜRETMESİ burada YAPILMAZ, `approvalStepState`ten okunur (tek kaynak).
  */
-export function ApprovalStepStrip({ steps, currentStepNo, myRoles }: ApprovalStepStripProps) {
+export function ApprovalStepStrip({ steps, currentStepNo, canDecide }: ApprovalStepStripProps) {
   return (
     <div className="ok-steps" data-testid="ok-steps">
       {steps.map((step, index) => {
-        const state = approvalStepState({ step, currentStepNo, myRoles });
+        const state = approvalStepState({ step, currentStepNo, canDecide });
         const note = approvalStepNote(state);
         return (
           <Fragment key={step.step_no}>

@@ -1268,15 +1268,6 @@ interface MockState {
     accent_color: string;
   };
   notifications: Array<{ event_key: string; label: string; email: boolean; in_app: boolean; sms: boolean }>;
-  /**
-   * F-OKROL · `user_id -> onay rolleri` ATAMA haritası.
-   *
-   * 🔴 `my_approval_roles` (Onay Kutusu) BU HARİTADAN TÜRETİLMEZ ve
-   * türetilmemelidir: o alan oturum sahibinin kümesidir ve F-OK'un üç
-   * karesi ona bakar. İki kaynağı birleştirmek, bu dilimin bir yazmasını
-   * BAŞKASININ karesine sızdırırdı (F-UNIT2 dersi).
-   */
-  approvalRoles: Record<string, string[]>;
   /** F-OKROL · `GET/PUT /approvals/settings` eşiği (artık DEĞİŞTİRİLEBİLİR). */
   approvalThreshold: string;
   auditLog: Array<{
@@ -3730,18 +3721,6 @@ function seedState(): MockState {
       { event_key: "payroll_payday", label: "Bordro ödeme günü", email: true, in_app: true, sms: false },
       { event_key: "daily_log_missing", label: "Günlük kayıt girilmedi", email: false, in_app: true, sms: false },
     ],
-    // F-OKROL · Mockup'ın çizdiği atamalar (`Ayarlar - Onay Rolleri.dc.html`
-    // `:190-196` `:203-209` `:214-220` `:225-232` `:240-246`). Sercan Öztürk
-    // (`u-2`) mockup'ta TEK rollüdür; Yusuf Kaya (`u-5`) yalnız Satınalma.
-    // 🔴 Ayşe Demir (`u-3`) ve Kadir Arslan (`u-4`) mockup'taki gibi ÇOKLU/tekil
-    // rol taşır — "bir kişi birden çok rol taşıyabilir" olgusu kadraja girsin.
-    approvalRoles: {
-      "u-1": ["project_manager", "accounting", "patron"],
-      "u-2": ["site_chief"],
-      "u-3": ["accounting"],
-      "u-4": ["site_chief", "project_manager"],
-      "u-5": ["procurement"],
-    },
     approvalThreshold: APPROVAL_THRESHOLD_TRY,
     // Mockup'taki satirlarla hizali (../projedesign/Ayarlar - Denetim Günlüğü.dc.html);
     // occurred_at gercek backend gibi UTC'dir (Z), ekran Europe/Istanbul'a cevirir —
@@ -15516,49 +15495,6 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       });
     }
 
-    if (method === "GET" && path === "/approvals/roles") {
-      const limit = Number(parsed.searchParams.get("limit") ?? "50");
-      const offset = Number(parsed.searchParams.get("offset") ?? "0");
-      if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
-        return send(422, { detail: "limit 1-200 araliginda olmalidir" });
-      }
-      const items = approvalRoleAssignments(state);
-      return send(200, {
-        items: items.slice(offset, offset + limit),
-        total: items.length,
-        limit,
-        offset,
-      });
-    }
-
-    const approvalRoleMatch = path.match(/^\/approvals\/roles\/([^/]+)$/);
-    if (method === "PUT" && approvalRoleMatch) {
-      const userId = approvalRoleMatch[1];
-      return withBody((body) => {
-        const keys = Object.keys(body);
-        if (keys.length !== 1 || keys[0] !== "approval_roles") {
-          return send(422, { detail: "approval_roles disinda alan kabul edilmez" });
-        }
-        const roles = body.approval_roles;
-        if (!Array.isArray(roles) || roles.some((r) => !APPROVAL_ROLE_VALUES.includes(String(r)))) {
-          return send(422, { detail: "approval_roles gecerli rol dizisi olmalidir" });
-        }
-        const known =
-          state.users.find((u) => u.id === userId) ??
-          (userId === APPROVAL_ROLE_WRITE_TARGET.id ? APPROVAL_ROLE_WRITE_TARGET : undefined);
-        if (!known) return send(404, { detail: "Kullanici bulunamadi" });
-        // Sunucu tekrarları SESSİZCE tekilleştirir (`service.replace_user_roles`).
-        const tekil = [...new Set(roles.map(String))];
-        state.approvalRoles[userId] = tekil;
-        return send(200, {
-          user_id: known.id,
-          full_name: known.full_name,
-          email: known.email,
-          approval_roles: tekil,
-        });
-      });
-    }
-
     // ── AI-CHAT-2 / K2 · sohbet geçmişi ────────────────────────────────
     //
     // 🔴 İKİZ DEVRİ: bu uçlar gerçek backend'in REDDEDECEĞİNİ reddeder.
@@ -20082,51 +20018,10 @@ const APPROVAL_THRESHOLD_TRY = "500000.00";
 
 /* --- F-OKROL · Onay Rolleri ve Eşik yardımcıları ----------------------- */
 
-/** `ApprovalRole` enum üyeleri — sözleşmeden TÜRETİLİR, elle yazılmaz. */
-const APPROVAL_ROLE_VALUES: string[] = [
-  "site_chief",
-  "project_manager",
-  "accounting",
-  "patron",
-  "procurement",
-] satisfies components["schemas"]["ApprovalRole"][];
-
-/**
- * 🔒 YAZMA HEDEFİ — `PUT /approvals/roles/{user_id}` e2e'sinin dokunduğu TEK
- * kullanıcı. `state.users`ta YOKTUR ve `approvalRoleAssignments` onu YAPISAL
- * OLARAK dışlar (`hiddenFromLists` deseninin bu ekrandaki karşılığı): hiçbir
- * kare onu görmez, dolayısıyla yazma testi hiçbir baseline'ı oynatamaz.
- */
-const APPROVAL_ROLE_WRITE_TARGET = {
-  id: "u-okrol-write",
-  full_name: "OKROL Yazma Hedefi",
-  email: "okrol.write@fiil.com",
-};
-
 function approvalSettingsBody(
   state: MockState,
 ): components["schemas"]["ApprovalSettingsRead"] {
   return { approval_threshold_try: state.approvalThreshold };
-}
-
-/**
- * `GET /approvals/roles` — EN AZ BİR rolü olan kullanıcılar, `full_name`
- * sırasında (gerçek uç `ORDER BY User.full_name, User.id`). Rolü boşalan
- * kullanıcı kümeden DÜŞER.
- */
-function approvalRoleAssignments(
-  state: MockState,
-): components["schemas"]["ApprovalRoleAssignmentRead"][] {
-  return state.users
-    .filter((user) => (state.approvalRoles[user.id] ?? []).length > 0)
-    .map((user) => ({
-      user_id: user.id,
-      full_name: user.full_name,
-      email: user.email,
-      approval_roles: (state.approvalRoles[user.id] ??
-        []) as components["schemas"]["ApprovalRole"][],
-    }))
-    .sort((a, b) => a.full_name.localeCompare(b.full_name, "tr") || a.user_id.localeCompare(b.user_id));
 }
 
 /**
@@ -20272,17 +20167,6 @@ const APPROVAL_SEEDS: readonly MockApprovalSeed[] = [
 ];
 
 /**
- * `my_approval_roles` — ME (`Ahmet Yılmaz`, Patron) hem `patron` hem
- * `project_manager` adımlarını imzalayabilir. İki rol de gereklidir: fikstürün
- * dört zincirinin sıradaki adımı bu iki rolden birine düşer ve uç ancak
- * "BANA düşen" zincirleri döndürebilir.
- */
-const MY_APPROVAL_ROLES: MockApprovalItem["steps"][number]["approval_role"][] = [
-  "patron",
-  "project_manager",
-];
-
-/**
  * Onay kutusunun YAZMA HEDEFI. `onay-kutusu.spec.ts` bu kaydi GERCEKTEN onaylar
  * ve testin sonunda geri alir; obur UC tohum (`scpp-3` · `pr-2` · `pp-5`) tum
  * spec'lerde SALT-OKURDUR (`onay-kutusu-visual.spec.ts:19-21` bunu yazili
@@ -20345,7 +20229,8 @@ function approvalInboxFixture(state: MockState, limit: number, offset: number): 
 
   const items: MockApprovalItem[] = pending
     .slice(offset, offset + limit)
-    .map((seed) => ({ ...seed, threshold_snapshot: APPROVAL_THRESHOLD_TRY }));
+    // IZN-B3b: kutudaki her kalem BANA düşer → `can_decide` hep true.
+    .map((seed) => ({ ...seed, threshold_snapshot: APPROVAL_THRESHOLD_TRY, can_decide: true }));
 
   return {
     items,
@@ -20354,7 +20239,6 @@ function approvalInboxFixture(state: MockState, limit: number, offset: number): 
     total: pending.length,
     limit,
     offset,
-    my_approval_roles: MY_APPROVAL_ROLES,
   };
 }
 
@@ -20379,6 +20263,7 @@ const APPROVAL_HISTORY_DECIDED: readonly MockApprovalHistoryItem[] = [
     created_at: "2026-06-12T08:30:00Z",
     threshold_snapshot: APPROVAL_THRESHOLD_TRY,
     amount_snapshot: "310000.00",
+    can_decide: false,
     current_step_no: 2,
     steps: [
       approvalStep(1, "site_chief", "2026-06-12T08:40:00Z", "Sercan Öztürk"),
@@ -20401,6 +20286,7 @@ const APPROVAL_HISTORY_DECIDED: readonly MockApprovalHistoryItem[] = [
     created_at: "2026-06-20T09:00:00Z",
     threshold_snapshot: APPROVAL_THRESHOLD_TRY,
     amount_snapshot: "92000.00",
+    can_decide: false,
     current_step_no: 2,
     steps: [
       approvalStep(1, "procurement", "2026-06-20T09:10:00Z", "Yasemin Kaya"),
@@ -20426,6 +20312,8 @@ function approvalHistoryFixture(
   const pending: MockApprovalHistoryItem[] = pendingApprovalSeeds(state).map((seed) => ({
     ...seed,
     threshold_snapshot: APPROVAL_THRESHOLD_TRY,
+    // IZN-B3b: açık zincirde sıradaki adım bende → true (kartta eylem YOK, yalnız "(Siz)").
+    can_decide: true,
     decision: "pending",
     decided_by: null,
     decided_at: null,
@@ -20441,7 +20329,6 @@ function approvalHistoryFixture(
     total: matching.length,
     limit,
     offset,
-    my_approval_roles: MY_APPROVAL_ROLES,
   };
 }
 

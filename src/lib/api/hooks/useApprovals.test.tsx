@@ -41,7 +41,7 @@ describe("useUpdateApprovalSettings", () => {
   });
 
   // KAYIT 446: eşik değiştikten sonra onay kutusu (APPROVALS_QUERY_KEY) eski
-  // eşikle karar vermeye devam etmemeli — kardeş mutasyon useSetApprovalRoles
+  // eşikle karar vermeye devam etmemeli — kardeş mutasyon (eski rol ataması)
   // ile AYNI kapsamı geçersiz kılmalı.
   it("eşik güncellenince hem approval-settings hem approvals geçersiz kılınır", async () => {
     const { result } = renderHook(() => useUpdateApprovalSettings(), { wrapper });
@@ -66,7 +66,7 @@ describe("useApprovalHistory", () => {
     vi.clearAllMocks();
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     vi.mocked(backendClient.GET).mockResolvedValue({
-      data: { items: [], total: 0, limit: 200, offset: 0, my_approval_roles: [] },
+      data: { items: [], total: 0, limit: 200, offset: 0 },
       error: undefined,
       response: new Response(),
     } as never);

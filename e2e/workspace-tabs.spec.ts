@@ -533,7 +533,7 @@ test.describe("O1) dar ekranda aktif sekme ŞERİT İÇİNDE TAM görünür (taz
   for (const width of [768, 390] as const) {
     test(`${width}px — /ayarlar/onay-rolleri, taze yükleme`, async ({ page }) => {
       await login(page);
-      await seedManyTabsActiveOn(page, "/ayarlar/onay-rolleri", "Onay Rolleri ve Eşik");
+      await seedManyTabsActiveOn(page, "/ayarlar/onay-rolleri", "Onay Eşiği");
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/ayarlar/onay-rolleri");
       await expect(tabsList(page).getByRole("tab")).toHaveCount(7);

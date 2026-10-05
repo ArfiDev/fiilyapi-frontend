@@ -454,6 +454,19 @@ describe("FST · Taslak Kaydet + Onaya Gönder GERÇEKTİR", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("IZN-B3b: submit 409 detail'i (rol atanmamış) OLDUĞU GİBİ basılır", async () => {
+    const detail = "Bu projede Şantiye Şefi, Muhasebe atanmamış; önce Ayarlar > Kullanıcılar'dan atayın";
+    submitMutateAsync.mockRejectedValue(new BackendError(409, { detail }));
+    render(<PurchaseRequestForm />);
+    fillSubmittableForm();
+
+    fireEvent.click(submitButton());
+
+    await waitFor(() =>
+      expect(screen.getByTestId("talep-hata").textContent).toContain(detail),
+    );
+  });
+
   it("🔴 submit patladıktan sonra yeniden deneme İKİNCİ talep AÇMAZ (PATCH yolu)", async () => {
     submitMutateAsync.mockRejectedValueOnce(
       new BackendError(409, { detail: "Durum uygun değil." }),
