@@ -10902,16 +10902,16 @@ export interface components {
             is_draft: boolean;
             /** Progress Pct */
             progress_pct?: string | null;
-            /** Start Date */
-            start_date: string | null;
-            status: components["schemas"]["ContractStatus"];
-            /** Title */
-            title: string;
             /**
              * Project Id
              * Format: uuid
              */
             project_id: string;
+            /** Start Date */
+            start_date: string | null;
+            status: components["schemas"]["ContractStatus"];
+            /** Title */
+            title: string;
         };
         /** ContractListResponse */
         ContractListResponse: {

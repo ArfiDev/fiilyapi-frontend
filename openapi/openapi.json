@@ -5436,6 +5436,11 @@
             ],
             "title": "Progress Pct"
           },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
           "start_date": {
             "anyOf": [
               {
@@ -5453,11 +5458,6 @@
           },
           "title": {
             "title": "Title",
-            "type": "string"
-          },
-          "project_id": {
-            "format": "uuid",
-            "title": "Project Id",
             "type": "string"
           }
         },
@@ -6388,7 +6388,6 @@
             "type": "string"
           },
           "name": {
-            "title": "Name",
             "anyOf": [
               {
                 "type": "string"
@@ -6396,7 +6395,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Name"
           },
           "national_id": {
             "anyOf": [
@@ -20509,7 +20509,6 @@
       "OfferSettingsRead": {
         "properties": {
           "default_overhead_pct": {
-            "title": "Default Overhead Pct",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -20518,14 +20517,14 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Default Overhead Pct"
           },
           "default_payment_terms": {
             "title": "Default Payment Terms",
             "type": "string"
           },
           "default_profit_pct": {
-            "title": "Default Profit Pct",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -20534,7 +20533,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Default Profit Pct"
           },
           "default_validity_days": {
             "title": "Default Validity Days",
