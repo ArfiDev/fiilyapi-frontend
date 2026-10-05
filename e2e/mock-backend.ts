@@ -9301,7 +9301,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
               status: entry.status,
               is_reversal: entry.reversal_of_id !== null,
               source_type: null,
-              total: entry.total_debit,
+              // IZN-B4b: fiş toplamı maskelenebilir (null); önizleme şeması string ister.
+              total: entry.total_debit ?? "0.00",
               period_closed: false,
             },
           ],
