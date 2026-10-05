@@ -2,6 +2,7 @@ import { BASE_STATUS_LABELS as INVOICE_STATUS_LABELS } from "@/components/invoic
 import { RENTAL_STATUS_BADGE } from "@/components/equipment-rental/rental-labels";
 import { PAYMENT_STATUS_BADGE } from "@/components/progress-payments/shared/status";
 import { JOURNAL_STATUS_LABELS } from "@/components/accounting/accounting-labels";
+import { PERIOD_STATUS_LABELS } from "@/components/payroll/payroll-labels";
 import type { DeleteKind } from "@/lib/api/hooks/useAdminDelete";
 
 /** Önizleme gelmeden başlıkta kullanılan tür adı (gelince `kind_label` kazanır). */
@@ -62,4 +63,9 @@ export function statusChangeSubject(kind: string, label: string): string {
 /** Tanınmayan durum değeri HAM döner. */
 export function statusChangeStateLabel(kind: string, raw: string): string {
   return Object.entries(statusLabels(kind)).find(([key]) => key === raw)?.[1] ?? raw;
+}
+
+/** Kapanmış bordro dönemi durumu (`pending_approval` | `approved` | `paid`) — bordro ekranının etiketleri; tanınmayan HAM. */
+export function payrollPeriodStatusLabel(raw: string): string {
+  return Object.entries(PERIOD_STATUS_LABELS).find(([key]) => key === raw)?.[1] ?? raw;
 }

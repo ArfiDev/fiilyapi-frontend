@@ -231,7 +231,7 @@ describe("DeleteConfirmDialog — mali aileler (SIL-F2.2)", () => {
         preview({
           closed_payroll_message: message,
           closed_payroll_timesheet_count: 4,
-          closed_payroll_periods: [{ year: 2026, month: 2, status: "closed" }],
+          closed_payroll_periods: [{ year: 2026, month: 2, status: "approved" }],
         }),
       ),
     );
@@ -239,7 +239,7 @@ describe("DeleteConfirmDialog — mali aileler (SIL-F2.2)", () => {
 
     const banner = await screen.findByTestId("delete-closed-payroll");
     expect(within(banner).getByText(message)).toBeInTheDocument();
-    expect(within(banner).getByText("Şubat 2026 · closed")).toBeInTheDocument();
+    expect(within(banner).getByText("Şubat 2026 · Onaylandı")).toBeInTheDocument();
   });
 
   it("closed_payroll_message boş/null ise bordro bandı basılmaz", async () => {

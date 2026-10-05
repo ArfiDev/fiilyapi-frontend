@@ -8,7 +8,14 @@ import { classifyDeleteError, type DeleteFailure } from "@/lib/api/delete-error"
 import { useAdminDelete, useDeletePreview, type DeleteKind, type DeletePreview } from "@/lib/api/hooks/useAdminDelete";
 import { cx } from "@/lib/cx";
 import { formatDateDots, formatMoneyTl, PERIOD_MONTHS } from "@/lib/format";
-import { DELETE_KIND_FALLBACK_LABELS, formatSamples, journalStatusText, statusChangeStateLabel, statusChangeSubject } from "./delete-labels";
+import {
+  DELETE_KIND_FALLBACK_LABELS,
+  formatSamples,
+  journalStatusText,
+  payrollPeriodStatusLabel,
+  statusChangeStateLabel,
+  statusChangeSubject,
+} from "./delete-labels";
 import "./delete-confirm.css";
 
 export interface DeletedRecord {
@@ -191,7 +198,7 @@ function DocumentsWithoutEntrySection({ preview }: { preview: DeletePreview }) {
 
 function periodText(period: { month: number; year: number; status: string }): string {
   const month = PERIOD_MONTHS.find((m) => m.value === period.month)?.label ?? String(period.month);
-  return `${month} ${period.year} · ${period.status}`;
+  return `${month} ${period.year} · ${payrollPeriodStatusLabel(period.status)}`;
 }
 
 /** SIL-F2.2 · Kapanmış bordro dönemi uyarısı — sunucu mesajı AYNEN basılır. */
