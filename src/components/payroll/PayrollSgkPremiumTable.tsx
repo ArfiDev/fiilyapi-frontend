@@ -1,4 +1,7 @@
 import type { PayrollSgkSummaryResponse } from "@/lib/api/hooks/usePayrollSgk";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatCurrency } from "@/lib/format";
 
 import type { SgkAmountRow } from "./payroll-sgk-derive";
@@ -28,6 +31,7 @@ interface PayrollSgkPremiumTableProps {
  * düzeltme yeri `payroll-sgk-derive.ts/sgkEmployerRows` üstündedir.
  */
 export function PayrollSgkPremiumTable({ summary, periodLabel }: PayrollSgkPremiumTableProps) {
+  const isHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
   return (
     <section className="bors-card" data-testid="bordro-sgk-premium">
       {/* SGK:64 */}
@@ -43,6 +47,7 @@ export function PayrollSgkPremiumTable({ summary, periodLabel }: PayrollSgkPremi
             totalLabel={SGK_ROW_EMPLOYEE_TOTAL}
             totalAmount={summary.employee_deduction_total}
             tone="employee"
+            isHidden={isHidden}
             testId="bordro-sgk-employee"
           />
 
@@ -53,6 +58,7 @@ export function PayrollSgkPremiumTable({ summary, periodLabel }: PayrollSgkPremi
             totalLabel={SGK_ROW_EMPLOYER_TOTAL}
             totalAmount={summary.employer_burden_total}
             tone="employer"
+            isHidden={isHidden}
             testId="bordro-sgk-employer"
           />
         </div>
@@ -66,6 +72,7 @@ export function PayrollSgkPremiumTable({ summary, periodLabel }: PayrollSgkPremi
           </div>
           <p className="bors-payable__value" data-testid="bordro-sgk-payable-value">
             {formatCurrency(summary.sgk_payable_total)}
+            <MaskedMark isHidden={isHidden} values={[summary.sgk_payable_total]} />
           </p>
         </div>
       </div>
@@ -78,8 +85,10 @@ interface PremiumColumnProps {
   rows: readonly SgkAmountRow[];
   totalLabel: string;
   /** 🔴 Sunucunun toplamı — ASLA satırlardan yeniden hesaplanmaz. */
-  totalAmount: string;
+  totalAmount: string | null;
   tone: "employee" | "employer";
+  /** IZN-F4c.2 — maas_kisisel gizliyse sütun başlığında (maskeli değer varken) TEK kilit. */
+  isHidden: boolean;
   testId: string;
 }
 
@@ -90,11 +99,15 @@ function PremiumColumn({
   totalLabel,
   totalAmount,
   tone,
+  isHidden,
   testId,
 }: PremiumColumnProps) {
   return (
     <div data-testid={testId}>
-      <h3 className="bors-columns__title">{title}</h3>
+      <h3 className="bors-columns__title">
+        {title}
+        <MaskedMark isHidden={isHidden} values={[...rows.map((row) => row.amount), totalAmount]} />
+      </h3>
       <div className="bors-rows">
         {rows.map((row) => (
           <div key={row.key} className="bors-row" data-testid={`${testId}-${row.key}`}>

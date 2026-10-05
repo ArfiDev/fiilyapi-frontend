@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { PAYROLL_HIDDEN_CATEGORIES, PERSONNEL_PII_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { initials } from "@/lib/shell/initials";
 import type { PersonnelDeriveItem } from "./personnel-derive";
 import {
@@ -78,6 +81,9 @@ export function PersonnelTable({
   pagination,
 }: PersonnelTableProps) {
   const visibleRows = rows ?? [];
+  // 🔴 IZN-F4c.2 — maskeli (`null`) SGK/ücret sütununun başlığında TEK kilit; hücrelerde "—".
+  const isPiiHidden = useCategoryHidden(PERSONNEL_PII_HIDDEN_CATEGORIES);
+  const isWageHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
   const message =
     visibleRows.length === 0
       ? emptyMessage({ isLoading, isError, errorMessage, hasFilter })
@@ -103,9 +109,11 @@ export function PersonnelTable({
             </th>
             <th scope="col" className="personel-table__th personel-table__th--left">
               SGK
+              <MaskedMark isHidden={isPiiHidden} values={visibleRows.map((row) => row.sgk_no)} />
             </th>
             <th scope="col" className="personel-table__th personel-table__th--right">
               Ücret/Gün
+              <MaskedMark isHidden={isWageHidden} values={visibleRows.map((row) => row.wage_amount)} />
             </th>
             <th scope="col" className="personel-table__th personel-table__th--center">
               Durum

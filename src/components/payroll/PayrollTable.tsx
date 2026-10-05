@@ -2,6 +2,9 @@
 
 import { Button } from "@/components/ui";
 import { BankIcon, WalletIcon } from "@/components/ui/icons";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import type {
   PayrollSectionResponse,
   PayrollSummaryResponse,
@@ -59,6 +62,12 @@ export function PayrollTable({
   isApproveDisabled,
   approveDisabledReason,
 }: PayrollTableProps) {
+  // 🔴 IZN-F4c.2 — maskeli (`null`) sütunun başlığında TEK kilit; hücrelerde "—".
+  const isHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
+  const lines = sections.flatMap((section) => section.lines);
+  const markFor = (pick: (line: (typeof lines)[number]) => string | null, total?: string | null) => (
+    <MaskedMark isHidden={isHidden} values={[...lines.map(pick), ...(total === undefined ? [] : [total])]} />
+  );
   return (
     <div className="bor-table-card" data-testid="bordro-table">
       <table className="bor-table">
@@ -76,12 +85,15 @@ export function PayrollTable({
             </th>
             <th scope="col" className="bor-th bor-th--num">
               {COL_GROSS}
+              {markFor((line) => line.gross_amount)}
             </th>
             <th scope="col" className="bor-th bor-th--num">
               {COL_DEDUCTION}
+              {markFor((line) => line.deduction_amount)}
             </th>
             <th scope="col" className="bor-th bor-th--num">
               {COL_NET}
+              {markFor((line) => line.net_amount, summary.net_total)}
             </th>
             {/* 🔴 K5 — BY:116/117'deki `🏦`/`💵` yazı tipinin `unicode-range`
                 kapsamı DIŞINDADIR (`fonts.css`); yerine `ui/icons` SVG'si +
@@ -89,10 +101,12 @@ export function PayrollTable({
             <th scope="col" className="bor-th bor-th--num bor-th--bank">
               <BankIcon className="bor-th__icon" aria-hidden="true" />
               {COL_BANK}
+              {markFor((line) => line.bank_amount, summary.bank_total)}
             </th>
             <th scope="col" className="bor-th bor-th--num bor-th--cash">
               <WalletIcon className="bor-th__icon" aria-hidden="true" />
               {COL_CASH}
+              {markFor((line) => line.cash_amount, summary.cash_total)}
             </th>
             <th scope="col" className="bor-th bor-th--center">
               {COL_STATUS}

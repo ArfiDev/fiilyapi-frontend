@@ -46,6 +46,11 @@ export interface PersonnelValidationContext {
    * zorunlu saymak formu kilitlerdi; gerekçe seçicinin altında GÖRÜNÜR yazar.
    */
   hasProjectOptions: boolean;
+  /**
+   * IZN-F4c.2 — maskeli (salt okunur "—") form alanları: kullanıcı DOLDURAMAZ, bu yüzden zorunlu
+   * sayılmaz (zorunluluğu sunucu uygular). Aksi hâlde maskeli rol taslağı yayına alamazdı.
+   */
+  maskedFields?: ReadonlySet<keyof PersonnelFormValues>;
 }
 
 export function hasPersonnelFormErrors(errors: PersonnelFormErrors): boolean {
@@ -79,14 +84,15 @@ export function validatePersonnelForm(
   // ── YAYIN yolu: mockup'ın `*` taşıyan alanları (PE 63-114) ──────────────
   if (!lastName) errors.lastName ??= MESSAGES.lastNameRequired;
   if (!values.trade.trim()) errors.trade = MESSAGES.tradeRequired;
-  if (!values.tcNo.trim()) errors.tcNo = MESSAGES.tcNoRequired;
-  if (!values.birthDate) errors.birthDate = MESSAGES.birthDateRequired;
-  if (!values.phone.trim()) errors.phone = MESSAGES.phoneRequired;
-  if (!values.address.trim()) errors.address = MESSAGES.addressRequired;
+  const isMasked = (field: keyof PersonnelFormValues) => context.maskedFields?.has(field) === true;
+  if (!isMasked("tcNo") && !values.tcNo.trim()) errors.tcNo = MESSAGES.tcNoRequired;
+  if (!isMasked("birthDate") && !values.birthDate) errors.birthDate = MESSAGES.birthDateRequired;
+  if (!isMasked("phone") && !values.phone.trim()) errors.phone = MESSAGES.phoneRequired;
+  if (!isMasked("address") && !values.address.trim()) errors.address = MESSAGES.addressRequired;
   if (!values.emergencyContactName.trim()) {
     errors.emergencyContactName = MESSAGES.emergencyContactNameRequired;
   }
-  if (!values.emergencyContactPhone.trim()) {
+  if (!isMasked("emergencyContactPhone") && !values.emergencyContactPhone.trim()) {
     errors.emergencyContactPhone = MESSAGES.emergencyContactPhoneRequired;
   }
   if (!values.hireDate) errors.hireDate = MESSAGES.hireDateRequired;
@@ -94,7 +100,7 @@ export function validatePersonnelForm(
     errors.assignedProjectId = MESSAGES.assignedProjectRequired;
   }
   if (!values.wageType) errors.wageType = MESSAGES.wageTypeRequired;
-  if (!values.wageAmount.trim()) errors.wageAmount = MESSAGES.wageAmountRequired;
+  if (!isMasked("wageAmount") && !values.wageAmount.trim()) errors.wageAmount = MESSAGES.wageAmountRequired;
 
   return errors;
 }

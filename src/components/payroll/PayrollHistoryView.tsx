@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Alert, Badge, Button } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { Select } from "@/components/ui/select";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { downloadPayrollPeriodsExport } from "@/lib/api/payroll-client";
@@ -12,6 +13,8 @@ import { useCompany } from "@/lib/api/hooks/useCompany";
 import type { PayrollPeriodListRow } from "@/lib/api/hooks/usePayroll";
 import { PAYROLL_PERMISSION_MODULE, usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import { isForbidden } from "@/lib/api/unwrap";
+import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -268,6 +271,8 @@ interface HistoryTableProps {
 
 /** BG:36-118 — dönem tablosu. `year` yalnız tfoot etiketinde kullanılır. */
 function HistoryTable({ year, rows, totals }: HistoryTableProps) {
+  // 🔴 IZN-F4c.2 — maskeli (`null`) sütunun başlığında TEK kilit; hücrelerde "—".
+  const isHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
   return (
     <div className="borg-card">
       <table className="borg-table" data-testid="bordro-gecmis-table">
@@ -275,10 +280,22 @@ function HistoryTable({ year, rows, totals }: HistoryTableProps) {
           <tr>
             <th className="borg-th borg-th--lead">{HCOL_PERIOD}</th>
             <th className="borg-th">{HCOL_PERSONNEL}</th>
-            <th className="borg-th borg-th--num">{HCOL_GROSS}</th>
-            <th className="borg-th borg-th--num">{HCOL_SGK_EMPLOYER}</th>
-            <th className="borg-th borg-th--num">{HCOL_NET}</th>
-            <th className="borg-th borg-th--num">{HCOL_COST}</th>
+            <th className="borg-th borg-th--num">
+              {HCOL_GROSS}
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.gross_total)} />
+            </th>
+            <th className="borg-th borg-th--num">
+              {HCOL_SGK_EMPLOYER}
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.sgk_employer_total)} />
+            </th>
+            <th className="borg-th borg-th--num">
+              {HCOL_NET}
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.net_total)} />
+            </th>
+            <th className="borg-th borg-th--num">
+              {HCOL_COST}
+              <MaskedMark isHidden={isHidden} values={rows.map((row) => row.total_cost)} />
+            </th>
             <th className="borg-th">{HCOL_PAYMENT_DATE}</th>
             <th className="borg-th">{HCOL_STATUS}</th>
             {/* BG:47 başlığı boştur; erişilebilir ad yine de basılır. */}

@@ -16,6 +16,7 @@ import {
   WAGE_TYPE_OPTIONS,
 } from "./constants";
 import type { PersonnelFormValues } from "./form-state";
+import { MaskedField } from "./masked-fields";
 import type { PersonnelFormErrors } from "./validate";
 
 export interface SubcontractorPickerState {
@@ -40,6 +41,8 @@ interface JobCardProps {
   subcontractors: SubcontractorPickerState;
   projects: ProjectPickerState;
   errors?: PersonnelFormErrors;
+  /** IZN-F4c.2 — maskeli alanlar: salt okunur "—" + kilit, gövdeye girmez. */
+  maskedFields?: ReadonlySet<keyof PersonnelFormValues>;
 }
 
 /** "Bağlı Taşeron" seçicisinin altındaki GÖRÜNÜR not — sessiz boş liste yasak. */
@@ -96,7 +99,9 @@ export function JobCard({
   subcontractors,
   projects,
   errors,
+  maskedFields,
 }: JobCardProps) {
+  const isMasked = (field: keyof PersonnelFormValues) => maskedFields?.has(field) === true;
   const noteId = useId();
   const projectNoteId = useId();
   const isSubcontractorEnabled = values.source === "subcontractor";
@@ -280,22 +285,26 @@ export function JobCard({
         </Field>
 
         {/* 114 */}
-        <Field label="Ücret Tutarı (₺)" required error={errors?.wageAmount}>
-          {(control) => (
-            <Input
-              {...control}
-              type="number"
-              numeric
-              min={0}
-              step="0.01"
-              value={values.wageAmount}
-              placeholder="1200"
-              className="pnf-amount"
-              status={errors?.wageAmount ? "error" : "default"}
-              onChange={(event) => onChange("wageAmount", event.target.value)}
-            />
-          )}
-        </Field>
+        {isMasked("wageAmount") ? (
+          <MaskedField label="Ücret Tutarı (₺)" />
+        ) : (
+          <Field label="Ücret Tutarı (₺)" required error={errors?.wageAmount}>
+            {(control) => (
+              <Input
+                {...control}
+                type="number"
+                numeric
+                min={0}
+                step="0.01"
+                value={values.wageAmount}
+                placeholder="1200"
+                className="pnf-amount"
+                status={errors?.wageAmount ? "error" : "default"}
+                onChange={(event) => onChange("wageAmount", event.target.value)}
+              />
+            )}
+          </Field>
+        )}
 
         {/* 115 */}
         <Field label="Ödeme Şekli">
@@ -320,32 +329,40 @@ export function JobCard({
         </Field>
 
         {/* 116 — iki sütun genişliğinde */}
-        <Field label="IBAN" className="pf-col-span-2">
-          {(control) => (
-            <Input
-              {...control}
-              numeric
-              maxLength={PERSONNEL_FIELD_MAX_LENGTH.iban}
-              value={values.iban}
-              placeholder="TR12 0001 0093 0012 3456 7890"
-              onChange={(event) => onChange("iban", event.target.value)}
-            />
-          )}
-        </Field>
+        {isMasked("iban") ? (
+          <MaskedField label="IBAN" className="pf-col-span-2" />
+        ) : (
+          <Field label="IBAN" className="pf-col-span-2">
+            {(control) => (
+              <Input
+                {...control}
+                numeric
+                maxLength={PERSONNEL_FIELD_MAX_LENGTH.iban}
+                value={values.iban}
+                placeholder="TR12 0001 0093 0012 3456 7890"
+                onChange={(event) => onChange("iban", event.target.value)}
+              />
+            )}
+          </Field>
+        )}
 
         {/* 117 — ipucu metni mockup'tan AYNEN */}
-        <Field label="SGK Sicil No" hint="Boş bırakılırsa otomatik sorgulanır">
-          {(control) => (
-            <Input
-              {...control}
-              numeric
-              maxLength={PERSONNEL_FIELD_MAX_LENGTH.sgk_no}
-              value={values.sgkNo}
-              placeholder="123 456 789 00"
-              onChange={(event) => onChange("sgkNo", event.target.value)}
-            />
-          )}
-        </Field>
+        {isMasked("sgkNo") ? (
+          <MaskedField label="SGK Sicil No" />
+        ) : (
+          <Field label="SGK Sicil No" hint="Boş bırakılırsa otomatik sorgulanır">
+            {(control) => (
+              <Input
+                {...control}
+                numeric
+                maxLength={PERSONNEL_FIELD_MAX_LENGTH.sgk_no}
+                value={values.sgkNo}
+                placeholder="123 456 789 00"
+                onChange={(event) => onChange("sgkNo", event.target.value)}
+              />
+            )}
+          </Field>
+        )}
       </div>
     </section>
   );

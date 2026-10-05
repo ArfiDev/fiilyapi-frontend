@@ -12,7 +12,9 @@ import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
+import { isCategoryHidden } from "@/lib/auth/hidden-fields";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useSession } from "@/components/shell/SessionProvider";
 import { PERSONNEL_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -51,6 +53,7 @@ import {
 } from "./form-state";
 import { IdentityCard } from "./IdentityCard";
 import { JobCard } from "./JobCard";
+import { maskedPersonnelFields } from "./masked-fields";
 import { PersonnelDocumentsCard } from "./PersonnelDocumentsCard";
 import { PersonnelFormActions } from "./PersonnelFormActions";
 import {
@@ -196,10 +199,18 @@ export function PersonnelForm(props: PersonnelFormProps) {
    * seçimi normal gider. OLUŞTURMA kipi etkilenmez: orada ezilecek sunucu
    * değeri YOKTUR.
    */
+  // 🔴 IZN-F4c.2 — maskeli (maas_kisisel gizli + sunucudan `null`) alanlar: salt okunur "—" + kilit;
+  // PATCH gövdesine KONMAZ (dolu gizli alan 403 verir; `null` yazmak gerçek değeri silerdi). POST etkilenmez.
+  const { me } = useSession();
+  const maskedSpecs = isEdit ? maskedPersonnelFields(detail, (categories) => isCategoryHidden(me, categories)) : [];
+  const maskedFields: ReadonlySet<keyof PersonnelFormValues> = new Set(maskedSpecs.map((spec) => spec.formKey));
+  const maskedApiFields: readonly OmittablePersonnelField[] = maskedSpecs.map((spec) => spec.apiField);
+
   const omittedSelectFields: readonly OmittablePersonnelField[] =
     !isEdit || !detail
       ? []
       : [
+          ...maskedApiFields,
           ...(detail.wage_type === null && !touched.has("wageType")
             ? (["wage_type"] as const)
             : []),
@@ -227,6 +238,7 @@ export function PersonnelForm(props: PersonnelFormProps) {
     const nextErrors = validatePersonnelForm(values, {
       intent: isPublishTransition ? "publish" : "draft",
       hasProjectOptions: projectOptions.length > 0,
+      maskedFields,
     });
     setErrors(nextErrors);
 
@@ -389,12 +401,13 @@ export function PersonnelForm(props: PersonnelFormProps) {
         </ul>
 
         <div className="pf-body" data-testid="personnel-form-body" ref={formRef}>
-          <IdentityCard values={values} onChange={handleChange} errors={errors} />
-          <ContactCard values={values} onChange={handleChange} errors={errors} />
+          <IdentityCard values={values} onChange={handleChange} errors={errors} maskedFields={maskedFields} />
+          <ContactCard values={values} onChange={handleChange} errors={errors} maskedFields={maskedFields} />
           <JobCard
             values={values}
             onChange={handleChange}
             errors={errors}
+            maskedFields={maskedFields}
             subcontractors={{
               items: subcontractorsQuery.data?.items ?? [],
               isLoading: subcontractorsQuery.isLoading,

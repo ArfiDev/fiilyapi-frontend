@@ -11,6 +11,7 @@ import {
   SELECT_PLACEHOLDER,
 } from "./constants";
 import type { PersonnelFormValues } from "./form-state";
+import { MaskedField } from "./masked-fields";
 import type { PersonnelFormErrors } from "./validate";
 
 interface IdentityCardProps {
@@ -20,6 +21,8 @@ interface IdentityCardProps {
     value: PersonnelFormValues[K],
   ) => void;
   errors?: PersonnelFormErrors;
+  /** IZN-F4c.2 — maskeli alanlar: salt okunur "—" + kilit, gövdeye girmez. */
+  maskedFields?: ReadonlySet<keyof PersonnelFormValues>;
 }
 
 /** Fotoğraf yükleme yer tutucusu (mockup 54–61) — `<input type="file">` YOK. */
@@ -58,7 +61,8 @@ function PhotoPlaceholder() {
  *
  * PENDING (tek kalan): fotoğraf (55–59) — BC form-slot mekanizması bekliyor.
  */
-export function IdentityCard({ values, onChange, errors }: IdentityCardProps) {
+export function IdentityCard({ values, onChange, errors, maskedFields }: IdentityCardProps) {
+  const isMasked = (field: keyof PersonnelFormValues) => maskedFields?.has(field) === true;
   return (
     <section className="pf-card">
       {/* 52 */}
@@ -99,36 +103,44 @@ export function IdentityCard({ values, onChange, errors }: IdentityCardProps) {
 
           {/* PE 65 — mockup `maxlength="11"` + monospace + ipucu KORUNUR.
               Checksum İSTEMCİDE hesaplanmaz: geçerlilik sunucudadır. */}
-          <Field
-            label="TC Kimlik No"
-            required
-            hint="11 haneli · Kimlik doğrulama yapılır"
-            error={errors?.tcNo}
-          >
-            {(control) => (
-              <Input
-                {...control}
-                numeric
-                maxLength={NATIONAL_ID_MAX_LENGTH}
-                value={values.tcNo}
-                placeholder="12345678901"
-                status={errors?.tcNo ? "error" : "default"}
-                onChange={(event) => onChange("tcNo", event.target.value)}
-              />
-            )}
-          </Field>
+          {isMasked("tcNo") ? (
+            <MaskedField label="TC Kimlik No" />
+          ) : (
+            <Field
+              label="TC Kimlik No"
+              required
+              hint="11 haneli · Kimlik doğrulama yapılır"
+              error={errors?.tcNo}
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  numeric
+                  maxLength={NATIONAL_ID_MAX_LENGTH}
+                  value={values.tcNo}
+                  placeholder="12345678901"
+                  status={errors?.tcNo ? "error" : "default"}
+                  onChange={(event) => onChange("tcNo", event.target.value)}
+                />
+              )}
+            </Field>
+          )}
 
           {/* PE 66 */}
-          <Field label="Doğum Tarihi" required error={errors?.birthDate}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={values.birthDate}
-                status={errors?.birthDate ? "error" : "default"}
-                onValueChange={(iso) => onChange("birthDate", iso)}
-              />
-            )}
-          </Field>
+          {isMasked("birthDate") ? (
+            <MaskedField label="Doğum Tarihi" />
+          ) : (
+            <Field label="Doğum Tarihi" required error={errors?.birthDate}>
+              {(control) => (
+                <DateInput
+                  {...control}
+                  value={values.birthDate}
+                  status={errors?.birthDate ? "error" : "default"}
+                  onValueChange={(iso) => onChange("birthDate", iso)}
+                />
+              )}
+            </Field>
+          )}
 
           {/* PE 67 */}
           <Field label="Cinsiyet">

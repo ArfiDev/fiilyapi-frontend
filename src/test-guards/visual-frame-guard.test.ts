@@ -394,7 +394,7 @@ const KASTEN_DISARIDA: Record<string, Muafiyet> = {
   "onay-kutusu-visual.spec.ts": { kadraj: 6, gerekce: ROUTE_GRAPH_CLEAN },
   "onay-rolleri-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
   "page-access-visual.spec.ts": { kadraj: 2, gerekce: ROUTE_GRAPH_CLEAN },
-  "personnel-detail-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
+  "personnel-detail-visual.spec.ts": { kadraj: 2, gerekce: ROUTE_GRAPH_CLEAN },
   "personnel-form-visual.spec.ts": { kadraj: 1, gerekce: "OZEL: kadraj `/personel/yeni` ekranidir, grafigi TEMIZ. Dosyadaki puantaj URL'i (`?year=&month=`) yalnizca `encodeURIComponent`li bir `donus` DEGERIDIR, gidilen ekran degil" },
   "personnel-list-visual.spec.ts": { kadraj: 2, gerekce: ROUTE_GRAPH_CLEAN },
   "progress-payment-detail-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
