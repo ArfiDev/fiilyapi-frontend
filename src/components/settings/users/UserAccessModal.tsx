@@ -19,7 +19,7 @@ import { statusLabel } from "@/lib/settings/status";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import type { DisciplineRef, UserResponse, UserStatus } from "@/lib/api/models";
 import { ProjectTeamTable } from "./ProjectTeamTable";
-import { selectableRoles } from "./user-access-roles";
+import { SYSTEM_ADMIN_ROLE_KEY, selectableRoles } from "./user-access-roles";
 import {
   EMPTY_ACCESS_DRAFT,
   draftFromAccess,
@@ -66,7 +66,11 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
   const deleteUser = useDeleteUser();
   // Parola sıfırlama: bugünkü SA kapısı (IZN-F2.x). Silme ise FAIL-CLOSED: yalnız `me.is_system_admin === true`.
   const canResetPassword = useButtonGate({ pages: USERS_EDIT, need: "sa", fallback: true });
-  const canDelete = me?.is_system_admin === true;
+  const isSystemAdmin = me?.is_system_admin === true;
+  const canDelete = isSystemAdmin;
+  // GECE KARARI (IZN-F3.1e): kişi KENDİ kaydını açtıysa ve Sistem Yöneticisi değilse erişim alanları salt okunur
+  // (backend: "kendi erişimini değiştiremez"). Unvan/durum bugünkü gibi.
+  const isAccessLocked = user !== undefined && me?.id === user.id && !isSystemAdmin;
 
   const [draft, setDraft] = useState<AccessDraft | null>(null);
   const [title, setTitle] = useState(user?.title ?? "");
@@ -97,6 +101,8 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
   const isPending = setAccess.isPending || createUser.isPending || updateUser.isPending || deleteUser.isPending;
   const roles = rolesQuery.data;
   const mainRoleName = roles?.find((role) => role.id === current?.roleId)?.name;
+  // Ana rolü Sistem Yöneticisi olan kişide ekip satırı OLMAZ (backend 422): tablo yerine not; gönderimde ekip boş.
+  const isSystemAdminRole = roles?.find((role) => role.id === current?.roleId)?.key === SYSTEM_ADMIN_ROLE_KEY;
   const roleKey = roles?.find((role) => role.id === (user?.role_id ?? ""))?.key ?? "";
   const catalog: DisciplineRef[] = (disciplinesQuery.data ?? []).map(({ id, code, name, color }) => ({ id, code, name, color }));
   const isIdentityLocked = createdUser !== null;
@@ -147,7 +153,8 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
   }
 
   async function saveEdit(target: UserResponse, access: AccessDraft) {
-    if (hasAccessChange) {
+    const savesAccess = hasAccessChange && !isAccessLocked;
+    if (savesAccess) {
       try {
         await setAccess.mutateAsync({ id: target.id, body: toAccessInput(access) });
       } catch (error) {
@@ -166,26 +173,27 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
         });
       } catch (error) {
         const reason = backendErrorMessage(error);
-        setFormError(hasAccessChange ? `Erişim kaydedildi, ancak unvan/durum kaydedilemedi: ${reason}` : reason);
+        setFormError(savesAccess ? `Erişim kaydedildi, ancak unvan/durum kaydedilemedi: ${reason}` : reason);
         return;
       }
     }
     // Kendi erişimini değiştiren yönetici: kabuktaki `me` (menü, izin kapıları) tazelenir.
-    if (hasAccessChange && me?.id === target.id) void refresh?.();
+    if (savesAccess && me?.id === target.id) void refresh?.();
     onClose();
   }
 
   async function submit() {
     if (current === null || isPending) return;
     setFormError(null);
+    const access: AccessDraft = isSystemAdminRole ? { ...current, members: [] } : current;
     if (!isEdit) {
-      const problem = validateCreate(current);
+      const problem = validateCreate(access);
       if (problem) return setFormError(problem);
-      return saveCreate(current);
+      return saveCreate(access);
     }
-    const problem = validateAccess(current);
+    const problem = validateAccess(access);
     if (problem) return setFormError(problem);
-    return saveEdit(user, current);
+    return saveEdit(user, access);
   }
 
   function confirmDelete() {
@@ -291,11 +299,11 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
                 <Select
                   {...control}
                   value={current?.roleId ?? ""}
-                  disabled={current === null || isIdentityLocked}
+                  disabled={current === null || isIdentityLocked || isAccessLocked}
                   onChange={(event) => current && patchDraft(withRole(current, event.target.value))}
                 >
                   <option value="">Seçin…</option>
-                  {selectableRoles(roles, baseline?.roleId ?? user?.role_id ?? "").map((role) => (
+                  {selectableRoles(roles, baseline?.roleId ?? user?.role_id ?? "", false, isSystemAdmin).map((role) => (
                     <option key={role.id} value={role.id}>
                       {role.name}
                     </option>
@@ -329,7 +337,8 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
           <label className={current?.allProjects ? "uac-all uac-all--on" : "uac-all"}>
             <Checkbox
               checked={current?.allProjects ?? false}
-              disabled={current === null}
+              // GECE KARARI: "Tüm projelere erişir" yalnız Sistem Yöneticisi değiştirir; değer görünür kalır.
+              disabled={current === null || !isSystemAdmin || isAccessLocked}
               onChange={(event) => current && patchDraft(withAllProjects(current, event.target.checked))}
             />
             <span className="uac-all__text">
@@ -337,6 +346,7 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
               <span className="uac-all__desc">
                 İşaretlenirse kişi bütün projeleri görür; proje tablosu kullanılmaz ve disiplin kısıtı olmaz.
               </span>
+              {!isSystemAdmin && <span className="uac-all__hint">yalnız Sistem Yöneticisi</span>}
             </span>
           </label>
 
@@ -360,14 +370,30 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
             </div>
           )}
 
-          {current !== null && !current.allProjects && (
+          {isAccessLocked && (
+            <div className="dsc-info" role="note">
+              <span className="dsc-info__mark" aria-hidden="true">
+                i
+              </span>
+              <span>Kendi erişiminizi değiştiremezsiniz · Sistem Yöneticisi değiştirir</span>
+            </div>
+          )}
+
+          {current !== null && !current.allProjects && isSystemAdminRole && (
+            <div className="uac-all-box">
+              <span className="uac-all-box__title">Sistem Yöneticisi tüm projelere erişir</span>
+              <span className="uac-all-box__text">Bu rolde proje ekibi tutulmaz; proje içi sayfalar da ana rolle açılır.</span>
+            </div>
+          )}
+
+          {current !== null && !current.allProjects && !isSystemAdminRole && (
             <>
               <ProjectTeamTable
                 draft={current}
                 roles={roles}
                 projects={projectsQuery.data?.items ?? []}
                 catalog={catalog}
-                disabled={isPending}
+                disabled={isPending || isAccessLocked}
                 onChange={patchDraft}
               />
               <div className="dsc-info">

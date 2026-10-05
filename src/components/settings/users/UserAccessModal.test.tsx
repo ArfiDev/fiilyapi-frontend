@@ -76,6 +76,7 @@ describe("UserAccessModal · düzenle", () => {
   });
 
   it("atanamaz rol, kişide yoksa seçicide görünmez; proje rolü seçicisinde Sistem Yöneticisi yok", async () => {
+    session.isAdmin = true;
     install();
     const dialog = await openEdit();
     expect(within(dialog).getByLabelText(/Ana rol/)).not.toHaveTextContent("Eski Rol");
@@ -119,6 +120,7 @@ describe("UserAccessModal · düzenle", () => {
   });
 
   it("'Tüm projelere erişir' işaretlenince tablo gizlenir, kutu çıkar; işaret kalkınca satırlar geri gelir", async () => {
+    session.isAdmin = true;
     install();
     const dialog = await openEdit();
     await userEvent.click(within(dialog).getByRole("checkbox", { name: /Tüm projelere erişir/ }));
@@ -164,6 +166,7 @@ describe("UserAccessModal · düzenle", () => {
   });
 
   it("all_projects=true iken PUT gövdesi projects: [] taşır", async () => {
+    session.isAdmin = true;
     const backend = install();
     const dialog = await openEdit();
     await userEvent.click(within(dialog).getByRole("checkbox", { name: /Tüm projelere erişir/ }));
@@ -216,18 +219,21 @@ describe("UserAccessModal · düzenle", () => {
     expect(backend.callsTo("PUT", /\/access$/)).toHaveLength(0);
   });
 
-  it("ana rol Sistem Yöneticisi iken eklenen proje satırının rolü BOŞ gelir; seçilmeden istek ATILMAZ", async () => {
+  it("GECE KARARI · ana rol Sistem Yöneticisi seçilince tablo yerine not çıkar; PUT ekip BOŞ gider", async () => {
+    session.isAdmin = true;
     const backend = install();
     const dialog = await openEdit();
     await userEvent.selectOptions(within(dialog).getByLabelText(/Ana rol/), "Sistem Yöneticisi");
-    await userEvent.selectOptions(within(dialog).getByLabelText("Projeye ekle"), "Villa B");
-    expect(within(dialog).getByLabelText("Villa B: bu projedeki rol")).toHaveValue("");
+    expect(within(dialog).queryByRole("table", { name: "Proje ekibi" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Projeye ekle")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("Sistem Yöneticisi tüm projelere erişir")).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Kaydet" }));
-    expect(await within(dialog).findByText("Her proje için bir rol seçin.")).toBeInTheDocument();
-    expect(backend.callsTo("PUT", /\/access$/)).toHaveLength(0);
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(backend.callsTo("PUT", /\/access$/)[0].body).toEqual({ role_id: "r-admin", all_projects: false, projects: [] });
   });
 
   it("kaydedilmemiş değişiklik kayıt defterine işlenir; kapanınca temizlenir", async () => {
+    session.isAdmin = true;
     install();
     const { unmount } = renderModal(AHMET);
     const dialog = await screen.findByRole("dialog", { name: "Kullanıcıyı düzenle" });
@@ -238,6 +244,75 @@ describe("UserAccessModal · düzenle", () => {
     await waitFor(() => expect(unsavedRegistry.labels()).toContain("Kullanıcı"));
     unmount();
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+});
+
+describe("UserAccessModal · yetki kuralları (GECE KARARI, IZN-F3.1e)", () => {
+  it("Sistem Yöneticisi DEĞİLSE 'Tüm projelere erişir' DISABLED + ipucu; değer görünür kalır", async () => {
+    install();
+    const dialog = await openEdit(AYSE);
+    const box = within(dialog).getByRole("checkbox", { name: /Tüm projelere erişir/ });
+    expect(box).toBeChecked();
+    expect(box).toBeDisabled();
+    expect(within(dialog).getByText("yalnız Sistem Yöneticisi", { selector: ".uac-all__hint" })).toBeInTheDocument();
+  });
+
+  it("Sistem Yöneticisi iken kutu açık ve ipucu yok", async () => {
+    session.isAdmin = true;
+    install();
+    const dialog = await openEdit(AYSE);
+    expect(within(dialog).getByRole("checkbox", { name: /Tüm projelere erişir/ })).toBeEnabled();
+    expect(dialog.querySelector(".uac-all__hint")).toBeNull();
+  });
+
+  it("ana rol seçicisinde Sistem Yöneticisi yalnız Sistem Yöneticisine sunulur", async () => {
+    install();
+    const dialog = await openEdit();
+    expect(within(within(dialog).getByLabelText(/Ana rol/)).queryByRole("option", { name: "Sistem Yöneticisi" })).toBeNull();
+  });
+
+  it("zaten Sistem Yöneticisi olan kişide rol değeri görünür kalır (SA olmayan açıcıda da) ve tablo yerine not var", async () => {
+    install({
+      users: [{ ...AHMET, role_id: "r-admin" }],
+      access: { [AHMET.id]: { role_id: "r-admin", all_projects: false, projects: [] } },
+    });
+    const dialog = await openEdit({ ...AHMET, role_id: "r-admin" });
+    const select = within(dialog).getByLabelText(/Ana rol/);
+    expect(select).toHaveValue("r-admin");
+    expect(within(select).getByRole("option", { name: "Sistem Yöneticisi" })).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Projeye ekle")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("Sistem Yöneticisi tüm projelere erişir")).toBeInTheDocument();
+  });
+
+  it("KENDİ kaydı + Sistem Yöneticisi değil → erişim alanları salt okunur, not satırı var", async () => {
+    install({ users: [{ ...AHMET, id: "me-1" }], access: { "me-1": AHMET_ACCESS } });
+    const dialog = await openEdit({ ...AHMET, id: "me-1" });
+    expect(within(dialog).getByText("Kendi erişiminizi değiştiremezsiniz · Sistem Yöneticisi değiştirir")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Ana rol/)).toBeDisabled();
+    expect(within(dialog).getByRole("checkbox", { name: /Tüm projelere erişir/ })).toBeDisabled();
+    expect(within(dialog).getByLabelText("Kule A: bu projedeki rol")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Kule A: disiplin ekle")).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Kule A projesinden çıkar" })).toBeDisabled();
+    expect(within(dialog).getByLabelText("Projeye ekle")).toBeDisabled();
+  });
+
+  it("KENDİ kaydında unvan değişimi PATCH atar, PUT access ATMAZ", async () => {
+    const backend = install({ users: [{ ...AHMET, id: "me-1" }], access: { "me-1": AHMET_ACCESS } });
+    const dialog = await openEdit({ ...AHMET, id: "me-1" });
+    await userEvent.clear(within(dialog).getByLabelText("Unvan"));
+    await userEvent.type(within(dialog).getByLabelText("Unvan"), "Şef");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(backend.callsTo("PATCH", /^\/users\/me-1$/)[0].body).toEqual({ title: "Şef" });
+    expect(backend.callsTo("PUT", /\/access$/)).toHaveLength(0);
+  });
+
+  it("KENDİ kaydı ama Sistem Yöneticisi → alanlar açık, not yok", async () => {
+    session.isAdmin = true;
+    install({ users: [{ ...AHMET, id: "me-1" }], access: { "me-1": AHMET_ACCESS } });
+    const dialog = await openEdit({ ...AHMET, id: "me-1" });
+    expect(within(dialog).getByLabelText(/Ana rol/)).toBeEnabled();
+    expect(within(dialog).queryByText(/Kendi erişiminizi/)).not.toBeInTheDocument();
   });
 });
 

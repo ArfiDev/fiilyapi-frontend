@@ -48263,7 +48263,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Atanan rol aktörün yetkilerini aşıyor / Sistem Yöneticisi rolünü yalnız Sistem Yöneticisi atar */
+            /** @description Atanan rol aktörün yetkilerini aşıyor · Sistem Yöneticisi rolünü yalnız Sistem Yöneticisi atar · Sistem Yöneticisi olmayan aktör KENDİ erişimini değiştiremez · `all_projects` işaretini yalnız Sistem Yöneticisi verir/kaldırır · Sistem Yöneticisi'nin ana rolünü yalnız Sistem Yöneticisi değiştirir */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -48277,7 +48277,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `all_projects=true` iken ekip dolu · aynı proje iki kez · bilinmeyen proje/rol/disiplin · proje rolü Sistem Yöneticisi */
+            /** @description `all_projects=true` iken ekip dolu · aynı proje iki kez · bilinmeyen proje/rol/disiplin · proje rolü Sistem Yöneticisi · Sistem Yöneticisi'ne ekip satırı */
             422: {
                 headers: {
                     [name: string]: unknown;
