@@ -11553,6 +11553,24 @@ export interface components {
          */
         DeleteKind: "site" | "section" | "block" | "unit" | "progress_payment" | "subcontractor_progress_payment" | "invoice" | "payment" | "journal_entry" | "financial_instrument";
         /**
+         * DeleteOtherProject
+         * @description Kökün projesi DIŞINDAKİ bir projede silinecek kayıtlar (zincirleme kapsam).
+         */
+        DeleteOtherProject: {
+            /**
+             * Count
+             * @description Bu projeden silinecek kayıt sayısı (`groups` ile aynı sayım biriminde). Projesi belirlenemeyen kayıtlar (muhasebe fişi, onay zinciri) sayılmaz.
+             */
+            count: number;
+            /** Name */
+            name: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+        };
+        /**
          * DeletePreviewGroup
          * @description Silinecek bağlı kayıtların bir türü.
          */
@@ -11650,10 +11668,20 @@ export interface components {
              */
             label: string;
             /**
+             * Other Projects
+             * @description Kökün projesi DIŞINDAKİ projelerde silinecek kayıtlar (ör. şantiye → onaylı hakediş → fatura → ödeme → ortak çek → başka projenin ödemesi): sayı azalan. Boş = silme yalnız kökün projesinde kalır.
+             */
+            other_projects: components["schemas"]["DeleteOtherProject"][];
+            /**
              * Preview Token
              * @description Bu ağacın karması. DELETE'e `preview_token` olarak AYNEN verilir; ağaç arada değişirse DELETE 409 `preview_stale` döner.
              */
             preview_token: string;
+            /**
+             * Status Changes
+             * @description Silinmeyecek kayıtların silme sonrası durum değişiklikleri (fatura `collected → sent`, hakediş `paid → approved`). Ağaçta DEĞİLDİR; kancalar uygular.
+             */
+            status_changes: components["schemas"]["DeleteStatusChange"][];
         };
         /**
          * DeleteRelation
@@ -11684,6 +11712,32 @@ export interface components {
             ref: string;
             /** Table */
             table: string;
+        };
+        /**
+         * DeleteStatusChange
+         * @description Ağaç DIŞINDA kalan bir kaydın silme sonrası durum değişikliği (önizleme + denetim).
+         */
+        DeleteStatusChange: {
+            /**
+             * From
+             * @description Mevcut durum (ham değer; ör. `collected`).
+             */
+            from: string;
+            /**
+             * Kind
+             * @description `invoice` | `progress_payment` | `subcontractor_progress_payment` | `equipment_rental_invoice`.
+             */
+            kind: string;
+            /**
+             * Label
+             * @description Görünen ad (ör. `Fatura F-0007`, `İşveren hakedişi #3 · Kule`).
+             */
+            label: string;
+            /**
+             * To
+             * @description Silme sonrası durum (ham değer; ör. `sent`).
+             */
+            to: string;
         };
         /**
          * DiaryStatus

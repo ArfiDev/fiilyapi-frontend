@@ -39,6 +39,8 @@ function preview(overrides: Partial<DeletePreview> = {}): DeletePreview {
     detached: [{ table: "personnel", label: "Personel", count: 3, is_financial: false }],
     journal_entry_count: 0,
     journal_entries: [],
+    other_projects: [],
+    status_changes: [],
     closed_period_entry_count: 0,
     documents_left_without_entry: [],
     closed_payroll_timesheet_count: 0,
@@ -264,6 +266,78 @@ describe("DeleteConfirmDialog — mali aileler (SIL-F2.2)", () => {
     const items = within(detached).getAllByRole("listitem");
     expect(within(items[0]).queryByText("mali kayıt")).not.toBeInTheDocument();
     expect(within(items[1]).getByText("mali kayıt")).toBeInTheDocument();
+  });
+
+  it("başka projeler VURGULU bantta 'proje adı · N kayıt' satırlarıyla, gruplar tablosunun ÜSTÜNDE basılır", async () => {
+    vi.mocked(backendClient.GET).mockResolvedValue(
+      okPreview(
+        preview({
+          other_projects: [
+            { project_id: "11111111-1111-4111-8111-111111111111", name: "Kule Projesi", count: 5 },
+            { project_id: "22222222-2222-4222-8222-222222222222", name: "Vadi Evleri", count: 1 },
+          ],
+        }),
+      ),
+    );
+    renderDialog();
+
+    const band = await screen.findByTestId("delete-other-projects");
+    expect(within(band).getByText("Başka projeler de etkilenecek")).toBeInTheDocument();
+    const items = within(band).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("Kule Projesi · 5 kayıt");
+    expect(items[1]).toHaveTextContent("Vadi Evleri · 1 kayıt");
+    const table = screen.getByTestId("delete-groups");
+    expect(band.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("başka proje yoksa bant basılmaz", async () => {
+    renderDialog();
+    await screen.findByTestId("delete-groups");
+    expect(screen.queryByTestId("delete-other-projects")).not.toBeInTheDocument();
+  });
+
+  it("durum değişimi: türün kendi ekranındaki Türkçe etiketlerle 'Fatura F-0007: Tahsil Edildi → Gönderildi'", async () => {
+    vi.mocked(backendClient.GET).mockResolvedValue(
+      okPreview(
+        preview({
+          status_changes: [
+            { kind: "invoice", label: "Fatura F-0007", from: "collected", to: "sent" },
+            { kind: "progress_payment", label: "İşveren hakedişi #3 · Kule", from: "paid", to: "approved" },
+            { kind: "subcontractor_progress_payment", label: "Taşeron hakedişi #1", from: "approved", to: "pending_approval" },
+            { kind: "equipment_rental_invoice", label: "Kira faturası K-12", from: "paid", to: "pending_verification" },
+          ],
+        }),
+      ),
+    );
+    renderDialog();
+
+    const section = await screen.findByTestId("delete-status-changes");
+    expect(within(section).getByText("Durumu değişecek kayıtlar (silinmeyecek)")).toBeInTheDocument();
+    const items = within(section).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("Fatura F-0007: Tahsil Edildi → Gönderildi");
+    expect(items[1]).toHaveTextContent("İşveren hakedişi #3 · Kule: Ödendi → Onaylandı");
+    expect(items[2]).toHaveTextContent("Taşeron hakedişi #1: Onaylandı → Onay Bekliyor");
+    expect(items[3]).toHaveTextContent("Kira faturası K-12: Ödendi → Doğrulama Bekliyor");
+  });
+
+  it("durum haritasında olmayan değer HAM basılır; etiketi tür adını taşımıyorsa tür adı öne eklenir", async () => {
+    vi.mocked(backendClient.GET).mockResolvedValue(
+      okPreview(
+        preview({
+          status_changes: [{ kind: "invoice", label: "F-0009", from: "yeni_durum", to: "sent" }],
+        }),
+      ),
+    );
+    renderDialog();
+
+    const section = await screen.findByTestId("delete-status-changes");
+    expect(within(section).getByRole("listitem")).toHaveTextContent("Fatura F-0009: yeni_durum → Gönderildi");
+  });
+
+  it("durum değişimi yoksa bölüm basılmaz", async () => {
+    renderDialog();
+    await screen.findByTestId("delete-groups");
+    expect(screen.queryByTestId("delete-status-changes")).not.toBeInTheDocument();
   });
 
   it("mali önizleme Sil'i KİLİTLEMEZ (financial_pending dalı kalktı)", async () => {

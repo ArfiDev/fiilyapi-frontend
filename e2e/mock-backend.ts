@@ -9268,6 +9268,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
     const emptyDeletePreviewExtras = {
       journal_entry_count: 0,
       journal_entries: [],
+      other_projects: [],
+      status_changes: [],
       closed_period_entry_count: 0,
       documents_left_without_entry: [],
       closed_payroll_timesheet_count: 0,

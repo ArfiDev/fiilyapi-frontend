@@ -8,7 +8,7 @@ import { classifyDeleteError, type DeleteFailure } from "@/lib/api/delete-error"
 import { useAdminDelete, useDeletePreview, type DeleteKind, type DeletePreview } from "@/lib/api/hooks/useAdminDelete";
 import { cx } from "@/lib/cx";
 import { formatDateDots, formatMoneyTl, PERIOD_MONTHS } from "@/lib/format";
-import { DELETE_KIND_FALLBACK_LABELS, formatSamples, journalStatusText } from "./delete-labels";
+import { DELETE_KIND_FALLBACK_LABELS, formatSamples, journalStatusText, statusChangeStateLabel, statusChangeSubject } from "./delete-labels";
 import "./delete-confirm.css";
 
 export interface DeletedRecord {
@@ -136,6 +136,40 @@ function JournalEntriesSection({ preview }: { preview: DeletePreview }) {
         </tbody>
       </table>
     </details>
+  );
+}
+
+/** SIL-F2.3 · Silme başka projelerin kayıtlarını da götürüyorsa VURGULU uyarı. */
+function OtherProjectsSection({ preview }: { preview: DeletePreview }) {
+  if (preview.other_projects.length === 0) return null;
+  return (
+    <Alert variant="danger" title="Başka projeler de etkilenecek" data-testid="delete-other-projects">
+      <ul className="delete-confirm__plain-list">
+        {preview.other_projects.map((project) => (
+          <li key={project.project_id}>
+            {project.name} · {project.count} kayıt
+          </li>
+        ))}
+      </ul>
+    </Alert>
+  );
+}
+
+/** SIL-F2.3 · Silinmeyen ama durumu geri türetilen kayıtlar (ör. fatura Tahsil Edildi → Gönderildi). */
+function StatusChangesSection({ preview }: { preview: DeletePreview }) {
+  if (preview.status_changes.length === 0) return null;
+  return (
+    <section className="delete-confirm__detached" data-testid="delete-status-changes">
+      <h3 className="delete-confirm__subtitle">Durumu değişecek kayıtlar (silinmeyecek)</h3>
+      <ul className="delete-confirm__detached-list">
+        {preview.status_changes.map((change) => (
+          <li key={`${change.kind}:${change.label}`}>
+            {statusChangeSubject(change.kind, change.label)}: {statusChangeStateLabel(change.kind, change.from)} →{" "}
+            {statusChangeStateLabel(change.kind, change.to)}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -269,8 +303,10 @@ export function DeleteConfirmDialog({ kind, recordId, onClose, onDeleted }: Dele
           <p className="delete-confirm__summary">{summaryText(data)}</p>
           <ClosedPayrollSection preview={data} />
           <DocumentsWithoutEntrySection preview={data} />
+          <OtherProjectsSection preview={data} />
           <GroupsTable preview={data} />
           <JournalEntriesSection preview={data} />
+          <StatusChangesSection preview={data} />
           <DetachedSection preview={data} />
           <p className="delete-confirm__warning">Bu işlem geri alınamaz.</p>
         </>

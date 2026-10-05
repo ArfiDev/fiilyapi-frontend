@@ -108,6 +108,8 @@ test("silme onay penceresi mali gorsel", async ({ page }) => {
             period_closed: false,
           },
         ],
+        other_projects: [{ project_id: "00000000-0000-4000-8000-0000000000b2", name: "Vadi Evleri", count: 4 }],
+        status_changes: [{ kind: "invoice", label: "Fatura F-0007", from: "collected", to: "sent" }],
         closed_payroll_timesheet_count: 6,
         closed_payroll_periods: [{ year: 2026, month: 3, status: "closed" }],
         closed_payroll_message:
@@ -131,6 +133,8 @@ test("silme onay penceresi mali gorsel", async ({ page }) => {
   // "kapalı dönem" hem uyarı satırında hem rozette geçer → yalnız rozet (tam metin).
   await expect(dialog.getByText("kapalı dönem", { exact: true })).toBeVisible();
   await expect(dialog.getByText("Kapanmış bordro dönemine ait 6 puantaj satırı", { exact: false })).toBeVisible();
+  await expect(dialog.getByText("Başka projeler de etkilenecek")).toBeVisible();
+  await expect(dialog.getByText("Fatura F-0007: Tahsil Edildi → Gönderildi")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Sil" })).toBeEnabled();
 
   // Kadraj hazırlığı (kaydırma sıfırlama + imleç parkı): `visual-scroll.ts`.
