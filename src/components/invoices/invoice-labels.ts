@@ -118,7 +118,7 @@ export const PAYMENT_KIND_OPTIONS: readonly PaymentMethodKind[] = [
  * (FY:119 vs FY:130). Türetilebilen SAKLANMAZ; bu yüzden eşleme `status`
  * TEK BAŞINA değil, `due_date` ile birlikte çözülür.
  */
-const BASE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+export const BASE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   draft: "Taslak",
   sent: "Gönderildi", // FY:91
   collected: "Tahsil Edildi", // FY:130

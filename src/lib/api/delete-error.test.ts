@@ -18,9 +18,9 @@ describe("classifyDeleteError", () => {
     expect(classifyDeleteError(err).reason).toBe("preview_required");
   });
 
-  it("409 + code financial_pending (şemada olmayan kod) → detail mesajı", () => {
+  it("409 + code financial_pending (SIL-B2'de kalktı) → özel dal YOK, genel conflict", () => {
     const err = new BackendError(409, { code: "financial_pending", detail: "Bekleyen hakediş var" });
-    expect(classifyDeleteError(err)).toEqual({ reason: "financial_pending", message: "Bekleyen hakediş var" });
+    expect(classifyDeleteError(err)).toEqual({ reason: "conflict", message: "Bekleyen hakediş var" });
   });
 
   it("409 + code null → conflict, detail mesajı", () => {

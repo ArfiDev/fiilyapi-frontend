@@ -116,26 +116,6 @@ export function useReplaceProgressPaymentLines(): UseMutationResult<
   });
 }
 
-/**
- * Hakediş silme. Başarı `204 No Content` — `unwrap` yalnız `response.ok`'a
- * bakar. Silinen kaydın `project_id`'si gövdede gelmediğinden özet
- * gecersiz kilinmaz; cagiran taraf gerekirse ayrica `useProgressPaymentSummary`
- * sorgusunu tazeleyebilir.
- */
-export function useDeleteProgressPayment(): UseMutationResult<void, Error, string> {
-  const invalidate = useProgressPaymentInvalidator();
-  return useMutation({
-    mutationFn: async (paymentId: string) => {
-      unwrap(
-        await backendClient.DELETE("/progress-payments/{payment_id}", {
-          params: { path: { payment_id: paymentId } },
-        }),
-      );
-    },
-    onSuccess: (_data, paymentId) => invalidate(paymentId, undefined, true),
-  });
-}
-
 // Durum aksiyonları (spec §7) — govde almazlar, yalniz payment_id. Dort ucun
 // yolu literal string oldugundan (openapi-fetch tip cikarimi govde/parametre
 // seklini uctan uca dogrular) ortak bir factory'ye sarilmiyor — dinamik yol

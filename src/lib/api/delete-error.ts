@@ -4,7 +4,6 @@ import { BackendError } from "@/lib/api/unwrap";
 export type DeleteFailureReason =
   | "preview_stale"
   | "preview_required"
-  | "financial_pending"
   | "forbidden"
   | "not_found"
   | "conflict"
@@ -26,8 +25,8 @@ const HTTP_PRECONDITION_REQUIRED = 428;
 
 /**
  * Gövdeden `code` (metin) ve `detail` (metin) okur. Gövde dış veridir; `code`
- * şemada yalnız `preview_*` değerlerini tanır ama backend `financial_pending`
- * gibi yenilerini şemadan ÖNCE ekleyebilir — bu yüzden `string` olarak okunur.
+ * şemada yalnız `preview_*` değerlerini tanır ama backend yenilerini şemadan
+ * ÖNCE ekleyebilir — bu yüzden `string` olarak okunur.
  */
 function readBody(body: unknown): { code: string | null; detail: string | null } {
   if (!body || typeof body !== "object") return { code: null, detail: null };
@@ -50,9 +49,6 @@ export function classifyDeleteError(err: unknown): DeleteFailure {
   }
   if (err.status === HTTP_CONFLICT) {
     if (code === "preview_stale") return { reason: "preview_stale", message: DELETE_STALE_MESSAGE };
-    if (code === "financial_pending") {
-      return { reason: "financial_pending", message: detail ?? DELETE_UNKNOWN_MESSAGE };
-    }
     return { reason: "conflict", message: detail ?? DELETE_UNKNOWN_MESSAGE };
   }
   return { reason: "unknown", message: DELETE_UNKNOWN_MESSAGE };

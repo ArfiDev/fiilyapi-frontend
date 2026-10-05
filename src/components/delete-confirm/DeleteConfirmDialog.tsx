@@ -7,7 +7,15 @@ import { Alert, Badge, Button } from "@/components/ui";
 import { classifyDeleteError, type DeleteFailure } from "@/lib/api/delete-error";
 import { useAdminDelete, useDeletePreview, type DeleteKind, type DeletePreview } from "@/lib/api/hooks/useAdminDelete";
 import { cx } from "@/lib/cx";
-import { DELETE_KIND_FALLBACK_LABELS, formatSamples } from "./delete-labels";
+import { formatDateDots, formatMoneyTl, PERIOD_MONTHS } from "@/lib/format";
+import {
+  DELETE_KIND_FALLBACK_LABELS,
+  formatSamples,
+  journalStatusText,
+  payrollPeriodStatusLabel,
+  statusChangeStateLabel,
+  statusChangeSubject,
+} from "./delete-labels";
 import "./delete-confirm.css";
 
 export interface DeletedRecord {
@@ -75,6 +83,11 @@ function DetachedSection({ preview }: { preview: DeletePreview }) {
         {preview.detached.map((group) => (
           <li key={group.table}>
             {group.label} · {group.count}
+            {group.is_financial && (
+              <Badge variant="danger" className="delete-confirm__badge">
+                mali kayıt
+              </Badge>
+            )}
           </li>
         ))}
       </ul>
@@ -82,14 +95,139 @@ function DetachedSection({ preview }: { preview: DeletePreview }) {
   );
 }
 
+/** SIL-F2.2 · Silinecek muhasebe fişleri — varsayılan KAPALI katlanır liste. */
+function JournalEntriesSection({ preview }: { preview: DeletePreview }) {
+  if (preview.journal_entry_count === 0) return null;
+  return (
+    <details className="delete-confirm__entries" data-testid="delete-journal-entries">
+      <summary className="delete-confirm__entries-summary">
+        Silinecek muhasebe fişleri ({preview.journal_entry_count})
+      </summary>
+      {preview.closed_period_entry_count > 0 && (
+        <p className="delete-confirm__entries-warning" data-testid="delete-closed-period-warning">
+          {preview.closed_period_entry_count} fiş kapalı döneme ait.
+        </p>
+      )}
+      <table className="delete-confirm__table">
+        <thead>
+          <tr>
+            <th scope="col">Fiş no</th>
+            <th scope="col">Tarih</th>
+            <th scope="col">Durum</th>
+            <th scope="col" className="delete-confirm__num">
+              Tutar
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {preview.journal_entries.map((entry) => (
+            <tr key={entry.entry_no} data-testid="delete-journal-entry-row">
+              <td>
+                {entry.entry_no}
+                {entry.is_reversal && (
+                  <Badge variant="warning" className="delete-confirm__badge">
+                    ters kayıt
+                  </Badge>
+                )}
+                {entry.period_closed && (
+                  <Badge variant="warning" className="delete-confirm__badge">
+                    kapalı dönem
+                  </Badge>
+                )}
+              </td>
+              <td>{formatDateDots(entry.entry_date)}</td>
+              <td>{journalStatusText(entry.status)}</td>
+              <td className="delete-confirm__num">{formatMoneyTl(entry.total)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  );
+}
+
+/** SIL-F2.3 · Silme başka projelerin kayıtlarını da götürüyorsa VURGULU uyarı. */
+function OtherProjectsSection({ preview }: { preview: DeletePreview }) {
+  if (preview.other_projects.length === 0) return null;
+  return (
+    <Alert variant="danger" title="Başka projeler de etkilenecek" data-testid="delete-other-projects">
+      <ul className="delete-confirm__plain-list">
+        {preview.other_projects.map((project) => (
+          <li key={project.project_id}>
+            {project.name} · {project.count} kayıt
+          </li>
+        ))}
+      </ul>
+    </Alert>
+  );
+}
+
+/** SIL-F2.3 · Silinmeyen ama durumu geri türetilen kayıtlar (ör. fatura Tahsil Edildi → Gönderildi). */
+function StatusChangesSection({ preview }: { preview: DeletePreview }) {
+  if (preview.status_changes.length === 0) return null;
+  return (
+    <section className="delete-confirm__detached" data-testid="delete-status-changes">
+      <h3 className="delete-confirm__subtitle">Durumu değişecek kayıtlar (silinmeyecek)</h3>
+      <ul className="delete-confirm__detached-list">
+        {preview.status_changes.map((change) => (
+          <li key={`${change.kind}:${change.label}`}>
+            {statusChangeSubject(change.kind, change.label)}: {statusChangeStateLabel(change.kind, change.from)} →{" "}
+            {statusChangeStateLabel(change.kind, change.to)}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** SIL-F2.2 · Silinince kaynak belgesi fişsiz kalacak kayıtlar. */
+function DocumentsWithoutEntrySection({ preview }: { preview: DeletePreview }) {
+  if (preview.documents_left_without_entry.length === 0) return null;
+  return (
+    <Alert variant="warning" title="Kaynak belge fişsiz kalacak" data-testid="delete-documents-without-entry">
+      <ul className="delete-confirm__plain-list">
+        {preview.documents_left_without_entry.map((doc) => (
+          <li key={`${doc.table}:${doc.ref}`}>
+            {doc.label} · {doc.ref} — {doc.message}
+          </li>
+        ))}
+      </ul>
+    </Alert>
+  );
+}
+
+function periodText(period: { month: number; year: number; status: string }): string {
+  const month = PERIOD_MONTHS.find((m) => m.value === period.month)?.label ?? String(period.month);
+  return `${month} ${period.year} · ${payrollPeriodStatusLabel(period.status)}`;
+}
+
+/** SIL-F2.2 · Kapanmış bordro dönemi uyarısı — sunucu mesajı AYNEN basılır. */
+function ClosedPayrollSection({ preview }: { preview: DeletePreview }) {
+  if (!preview.closed_payroll_message) return null;
+  return (
+    <Alert variant="warning" data-testid="delete-closed-payroll">
+      <p className="delete-confirm__alert-text">{preview.closed_payroll_message}</p>
+      {preview.closed_payroll_periods.length > 0 && (
+        <ul className="delete-confirm__plain-list">
+          {preview.closed_payroll_periods.map((period) => (
+            <li key={`${period.year}-${period.month}`}>{periodText(period)}</li>
+          ))}
+        </ul>
+      )}
+    </Alert>
+  );
+}
+
 /**
- * SIL-F1.2 · Ortak silme onay penceresi (şantiye/bölüm/blok/ünite).
+ * SIL-F1.2 · Ortak silme onay penceresi (şantiye/bölüm/blok/ünite; SIL-F2.2: + 6 mali aile).
  *
  * Mockup'ı YOKTUR (onaylı sapma): ortak `Modal` + `Button`/`Badge`/`Alert`
  * ilkelleri; yeni tasarım dili yok. Silinecek ağaç SUNUCUDAKİ önizlemeden
  * gelir ve `preview_token` DELETE'e aynen verilir. Ağaç arada değişirse
  * (409 `preview_stale`) önizleme yeniden çekilir, pencere yeni ağaçla açık
- * kalır. 409 `financial_pending` silmeyi KİLİTLER (düğme kapalı).
+ * kalır. SIL-F2.2: mali aileler fiş listesi, fişsiz kalacak belge ve kapanmış
+ * bordro uyarılarını da taşır; SIL-B2'de `financial_pending` kalktı (mali
+ * kayıt artık silmeyi KİLİTLEMEZ, yalnız rozetle işaretlenir).
  */
 export function DeleteConfirmDialog({ kind, recordId, onClose, onDeleted }: DeleteConfirmDialogProps) {
   const preview = useDeletePreview(kind, recordId);
@@ -99,9 +237,8 @@ export function DeleteConfirmDialog({ kind, recordId, onClose, onDeleted }: Dele
 
   const data = preview.data;
   const previewFailure = preview.isError ? classifyDeleteError(preview.error) : null;
-  const isBlocked = failure?.reason === "financial_pending";
   const isBusy = remove.isPending;
-  const canConfirm = data !== undefined && !preview.isFetching && !isBusy && !isBlocked;
+  const canConfirm = data !== undefined && !preview.isFetching && !isBusy;
   const kindLabel = data?.kind_label ?? DELETE_KIND_FALLBACK_LABELS[kind];
 
   function handleClose() {
@@ -171,7 +308,12 @@ export function DeleteConfirmDialog({ kind, recordId, onClose, onDeleted }: Dele
       {data && (
         <>
           <p className="delete-confirm__summary">{summaryText(data)}</p>
+          <ClosedPayrollSection preview={data} />
+          <DocumentsWithoutEntrySection preview={data} />
+          <OtherProjectsSection preview={data} />
           <GroupsTable preview={data} />
+          <JournalEntriesSection preview={data} />
+          <StatusChangesSection preview={data} />
           <DetachedSection preview={data} />
           <p className="delete-confirm__warning">Bu işlem geri alınamaz.</p>
         </>

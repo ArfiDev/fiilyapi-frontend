@@ -535,6 +535,12 @@ const TOKEN_PAIR = { access_token: fakeJwt(), refresh_token: fakeJwt(), token_ty
 // bilinmezse ekran SALT OKUNUR açılırdı. Patron = `admin` (disiplin silme dahil).
 // Görüntüleyici hâli `e2e/earned-value-helpers.ts` → `withEarnedValueLevel`
 // (`/api/auth/me` yanıtını kadraja özel değiştirir; paylaşılan durum oynamaz).
+/** SIL-B2 · 6 mali ailenin doğrudan DELETE ucu `preview_token` olmadan bu yanıtı verir. */
+const DELETE_PREVIEW_REQUIRED_BODY = {
+  code: "preview_required",
+  detail: "Silmeden önce önizleme alınmalı; önizlemeyi açıp onaylayın",
+} as const;
+
 const ME = {
   id: "11111111-1111-1111-1111-111111111111",
   email: "patron@fiil.com",
@@ -9239,22 +9245,89 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       });
     }
 
-    // SIL-F1.2 — ortak silme ucları (`/admin/silme/{kind}/{id}`). YAZAN akış sahte
-    // sunucuda: DELETE paylaşılan durumu DEĞİŞTİRMEZ (diğer kareler/testler aynı
-    // şantiyeyi görmeye devam eder); yalnız token sözleşmesini taklit eder:
+    // SIL-F1.2 / SIL-F2.2 — ortak silme ucları (`/admin/silme/{kind}/{id}`). YAZAN akış
+    // sahte sunucuda: şantiye/bölüm/blok/ünite DELETE'i paylaşılan durumu DEĞİŞTİRMEZ
+    // (diğer kareler/testler aynı şantiyeyi görmeye devam eder). Mali ailelerden yalnız
+    // `journal_entry` ve `payment` GERÇEKTEN düşer (e2e satırın listeden düştüğünü sınar);
+    // geri kalanı yalnız token sözleşmesini taklit eder:
     // token yok → 428 `preview_required`, uyuşmazsa → 409 `preview_stale`.
-    const deleteKinds = new Set(["site", "section", "block", "unit"]);
+    const deleteKindLabels = {
+      site: "Şantiye",
+      section: "Bölüm",
+      block: "Blok",
+      unit: "Ünite",
+      progress_payment: "İşveren hakedişi",
+      subcontractor_progress_payment: "Taşeron hakedişi",
+      invoice: "Fatura",
+      payment: "Ödeme / tahsilat",
+      journal_entry: "Muhasebe fişi",
+      financial_instrument: "Çek / senet",
+    } as const satisfies Record<components["schemas"]["DeleteKind"], string>;
+    const deleteKinds = new Set<string>(Object.keys(deleteKindLabels));
+    // SIL-F2.2 · önizleme ekleri — varsayılan BOŞ (mali olmayan türler ve boş mali ağaç).
+    const emptyDeletePreviewExtras = {
+      journal_entry_count: 0,
+      journal_entries: [],
+      other_projects: [],
+      status_changes: [],
+      closed_period_entry_count: 0,
+      documents_left_without_entry: [],
+      closed_payroll_timesheet_count: 0,
+      closed_payroll_periods: [],
+      closed_payroll_message: null,
+    } satisfies Partial<components["schemas"]["DeletePreviewResponse"]>;
     const deletePreviewMatch = path.match(/^\/admin\/silme\/([^/]+)\/([^/]+)\/onizleme$/);
     if (method === "GET" && deletePreviewMatch && deleteKinds.has(deletePreviewMatch[1])) {
       const kind = deletePreviewMatch[1] as components["schemas"]["DeleteKind"];
       const recordId = deletePreviewMatch[2];
+      const kindLabel = deleteKindLabels[kind];
+      if (kind === "journal_entry") {
+        const entry = accountingState.entries.find((row) => row.id === recordId);
+        if (!entry) return send(404, { detail: "Fiş bulunamadı." });
+        return send(200, {
+          ...emptyDeletePreviewExtras,
+          kind,
+          id: entry.id,
+          kind_label: kindLabel,
+          label: entry.entry_no,
+          dependent_count: 0,
+          groups: [],
+          detached: [],
+          journal_entry_count: 1,
+          journal_entries: [
+            {
+              entry_no: entry.entry_no,
+              entry_date: entry.entry_date,
+              status: entry.status,
+              is_reversal: entry.reversal_of_id !== null,
+              source_type: null,
+              total: entry.total_debit,
+              period_closed: false,
+            },
+          ],
+          preview_token: "mock-preview-token",
+        } satisfies components["schemas"]["DeletePreviewResponse"]);
+      }
+      if (kind !== "site" && kind !== "section" && kind !== "block" && kind !== "unit") {
+        return send(200, {
+          ...emptyDeletePreviewExtras,
+          kind,
+          id: recordId,
+          kind_label: kindLabel,
+          label: kindLabel,
+          dependent_count: 0,
+          groups: [],
+          detached: [],
+          preview_token: "mock-preview-token",
+        } satisfies components["schemas"]["DeletePreviewResponse"]);
+      }
       const site = kind === "site" ? resolveByIdOrSlug(state.sites, recordId) : null;
-      const kindLabels = { site: "Şantiye", section: "Bölüm", block: "Blok", unit: "Ünite" } as const;
       return send(200, {
+        ...emptyDeletePreviewExtras,
         kind,
         id: site?.id ?? recordId,
-        kind_label: kindLabels[kind],
-        label: site?.name ?? kindLabels[kind],
+        kind_label: kindLabel,
+        label: site?.name ?? kindLabel,
         dependent_count: 14,
         groups: [
           {
@@ -9275,7 +9348,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           },
           { table: "sections", label: "Bölüm", count: 3, relation: "cascade", is_financial: false, samples: [] },
         ],
-        detached: [{ table: "personnel", label: "Personel", count: 4 }],
+        detached: [{ table: "personnel", label: "Personel", count: 4, is_financial: false }],
         preview_token: "mock-preview-token",
       } satisfies components["schemas"]["DeletePreviewResponse"]);
     }
@@ -9287,6 +9360,12 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       }
       if (token !== "mock-preview-token") {
         return send(409, { code: "preview_stale", detail: "Silinecek kayıtlar değişti; önizlemeyi yenileyin" });
+      }
+      if (deleteMatch[1] === "journal_entry") {
+        accountingState.entries = accountingState.entries.filter((row) => row.id !== deleteMatch[2]);
+      }
+      if (deleteMatch[1] === "payment") {
+        invoiceState.payments = invoiceState.payments.filter((row) => row.id !== deleteMatch[2]);
       }
       return send(204);
     }
@@ -11147,12 +11226,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       });
     }
     if (method === "DELETE" && subcontractorPaymentIdMatch) {
-      const index = state.subcontractorProgressPayments.findIndex(
-        (p) => p.id === subcontractorPaymentIdMatch[1],
-      );
-      if (index === -1) return send(404, { detail: "hakedis yok" });
-      state.subcontractorProgressPayments.splice(index, 1);
-      return send(204);
+      // SIL-B2 · doğrudan DELETE preview_token İSTER (yoksa 428); UI `/admin/silme` akışını kullanır.
+      return send(428, DELETE_PREVIEW_REQUIRED_BODY);
     }
 
     // GET /subcontractor-contracts/{contract_id} — sözleşme detayı (T2-T5'in
@@ -14942,10 +15017,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
 
     const invoicePaymentIdMatch = path.match(/^\/payments\/([^/]+)$/);
     if (method === "DELETE" && invoicePaymentIdMatch) {
-      const payment = invoiceState.payments.find((row) => row.id === invoicePaymentIdMatch[1]);
-      if (!payment) return send(404, { detail: "Ödeme bulunamadı." });
-      invoiceState.payments = invoiceState.payments.filter((row) => row.id !== payment.id);
-      return send(204);
+      // SIL-B2 · doğrudan DELETE preview_token İSTER (yoksa 428); UI `/admin/silme` akışını kullanır.
+      return send(428, DELETE_PREVIEW_REQUIRED_BODY);
     }
 
     // FGE:104-143 eşleştirme kartının GERÇEK kaynağı (MK-2).
@@ -15243,11 +15316,8 @@ export function startMockBackend(port: number): { server: Server; close: () => P
         });
       }
       if (method === "DELETE") {
-        if (entry.status !== "draft") {
-          return send(409, { detail: "Yalnızca taslak fiş silinebilir." });
-        }
-        accountingState.entries = accountingState.entries.filter((row) => row.id !== entry.id);
-        return send(204);
+        // SIL-B2 · doğrudan DELETE preview_token İSTER (yoksa 428); UI `/admin/silme` akışını kullanır.
+        return send(428, DELETE_PREVIEW_REQUIRED_BODY);
       }
     }
 

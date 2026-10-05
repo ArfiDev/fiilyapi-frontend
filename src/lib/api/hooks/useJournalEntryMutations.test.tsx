@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import {
-  useDeleteJournalEntry,
   usePostJournalEntry,
   useReverseJournalEntry,
 } from "./useJournalEntryMutations";
@@ -138,20 +137,5 @@ describe("useReverseJournalEntry", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as BackendError).status).toBe(409);
-  });
-});
-
-describe("useDeleteJournalEntry", () => {
-  it("DELETE /journal-entries/{id} cagirir ve YEDI okumayi tazeler", async () => {
-    vi.mocked(backendClient.DELETE).mockResolvedValue(okResponse(undefined));
-
-    const { result } = renderHook(() => useDeleteJournalEntry(), { wrapper });
-    result.current.mutate("entry-2");
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(backendClient.DELETE).toHaveBeenCalledWith("/journal-entries/{entry_id}", {
-      params: { path: { entry_id: "entry-2" } },
-    });
-    expect(invalidated).toEqual(EXPECTED_SCOPE);
   });
 });

@@ -7,7 +7,6 @@ import {
   useCreateProgressPayment,
   useUpdateProgressPayment,
   useReplaceProgressPaymentLines,
-  useDeleteProgressPayment,
   useSubmitProgressPayment,
   useApproveProgressPayment,
   useRejectProgressPayment,
@@ -139,37 +138,6 @@ describe("useReplaceProgressPaymentLines", () => {
   });
 });
 
-describe("useDeleteProgressPayment", () => {
-  function noContentResponse() {
-    return { data: undefined, error: undefined, response: new Response(null, { status: 204 }) } as never;
-  }
-
-  it("başarıda liste + detay sorgularını geçersiz kılar (özet — project_id yok)", async () => {
-    vi.mocked(backendClient.DELETE).mockResolvedValue(noContentResponse());
-
-    const { result } = renderHook(() => useDeleteProgressPayment(), { wrapper });
-    act(() => result.current.mutate(PAYMENT_ID));
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(backendClient.DELETE).toHaveBeenCalledWith("/progress-payments/{payment_id}", {
-      params: { path: { payment_id: PAYMENT_ID } },
-    });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [PROGRESS_PAYMENTS_QUERY_KEY] });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [PROGRESS_PAYMENT_QUERY_KEY, PAYMENT_ID] });
-    expect(invalidateSpy).toHaveBeenCalledTimes(3);
-  });
-
-  it("404'te hiçbir sorgu geçersiz kılınmaz", async () => {
-    vi.mocked(backendClient.DELETE).mockResolvedValue(errorResponse(404, "kayıt bulunamadı"));
-
-    const { result } = renderHook(() => useDeleteProgressPayment(), { wrapper });
-    act(() => result.current.mutate(PAYMENT_ID));
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(invalidateSpy).not.toHaveBeenCalled();
-  });
-});
-
 describe.each([
   ["useSubmitProgressPayment", useSubmitProgressPayment, "submit"],
   ["useApproveProgressPayment", useApproveProgressPayment, "approve"],
@@ -271,12 +239,10 @@ describe("hakediş yazımları · son fiyat (HK) kaynağı katalog önbelleğini
     ["onayla", () => useApproveProgressPayment(), "POST", PAYMENT_ID],
     ["onayı geri al", () => useUnapproveProgressPayment(), "POST", PAYMENT_ID],
     ["fiyatları tazele", () => useRefreshProgressPaymentPrices(), "POST", PAYMENT_ID],
-    ["sil", () => useDeleteProgressPayment(), "POST", PAYMENT_ID],
   ];
 
   it.each(cases)("🔴 %s sonrası [catalog-items] geçersiz kılınır", async (_ad, useHook) => {
     vi.mocked(backendClient.POST).mockResolvedValue(okResponse({ ...DETAIL, updated_count: 0 }));
-    vi.mocked(backendClient.DELETE).mockResolvedValue(okResponse(undefined));
     const { result } = renderHook(() => useHook() as ReturnType<typeof useApproveProgressPayment>, { wrapper });
     act(() => result.current.mutate(PAYMENT_ID));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

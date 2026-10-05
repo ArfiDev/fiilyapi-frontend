@@ -114,24 +114,6 @@ export function useReplaceSubcontractorProgressPaymentLines(): UseMutationResult
   });
 }
 
-/**
- * Hakediş silme. Başarı `204 No Content` — `unwrap` yalnız `response.ok`'a
- * bakar.
- */
-export function useDeleteSubcontractorProgressPayment(): UseMutationResult<void, Error, string> {
-  const invalidate = useSubcontractorProgressPaymentInvalidator();
-  return useMutation({
-    mutationFn: async (paymentId: string) => {
-      unwrap(
-        await backendClient.DELETE("/subcontractor-progress-payments/{payment_id}", {
-          params: { path: { payment_id: paymentId } },
-        }),
-      );
-    },
-    onSuccess: (_data, paymentId) => invalidate(paymentId),
-  });
-}
-
 // Durum aksiyonları — govde almazlar (reject harici), yalniz payment_id.
 // İşveren dosyasındaki ayni gerekce ile ortak factory'ye sarilmiyor: dort
 // ucun yolu literal string oldugundan dinamik yol olusturmak `as` ile tip

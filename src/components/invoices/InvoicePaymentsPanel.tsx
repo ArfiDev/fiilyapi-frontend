@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { DeleteRecordDialog } from "@/components/delete-confirm/DeleteRecordDialog";
 import { Button, DateInput, Field, Input, Select } from "@/components/ui";
 import { isoDate } from "@/components/site-diary/derive";
 import { backendErrorMessage } from "@/lib/api/error-message";
@@ -10,10 +11,7 @@ import {
   useBankAccounts,
 } from "@/lib/api/hooks/useBankAccounts";
 import { useInvoicePayments } from "@/lib/api/hooks/useInvoiceDetail";
-import {
-  useCreateInvoicePayment,
-  useDeleteInvoicePayment,
-} from "@/lib/api/hooks/useInvoiceMutations";
+import { useCreateInvoicePayment } from "@/lib/api/hooks/useInvoiceMutations";
 import { formatAmount, formatDateDots } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -49,7 +47,8 @@ export function InvoicePaymentsPanel({
     limit: BANK_ACCOUNT_LIST_MAX_LIMIT,
   });
   const createPayment = useCreateInvoicePayment(invoiceId);
-  const deletePayment = useDeleteInvoicePayment(invoiceId);
+  // SIL-F2.2 · silme ortak onay penceresinden (önizleme + token) geçer; açık satırın kimliği.
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
 
   const [today] = useState(() => new Date());
   const [accountId, setAccountId] = useState("");
@@ -158,19 +157,14 @@ export function InvoicePaymentsPanel({
                       <Button
                         size="sm"
                         variant="ghost"
-                        disabled={!canDelete || deletePayment.isPending}
+                        disabled={!canDelete}
                         title={
                           canDelete
                             ? undefined
                             : "Ödeme silme yalnız yönetici (admin) yetkisindedir."
                         }
                         data-testid="fat-payment-delete"
-                        onClick={() =>
-                          deletePayment.mutate(payment.id, {
-                            onError: (err) =>
-                              setError(backendErrorMessage(err, "Tahsilat silinemedi.")),
-                          })
-                        }
+                        onClick={() => setDeletingPaymentId(payment.id)}
                       >
                         Sil
                       </Button>
@@ -180,6 +174,14 @@ export function InvoicePaymentsPanel({
               </tbody>
             </table>
           </div>
+        )}
+
+        {deletingPaymentId !== null && (
+          <DeleteRecordDialog
+            kind="payment"
+            recordId={deletingPaymentId}
+            onClose={() => setDeletingPaymentId(null)}
+          />
         )}
 
         {error !== null && (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
+import { DeleteRecordButton } from "@/components/delete-confirm/DeleteRecordButton";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Badge, Button } from "@/components/ui";
 import { remainingDays } from "@/components/section-detail/remainingDays";
@@ -184,6 +185,13 @@ export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
               </Button>
             </>
           )}
+          {/* SIL-F2.2 — yalnız Sistem Yöneticisi görür; silince fatura listesine döner. */}
+          <DeleteRecordButton
+            kind="invoice"
+            recordId={invoice.id}
+            redirectTo={INVOICES_URL}
+            className="btn btn--danger btn--md"
+          />
         </div>
       </div>
 
