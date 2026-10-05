@@ -26,7 +26,9 @@ import { routes } from "@/lib/routes";
  *
  * 🔴 KANON E: sunucu KARAR ALANI DÖNDÜRMEZ (`can_approve` yok, `status` yok,
  * aciliyet/renk yok). Adım durumu `decided_at` + `current_step_no` +
- * `my_approval_roles` üçlüsünden TÜRETİLİR ve türetme TEK yardımcıda yaşar.
+ * `can_decide` üçlüsünden TÜRETİLİR ve türetme TEK yardımcıda yaşar.
+ * (IZN-B3b: `my_approval_roles` KALKTI — "sıradaki adım benim mi" sorusunun
+ * cevabı kalem başına `can_decide`dir.)
  */
 
 /** Karşılığı olmayan alanın basılacağı işaret (`—`, U+2014 — fontta KAPSANIR). */
@@ -70,7 +72,8 @@ export type ApprovalStepState =
 export interface ApprovalStepStateInput {
   step: ApprovalStepRead;
   currentStepNo: number;
-  myRoles: readonly ApprovalRole[];
+  /** Kalemin `can_decide`ı: true ise SIRADAKİ adımın sahibi benim. */
+  canDecide: boolean;
 }
 
 /**
@@ -91,11 +94,11 @@ export interface ApprovalStepStateInput {
 export function approvalStepState({
   step,
   currentStepNo,
-  myRoles,
+  canDecide,
 }: ApprovalStepStateInput): ApprovalStepState {
   if (step.decided_at !== null) return "decided";
   if (step.step_no === currentStepNo) {
-    return myRoles.includes(step.approval_role) ? "current-mine" : "current-other";
+    return canDecide ? "current-mine" : "current-other";
   }
   return "upcoming";
 }

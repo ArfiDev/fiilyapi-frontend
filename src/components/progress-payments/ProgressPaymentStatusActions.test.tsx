@@ -306,6 +306,28 @@ describe("ProgressPaymentStatusActions — hata gösterimi (Türkçe, sessiz ba�
     });
   });
 
+  it("IZN-B3b: Onaya Gönder 409 detail'i (rol atanmamış) OLDUĞU GİBİ basılır", async () => {
+    mockSession();
+    const detail = "Bu projede Şantiye Şefi, Muhasebe atanmamış; önce Ayarlar > Kullanıcılar'dan atayın";
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ detail }, 409)));
+
+    renderActions(makeDetail("draft"));
+    await userEvent.click(screen.getByRole("button", { name: "Onaya Gönder" }));
+
+    expect(await screen.findByTestId("pp-detail-action-error")).toHaveTextContent(detail);
+  });
+
+  it("IZN-B3b: onay 403 (projede rol yok) metni OLDUĞU GİBİ basılır", async () => {
+    mockSession({ progress_payments: "approve" });
+    const detail = "Bu projede bu onay adimi icin gereken role sahip degilsiniz";
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ detail }, 403)));
+
+    renderActions(makeDetail("pending_approval"));
+    await userEvent.click(screen.getByRole("button", { name: "Onayla" }));
+
+    expect(await screen.findByTestId("pp-detail-action-error")).toHaveTextContent(detail);
+  });
+
   it("403'te Türkçe yetki mesajı basılır", async () => {
     mockSession({ progress_payments: "approve" });
     vi.stubGlobal(

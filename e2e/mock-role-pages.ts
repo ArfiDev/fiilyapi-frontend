@@ -138,7 +138,7 @@ const CATALOG_ROWS = [
   ["ayarlar.kullanicilar", "Kullanıcılar", "ayarlar", null, "/ayarlar/kullanicilar", false, []],
   ["ayarlar.rol_yonetimi", "Rol Yönetimi", "ayarlar", null, "/ayarlar/roller", false, []],
   ["ayarlar.sayfa_izinleri", "Sayfa İzinleri", "ayarlar", null, "/ayarlar/izin-matrisi", false, []],
-  ["ayarlar.onay_rolleri", "Onay Rolleri ve Eşik", "ayarlar", null, "/ayarlar/onay-rolleri", false, []],
+  ["ayarlar.onay_rolleri", "Onay Eşiği", "ayarlar", null, "/ayarlar/onay-rolleri", false, []],
   ["ayarlar.bordro_oranlari", "Bordro Oranları", "ayarlar", null, "/ayarlar/bordro-oranlari", false, []],
   ["ayarlar.entegrasyonlar", "Entegrasyonlar", "ayarlar", null, "/ayarlar/entegrasyonlar", false, []],
   ["ayarlar.yedekleme", "Yedekleme", "ayarlar", null, "/ayarlar/yedekleme", false, []],

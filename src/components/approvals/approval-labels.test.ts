@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ApprovalRole, ApprovalStepRead } from "@/lib/api/hooks/useApprovals";
+import type { ApprovalStepRead } from "@/lib/api/hooks/useApprovals";
 
 import {
   APPROVAL_DOCUMENT_PRESENTATION,
@@ -37,8 +37,7 @@ function step(partial: Partial<ApprovalStepRead> = {}): ApprovalStepRead {
   };
 }
 
-const PATRON_ROLES: readonly ApprovalRole[] = ["patron"];
-
+// IZN-B3b: "sıradaki adım benim mi" = kalemin `can_decide`ı (rol listesi KALKTI).
 // 🔴 DÖRT DURUMUN HEPSİ — `current-other` bu sekmede ULAŞILAMAZDIR (`GET
 // /approvals` yalnız bana düşen adımları döndürür) ve tam bu yüzden BİRİM
 // TESTİYLE doğrulanır: kadraj/e2e onu asla göremez, ama `Tümü` sekmesi
@@ -48,25 +47,25 @@ describe("approvalStepState — dört durum (mockup :129-135)", () => {
     const state = approvalStepState({
       step: step({ step_no: 9, decided_at: "2026-07-20T08:00:00Z" }),
       currentStepNo: 2,
-      myRoles: PATRON_ROLES,
+      canDecide: true,
     });
     expect(state).toBe("decided");
   });
 
-  it(":170 sıradaki adım BENİM rolümdeyse `current-mine`", () => {
+  it(":170 sıradaki adım BENİM ise (`can_decide` true) `current-mine`", () => {
     const state = approvalStepState({
       step: step({ step_no: 3, approval_role: "patron" }),
       currentStepNo: 3,
-      myRoles: PATRON_ROLES,
+      canDecide: true,
     });
     expect(state).toBe("current-mine");
   });
 
-  it(":133 sıradaki adım BAŞKASININ rolündeyse `current-other` (bu sekmede ulaşılamaz dal)", () => {
+  it(":133 sıradaki adım BAŞKASININ ise (`can_decide` false) `current-other` (Benim Onayım'da ulaşılamaz dal)", () => {
     const state = approvalStepState({
       step: step({ step_no: 3, approval_role: "accounting" }),
       currentStepNo: 3,
-      myRoles: PATRON_ROLES,
+      canDecide: false,
     });
     expect(state).toBe("current-other");
   });
@@ -75,7 +74,7 @@ describe("approvalStepState — dört durum (mockup :129-135)", () => {
     const state = approvalStepState({
       step: step({ step_no: 4, approval_role: "patron" }),
       currentStepNo: 2,
-      myRoles: PATRON_ROLES,
+      canDecide: true,
     });
     expect(state).toBe("upcoming");
   });
@@ -84,7 +83,7 @@ describe("approvalStepState — dört durum (mockup :129-135)", () => {
     const state = approvalStepState({
       step: step({ step_no: 1, approval_role: "site_chief" }),
       currentStepNo: 3,
-      myRoles: PATRON_ROLES,
+      canDecide: true,
     });
     expect(state).toBe("upcoming");
   });

@@ -20,7 +20,7 @@ const SETTINGS_CATALOG: readonly (readonly [string, string, string])[] = [
   ["ayarlar.kullanicilar", "Kullanıcılar", "/ayarlar/kullanicilar"],
   ["ayarlar.rol_yonetimi", "Rol Yönetimi", "/ayarlar/roller"],
   ["ayarlar.sayfa_izinleri", "Sayfa İzinleri", "/ayarlar/izin-matrisi"],
-  ["ayarlar.onay_rolleri", "Onay Rolleri ve Eşik", "/ayarlar/onay-rolleri"],
+  ["ayarlar.onay_rolleri", "Onay Eşiği", "/ayarlar/onay-rolleri"],
   ["ayarlar.bordro_oranlari", "Bordro Oranları", "/ayarlar/bordro-oranlari"],
   ["ayarlar.entegrasyonlar", "Entegrasyonlar", "/ayarlar/entegrasyonlar"],
   ["ayarlar.yedekleme", "Yedekleme", "/ayarlar/yedekleme"],

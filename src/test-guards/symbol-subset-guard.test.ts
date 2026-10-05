@@ -119,7 +119,7 @@ const ALLOWED: readonly (readonly [number, string])[] = [
   [0x1f477, "👷 personel/işçi ikonu (8 yüzey: puantaj, İK, günlük)"],
   [0x1f4bc, "💼 iş/görev modülü ikonu (JobCard, roller, drill gezinme)"],
   [0x1f91d, "🤝 taşeron/ortaklık proje tipi kartı ikonu"],
-  [0x1f44d, "👍 Onay Rolleri ve Eşik sekmesi ikonu (settings-nav-config) — mockup ✅ ikamesi"],
+  [0x1f44d, "👍 Onay Eşiği sekmesi ikonu (settings-nav-config) — mockup ✅ ikamesi"],
 
   // — Yapı/tesis ikonları —
   [0x1f3d7, "🏗 şantiye ikonu — en yaygın modül simgesi (10 yüzey)"],

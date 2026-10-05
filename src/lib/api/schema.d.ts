@@ -320,8 +320,8 @@ export interface paths {
         };
         /**
          * List Approval Role Assignments Endpoint
-         * @description EN AZ BIR onay rolu tasiyan kullanicilar. Rolu OLMAYANLAR burada DONMEZ:
-         *     bu uc atamalarin listesidir, kullanici katalogu `GET /users`tur.
+         * @deprecated
+         * @description KALDIRILDI (IZN-B3b): her çağrı 410 döner. Onay rolü = proje rolü (K1).
          */
         get: operations["list_approval_role_assignments_endpoint_approvals_roles_get"];
         put?: never;
@@ -342,10 +342,8 @@ export interface paths {
         get?: never;
         /**
          * Set Approval Roles Endpoint
-         * @description Bir kullanicinin onay rollerini TAM KUME olarak yazar (K1).
-         *
-         *     Onay rolu HICBIR IZIN VERMEZ: yalnizca zincirde imza adayligidir. Bu yuzden
-         *     burada izin matrisine DOKUNULMAZ ve yeni bir rol/modul acilmaz.
+         * @deprecated
+         * @description KALDIRILDI (IZN-B3b): her çağrı 410 döner, hiçbir şey yazılmaz.
          */
         put: operations["set_approval_roles_endpoint_approvals_roles__user_id__put"];
         post?: never;
@@ -9042,10 +9040,15 @@ export interface components {
          *     * `reason`: YALNIZ retse gerekce, aksi `null`.
          *     * `current_step_no`: retse reddedilen adim, suren zincirde siradaki adim,
          *       onaylanmissa son adim.
+         *     * `can_decide` (IZN-B3b): aktor bu zincirin SIRADAKI adimini SIMDI onaylayip/reddedebilir mi.
+         *       Yalniz suren zincirde `true` olabilir; onaylanmis / reddedilmis satirda ve baskasinin
+         *       adiminda `false`.
          */
         ApprovalHistoryItem: {
             /** Amount Snapshot */
             amount_snapshot: string | null;
+            /** Can Decide */
+            can_decide: boolean;
             /**
              * Chain Id
              * Format: uuid
@@ -9097,8 +9100,6 @@ export interface components {
             items: components["schemas"]["ApprovalHistoryItem"][];
             /** Limit */
             limit: number;
-            /** My Approval Roles */
-            my_approval_roles: components["schemas"]["ApprovalRole"][];
             /** Offset */
             offset: number;
             /** Total */
@@ -9125,6 +9126,8 @@ export interface components {
         ApprovalInboxItem: {
             /** Amount Snapshot */
             amount_snapshot: string | null;
+            /** Can Decide */
+            can_decide: boolean;
             /**
              * Chain Id
              * Format: uuid
@@ -9160,19 +9163,18 @@ export interface components {
         };
         /**
          * ApprovalInboxResponse
-         * @description 🔴 KANON E: `can_approve` gibi bir KARAR ALANI YOKTUR.
+         * @description Onay kutusu zarfi.
          *
-         *     `my_approval_roles` OLGUSU doner; "bu satiri onaylayabilir miyim" kararini
-         *     ekran, adim rolu ile bu kume uzerinden TEK yardimcida birlestirir.
-         *     🔴 ACILIYET/RENK de SUNUCUDA URETILMEZ (K10 kanonu).
+         *     🔴 IZN-B3b: `my_approval_roles` KALKTI — onay rolu artik PROJEYE baglidir ve tek bir liste
+         *     yanlis olurdu. "Bu satiri SIMDI onaylayabilir miyim" sorusunu satirdaki `can_decide` yanitlar
+         *     (adimin sahibi aktor + kendi evraki / gorevler ayriligi bekcileri + acik zincir).
+         *     🔴 ACILIYET/RENK SUNUCUDA URETILMEZ (K10 kanonu).
          */
         ApprovalInboxResponse: {
             /** Items */
             items: components["schemas"]["ApprovalInboxItem"][];
             /** Limit */
             limit: number;
-            /** My Approval Roles */
-            my_approval_roles: components["schemas"]["ApprovalRole"][];
             /** Offset */
             offset: number;
             /** Total */
@@ -9193,39 +9195,6 @@ export interface components {
          * @enum {string}
          */
         ApprovalRole: "site_chief" | "project_manager" | "accounting" | "patron" | "procurement";
-        /** ApprovalRoleAssignmentListResponse */
-        ApprovalRoleAssignmentListResponse: {
-            /** Items */
-            items: components["schemas"]["ApprovalRoleAssignmentRead"][];
-            /** Limit */
-            limit: number;
-            /** Offset */
-            offset: number;
-            /** Total */
-            total: number;
-        };
-        /** ApprovalRoleAssignmentRead */
-        ApprovalRoleAssignmentRead: {
-            /** Approval Roles */
-            approval_roles: components["schemas"]["ApprovalRole"][];
-            /** Email */
-            email: string;
-            /** Full Name */
-            full_name: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-        };
-        /**
-         * ApprovalRoleAssignmentUpdate
-         * @description TAM KUME yazar: gonderilmeyen rol KALKAR (kismi ekleme ucu YOKTUR).
-         */
-        ApprovalRoleAssignmentUpdate: {
-            /** Approval Roles */
-            approval_roles: components["schemas"]["ApprovalRole"][];
-        };
         /** ApprovalSettingsRead */
         ApprovalSettingsRead: {
             /** Approval Threshold Try */
@@ -27355,25 +27324,13 @@ export interface operations {
     };
     list_approval_role_assignments_endpoint_approvals_roles_get: {
         parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApprovalRoleAssignmentListResponse"];
-                };
-            };
             /** @description Yetkisiz işlem */
             403: {
                 headers: {
@@ -27388,13 +27345,13 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Uç kaldırıldı: onay rolü artık proje rolü (`PUT /users/{id}/access`) */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": unknown;
                 };
             };
         };
@@ -27408,21 +27365,8 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApprovalRoleAssignmentUpdate"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApprovalRoleAssignmentRead"];
-                };
-            };
             /** @description Yetkisiz işlem */
             403: {
                 headers: {
@@ -27436,6 +27380,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Uç kaldırıldı: onay rolü artık proje rolü (`PUT /users/{id}/access`) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

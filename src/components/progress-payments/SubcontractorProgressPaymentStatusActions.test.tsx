@@ -200,6 +200,19 @@ describe("SubcontractorProgressPaymentStatusActions — hata gösterimi", () => 
   });
 });
 
+describe("SubcontractorProgressPaymentStatusActions — IZN-B3b submit 409", () => {
+  it("Onaya Gönder 409 detail'i (rol atanmamış) OLDUĞU GİBİ basılır", async () => {
+    mockSession();
+    const detail = "Bu projede Şantiye Şefi, Muhasebe atanmamış; önce Ayarlar > Kullanıcılar'dan atayın";
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ detail }, 409)));
+
+    renderActions(makeDetail("draft"));
+    await userEvent.click(screen.getByRole("button", { name: "Onaya Gönder" }));
+
+    expect(await screen.findByTestId("th-detail-action-error")).toHaveTextContent(detail);
+  });
+});
+
 describe("SubcontractorProgressPaymentStatusActions — SEKME-F1.3b kaydedilmemiş değişiklik kaydı (yalnız Reddet diyaloğu)", () => {
   it("kapalı → false; diyalog açık + gerekçe yazıldı → true; başarılı reddet → false", async () => {
     mockSession({ progress_payments: "approve" });

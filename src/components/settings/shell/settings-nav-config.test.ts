@@ -17,9 +17,9 @@ import { SETTINGS_NAV } from "./settings-nav-config";
 const filePath = fileURLToPath(new URL("./settings-nav-config.ts", import.meta.url));
 
 describe("settings-nav-config emoji literal kurali", () => {
-  it("'Onay Rolleri ve Esik' emoji alani JS unicode kacis dizisi ICERMEZ", () => {
+  it("'Onay Esigi' emoji alani JS unicode kacis dizisi ICERMEZ", () => {
     const source = readFileSync(filePath, "utf8");
-    const line = source.split("\n").find((l) => l.includes("Onay Rolleri ve Eşik"));
+    const line = source.split("\n").find((l) => l.includes("Onay Eşiği"));
     expect(line).toBeDefined();
     const escapeSequence = /\\u\{[0-9a-fA-F]+\}|\\u[0-9a-fA-F]{4}/;
     expect(line).not.toMatch(escapeSequence);

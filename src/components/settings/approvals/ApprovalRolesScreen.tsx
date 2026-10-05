@@ -4,26 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { Button, Field, Input } from "@/components/ui";
-import { CheckIcon, LockIcon, inlineSymbolProps } from "@/components/ui/icons";
+import { LockIcon, inlineSymbolProps } from "@/components/ui/icons";
 import { ApprovalFlowArrow } from "@/components/approvals/ApprovalFlowStrip";
-import {
-  APPROVAL_ROLE_LABELS,
-  UNKNOWN_VALUE,
-} from "@/components/approvals/approval-labels";
+import { APPROVAL_ROLE_LABELS } from "@/components/approvals/approval-labels";
 import { AccessDenied } from "@/components/settings/AccessDenied";
-import { SettingsCard } from "@/components/settings/primitives/SettingsCard";
-import { RolePill } from "@/components/settings/primitives/RolePill";
-import { roleVisual } from "@/components/settings/primitives/role-visuals";
-import { UserAvatar } from "@/components/settings/primitives/UserAvatar";
 import {
-  useApprovalRoleAssignments,
   useApprovalSettings,
-  useSetApprovalRoles,
   useUpdateApprovalSettings,
   type ApprovalRole,
 } from "@/lib/api/hooks/useApprovals";
-import { useRoles } from "@/lib/api/hooks/useRoles";
-import { useUsers } from "@/lib/api/hooks/useUsers";
 import { checkApprovalThreshold } from "@/lib/api/approval-threshold";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
@@ -33,13 +22,8 @@ import { APPROVAL_ROLES_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
 import { formatCurrencyTight } from "@/lib/format";
-import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import {
-  APPROVAL_PENDING_COLUMN_LABEL,
-  APPROVAL_PENDING_COLUMN_REASON,
-  APPROVAL_ROLE_ORDER,
-  APPROVAL_ROLES_SAVE_ERROR,
   APPROVAL_THRESHOLD_ADMIN_BADGE,
   APPROVAL_THRESHOLD_CARD_TITLE,
   APPROVAL_THRESHOLD_FIELD_LABEL,
@@ -48,23 +32,12 @@ import {
   APPROVAL_THRESHOLD_LOCKED_NOTE,
   APPROVAL_THRESHOLD_SAVE_ERROR,
   APPROVAL_THRESHOLD_SAVE_LABEL,
-  approvalRoleCountLabel,
   approvalThresholdAboveLabel,
   approvalThresholdBelowLabel,
-  mergeApprovalRoleRows,
-  toggleApprovalRole,
-  type ApprovalRoleRow,
 } from "./approval-role-admin";
 import "@/components/settings/settings.css";
 import "./approval-roles.css";
 import { routes } from "@/lib/routes";
-
-/**
- * `GET /users` ve `GET /approvals/roles` `limit` tavanı (openapi.json `le=200`).
- * AÇIKÇA gönderilir; aşan kayıt `buildListTruncation` ile GÖRÜNÜR kılınır —
- * sessiz kırpma, bir kullanıcının imza yetkisinin kaybolması demektir.
- */
-const APPROVAL_ROLE_PAGE_LIMIT = 200;
 
 /** Zincirin eşik ALTINDAKİ hâli (`:159-163`) — Patron adımı YOK. */
 const CHAIN_BELOW: readonly ApprovalRole[] = ["site_chief", "project_manager", "accounting"];
@@ -72,9 +45,6 @@ const CHAIN_BELOW: readonly ApprovalRole[] = ["site_chief", "project_manager", "
 const CHAIN_ABOVE: readonly ApprovalRole[] = [...CHAIN_BELOW, "patron"];
 
 export function ApprovalRolesScreen() {
-  const usersQuery = useUsers({ limit: APPROVAL_ROLE_PAGE_LIMIT, offset: 0 });
-  const rolesQuery = useRoles();
-  const assignmentsQuery = useApprovalRoleAssignments();
   const settingsQuery = useApprovalSettings();
 
   const { level } = useModulePermission("approvals");
@@ -82,19 +52,15 @@ export function ApprovalRolesScreen() {
   // `approvals: admin` yazar, `full` seviyeli kullanıcı 403 alır. Bilinmezlik
   // kuralı (seviye yoksa `true`) kasıtlı korunur — yükü gelmemiş oturumda
   // gizleme, tam yetkili kullanıcıya sessiz yetenek kaybı olurdu.
-  // IZN-F2.x · eşik kaydet + onay rolü atama = ayarlar.onay_rolleri Düzenler.
+  // IZN-F2.x · eşik kaydet = ayarlar.onay_rolleri Düzenler.
   const canEditThreshold = useButtonGate({
     pages: APPROVAL_ROLES_EDIT,
     need: "edit",
     fallback: hasAtLeast(level, "admin"),
   });
 
-  // Onay rolü atama bugün KAPISIZ → grant yoksa serbest (fallback true).
-  const canAssignRoles = useButtonGate({ pages: APPROVAL_ROLES_EDIT, need: "edit", fallback: true });
-
   const [thresholdDraft, setThresholdDraft] = useState<string | null>(null);
   const [thresholdError, setThresholdError] = useState<string | null>(null);
-  const [rolesError, setRolesError] = useState<string | null>(null);
 
   const savedThreshold = settingsQuery.data?.approval_threshold_try;
   // Sunucudan gelen değer kutunun TABANIDIR; kullanıcı yazmaya başlayınca
@@ -104,9 +70,7 @@ export function ApprovalRolesScreen() {
     setThresholdError(null);
   }, [savedThreshold]);
 
-  // SEKME-F1.3b (B1, kullanıcı kararı) · YALNIZ eşik alt-formu bağlanır.
-  // Kullanıcı×rol rozet ızgarası her tıklamada ANINDA kaydolur (`toggleRow`),
-  // ayrı taslak YOK — o kısım bağlanmaz (çift kayıt/anlamsız dirty olurdu).
+  // SEKME-F1.3b (B1, kullanıcı kararı) · eşik alt-formu bağlanır.
   // dirty: `thresholdDraft !== null` zaten "dokunuldu" sinyali (tercih 1).
   // 🔴 ASYNC TABAN: taban `settingsQuery.data.approval_threshold_try`;
   // yukarıdaki efekt kayıttan SONRA da (savedThreshold değişince) taslağı
@@ -114,21 +78,13 @@ export function ApprovalRolesScreen() {
   useUnsavedChanges(thresholdDraft !== null, "Onay eşiği");
 
   const updateSettings = useUpdateApprovalSettings();
-  const setRoles = useSetApprovalRoles();
 
-  const queries = [usersQuery, rolesQuery, assignmentsQuery, settingsQuery];
-  if (queries.some((q) => q.isLoading)) return <p className="settings-note">Yükleniyor…</p>;
-  if (queries.some((q) => isForbidden(q.error))) return <AccessDenied />;
-  if (!usersQuery.data || !rolesQuery.data || !assignmentsQuery.data || !settingsQuery.data) {
-    return <p className="settings-note settings-note--error">Onay rolleri yüklenemedi.</p>;
+  if (settingsQuery.isLoading) return <p className="settings-note">Yükleniyor…</p>;
+  if (isForbidden(settingsQuery.error)) return <AccessDenied />;
+  if (!settingsQuery.data) {
+    return <p className="settings-note settings-note--error">Onay eşiği yüklenemedi.</p>;
   }
 
-  const rows = mergeApprovalRoleRows(
-    usersQuery.data.items,
-    rolesQuery.data,
-    assignmentsQuery.data.items,
-  );
-  const truncation = buildListTruncation(usersQuery.data.items.length, usersQuery.data.total);
   const thresholdValue = thresholdDraft ?? settingsQuery.data.approval_threshold_try;
   const formattedThreshold = formatCurrencyTight(settingsQuery.data.approval_threshold_try);
 
@@ -144,25 +100,15 @@ export function ApprovalRolesScreen() {
     });
   }
 
-  function toggleRow(row: ApprovalRoleRow, role: ApprovalRole) {
-    setRolesError(null);
-    setRoles.mutate(
-      { userId: row.userId, roles: toggleApprovalRole(row.approvalRoles, role) },
-      { onError: (error) => setRolesError(backendErrorMessage(error) || APPROVAL_ROLES_SAVE_ERROR) },
-    );
-  }
-
   return (
     <div className="okr-wrap">
-      {/* `:126-133` — bu ekranın Rol Yönetimi'nden farkını anlatan şerit. */}
+      {/* IZN-B3b — onay yetkisi artık projedeki kullanıcı erişiminden gelir. */}
       <aside className="okr-intro">
-        <p className="okr-intro__text">
-          <strong>Sayfa İzinleri</strong> rolün <em>neyi görebileceğini</em> tanımlar (sayfa
-          erişimleri). Bu ekran ise <strong>kimin onaylayacağını</strong> belirler — bir kullanıcı
-          birden çok onay rolü taşıyabilir.
+        <p className="okr-intro__text" data-testid="okr-intro-note">
+          Onayı, belgenin projesinde ilgili role atanmış kişi verir (Ayarlar &gt; Kullanıcılar)
         </p>
-        <Link className="okr-intro__link" href={routes.settings.permissionMatrix()}>
-          Sayfa İzinleri
+        <Link className="okr-intro__link" href={routes.settings.users()}>
+          Kullanıcılar
           <ApprovalFlowArrow />
         </Link>
       </aside>
@@ -232,112 +178,6 @@ export function ApprovalRolesScreen() {
           </div>
         </div>
       </section>
-
-      {/* --- KULLANICI × ROL (`:179-224`) --- */}
-      <SettingsCard
-        title="Kullanıcı Onay Rolleri"
-        count={approvalRoleCountLabel(rows.length)}
-        actions={
-          <span className="okr-card__hint">
-            Rozete tıklayarak rol ekle/çıkar · Bir kullanıcı birden çok rol taşıyabilir
-          </span>
-        }
-        bodyPad="flush"
-      >
-        {rolesError && (
-          <p className="settings-note settings-note--error" role="alert">
-            {rolesError}
-          </p>
-        )}
-        {truncation.isTruncated && (
-          <p className="settings-note settings-note--error">{listTruncationMessage(truncation)}</p>
-        )}
-        <div className="okr-table-scroll">
-          <table className="okr-table">
-            <thead>
-              <tr>
-                <th scope="col">Kullanıcı</th>
-                <th scope="col" className="okr-th--role">
-                  Sistem Rolü
-                </th>
-                <th scope="col">Onay Rolleri</th>
-                {/* 🔴 KOLON SİLİNMEZ, DEVRE-DIŞI BASILIR (F-TH kanonu): sayı
-                    hiçbir uçtan gelmiyor, uydurulmuyor. */}
-                <th
-                  scope="col"
-                  className="okr-th--pending"
-                  aria-disabled="true"
-                  title={APPROVAL_PENDING_COLUMN_REASON}
-                >
-                  {APPROVAL_PENDING_COLUMN_LABEL}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.userId}>
-                  <td>
-                    <span className="okr-user">
-                      <UserAvatar roleKey={row.systemRole?.key ?? ""} name={row.fullName} />
-                      <span className="okr-user__text">
-                        <span className="okr-user__name">{row.fullName}</span>
-                        <span className="okr-user__mail">{row.email}</span>
-                      </span>
-                    </span>
-                  </td>
-                  <td>
-                    {row.systemRole ? (
-                      <RolePill roleKey={row.systemRole.key} name={row.systemRole.name} />
-                    ) : (
-                      <span className="okr-muted">{UNKNOWN_VALUE}</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className="okr-chips">
-                      {APPROVAL_ROLE_ORDER.map((role) => {
-                        const on = row.approvalRoles.includes(role);
-                        // 🔴 Rol renkleri BURADA YENİDEN TANIMLANMAZ:
-                        // `roleVisual` sözlüğü beş onay rolünün de anahtarını
-                        // (`site_chief` … `procurement`) zaten taşıyor —
-                        // `ApprovalRole` değerleri `roles/seed_data.py`
-                        // anahtarlarıyla BİREBİR aynıdır (şema R1).
-                        const visual = roleVisual(role);
-                        return (
-                          <button
-                            key={role}
-                            type="button"
-                            className={cx("okr-chip", !on && "okr-chip--off")}
-                            style={
-                              on ? { background: visual.badgeBg, color: visual.badgeText } : undefined
-                            }
-                            aria-pressed={on}
-                            disabled={setRoles.isPending || !canAssignRoles}
-                            onClick={() => toggleRow(row, role)}
-                          >
-                            {APPROVAL_ROLE_LABELS[role]}
-                            {/* `✓` glif değil ikondur (F-SEM); anlam
-                                `aria-pressed`te zaten taşınıyor. */}
-                            {on && <CheckIcon {...inlineSymbolProps} />}
-                          </button>
-                        );
-                      })}
-                    </span>
-                  </td>
-                  <td className="okr-td--pending">
-                    <span className="okr-muted">{UNKNOWN_VALUE}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="okr-foot">
-          <strong>Not:</strong> Onay rolü olmayan kullanıcı ilgili kalemi görebilir ama
-          onaylayamaz. Sistem rolü ile onay rolü ayrıdır — bir Proje Müdürü aynı zamanda Şantiye
-          Şefi onayı da verebilir.
-        </p>
-        <p className="okr-foot okr-foot--pending">{APPROVAL_PENDING_COLUMN_REASON}</p>
-      </SettingsCard>
     </div>
   );
 }

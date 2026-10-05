@@ -257,77 +257,9 @@ export function useRejectApprovalItem(): UseMutationResult<void, Error, Approval
 }
 
 /* ------------------------------------------------------------------------ *
- * F-OKROL · Onay Rolleri ve Eşik YÖNETİM uçları (`Ayarlar - Onay Rolleri`)  *
+ * Onay Eşiği YÖNETİM ucu (`Ayarlar > Onay Eşiği`). IZN-B3b: rol atama uçları *
+ * KALKTI (backend 410) — onay rolü projedeki kullanıcı erişiminden gelir.   *
  * ------------------------------------------------------------------------ */
-
-export type ApprovalRoleAssignmentRead = DeepScale<components["schemas"]["ApprovalRoleAssignmentRead"]>;
-export type ApprovalRoleAssignmentListResponse =
-  DeepScale<components["schemas"]["ApprovalRoleAssignmentListResponse"]>;
-
-export const APPROVAL_ROLE_ASSIGNMENTS_QUERY_KEY = "approval-role-assignments";
-
-/** `GET /approvals/roles` `limit` tavanı (openapi.json: `le=200`). */
-export const APPROVAL_ROLE_ASSIGNMENTS_MAX_LIMIT = 200;
-
-/**
- * 🔴 BU UÇ BİR KULLANICI KATALOĞU DEĞİLDİR — ölçüldü
- * (`approvals/repository.py::assignment_page`): sorgu `UserApprovalRole`
- * üzerinden `JOIN`ler, yani **en az bir onay rolü taşıyan** kullanıcıları
- * döner. Rolü OLMAYAN kullanıcı burada HİÇ görünmez.
- *
- * Sonucu: ekran YALNIZ bu uçtan beslenirse rolü olmayan bir kullanıcıya rol
- * VERİLEMEZ (satırı hiç basılmaz) ve ekran kendi işini yapamaz. Bu yüzden
- * satır kümesi `GET /users` katalogundan kurulur, atamalar buradan
- * BİNDİRİLİR (`mergeApprovalRoleRows`).
- */
-export function useApprovalRoleAssignments(): UseQueryResult<
-  ApprovalRoleAssignmentListResponse,
-  Error
-> {
-  return useQuery({
-    queryKey: [APPROVAL_ROLE_ASSIGNMENTS_QUERY_KEY],
-    queryFn: async () =>
-      unwrap(
-        await backendClient.GET("/approvals/roles", {
-          params: { query: { limit: APPROVAL_ROLE_ASSIGNMENTS_MAX_LIMIT, offset: 0 } },
-        }),
-      ),
-  });
-}
-
-export interface SetApprovalRolesInput {
-  userId: string;
-  /** TAM KÜME — gönderilmeyen rol KALKAR (`ApprovalRoleAssignmentUpdate` K1). */
-  roles: ApprovalRole[];
-}
-
-/**
- * `PUT /approvals/roles/{user_id}` — atama TAM KÜME yazar.
- *
- * Onay kutusu da bayatlar: yanıtın `my_approval_roles` alanı oturumun kendi
- * rollerini taşır; kullanıcı KENDİ rolünü değiştirirse kutu eski kümeyle
- * karar vermeye devam ederdi.
- */
-export function useSetApprovalRoles(): UseMutationResult<
-  ApprovalRoleAssignmentRead,
-  Error,
-  SetApprovalRolesInput
-> {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ userId, roles }) =>
-      unwrap(
-        await backendClient.PUT("/approvals/roles/{user_id}", {
-          params: { path: { user_id: userId } },
-          body: { approval_roles: roles },
-        }),
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [APPROVAL_ROLE_ASSIGNMENTS_QUERY_KEY] });
-      queryClient.invalidateQueries({ queryKey: [APPROVALS_QUERY_KEY] });
-    },
-  });
-}
 
 /**
  * `PUT /approvals/settings` — eşiği yazar. Gövde ONDALIK STRING gider
@@ -338,8 +270,7 @@ export function useSetApprovalRoles(): UseMutationResult<
  * tipinde YAŞAMAZ — çağıran `checkApprovalThreshold` korkuluğundan geçmiş
  * değeri gönderir.
  *
- * Onay kutusu da bayatlar: `useSetApprovalRoles` emsaliyle AYNI sebep —
- * eşik değiştikten sonra onay şeridi eski eşikle karar vermeye devam ederdi
+ * Onay kutusu da bayatlar: eşik değiştikten sonra onay şeridi eski eşikle karar vermeye devam ederdi
  * (KAYIT 446).
  */
 export function useUpdateApprovalSettings(): UseMutationResult<
