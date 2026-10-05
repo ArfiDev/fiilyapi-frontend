@@ -11,6 +11,8 @@ import type { BalanceSheetResponse } from "@/lib/api/hooks/useBalanceSheet";
 import { useBalanceSheet } from "@/lib/api/hooks/useBalanceSheet";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
 import {
@@ -57,6 +59,7 @@ import "./financial-statements.css";
  */
 export function BalanceSheetView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
 
   // 🔴 Varsayılan gün YEREL takvimden türetilir (`toISOString()` UTC'ye çevirir
   // ve TR saatinde ay sonunu bir gün geri kaydırırdı — TB5 dersi).
@@ -65,7 +68,7 @@ export function BalanceSheetView() {
 
   const balanceSheetQuery = useBalanceSheet(asOf);
 
-  if (!permission.canView || isForbidden(balanceSheetQuery.error)) {
+  if (!canViewAccounting || isForbidden(balanceSheetQuery.error)) {
     return <AccessDenied />;
   }
 

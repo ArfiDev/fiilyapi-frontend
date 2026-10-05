@@ -11,7 +11,7 @@ import { downloadPersonnelExport } from "@/lib/api/personnel-export-client";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { PERSONNEL_EDIT, PERSONNEL_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { PERSONNEL_MAX_LIMIT, usePersonnel } from "@/lib/api/hooks/usePersonnel";
@@ -75,6 +75,8 @@ export function PersonnelListView() {
     need: "edit",
     fallback: hasAtLeast(permission.level, "full"),
   });
+  // IZN-F5-ön · görüntüleme kapısı = ik.* sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view", fallback: permission.canView });
 
   const query = searchParams.get(QUERY_PARAM) ?? "";
   const projectId = searchParams.get(PROJECT_PARAM) ?? undefined;
@@ -123,7 +125,7 @@ export function PersonnelListView() {
   // Uyarı bandının tek kaynağı. Bant KRİTİK DEĞİL: hata verirse sessizce düşer.
   const documentSummaryQuery = useHrDocumentsSummary();
 
-  if (!permission.canView || isForbidden(personnelQuery.error)) return <AccessDenied />;
+  if (!canViewPersonnel || isForbidden(personnelQuery.error)) return <AccessDenied />;
 
   const serverItems = personnelQuery.data?.items;
   const serverTotal = personnelQuery.data?.total;

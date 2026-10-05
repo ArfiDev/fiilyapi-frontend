@@ -1,0 +1,71 @@
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useSession } from "@/components/shell/SessionProvider";
+import { useEvSettings, useEvSiteOptions } from "@/lib/api/hooks/useEvSettings";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
+
+import { PlanningSettingsScreen } from "./PlanningSettingsScreen";
+
+// IZN-F5-ön — Planlama Ayarları GÖRÜNTÜLEME kapısı earned_value Görür sayfalarından karar verir
+// (backend `earned_value:view`). Grant yoksa bugünkü modül kararı (`level === "none"` → reddet) aynen kalır.
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/ayarlar/planlama",
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams("site=s-a"),
+}));
+vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
+vi.mock("@/lib/api/hooks/useEvSettings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/hooks/useEvSettings")>()),
+  useEvSettings: vi.fn(),
+  useEvSiteOptions: vi.fn(),
+}));
+
+const DENIED = "Bu alana yetkiniz yok";
+const LOADING = "Planlama ayarları yükleniyor";
+
+function session(me: ReturnType<typeof meFixture>) {
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
+}
+
+describe("PlanningSettingsScreen · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useEvSiteOptions).mockReturnValue({
+      options: [{ siteId: "s-a", siteName: "A", projectId: "p-1", projectName: "P", isCompleted: false }],
+      groups: [],
+      isLoading: false,
+      isError: false,
+    });
+    vi.mocked(useEvSettings).mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+      isError: false,
+    } as unknown as ReturnType<typeof useEvSettings>);
+  });
+
+  it("ayarlar.planlama Görür → ekran açılır (modül earned_value:none olsa da)", () => {
+    session(meFixture({ pages: { "ayarlar.planlama": pageGrant("view") }, permissions: { earned_value: "none" } }));
+    render(<PlanningSettingsScreen />);
+    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(LOADING)).toBeInTheDocument();
+  });
+
+  it("planlama sayfalarında yalnız none → AccessDenied (modül full olsa da)", () => {
+    session(meFixture({ pages: { "ayarlar.planlama": pageGrant("none") }, permissions: { earned_value: "full" } }));
+    render(<PlanningSettingsScreen />);
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
+  });
+
+  it("pages boş → bugünkü davranış: earned_value:none reddedilir, view açılır", () => {
+    session(meFixture({ pages: {}, permissions: { earned_value: "none" } }));
+    const { unmount } = render(<PlanningSettingsScreen />);
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
+    unmount();
+
+    session(meFixture({ pages: {}, permissions: { earned_value: "view" } }));
+    render(<PlanningSettingsScreen />);
+    expect(screen.queryByText(DENIED)).toBeNull();
+  });
+});

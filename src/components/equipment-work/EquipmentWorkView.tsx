@@ -21,6 +21,8 @@ import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { isLoaded, resolveLookup } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { EquipmentWorkKpiStrip } from "./EquipmentWorkKpiStrip";
 import { EquipmentWorkRecentList } from "./EquipmentWorkRecentList";
@@ -78,6 +80,7 @@ export function EquipmentWorkView() {
   const searchParams = useSearchParams();
 
   const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
   const period = parsePeriod(searchParams.get("year"), searchParams.get("month"));
   const siteParam = searchParams.get("site") ?? "";
 
@@ -110,7 +113,7 @@ export function EquipmentWorkView() {
   const equipmentQuery = useEquipment({ limit: EQUIPMENT_LIST_MAX_LIMIT });
   const personnelQuery = usePersonnel({ limit: PERSONNEL_MAX_LIMIT });
 
-  if (!permission.canView || isForbidden(summaryQuery.error)) return <AccessDenied />;
+  if (!canViewEquipment || isForbidden(summaryQuery.error)) return <AccessDenied />;
 
   const siteLabelById = new Map(siteOptions.options.map((option) => [option.siteId, option.label]));
   const equipmentNameById = new Map(

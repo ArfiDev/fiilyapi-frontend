@@ -11,7 +11,7 @@ import type { PayrollSgkSummaryResponse } from "@/lib/api/hooks/usePayrollSgk";
 import { usePayrollSgkSummary, useSubmitPayrollSgk } from "@/lib/api/hooks/usePayrollSgk";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { SGK_APPROVE } from "@/lib/auth/page-gates";
+import { SGK_APPROVE, PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrencyTight, formatDateLong, formatPeriod } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -81,6 +81,8 @@ export function PayrollSgkView() {
   const permission = useModulePermission(PAYROLL_PERMISSION_MODULE);
   // IZN-F2.x · SGK'ya Gönder = mali.sgk_bildirimi Onaylar.
   const canSubmitSgk = useButtonGate({ pages: SGK_APPROVE, need: "approve", fallback: permission.canWrite });
+  // IZN-F5-ön · görüntüleme kapısı = bordro sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view", fallback: permission.canView });
   const periodsQuery = usePayrollPeriods();
 
   // `null` = kullanıcı henüz seçim yapmadı ⇒ varsayılan (en yeni dönem).
@@ -93,7 +95,7 @@ export function PayrollSgkView() {
   const submitSgk = useSubmitPayrollSgk();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  if (!permission.canView || isForbidden(periodsQuery.error) || isForbidden(summaryQuery.error)) {
+  if (!canViewPayroll || isForbidden(periodsQuery.error) || isForbidden(summaryQuery.error)) {
     return <AccessDenied />;
   }
 

@@ -10,6 +10,8 @@ import type { VatReturnResponse } from "@/lib/api/hooks/useVatReturn";
 import { useVatReturn } from "@/lib/api/hooks/useVatReturn";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatCurrency } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
@@ -42,6 +44,7 @@ import "./accounting.css";
  */
 export function VatReturnView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
 
   // 🔴 K4 — beyanname ÖNCEKİ AYIN beyanıdır: mockup Haziran'ı gösterirken
   // vadeyi 28.07 yazar (KDV:45 ve :68 birlikte bunu söyler). Mizan'ın
@@ -50,7 +53,7 @@ export function VatReturnView() {
 
   const vatQuery = useVatReturn(period.year, period.month);
 
-  if (!permission.canView || isForbidden(vatQuery.error)) {
+  if (!canViewAccounting || isForbidden(vatQuery.error)) {
     return <AccessDenied />;
   }
 

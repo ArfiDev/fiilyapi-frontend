@@ -12,7 +12,7 @@ import { useSiteDiarySummary } from "@/lib/api/hooks/useSiteDiary";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { PROGRESS_PAYMENTS_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatPeriod } from "@/lib/format";
 
@@ -60,6 +60,8 @@ export function SiteDiarySummaryView() {
     fallback: paymentsPermission.canWrite,
     projectId: projectKey,
   });
+  // IZN-F5-ön · görüntüleme kapısı = günlük kayıt sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
   const siteQuery = useSite(siteKey, { project: projectKey });
   // 🔴 SLUG -> KANONIK KIMLIK GECIS NOKTASI (bkz. `routes.ts` YOL/SORGU kurali).
   const siteId = siteQuery.data?.id ?? "";
@@ -80,7 +82,7 @@ export function SiteDiarySummaryView() {
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
   const paymentSummaryQuery = useProgressPaymentSummary(projectId);
 
-  if (!permission.canView) return <AccessDenied />;
+  if (!canViewDiary) return <AccessDenied />;
   if (isForbidden(siteQuery.error) || isForbidden(summaryQuery.error)) return <AccessDenied />;
 
   const site = siteQuery.data;

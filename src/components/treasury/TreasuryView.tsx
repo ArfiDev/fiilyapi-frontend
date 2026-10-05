@@ -11,6 +11,8 @@ import { useCashFlow } from "@/lib/api/hooks/useCashFlow";
 import { useUpcomingPayments } from "@/lib/api/hooks/useUpcomingPayments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { TREASURY_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import { BankAccountCards } from "./BankAccountCards";
@@ -41,6 +43,8 @@ const PLAN_PAYMENT_DISABLED_HINT = "Ödeme planlama ucu henüz açılmadı.";
  */
 export function TreasuryView() {
   const permission = useModulePermission(TREASURY_PERMISSION_MODULE);
+  // IZN-F5-ön · görüntüleme kapısı = hazine sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewTreasury = useButtonGate({ pages: TREASURY_VIEW, need: "view", fallback: permission.canView });
 
   // `is_active=true`: mockup PASİF hesap çizmiyor (E9:69-85'te üç kart da canlı
   // hesaptır) ve kapatılmış bir hesabın bakiyesini şeritte göstermek "elde bu
@@ -53,7 +57,7 @@ export function TreasuryView() {
   const cashFlowQuery = useCashFlow();
   const upcomingQuery = useUpcomingPayments();
 
-  if (!permission.canView || isForbidden(accountsQuery.error)) return <AccessDenied />;
+  if (!canViewTreasury || isForbidden(accountsQuery.error)) return <AccessDenied />;
 
   const accounts = accountsQuery.data?.items;
   const truncation = buildListTruncation(accounts?.length ?? 0, accountsQuery.data?.total);

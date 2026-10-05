@@ -13,6 +13,8 @@ import type { IncomeStatementResponse } from "@/lib/api/hooks/useIncomeStatement
 import { useIncomeStatement } from "@/lib/api/hooks/useIncomeStatement";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
 import {
@@ -63,6 +65,7 @@ import "./financial-statements.css";
  */
 export function FinancialStatementsHomeView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
 
   // 🔴 "Bugün" BİR KEZ okunur: her render'da `new Date()` çağırmak, gece
   // yarısını geçen bir oturumda `›` okunu sessizce açar/kapatır ve kareyi
@@ -75,7 +78,7 @@ export function FinancialStatementsHomeView() {
 
   const statementQuery = useIncomeStatement(period.year, period.month);
 
-  if (!permission.canView || isForbidden(statementQuery.error))
+  if (!canViewAccounting || isForbidden(statementQuery.error))
     return <AccessDenied />;
 
   const data = statementQuery.data;

@@ -18,7 +18,7 @@ import type { WorkItemRead } from "@/lib/api/models";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { CONTRACTS_EDIT, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
@@ -49,7 +49,13 @@ interface TemplatesScreenProps {
  */
 export function TemplatesScreen(props: TemplatesScreenProps) {
   const { level } = useModulePermission("contracts");
-  if (level === "none") return <AccessDenied />;
+  // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
+  const canViewTemplates = useButtonGate({
+    pages: CONTRACTS_VIEW,
+    need: "view",
+    fallback: level !== "none",
+  });
+  if (!canViewTemplates) return <AccessDenied />;
   return <TemplatesContent level={level} templateParam={props.templateParam} />;
 }
 
@@ -135,7 +141,7 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
     }
   }
 
-  const readOnlyText = readOnlyMessage(level, scope.isRestricted);
+  const readOnlyText = readOnlyMessage(level, scope.isRestricted, canEditTemplates);
   return (
     <div className="offers">
       <OfferTabs offerCount={null} listHref={routes.offers.list()} isActive={false} />

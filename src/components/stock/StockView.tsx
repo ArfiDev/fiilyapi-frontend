@@ -11,7 +11,7 @@ import { stockErrorMessage } from "@/lib/api/stock-error";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { INVENTORY_EDIT } from "@/lib/auth/page-gates";
+import { INVENTORY_EDIT, INVENTORY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -59,6 +59,8 @@ export function StockView() {
     need: "edit",
     fallback: hasAtLeast(permission.level, "full"),
   });
+  // IZN-F5-ön · görüntüleme kapısı = stok sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewStock = useButtonGate({ pages: INVENTORY_VIEW_PAGES, need: "view", fallback: permission.canView });
 
   const status = parseStockStatus(searchParams.get(STATUS_PARAM));
   const category = parseStockCategory(searchParams.get(CATEGORY_PARAM));
@@ -76,7 +78,7 @@ export function StockView() {
     ...(query ? { q: query } : {}),
   });
 
-  if (!permission.canView || isForbidden(summaryQuery.error)) return <AccessDenied />;
+  if (!canViewStock || isForbidden(summaryQuery.error)) return <AccessDenied />;
 
   const rows = summaryQuery.data?.items;
   const kpis = summaryQuery.data?.kpis;

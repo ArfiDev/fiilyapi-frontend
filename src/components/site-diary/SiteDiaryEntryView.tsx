@@ -34,7 +34,7 @@ import { backendErrorMessage, submitBlockedReasons } from "@/lib/api/error-messa
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { DIARY_REOPEN_APPROVE, PROGRESS_PAYMENTS_EDIT, SITE_DIARY_EDIT } from "@/lib/auth/page-gates";
+import { DIARY_REOPEN_APPROVE, PROGRESS_PAYMENTS_EDIT, SITE_DIARY_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { formatMonthName } from "@/lib/format";
@@ -144,6 +144,8 @@ export function DiaryEntryScreen({
   // IZN-F2.x · günlük aç/düzenle/satır/Gönder = günlük kayıt Düzenler (VEYA); Yeniden Aç = YALNIZ kök
   // saha.gunluk_kayit Onaylar (73/88 ikizleri B3'e kadar işlevsiz).
   const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
+  // IZN-F5-ön · görüntüleme kapısı = günlük kayıt sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
   const canReopen = useButtonGate({
     pages: DIARY_REOPEN_APPROVE,
     need: "approve",
@@ -443,7 +445,7 @@ export function DiaryEntryScreen({
     isFormDirty: registryDirty,
   });
 
-  if (!permission.canView) return <AccessDenied />;
+  if (!canViewDiary) return <AccessDenied />;
   if (isForbidden(siteQuery.error) || isForbidden(entriesQuery.error)) return <AccessDenied />;
 
   const site = siteQuery.data;

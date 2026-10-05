@@ -11,6 +11,8 @@ import { usePurchaseOrders } from "@/lib/api/hooks/usePurchaseOrders";
 import { usePurchasingSummary } from "@/lib/api/hooks/usePurchasingSummary";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatMonthName } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -55,6 +57,12 @@ export function PurchaseOrdersView() {
   const searchParams = useSearchParams();
 
   const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
+  // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewProcurement = useButtonGate({
+    pages: PROCUREMENT_VIEW_PAGES,
+    need: "view",
+    fallback: permission.canView,
+  });
 
   // Teslimat renginin ve başlık altı ay adının TEK referansı. Bileşenler
   // `new Date()` çağırmaz (`purchase-order-delivery.ts` notu): mount başına
@@ -75,7 +83,7 @@ export function PurchaseOrdersView() {
   // Satır yalnız `project_id` taşır; "Proje" sütununun adı buradan çözülür.
   const projectsQuery = useProjects();
 
-  if (!permission.canView || isForbidden(ordersQuery.error)) return <AccessDenied />;
+  if (!canViewProcurement || isForbidden(ordersQuery.error)) return <AccessDenied />;
 
   const rows = ordersQuery.data?.items;
   const truncation = buildListTruncation(rows?.length ?? 0, ordersQuery.data?.total);

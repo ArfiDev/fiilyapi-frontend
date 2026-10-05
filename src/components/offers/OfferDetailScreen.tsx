@@ -13,7 +13,7 @@ import { parseCountInput } from "@/lib/decimal";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT, OFFER_CONVERT_APPROVE, PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { CONTRACTS_EDIT, OFFER_CONVERT_APPROVE, PROJECT_CREATE_EDIT, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
@@ -53,7 +53,13 @@ interface OfferDetailScreenProps {
  */
 export function OfferDetailScreen(props: OfferDetailScreenProps) {
   const { level } = useModulePermission("contracts");
-  if (level === "none") return <AccessDenied />;
+  // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
+  const canViewOffer = useButtonGate({
+    pages: CONTRACTS_VIEW,
+    need: "view",
+    fallback: level !== "none",
+  });
+  if (!canViewOffer) return <AccessDenied />;
   return <OfferDetailContent {...props} />;
 }
 
@@ -112,7 +118,7 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
       canAddEmployer={canAddEmployer}
       canAdminProjects={hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL)}
       canConvert={canConvert}
-      readOnlyText={readOnlyMessage(level, scope.isRestricted)}
+      readOnlyText={readOnlyMessage(level, scope.isRestricted, canEditOffers)}
       renderItems={renderItems}
       toast={toast?.text ?? null}
       onToast={(text) => setToast({ text })}

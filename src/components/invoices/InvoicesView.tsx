@@ -11,7 +11,7 @@ import { INVOICE_LIST_MAX_LIMIT, useInvoices, useInvoiceSummary } from "@/lib/ap
 import { useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { INVOICE_APPROVE, INVOICING_EDIT } from "@/lib/auth/page-gates";
+import { INVOICE_APPROVE, INVOICING_EDIT, INVOICING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatMonthName } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -58,6 +58,7 @@ export function InvoicesView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
+  const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view", fallback: permission.canView });
   // IZN-F2.x · Yeni Fatura = mali.fatura Düzenler; gelen faturada Onayla = mali.fatura Onaylar.
   const canCreateInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
   const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve", fallback: permission.canWrite });
@@ -101,7 +102,7 @@ export function InvoicesView() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
 
-  if (!permission.canView || isForbidden(outgoingQuery.error) || isForbidden(incomingQuery.error)) {
+  if (!canViewInvoicing || isForbidden(outgoingQuery.error) || isForbidden(incomingQuery.error)) {
     return <AccessDenied />;
   }
 

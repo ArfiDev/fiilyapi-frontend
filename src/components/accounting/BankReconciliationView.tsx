@@ -14,6 +14,8 @@ import { LEDGER_MAX_LIMIT, useLedger } from "@/lib/api/hooks/useLedger";
 import { useTrialBalance } from "@/lib/api/hooks/useTrialBalance";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -71,6 +73,7 @@ import "./bank-reconciliation.css";
  */
 export function BankReconciliationView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
 
   const [period, setPeriod] = useState<Period>(() => currentPeriod(new Date()));
   const [accountId, setAccountId] = useState("");
@@ -92,7 +95,7 @@ export function BankReconciliationView() {
   });
 
   if (
-    !permission.canView ||
+    !canViewAccounting ||
     isForbidden(accountsQuery.error) ||
     isForbidden(trialBalanceQuery.error) ||
     isForbidden(ledgerQuery.error)

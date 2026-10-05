@@ -14,7 +14,7 @@ import {
 } from "@/lib/api/hooks/useLeaves";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { LEAVE_APPROVE, PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { LEAVE_APPROVE, PERSONNEL_EDIT, PERSONNEL_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import {
@@ -71,6 +71,7 @@ export interface LeavesViewProps {
  */
 export function LeavesView({ currentYear = new Date().getFullYear() }: LeavesViewProps = {}) {
   const permission = useModulePermission("personnel");
+  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view", fallback: permission.canView });
   // IZN-F2.x · bugün KAPISIZ düğmeler (fallback true): talep = ik.* Düzenler; Onayla/Reddet = ik.izin_yonetimi Onaylar.
   const canRequestLeave = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit", fallback: true });
   const canDecideLeave = useButtonGate({ pages: LEAVE_APPROVE, need: "approve", fallback: true });
@@ -104,7 +105,7 @@ export function LeavesView({ currentYear = new Date().getFullYear() }: LeavesVie
   }
 
   if (
-    !permission.canView ||
+    !canViewPersonnel ||
     isForbidden(summaryQuery.error) ||
     isForbidden(requestsQuery.error)
   ) {

@@ -9,6 +9,8 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { useHrDocumentsSummary } from "@/lib/api/hooks/useHrDocuments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PERSONNEL_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import {
   APPOINTMENT_PENDING_REASON,
@@ -41,9 +43,10 @@ import "./hr-documents.css";
  */
 export function HrDocumentsView() {
   const permission = useModulePermission("personnel");
+  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view", fallback: permission.canView });
   const summaryQuery = useHrDocumentsSummary();
 
-  if (!permission.canView || isForbidden(summaryQuery.error)) return <AccessDenied />;
+  if (!canViewPersonnel || isForbidden(summaryQuery.error)) return <AccessDenied />;
 
   const summary = summaryQuery.data;
   const errorMessage = summaryQuery.isError ? backendErrorMessage(summaryQuery.error) : undefined;

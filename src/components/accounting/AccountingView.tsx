@@ -25,7 +25,7 @@ import { useVatReturn } from "@/lib/api/hooks/useVatReturn";
 import { LEDGER_MAX_LIMIT, useLedger } from "@/lib/api/hooks/useLedger";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { ACCOUNTING_EDIT } from "@/lib/auth/page-gates";
+import { ACCOUNTING_EDIT, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatCurrency } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -74,6 +74,7 @@ export type JournalEntryDialogState =
  */
 export function AccountingView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
   // IZN-F2.x · fiş oluştur/düzenle/Ters Kayıt = mali.yevmiye/hesap_plani/donem_kapanisi Düzenler (VEYA).
   const canEditAccounting = useButtonGate({ pages: ACCOUNTING_EDIT, need: "edit", fallback: permission.canWrite });
 
@@ -143,7 +144,7 @@ export function AccountingView() {
   const deleteMutation = useDeleteJournalEntry();
 
   if (
-    !permission.canView ||
+    !canViewAccounting ||
     isForbidden(summaryQuery.error) ||
     isForbidden(ledgerQuery.error) ||
     isForbidden(draftsQuery.error) ||
