@@ -1,0 +1,266 @@
+/* IZN-F3.2 · Kullanıcıyı düzenle / ekle — "Ayarlar - Kullanıcılar (TASLAK).dc.html" Durum 2-3. */
+
+.uac-modal {
+  max-width: 800px;
+}
+.uac-modal .modal__head {
+  padding: 18px var(--space-5);
+}
+.uac-modal .modal__body {
+  padding: var(--space-4) var(--space-5);
+}
+.uac-modal .modal__footer {
+  align-items: center;
+  padding: 14px var(--space-5);
+}
+.uac-footer__spacer {
+  flex: 1;
+}
+.uac-footer__save {
+  min-width: 110px;
+}
+.uac-footer__delete {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.uac-footer__note {
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+/* Pasifleştir / Sil: beyaz zemin, renkli kenarlık (mockup) */
+.uac-btn-warn {
+  background: var(--color-surface);
+  color: var(--color-warning-deep-text);
+  border: 1.5px solid var(--color-warning-border-soft);
+}
+.uac-btn-warn:hover:not(:disabled) {
+  background: var(--color-warning-soft);
+}
+.uac-btn-danger {
+  background: var(--color-surface);
+  color: var(--color-error-card-title);
+  border: 1.5px solid var(--color-danger-tint-border);
+}
+.uac-btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-tint);
+}
+
+.uac-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-form-section-gap);
+}
+.uac-row {
+  display: flex;
+  gap: var(--space-form-section-gap);
+}
+.uac-row > * {
+  flex: 1;
+  min-width: 0;
+}
+.uac-row--role > :first-child {
+  flex: 0 1 320px;
+}
+.uac-readonly {
+  font-weight: var(--weight-medium);
+  color: var(--color-text-subtle);
+}
+.uac-link {
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* "Tüm projelere erişir" kutusu */
+.uac-all {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  cursor: pointer;
+}
+.uac-all--on {
+  background: var(--color-nav-active-bg);
+  border-color: var(--color-primary-ring);
+}
+.uac-all__text {
+  display: flex;
+  flex-direction: column;
+}
+.uac-all__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.uac-all__desc {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.uac-all__hint {
+  margin-top: 2px;
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.uac-all-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-5) var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-10);
+  text-align: center;
+}
+.uac-all-box__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.uac-all-box__text {
+  max-width: 560px;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* Projeler tablosu */
+.uac-team__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.uac-team__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.uac-team__count {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+.uac-grid {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: hidden;
+}
+.uac-grid__row {
+  display: grid;
+  grid-template-columns: 150px 200px 1fr 32px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.uac-grid__row:last-child {
+  border-bottom: none;
+}
+.uac-grid__row--head {
+  padding: 9px 14px;
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-table-head);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.uac-grid__optional {
+  font-weight: var(--weight-medium);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-subtle);
+}
+.uac-grid__project {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.uac-grid__remove {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: var(--color-surface-muted);
+  border: none;
+  border-radius: var(--radius-6);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.uac-grid__remove:hover:not(:disabled) {
+  color: var(--color-danger-strong);
+}
+.uac-grid__empty {
+  padding: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+/* Disiplin çipleri + "+ Disiplin" / "+ Projeye ekle" kesikli denetimleri */
+.uac-disc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.uac-disc__all {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+.uac-disc__remove {
+  margin-left: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+.uac-add {
+  display: inline-flex;
+}
+.uac-add .select {
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+  color: var(--color-text-subtle);
+  font-weight: var(--weight-semibold);
+  background: transparent;
+}
+.uac-add .select-chevron {
+  display: none;
+}
+.uac-add--chip .select-wrap {
+  width: auto;
+}
+.uac-add--chip .select {
+  width: auto;
+  padding: 3px 9px;
+  font-size: var(--text-small);
+  border-radius: 10px;
+}
+.uac-add--block {
+  margin-top: var(--space-2);
+}
+.uac-add--block .select-wrap {
+  width: auto;
+}
+.uac-add--block .select {
+  width: auto;
+  padding: 9px 14px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-10);
+}

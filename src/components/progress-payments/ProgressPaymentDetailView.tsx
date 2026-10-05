@@ -43,7 +43,12 @@ export function ProgressPaymentDetailView({ paymentId }: ProgressPaymentDetailVi
   const summaryQuery = useProgressPaymentSummary(detailQuery.data?.project_id ?? "");
   const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = useButtonGate({
+    pages: PROGRESS_PAYMENTS_EDIT,
+    need: "edit",
+    fallback: moduleCanWrite,
+    projectId: detailQuery.data?.project_id,
+  });
 
   if (isForbidden(detailQuery.error)) return <AccessDenied />;
   if (detailQuery.isError) return <p className="pp-detail__message">Hakediş yüklenemedi</p>;

@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { cx } from "@/lib/cx";
 import { routes } from "@/lib/routes";
+import type { PageKey } from "@/lib/api/models";
+import { useProjectPageVisibility } from "@/lib/auth/usePagePermission";
 
 export interface SiteDetailTabsProps {
   /**
@@ -20,6 +24,8 @@ export interface SiteDetailTabsProps {
 
 interface TabDef {
   label: string;
+  /** IZN-F3.2 · Sekmenin sayfa-izni anahtarı (proje rolünde "none" → gizli; grant yok → görünür). */
+  pageKey: PageKey;
   slug: string | null;
   /** Rotasi yazildi mi — yazilmamis sekmeler "Bu bölüm yakında" ipucu tasir. */
   written?: boolean;
@@ -43,21 +49,23 @@ interface TabDef {
 // (`Şantiye - Belgeler.dc.html`), "Stok" F-ST T3 (`Şantiye - Stok.dc.html`)
 // ile yazildi.
 const TABS: TabDef[] = [
-  { label: "Bölümler", slug: null, written: true },
-  { label: "İş Kalemleri", slug: "is-kalemleri", written: true },
-  { label: "Puantaj", slug: "puantaj", written: true },
-  { label: "Stok", slug: "stok", written: true },
-  { label: "Hakedişler", slug: "hakedisler", written: true },
-  { label: "Günlük Kayıt", slug: "gunluk-kayit", written: true },
-  { label: "Belgeler", slug: "belgeler", written: true },
+  { label: "Bölümler", pageKey: "santiye.bolumler", slug: null, written: true },
+  { label: "İş Kalemleri", pageKey: "santiye.is_kalemleri", slug: "is-kalemleri", written: true },
+  { label: "Puantaj", pageKey: "santiye.puantaj", slug: "puantaj", written: true },
+  { label: "Stok", pageKey: "santiye.stok", slug: "stok", written: true },
+  { label: "Hakedişler", pageKey: "santiye.hakedisler", slug: "hakedisler", written: true },
+  { label: "Günlük Kayıt", pageKey: "santiye.gunluk_kayit", slug: "gunluk-kayit", written: true },
+  { label: "Belgeler", pageKey: "santiye.belgeler", slug: "belgeler", written: true },
 ];
 
 export function SiteDetailTabs({ projectKey, siteKey, activePath }: SiteDetailTabsProps) {
   const base = routes.projects.sites.detail({ projectId: projectKey, siteId: siteKey });
+  // Adres anahtarı slug olabilir; kimlik çözümü önbellekten yapılır (`useProjectScopeId`), yeni istek YOK.
+  const isPageVisible = useProjectPageVisibility(projectKey);
 
   return (
     <div className="site-detail-tabs" role="tablist" aria-label="Şantiye detay sekmeleri">
-      {TABS.map((tab) => {
+      {TABS.filter((tab) => isPageVisible(tab.pageKey)).map((tab) => {
         const href = tab.slug ? `${base}/${tab.slug}` : base;
         const active = activePath === href;
         return (

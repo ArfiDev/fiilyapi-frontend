@@ -20,10 +20,13 @@ export type HiddenCategory = components["schemas"]["HiddenCategory"];
 export type ModuleResponse = DeepScale<components["schemas"]["ModuleResponse"]>;
 export type ModuleGroup = DeepScale<components["schemas"]["ModuleGroup"]>;
 export type ProjectResponse = WithPlainProgressPct<DeepScale<components["schemas"]["ProjectListItem"]>>;
-export type ProjectAccessInput = DeepScale<components["schemas"]["ProjectAccessInput"]>;
-export type ProjectAccessResponse = DeepScale<components["schemas"]["ProjectAccessResponse"]>;
-export type UserDisciplinesInput = DeepScale<components["schemas"]["UserDisciplinesInput"]>;
-export type UserDisciplinesRead = DeepScale<components["schemas"]["UserDisciplinesRead"]>;
+// IZN-F3.2 · Kullanıcı erişimi (ana rol + proje ekibi, `/users/{id}/access`). Eski `project-access` ve
+// `disciplines` uçları 410 (deprecated); onların tipleri bilerek burada YOK.
+export type UserAccessInput = DeepScale<components["schemas"]["UserAccessInput"]>;
+export type UserAccessResponse = DeepScale<components["schemas"]["UserAccessResponse"]>;
+export type ProjectMemberInput = DeepScale<components["schemas"]["ProjectMemberInput"]>;
+export type ProjectMemberResponse = DeepScale<components["schemas"]["ProjectMemberResponse"]>;
+export type DisciplineRef = DeepScale<components["schemas"]["DisciplineRef"]>;
 export type PermissionCell = DeepScale<components["schemas"]["PermissionCell"]>;
 export type PermissionUpdate = DeepScale<components["schemas"]["PermissionUpdate"]>;
 export type PasswordReset = DeepScale<components["schemas"]["PasswordReset"]>;

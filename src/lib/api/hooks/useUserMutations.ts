@@ -2,14 +2,11 @@ import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/r
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import { USERS_QUERY_KEY } from "./useUsers";
-import { PROJECT_ACCESS_QUERY_KEY } from "./useProjects";
 import type {
   UserCreate,
   UserUpdate,
   UserResponse,
   PasswordReset,
-  ProjectAccessInput,
-  ProjectAccessResponse,
 } from "@/lib/api/models";
 
 export function useCreateUser(): UseMutationResult<UserResponse, Error, UserCreate> {
@@ -49,17 +46,6 @@ export function useResetPassword(): UseMutationResult<void, Error, { id: string;
   return useMutation({
     mutationFn: async ({ id, body }) => {
       unwrap(await backendClient.PATCH("/users/{user_id}/password", { params: { path: { user_id: id } }, body }));
-    },
-  });
-}
-
-export function useSetProjectAccess(): UseMutationResult<ProjectAccessResponse, Error, { id: string; body: ProjectAccessInput }> {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, body }) =>
-      unwrap(await backendClient.PUT("/users/{user_id}/project-access", { params: { path: { user_id: id } }, body })),
-    onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: [PROJECT_ACCESS_QUERY_KEY, id] });
     },
   });
 }

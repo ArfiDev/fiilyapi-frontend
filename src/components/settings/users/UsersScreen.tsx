@@ -10,22 +10,14 @@ import { RolePill } from "@/components/settings/primitives/RolePill";
 import { StatusBadge } from "@/components/settings/StatusBadge";
 import { useUsers, PAGE_SIZE } from "@/lib/api/hooks/useUsers";
 import { useRoles } from "@/lib/api/hooks/useRoles";
-import { useProjects, useProjectAccess } from "@/lib/api/hooks/useProjects";
-import { useDeleteUser } from "@/lib/api/hooks/useUserMutations";
-import { UserFormModal } from "@/components/settings/UserFormModal";
-import { PasswordResetModal } from "@/components/settings/PasswordResetModal";
-import { ProjectAccessModal } from "@/components/settings/ProjectAccessModal";
-import { DisciplineAssignmentModal } from "@/components/settings/DisciplineAssignmentModal";
-import { DisciplineCell } from "./DisciplineCell";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
+import { UserAccessModal } from "./UserAccessModal";
 import { USERS_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
-import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
 import { AccessDenied } from "@/components/settings/AccessDenied";
-import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { cx } from "@/lib/cx";
-import type { ProjectResponse, RoleResponse, UserResponse } from "@/lib/api/models";
+import type { RoleResponse, UserResponse } from "@/lib/api/models";
 import "@/components/settings/settings.css";
 import "./users-screen.css";
 import { routes } from "@/lib/routes";
@@ -40,14 +32,10 @@ const SETTINGS_TABS = [
   { href: routes.settings.company(), label: "Şirket" },
 ] as const;
 
-type ModalState =
-  | { type: "create" }
-  | { type: "edit"; user: UserResponse }
-  | { type: "password"; user: UserResponse }
-  | { type: "project"; user: UserResponse }
-  | { type: "discipline"; user: UserResponse }
-  | { type: "delete"; user: UserResponse }
-  | null;
+/** Arama kutusuna yazma ile sunucu isteği arasındaki bekleme (ms). */
+const SEARCH_DEBOUNCE_MS = 300;
+
+type ModalState = { type: "create" } | { type: "edit"; user: UserResponse } | null;
 
 function role(roles: RoleResponse[] | undefined, roleId: string): RoleResponse | undefined {
   return roles?.find((r) => r.id === roleId);
@@ -58,21 +46,10 @@ function pageFromParams(v: string | null): number {
   return Number.isInteger(n) && n >= 1 ? n : 1;
 }
 
-// Proje Erişimi hücresi: her satır kendi useProjectAccess çağrısını yapan ayrı bir
-// bileşen örneği olduğu için hook kuralları ihlal edilmez (client N+1, ref §C.1).
-function ProjectAccessCell({ userId, projects }: { userId: string; projects: ProjectResponse[] | undefined }) {
-  const accessQuery = useProjectAccess(userId);
-
-  if (accessQuery.isLoading) return <span className="users-cell-access">…</span>;
-  if (accessQuery.isError || !accessQuery.data) return <span className="users-cell-access">—</span>;
-
-  const { all_projects, project_ids } = accessQuery.data;
-  if (all_projects) return <span className="users-cell-access">Tüm Projeler</span>;
-
-  const names = project_ids
-    .map((id) => projects?.find((p) => p.id === id)?.name)
-    .filter((name): name is string => Boolean(name));
-  return <span className="users-cell-access">{names.length > 0 ? names.join(", ") : "—"}</span>;
+/** "Projeler" sütunu: tüm projeler → mavi rozet, değilse "N proje" (mockup Durum 1). */
+function ProjectCountCell({ user }: { user: UserResponse }) {
+  if (user.all_projects) return <span className="users-badge-all">Tüm projeler</span>;
+  return <span className="users-cell-access">{user.project_count} proje</span>;
 }
 
 export function UsersScreen() {
@@ -82,23 +59,15 @@ export function UsersScreen() {
   const page = pageFromParams(searchParams.get("sayfa"));
   const offset = (page - 1) * PAGE_SIZE;
 
-  const usersQuery = useUsers({ limit: PAGE_SIZE, offset });
+  // IZN-B3 · Arama SUNUCUDA (`GET /users?q=`): ad, e-posta ve ana rol adı; yazma `useDebouncedValue` ile sakinleşir.
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
+  const usersQuery = useUsers({ limit: PAGE_SIZE, offset, q: debouncedSearch });
   const rolesQuery = useRoles();
-  const projectsQuery = useProjects(); // proje adı çözümü (ref §C.1)
-  const deleteUser = useDeleteUser();
-  // Yazma kapısı: backend PUT `user_management` `full` ister (user_discipline_router.py).
-  const moduleCanWrite = useModulePermission("user_management").canWrite;
-  // IZN-F2.x · ekle/düzenle/proje erişimi/disiplin = ayarlar.kullanicilar Düzenler; parola sıfırla + kullanıcı sil =
-  // yalnız sistem yöneticisi. Disiplin dışındakiler bugün KAPISIZ → grant yoksa görünür (fallback true).
-  const canEditDisciplines = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: moduleCanWrite });
+  // IZN-F2.x · ekle/düzenle (rol, proje ekibi, disiplin dahil) = ayarlar.kullanicilar Düzenler; grant yoksa görünür.
   const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: true });
-  const isSystemAdminOnly = useButtonGate({ pages: USERS_EDIT, need: "sa", fallback: true });
 
   const [modal, setModal] = useState<ModalState>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  // Kayıt 68/138: `GET /users`da arama parametresi YOK — en küçük onarım
-  // GEÇERLİ SAYFA üzerinde ad/e-posta ile İSTEMCİ TARAFI süzgeçtir.
-  const [searchQuery, setSearchQuery] = useState("");
 
   const total = usersQuery.data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -108,13 +77,10 @@ export function UsersScreen() {
     params.set("sayfa", String(next));
     router.push(`${pathname}?${params.toString()}`);
   }
-  function closeModal() {
-    setModal(null);
-    setDeleteError(null);
-  }
-  function confirmDelete(user: UserResponse) {
-    setDeleteError(null);
-    deleteUser.mutate(user.id, { onSuccess: closeModal, onError: (e) => setDeleteError(backendErrorMessage(e)) });
+  function handleSearchChange(value: string) {
+    setSearchInput(value);
+    // Yeni arama her zaman ilk sayfadan başlar (eski sayfa ofseti sonuçları atlatır).
+    if (page !== 1) goToPage(1);
   }
 
   useEffect(() => {
@@ -128,13 +94,7 @@ export function UsersScreen() {
     return <p className="settings-note settings-note--error">Kullanıcılar yüklenemedi.</p>;
   if (page > pageCount) return null;
 
-  const normalizedQuery = searchQuery.trim().toLocaleLowerCase("tr");
-  const items = usersQuery.data.items.filter(
-    (user) =>
-      normalizedQuery === "" ||
-      user.full_name.toLocaleLowerCase("tr").includes(normalizedQuery) ||
-      user.email.toLocaleLowerCase("tr").includes(normalizedQuery),
-  );
+  const items = usersQuery.data.items;
 
   return (
     <>
@@ -154,6 +114,20 @@ export function UsersScreen() {
         })}
       </nav>
 
+      {/* Mockup (TASLAK) üst bilgi kutusu — modeli bir bakışta anlatır. */}
+      <div className="users-info">
+        <p>
+          <b>Kişi yalnız ekibinde olduğu projeleri görür.</b>
+        </p>
+        <p>
+          Rol <b>proje başınadır</b>: proje içi sayfalar o projedeki rolle, şirket geneli sayfalar (Muhasebe, İK,
+          Ayarlar vb.) <b>ana rolle</b> açılır.
+        </p>
+        <p>
+          Disiplin isteğe bağlıdır ve proje başınadır. Kullanıcı silme yalnız <b>Sistem Yöneticisi</b>&apos;ndedir.
+        </p>
+      </div>
+
       <SettingsCard
         title="Kullanıcı Listesi"
         count={`${total} kullanıcı`}
@@ -164,10 +138,10 @@ export function UsersScreen() {
               <span aria-hidden="true">🔍</span>
               <Input
                 type="search"
-                placeholder="Kullanıcı ara..."
+                placeholder="Ad, e-posta veya rol ara..."
                 aria-label="Kullanıcı ara"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                value={searchInput}
+                onChange={(event) => handleSearchChange(event.target.value)}
               />
             </span>
             {canEditUsers && (
@@ -181,15 +155,10 @@ export function UsersScreen() {
         <table className="users-table">
           <thead>
             <tr>
-              <th>Kullanıcı</th>
+              <th>Ad Soyad</th>
               <th>E-posta</th>
-              <th className="users-table__center">Rol</th>
-              <th>Proje Erişimi</th>
-              <th>
-                <span className="users-th-new">
-                  Disiplin<span className="users-new-tag">YENİ</span>
-                </span>
-              </th>
+              <th className="users-table__center">Ana rol</th>
+              <th>Projeler</th>
               <th className="users-table__center">Durum</th>
               <th aria-label="İşlemler" />
             </tr>
@@ -211,57 +180,24 @@ export function UsersScreen() {
                   <td>{user.email}</td>
                   <td className="users-table__center">{r ? <RolePill roleKey={r.key} name={r.name} /> : "—"}</td>
                   <td>
-                    <ProjectAccessCell userId={user.id} projects={projectsQuery.data?.items} />
-                  </td>
-                  <td>
-                    <DisciplineCell
-                      userId={user.id}
-                      canEdit={canEditDisciplines}
-                      onOpen={() => setModal({ type: "discipline", user })}
-                    />
+                    <ProjectCountCell user={user} />
                   </td>
                   <td className="users-table__center">
                     <StatusBadge status={user.status} />
                   </td>
-                  <td>
-                    <div className="settings-row-actions">
-                      {canEditUsers && (
-                        <button className="users-edit" onClick={() => setModal({ type: "edit", user })}>
-                          Düzenle
-                        </button>
-                      )}
-                      {isSystemAdminOnly && (
-                        <Button variant="ghost" size="sm" onClick={() => setModal({ type: "password", user })}>
-                          Parola
-                        </Button>
-                      )}
-                      {canEditUsers && (
-                        <Button variant="ghost" size="sm" onClick={() => setModal({ type: "project", user })}>
-                          Projeler
-                        </Button>
-                      )}
-                      {canEditDisciplines && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label="Disiplin ataması"
-                          onClick={() => setModal({ type: "discipline", user })}
-                        >
-                          Disiplin
-                        </Button>
-                      )}
-                      {isSystemAdminOnly && (
-                        <Button variant="danger" size="sm" onClick={() => setModal({ type: "delete", user })}>
-                          Sil
-                        </Button>
-                      )}
-                    </div>
+                  <td className="users-table__center">
+                    {canEditUsers && (
+                      <button className="users-edit" onClick={() => setModal({ type: "edit", user })}>
+                        Düzenle
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+        {items.length === 0 && <p className="settings-note users-empty">Aramanıza uyan kullanıcı yok.</p>}
       </SettingsCard>
 
       {pageCount > 1 && (
@@ -278,31 +214,8 @@ export function UsersScreen() {
         </div>
       )}
 
-      {modal?.type === "create" && <UserFormModal mode="create" onClose={closeModal} />}
-      {modal?.type === "edit" && <UserFormModal mode="edit" user={modal.user} onClose={closeModal} />}
-      {modal?.type === "password" && <PasswordResetModal user={modal.user} onClose={closeModal} />}
-      {modal?.type === "project" && <ProjectAccessModal user={modal.user} onClose={closeModal} />}
-      {modal?.type === "discipline" && (
-        <DisciplineAssignmentModal
-          user={modal.user}
-          // Rol çözülemezse ("" — roller yüklenmedi/hata) yönetici uyarısı gösterilmez.
-          // Uyarı bir UI UYARISIDIR, güvenlik değil: backend zorlamaz (Ü10 "uyarır, engellemez").
-          roleKey={role(rolesQuery.data, modal.user.role_id)?.key ?? ""}
-          onClose={closeModal}
-        />
-      )}
-      {modal?.type === "delete" && (
-        <ConfirmDialog
-          title="Kullanıcıyı Sil"
-          message={`"${modal.user.full_name}" kullanıcısını silmek istediğinize emin misiniz?`}
-          confirmLabel="Sil"
-          danger
-          isPending={deleteUser.isPending}
-          errorText={deleteError}
-          onConfirm={() => confirmDelete(modal.user)}
-          onClose={closeModal}
-        />
-      )}
+      {modal?.type === "create" && <UserAccessModal onClose={() => setModal(null)} />}
+      {modal?.type === "edit" && <UserAccessModal user={modal.user} onClose={() => setModal(null)} />}
     </>
   );
 }

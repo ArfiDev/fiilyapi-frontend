@@ -72,7 +72,6 @@ const EXEMPT: Record<string, string> = {
   "components/ai/AiPanel.tsx": "AI sohbet girdisi geçici, kayıt değil",
   "components/invoices/InvoicesView.tsx": "süzgeç/arama, kalıcı kaydet kavramı yok",
   "components/personnel-form/PersonnelFormActions.tsx": "salt buton şeridi, state PersonnelForm'da",
-  "components/settings/users/UsersScreen.tsx": "salt liste+modal anahtarı, form alt-modallerde",
   "components/section-form/SectionTypePicker.tsx":
     "SectionForm'un alt-alan seçicisi: seçili tip SectionForm değerinde (dirty orada), 'yeni tip adı' geçici girdi",
   "components/site-form/SiteFormActions.tsx": "salt buton şeridi, state SiteCreateView'de",

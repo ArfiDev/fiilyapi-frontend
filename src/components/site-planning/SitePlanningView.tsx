@@ -66,7 +66,7 @@ export function SitePlanningView() {
 
   const permission = useModulePermission("site_diary");
   // IZN-F2.x · plan kaydet = santiye.gunluk_planlama/günlük kayıt Düzenler (VEYA).
-  const canWritePlan = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite });
+  const canWritePlan = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
   const weekStart = resolveWeekStart(searchParams.get("week"));
   // 🔴 URL-3 — bu ekranin cozumleme kaynagi YOKTU (tek `useSite` cagirmayan
   // santiye ekraniydi). Slug'li adreste `useSitePlan`/`useSiteSections`/dort

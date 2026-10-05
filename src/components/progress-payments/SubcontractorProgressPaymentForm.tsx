@@ -88,9 +88,6 @@ const PENDING_SEQUENCE_HINT = "Sıra numarası ilk kayıtta backend tarafından 
 export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPaymentFormProps) {
   const router = useRouter();
   const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
-  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
-
   const isEdit = props.mode === "edit";
   const detailQuery = useSubcontractorProgressPayment(isEdit ? props.paymentId : "");
   const detail = isEdit ? detailQuery.data : undefined;
@@ -98,6 +95,13 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
   const resolvedContractId = isEdit ? (detail?.contract_id ?? "") : props.contractId;
   const contractQuery = useSubcontractorContract(resolvedContractId);
   const contract = contractQuery.data;
+  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA); IZN-F3.2b · o projedeki rolden.
+  const canWrite = useButtonGate({
+    pages: PROGRESS_PAYMENTS_EDIT,
+    need: "edit",
+    fallback: moduleCanWrite,
+    projectId: contract?.project_id,
+  });
 
   const projectQuery = useProject(contract?.project_id ?? "");
   const siteQuery = useSite(contract?.site_id ?? "");

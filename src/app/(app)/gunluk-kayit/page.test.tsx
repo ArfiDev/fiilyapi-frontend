@@ -40,6 +40,7 @@ function renderPage() {
 }
 
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   usePathname: () => "/gunluk-kayit",
   useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),

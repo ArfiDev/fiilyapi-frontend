@@ -11,10 +11,23 @@ export interface MeFixtureOptions {
   isSystemAdmin?: boolean;
   /** Eski modül izinleri (geri uyum düşüşü için). */
   permissions?: Record<string, string>;
+  /** IZN-F3.2 · `true` = kişi her projeyi ana rolüyle görür. */
+  allProjects?: boolean;
+  /** IZN-F3.2 · proje ekibi satırları (proje UUID'si → o projedeki rol ANAHTARI). */
+  projects?: ReadonlyArray<{ project_id: string; role_key: string }>;
+  /** IZN-F3.2 · ekip rolü anahtarı → o rolün sayfa izinleri. */
+  rolePages?: Record<string, Partial<Record<PageKey, PageGrant>>>;
 }
 
 /** `useSession().me` için kısmi yük; `pages` verilmezse alan HİÇ yoktur (eski oturum). */
-export function meFixture({ pages, isSystemAdmin = false, permissions }: MeFixtureOptions = {}): MeResponse {
+export function meFixture({
+  pages,
+  isSystemAdmin = false,
+  permissions,
+  allProjects,
+  projects,
+  rolePages,
+}: MeFixtureOptions = {}): MeResponse {
   return {
     id: "11111111-1111-1111-1111-111111111111",
     email: "test@ornek.com",
@@ -25,5 +38,14 @@ export function meFixture({ pages, isSystemAdmin = false, permissions }: MeFixtu
     is_system_admin: isSystemAdmin,
     ...(pages === undefined ? {} : { pages }),
     ...(permissions === undefined ? {} : { permissions }),
+    ...(allProjects === undefined ? {} : { all_projects: allProjects }),
+    ...(projects === undefined ? {} : { projects: projects.map((project) => ({ ...project, discipline_ids: [] })) }),
+    ...(rolePages === undefined
+      ? {}
+      : {
+          role_pages: Object.fromEntries(
+            Object.entries(rolePages).map(([roleKey, pages]) => [roleKey, { pages, hidden_fields: [] }]),
+          ),
+        }),
   } as unknown as MeResponse;
 }

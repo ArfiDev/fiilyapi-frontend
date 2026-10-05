@@ -149,7 +149,7 @@ export function SectionDetailView() {
   // İzin: ekran `sites:view`, "Düzenle" butonu `sites:full` (task-2-brief §İzin).
   const { canView, canWrite: moduleCanWrite } = useModulePermission("sites");
   // IZN-F2.x · bölüm düzenle = santiye.bolumler/bolum.detay Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
   // DET-1.2 · S4 — açık sekme URL'dedir (`?sekme=`): günlük kayıt detayının
   // kırıntısı/geri tuşu "Günlük Kayıt"a DÖNER. Tek kaynak URL; yerel kopya yok.
   const router = useRouter();

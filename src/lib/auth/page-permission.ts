@@ -17,7 +17,48 @@ export type GateNeed = "view" | "edit" | "approve" | "sa";
 export type PagePermissionMe = {
   is_system_admin?: boolean;
   pages?: Partial<Record<string, PageGrant>>;
+  /** IZN-B3 · `true` ise kişi her projeyi ANA ROLÜYLE görür (proje rolü yok). Eski oturumda alan yoktur. */
+  all_projects?: boolean;
+  /** IZN-B3 · proje ekibi satırları: o projedeki rol ANAHTARI. */
+  projects?: ReadonlyArray<{ project_id: string; role_key: string }>;
+  /** IZN-B3 · ekip rolü anahtarı → o rolün sayfa izinleri. */
+  role_pages?: Partial<Record<string, { pages?: Partial<Record<string, PageGrant>> }>>;
 };
+
+/**
+ * IZN-F3.2 — hangi sayfa izin haritası geçerli?
+ *
+ * - `projectId` yok, `all_projects === true` ya da kişi o projenin ekibinde değil → ANA ROL (`me.pages`).
+ * - Ekipteyse ve `role_pages`te o rolün haritası varsa → PROJE ROLÜNÜN haritası.
+ * - `role_pages`te o rol yoksa → ana rol (bayat/eksik yük sessizce yetki daraltmasın).
+ *
+ * Şirket geneli sayfalar (menü, Ayarlar…) bu fonksiyonu ÇAĞIRMAZ: onlar her zaman ana rolledir.
+ */
+export function pagesForProject(
+  me: PagePermissionMe | null | undefined,
+  projectId?: string | null,
+): Partial<Record<string, PageGrant>> {
+  const mainPages = me?.pages ?? {};
+  if (!me || !projectId || me.all_projects === true) return mainPages;
+  const member = me.projects?.find((project) => project.project_id === projectId);
+  if (!member) return mainPages;
+  return me.role_pages?.[member.role_key]?.pages ?? mainPages;
+}
+
+/**
+ * Proje bağlamlı sekme/menü görünürlüğü: grant'ı olmayan sayfa GÖRÜNÜR, `none` gizli, sistem
+ * yöneticisi her şeyi görür (IZN-F1 `nav-visibility` kuralıyla aynı; ikiz kuralı YOK — anahtar
+ * zaten proje düzeyindedir).
+ */
+export function isPageVisibleInProject(
+  me: PagePermissionMe | null | undefined,
+  pageKey: PageKey,
+  projectId?: string | null,
+): boolean {
+  if (!me || me.is_system_admin === true) return true;
+  const grant = pagesForProject(me, projectId)[pageKey];
+  return grant === undefined || grant.level !== "none";
+}
 
 export interface PagePermission {
   canView: boolean;
@@ -36,9 +77,10 @@ export interface PagePermission {
 export function decidePagePermission(
   me: PagePermissionMe | null | undefined,
   pageKeys: readonly PageKey[],
+  projectId?: string | null,
 ): PagePermission {
   const isSystemAdmin = me?.is_system_admin === true;
-  const pages = me?.pages ?? {};
+  const pages = pagesForProject(me, projectId);
   const grants = pageKeys.map((key) => pages[key]).filter((grant): grant is PageGrant => grant !== undefined);
   const hasGrant = pageKeys.length === 0 ? Object.keys(pages).length > 0 : grants.length > 0;
   return {

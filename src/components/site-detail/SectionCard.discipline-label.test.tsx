@@ -7,7 +7,7 @@ import type { SectionResponse } from "./SectionCard";
 // DSC-F3a — kısıtlıda fiziksel % etiketi "Fiziksel (disiplinlerim)", kısıtsızda bugünkü metin.
 const session = vi.hoisted(() => ({ disciplines: [] as { id: string; code: string; name: string; color: string }[] }));
 vi.mock("@/components/shell/SessionProvider", () => ({
-  useSession: () => ({ me: { id: "u1", disciplines: session.disciplines }, isLoading: false }),
+  useSession: () => ({ me: { id: "u1", all_projects: false, projects: [{ project_id: "p-1", role_key: "x", discipline_ids: session.disciplines.map((d) => d.id) }] }, isLoading: false }),
 }));
 
 const KAB = { id: "a1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };

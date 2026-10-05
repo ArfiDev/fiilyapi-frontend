@@ -39,14 +39,36 @@ const ABSENT_STATUSES = new Set([403, 404, 409]);
  * kurar. EV'si olmayan şantiyede (aktif baseline yok → `has_baseline: false`,
  * ya da 404/409) `undefined` döner: çekirdek bugünkü gibi çalışır (B2-3).
  */
-export function useDiaryProgressExtension(ctx: DiaryExtensionContext | null): DiaryExtension | undefined {
+/**
+ * `projectKey` (IZN-F3.2b · opsiyonel): şantiye rotasındaki adres anahtarı; günlük/bütçe kapıları o projedeki
+ * rolden okunur. Kök (şantiyesiz) günlükte verilmez → ana rol.
+ */
+export function useDiaryProgressExtension(
+  ctx: DiaryExtensionContext | null,
+  projectKey?: string,
+): DiaryExtension | undefined {
   const evPermission = useModulePermission("earned_value");
   const diaryPermission = useModulePermission("site_diary");
   // IZN-F2.x · saat dağıtımı yazma = bütçe Düzenler; Gün Kilidi Aç = bütçe/günlük rapor Onaylar;
   // günlük yazma = günlük kayıt Düzenler. Grant yoksa bugünkü seviye kararı.
-  const canWriteAllocation = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit", fallback: hasAtLeast(evPermission.level, "draft") });
-  const canUnlockDay = useButtonGate({ pages: EV_UNLOCK_APPROVE, need: "approve", fallback: hasAtLeast(evPermission.level, "approve") });
-  const diaryCanWrite = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: diaryPermission.canWrite });
+  const canWriteAllocation = useButtonGate({
+    pages: EV_BUDGET_EDIT,
+    need: "edit",
+    fallback: hasAtLeast(evPermission.level, "draft"),
+    projectId: projectKey,
+  });
+  const canUnlockDay = useButtonGate({
+    pages: EV_UNLOCK_APPROVE,
+    need: "approve",
+    fallback: hasAtLeast(evPermission.level, "approve"),
+    projectId: projectKey,
+  });
+  const diaryCanWrite = useButtonGate({
+    pages: SITE_DIARY_EDIT,
+    need: "edit",
+    fallback: diaryPermission.canWrite,
+    projectId: projectKey,
+  });
   const siteId = evPermission.canView ? (ctx?.siteId ?? "") : "";
   const day = ctx?.day ?? "";
   const dayQuery = useEvDay(siteId, day);

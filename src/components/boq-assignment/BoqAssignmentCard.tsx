@@ -84,7 +84,14 @@ const COLUMNS = [
 
 export type BoqAssignmentCardProps =
   | { mode: "create" }
-  | { mode: "edit"; siteId: string; sectionId: string; canWrite: boolean };
+  | {
+      mode: "edit";
+      siteId: string;
+      sectionId: string;
+      canWrite: boolean;
+      /** IZN-F3.2b · Adres anahtarı (UUID/slug): atama kapısı o projedeki rolden okunur. Opsiyonel. */
+      projectKey?: string;
+    };
 
 function PlusIcon() {
   return (
@@ -140,10 +147,12 @@ function LiveCard({
   siteId,
   sectionId,
   canWrite,
+  projectKey,
 }: {
   siteId: string;
   sectionId: string;
   canWrite: boolean;
+  projectKey?: string;
 }) {
   // İKİ SORGU, N+1 YOK:
   //  · süzgeçsiz → pozun GERÇEK kotası + dağıtılmış/dağıtılmamış (metadata)
@@ -162,6 +171,7 @@ function LiveCard({
     pages: BOQ_EDIT,
     need: "edit",
     fallback: hasAtLeast(boqPermission.level, "full"),
+    projectId: projectKey,
   });
 
   const [draft, setDraft] = useState<ReadonlyMap<string, string>>(new Map());

@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { PageKey } from "@/lib/api/models";
 
-import { decideGate, decidePagePermission, type PagePermissionMe } from "./page-permission";
+import {
+  decideGate,
+  decidePagePermission,
+  isPageVisibleInProject,
+  pagesForProject,
+  type PagePermissionMe,
+} from "./page-permission";
 import { pageGrant } from "./page-grants.testkit";
 
 const PUANTAJ: PageKey = "saha.puantaj";
@@ -128,5 +134,82 @@ describe("decideGate · geri uyum düşüşü ve eşikler", () => {
     const admin = decidePagePermission(me({}, true), [PUANTAJ]);
     expect(decideGate(admin, "edit", false)).toBe(true);
     expect(decideGate(admin, "sa", false)).toBe(true);
+  });
+});
+
+// ── IZN-F3.2 · proje bağlamlı izin ──────────────────────────────────────────────────────
+const PROJECT_A = "11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const PROJECT_B = "22222222-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const HAKEDIS: PageKey = "proje.isveren_hakedis";
+
+function projectMe(overrides: Partial<PagePermissionMe> = {}): PagePermissionMe {
+  return {
+    is_system_admin: false,
+    pages: { [HAKEDIS]: pageGrant("view") }, // ANA ROL: yalnız görür
+    all_projects: false,
+    projects: [{ project_id: PROJECT_A, role_key: "site_chief" }],
+    role_pages: { site_chief: { pages: { [HAKEDIS]: pageGrant("edit") } } }, // PROJE ROLÜ: düzenler
+    ...overrides,
+  };
+}
+
+describe("decidePagePermission · proje bağlamı (IZN-F3.2)", () => {
+  it("ekipte olduğu projede PROJE ROLÜNÜN izni geçerlidir (ana rol view, proje rolü edit → edit)", () => {
+    expect(decidePagePermission(projectMe(), [HAKEDIS], PROJECT_A)).toMatchObject({ canEdit: true, hasGrant: true });
+  });
+
+  it("projectId verilmezse ana rol (proje rolü yok sayılır)", () => {
+    expect(decidePagePermission(projectMe(), [HAKEDIS])).toMatchObject({ canEdit: false, canView: true });
+  });
+
+  it("kişi o projenin ekibinde DEĞİLSE ana rol", () => {
+    expect(decidePagePermission(projectMe(), [HAKEDIS], PROJECT_B)).toMatchObject({ canEdit: false, canView: true });
+  });
+
+  it("all_projects=true iken proje satırı olsa da ANA ROL (proje içi sayfalar ana rolle açılır)", () => {
+    expect(decidePagePermission(projectMe({ all_projects: true }), [HAKEDIS], PROJECT_A).canEdit).toBe(false);
+  });
+
+  it("role_pages'te o rol YOKSA (eksik/bayat yük) ana role düşer", () => {
+    const result = decidePagePermission(projectMe({ role_pages: {} }), [HAKEDIS], PROJECT_A);
+    expect(result).toMatchObject({ canEdit: false, canView: true });
+    expect(decidePagePermission(projectMe({ role_pages: undefined }), [HAKEDIS], PROJECT_A).canView).toBe(true);
+  });
+
+  it("proje rolü 'none' verirse ana rol view olsa da görmez", () => {
+    const me = projectMe({ role_pages: { site_chief: { pages: { [HAKEDIS]: pageGrant("none") } } } });
+    expect(decidePagePermission(me, [HAKEDIS], PROJECT_A)).toMatchObject({ canView: false, canEdit: false, hasGrant: true });
+  });
+
+  it("proje rolünün haritasında anahtar yoksa hasGrant false → çağıran FALLBACK'e düşer (geri uyum)", () => {
+    const me = projectMe({ role_pages: { site_chief: { pages: {} } } });
+    const permission = decidePagePermission(me, [HAKEDIS], PROJECT_A);
+    expect(permission.hasGrant).toBe(false);
+    expect(decideGate(permission, "edit", true)).toBe(true);
+    expect(decideGate(permission, "edit", false)).toBe(false);
+  });
+
+  it("sistem yöneticisi proje bağlamında da her kapıyı geçer", () => {
+    const me = projectMe({
+      is_system_admin: true,
+      role_pages: { site_chief: { pages: { [HAKEDIS]: pageGrant("none") } } },
+    });
+    expect(decidePagePermission(me, [HAKEDIS], PROJECT_A)).toMatchObject({ canEdit: true, canApprove: true });
+  });
+});
+
+describe("pagesForProject / isPageVisibleInProject (IZN-F3.2)", () => {
+  it("harita seçimi: ekipteyse proje rolü, değilse ana rol", () => {
+    expect(pagesForProject(projectMe(), PROJECT_A)[HAKEDIS]?.level).toBe("edit");
+    expect(pagesForProject(projectMe(), PROJECT_B)[HAKEDIS]?.level).toBe("view");
+    expect(pagesForProject(null, PROJECT_A)).toEqual({});
+  });
+
+  it("görünürlük: grant yok → görünür, none → gizli, SA → her zaman görünür", () => {
+    const hidden = projectMe({ role_pages: { site_chief: { pages: { [HAKEDIS]: pageGrant("none") } } } });
+    expect(isPageVisibleInProject(hidden, HAKEDIS, PROJECT_A)).toBe(false);
+    expect(isPageVisibleInProject(hidden, "proje.belgeler", PROJECT_A)).toBe(true);
+    expect(isPageVisibleInProject({ ...hidden, is_system_admin: true }, HAKEDIS, PROJECT_A)).toBe(true);
+    expect(isPageVisibleInProject(null, HAKEDIS, PROJECT_A)).toBe(true);
   });
 });

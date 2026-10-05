@@ -72,6 +72,7 @@ export function SiteDocumentsView() {
     pages: DOCUMENTS_EDIT,
     need: "edit",
     fallback: hasAtLeast(permission.level, "full"),
+    projectId: projectKey,
   });
 
   const activeFolderId = searchParams.get(FOLDER_PARAM) ?? undefined;

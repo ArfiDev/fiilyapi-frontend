@@ -1,5 +1,7 @@
 "use client";
 import { routes, type SectionTabKey } from "@/lib/routes";
+import type { PageKey } from "@/lib/api/models";
+import { useProjectPageVisibility } from "@/lib/auth/usePagePermission";
 
 /**
  * Bölüm detayı sekme şeridi (D99-105).
@@ -29,6 +31,8 @@ import { routes, type SectionTabKey } from "@/lib/routes";
 
 export interface SectionTabDef {
   readonly label: string;
+  /** IZN-F3.2 · Sekmenin sayfa-izni anahtarı (proje rolünde "none" → gizli; grant yok → görünür). */
+  readonly pageKey: PageKey;
   /**
    * Bu sekmenin içeriğini taşıyan/taşıyacak ŞANTİYE seviyesi rota dilimi
    * (`/projeler/{p}/santiyeler/{s}/<slug>`). HER ZAMAN doludur — `moduleWritten`
@@ -68,6 +72,7 @@ export const SECTION_TABS: readonly (SectionTabDef & SectionTabContent)[] = [
   // BOQ-SEC-F: bölüm bağı AÇILDI — `GET /sites/{id}/boq?section_id=` canlı.
   {
     label: "İş Kalemleri",
+    pageKey: "bolum.is_kalemleri",
     siteSlug: "is-kalemleri",
     moduleWritten: true,
     contentLive: true,
@@ -76,6 +81,7 @@ export const SECTION_TABS: readonly (SectionTabDef & SectionTabContent)[] = [
   // bölüm süzgeciyle görünüme uygulanıyor (K2: süzgeç istemcide).
   {
     label: "İşçiler & Puantaj",
+    pageKey: "bolum.puantaj",
     siteSlug: "puantaj",
     moduleWritten: true,
     contentLive: true,
@@ -88,15 +94,18 @@ export const SECTION_TABS: readonly (SectionTabDef & SectionTabContent)[] = [
   // ⚠️ `SectionTabContent` ayrık birliği YİNE DE SİLİNMEZ: bekçinin
   // (`tab-strip-routes.test.tsx`) tanıdığı iki hâl korunur, aksi hâlde bir
   // sonraki pending sekme geldiğinde tip yeniden icat edilirdi.
-  { label: "Malzeme", siteSlug: "stok", moduleWritten: true, contentLive: true },
+  { label: "Malzeme",
+    pageKey: "bolum.malzeme", siteSlug: "stok", moduleWritten: true, contentLive: true },
   // F-BLMSEK T2: bölüm bağı AÇILDI — `SubcontractorProgressPaymentListItem`
   // `section_id` taşır. İŞVEREN hakedişi taşımaz (ölçüldü, sıfır isabet); o
   // eksiklik sekmeyi yer tutucuda tutmak yerine panelin GÖRÜNÜR kapsam
   // satırında basılır (`section_employer_progress_payments`).
-  { label: "Hakediş", siteSlug: "hakedisler", moduleWritten: true, contentLive: true },
+  { label: "Hakediş",
+    pageKey: "bolum.hakedis", siteSlug: "hakedisler", moduleWritten: true, contentLive: true },
   // F-BLMSEK: bölüm bağı AÇILDI. DET-1.1: süzgeç SUNUCUDA (`?section_id=`,
   // Kural A — başlığı bu bölüm ∪ bu bölüme satır yazılmış gün).
-  { label: "Günlük Kayıt", siteSlug: "gunluk-kayit", moduleWritten: true, contentLive: true },
+  { label: "Günlük Kayıt",
+    pageKey: "bolum.gunluk_kayit", siteSlug: "gunluk-kayit", moduleWritten: true, contentLive: true },
 ];
 
 /**
@@ -124,29 +133,33 @@ export function SectionDetailTabs({
   onSelect,
 }: SectionDetailTabsProps) {
   const base = routes.projects.sites.detail({ projectId: projectKey, siteId: siteKey });
+  const isPageVisible = useProjectPageVisibility(projectKey);
 
   return (
     <div className="section-tabs" role="tablist" aria-label="Bölüm detay sekmeleri">
-      {SECTION_TABS.map((tab, index) => (
-        <button
-          key={tab.label}
-          type="button"
-          role="tab"
-          aria-selected={activeIndex === index}
-          // Bekçi çapaları (DOM'dan okunur — sabiti import etmek bileşenin
-          // kendi mantığını atlardı, F-PRJTAB kanonu).
-          data-content-pending={tab.contentPending ?? undefined}
-          data-content-live={tab.contentLive ? "true" : undefined}
-          data-module-route={`${base}/${tab.siteSlug}`}
-          data-module-written={String(tab.moduleWritten)}
-          className={
-            activeIndex === index ? "section-tabs__tab section-tabs__tab--active" : "section-tabs__tab"
-          }
-          onClick={() => onSelect(index)}
-        >
-          {tab.label}
-        </button>
-      ))}
+      {/* Gizli sekme dizide KALIR: `index` URL (`?sekme=`) ve `activeIndex` ile paylaşılan kimliktir. */}
+      {SECTION_TABS.map((tab, index) => ({ tab, index }))
+        .filter(({ tab }) => isPageVisible(tab.pageKey))
+        .map(({ tab, index }) => (
+          <button
+            key={tab.label}
+            type="button"
+            role="tab"
+            aria-selected={activeIndex === index}
+            // Bekçi çapaları (DOM'dan okunur — sabiti import etmek bileşenin
+            // kendi mantığını atlardı, F-PRJTAB kanonu).
+            data-content-pending={tab.contentPending ?? undefined}
+            data-content-live={tab.contentLive ? "true" : undefined}
+            data-module-route={`${base}/${tab.siteSlug}`}
+            data-module-written={String(tab.moduleWritten)}
+            className={
+              activeIndex === index ? "section-tabs__tab section-tabs__tab--active" : "section-tabs__tab"
+            }
+            onClick={() => onSelect(index)}
+          >
+            {tab.label}
+          </button>
+        ))}
     </div>
   );
 }

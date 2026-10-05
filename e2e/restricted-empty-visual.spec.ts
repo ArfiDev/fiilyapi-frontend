@@ -7,7 +7,7 @@ import { prepareFrame } from "./visual-scroll";
 // Kaynak mockup: Ayarlar - Kullanıcı Disiplin Ataması.dc.html · "Yapılan miktarlar · filtre".
 //
 // 🔒 İZOLASYON: kısıtlılık ve boşluk YALNIZ tarayıcı katmanında (`page.route`)
-// kurulur — `/auth/me` yanıtına TEK bir `DisciplineRef` eklenir, ilgili liste
+// kurulur — `/auth/me` yanıtına TEK bir projede TEK `discipline_id` eklenir (ad EV kataloğundan çözülür), ilgili liste
 // uçlarının gövdesi boşaltılır. Paylaşılan sahte backend durumuna YAZILMAZ;
 // başka spec'lerin kareleri (atamasız davranış) değişmez.
 //
@@ -15,7 +15,7 @@ import { prepareFrame } from "./visual-scroll";
 // `toHaveScreenshot`tan hemen önceki SON çağrıdır.
 
 const VIEWPORT = { width: 1440, height: 900 } as const;
-const KAB = { id: "00000000-0000-4000-8000-0000000000a1", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
+const KAB = { id: "e7d15000-0000-4000-8000-000000000001", code: "KAB", name: "Kaba İnşaat", color: "#2563eb" };
 const NOTICE_TITLE = "Disiplininize ait kayıt yok.";
 
 /** `/auth/me` yanıtına yalnız bu sayfa için TEK disiplin atar. */
@@ -23,7 +23,7 @@ async function restrictToOneDiscipline(page: Page) {
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
     const me = (await response.json()) as Record<string, unknown>;
-    await route.fulfill({ response, json: { ...me, disciplines: [KAB] } });
+    await route.fulfill({ response, json: { ...me, all_projects: false, projects: [{ project_id: "p-1", role_key: "patron", discipline_ids: [KAB.id] }] } });
   });
 }
 
@@ -46,6 +46,8 @@ test("kisitli bos yapilan miktarlar gorsel", async ({ page }) => {
   await emptyFields(page, "**/api/backend/sites/*/earned-value/reports/daily*", (b) => ({ ...b, quantities: [] }));
   await page.goto("/projeler/p-1/santiyeler/s-1/gunluk-ilerleme-raporu");
   await expect(page.getByText(NOTICE_TITLE)).toBeVisible();
+  // IZN-F3.1c: ad katalogtan ASENKRON çözülür — kare adı da basmadan önce beklenir.
+  await expect(page.getByTestId("restricted-empty-notice").getByText("Kaba İnşaat").first()).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 
   await prepareFrame(page);
@@ -57,6 +59,8 @@ test("kisitli bos is kalemleri gorsel", async ({ page }) => {
   await page.goto("/projeler/p-1/santiyeler/s-1/is-kalemleri");
   await expect(page.getByRole("heading", { level: 1, name: "İş Kalemleri (BOQ)" })).toBeVisible();
   await expect(page.getByText(NOTICE_TITLE)).toBeVisible();
+  // IZN-F3.1c: ad katalogtan ASENKRON çözülür — kare adı da basmadan önce beklenir.
+  await expect(page.getByTestId("restricted-empty-notice").getByText("Kaba İnşaat").first()).toBeVisible();
 
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("kisitli-bos-is-kalemleri.png", { fullPage: true });
@@ -66,6 +70,8 @@ test("kisitli bos planlama paneli gorsel", async ({ page }) => {
   await emptyFields(page, "**/api/backend/sites/*/earned-value/panel*", (b) => ({ ...b, rows: [] }));
   await openPlanningPanel(page, { siteId: "s-1" });
   await expect(page.getByText(NOTICE_TITLE)).toBeVisible();
+  // IZN-F3.1c: ad katalogtan ASENKRON çözülür — kare adı da basmadan önce beklenir.
+  await expect(page.getByTestId("restricted-empty-notice").getByText("Kaba İnşaat").first()).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 
   await prepareFrame(page);
@@ -79,6 +85,8 @@ test("kisitli bos birim oran katalogu gorsel", async ({ page }) => {
   await page.goto(UNIT_RATE_CATALOG_URL);
   await expect(page.getByRole("heading", { level: 1, name: "Birim Oran Kataloğu" })).toBeVisible();
   await expect(page.getByText(NOTICE_TITLE)).toBeVisible();
+  // IZN-F3.1c: ad katalogtan ASENKRON çözülür — kare adı da basmadan önce beklenir.
+  await expect(page.getByTestId("restricted-empty-notice").getByText("Kaba İnşaat").first()).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 
   await prepareFrame(page);

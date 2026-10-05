@@ -37,6 +37,7 @@ const replace = vi.fn();
 let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   usePathname: () => "/gunluk-kayit",
   useRouter: () => ({ replace }),
   useSearchParams: () => searchParams,

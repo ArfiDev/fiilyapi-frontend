@@ -63,7 +63,7 @@ export function SiteDiaryDetailView({ extension, onExtensionContext }: DiaryDeta
   const entryQuery = useSiteDiaryEntry(entryId, { sectionId: section?.id, enabled: sectionResolved });
   const permission = useModulePermission("site_diary");
   // IZN-F2.x · "Günlük kayıtta aç" = günlük kayıt Düzenler (VEYA).
-  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite });
+  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
 
   const entry = entryQuery.data;
   // Adresteki şantiyeye ait olmayan kayıt (kimlik elle değiştirilmiş) —

@@ -79,14 +79,18 @@ const COEFFICIENT_INPUT_MAX_LENGTH = 10;
 export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   const router = useRouter();
   const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
-  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
-
   const isEdit = props.mode === "edit";
   const detailQuery = useProgressPayment(isEdit ? props.paymentId : "");
   const detail = isEdit ? detailQuery.data : undefined;
 
   const resolvedProjectId = isEdit ? (detail?.project_id ?? "") : props.projectId;
+  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA); IZN-F3.2b · o projedeki rolden.
+  const canWrite = useButtonGate({
+    pages: PROGRESS_PAYMENTS_EDIT,
+    need: "edit",
+    fallback: moduleCanWrite,
+    projectId: resolvedProjectId,
+  });
   const projectQuery = useProject(resolvedProjectId);
   const distributionQuery = useContractDistribution(resolvedProjectId);
   const contractQuery = useEmployerContract(resolvedProjectId);

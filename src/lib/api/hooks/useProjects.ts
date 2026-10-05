@@ -2,8 +2,8 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
-import type { ProjectAccessResponse } from "@/lib/api/models";
 import type { DeepScale, WithPlainProgressPct } from "@/lib/api/scale";
+import { PROJECT_QUERY_KEY } from "./project-scope-query-keys";
 
 // NOT: Plan "ProjectResponse" adini varsayiyordu; gercek semada oge tipi
 // "ProjectListItem" (bkz. src/lib/api/schema.d.ts). Gercek adi kullaniyoruz.
@@ -48,7 +48,6 @@ export interface ProjectListFilter {
 }
 
 export const PROJECTS_QUERY_KEY = "projects";
-export const PROJECT_ACCESS_QUERY_KEY = "project-access";
 
 /**
  * `GET /projects` `limit` tavanı (openapi.json: `le=200`). Sunucu varsayılanı
@@ -86,7 +85,7 @@ export function useProjects(
   });
 }
 
-export const PROJECT_QUERY_KEY = "project";
+export { PROJECT_QUERY_KEY };
 
 // Proje Detay (P2) — hero seridi + sekmeler icin tekil proje.
 // KAYIT 456: `useSites.ts`teki boş-id kapısıyla AYNI desen — id boşsa ağa
@@ -99,20 +98,6 @@ export function useProject(projectId: string): UseQueryResult<ProjectDetail, Err
       unwrap(
         await backendClient.GET("/projects/{project_id}", {
           params: { path: { project_id: projectId } },
-        }),
-      ),
-  });
-}
-
-// KAYIT 456: aynı boş-id kapısı.
-export function useProjectAccess(userId: string): UseQueryResult<ProjectAccessResponse, Error> {
-  return useQuery({
-    enabled: userId.length > 0,
-    queryKey: [PROJECT_ACCESS_QUERY_KEY, userId],
-    queryFn: async () =>
-      unwrap(
-        await backendClient.GET("/users/{user_id}/project-access", {
-          params: { path: { user_id: userId } },
         }),
       ),
   });

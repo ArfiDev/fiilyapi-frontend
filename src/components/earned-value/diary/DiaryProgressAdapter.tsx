@@ -24,6 +24,7 @@
  * Mockup: `Şantiye - Günlük Kayıt (İlerleme).dc.html` (İ) + `(Ek Formlar)`.
  */
 import { useState, type ReactElement } from "react";
+import { useParams } from "next/navigation";
 
 import type { DiaryExtensionContext, DiaryExtensionProps } from "@/components/site-diary/diary-extension";
 import { GeneralSiteDiaryView } from "@/components/site-diary/GeneralSiteDiaryView";
@@ -34,18 +35,21 @@ import "./diary-progress.css";
 
 interface DiaryProgressAdapterProps {
   render: (props: DiaryExtensionProps) => ReactElement;
+  /** IZN-F3.2b · Şantiye rotasının proje adres anahtarı (kök günlükte yok). */
+  projectKey?: string;
 }
 
-function DiaryProgressAdapter({ render }: DiaryProgressAdapterProps) {
+function DiaryProgressAdapter({ render, projectKey }: DiaryProgressAdapterProps) {
   const [context, setContext] = useState<DiaryExtensionContext | null>(null);
-  const extension = useDiaryProgressExtension(context);
+  const extension = useDiaryProgressExtension(context, projectKey);
   // `extension === undefined` → çekirdek uzantısız (bugünkü) davranışta kalır.
   return render({ extension, onExtensionContext: setContext });
 }
 
 /** Şantiye rotası — `/projeler/[projectId]/santiyeler/[siteId]/gunluk-kayit`. */
 export function SiteDiaryProgressView() {
-  return <DiaryProgressAdapter render={(props) => <SiteDiaryEntryView {...props} />} />;
+  const { projectId: projectKey } = useParams<{ projectId: string }>();
+  return <DiaryProgressAdapter projectKey={projectKey} render={(props) => <SiteDiaryEntryView {...props} />} />;
 }
 
 /** Kök ikiz — `/gunluk-kayit?site=` (E7 kabuğu, şantiye seçici). */

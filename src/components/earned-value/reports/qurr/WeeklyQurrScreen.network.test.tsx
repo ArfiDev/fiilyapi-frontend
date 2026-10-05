@@ -36,6 +36,7 @@ const replaceMock = vi.fn((url: string) => {
   searchParams = new URLSearchParams(qIndex >= 0 ? url.slice(qIndex + 1) : "");
 });
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   useRouter: () => ({ replace: replaceMock }),
   usePathname: () => "/planlama/haftalik-qurr",
   useSearchParams: () => searchParams,

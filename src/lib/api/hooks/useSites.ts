@@ -3,6 +3,7 @@ import { backendClient } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 import type { components } from "@/lib/api/schema";
 import type { DeepScale } from "@/lib/api/scale";
+import { SITE_QUERY_KEY } from "./project-scope-query-keys";
 
 // Task 5 — Proje Detay › Şantiyeler listesi (spec §4.3). Tip adı "SiteCard" bilesen
 // adiyla catisir, bu yuzden "SiteListItem" olarak takma ad verildi.
@@ -13,7 +14,7 @@ export type SiteListItem = DeepScale<components["schemas"]["SiteCard"]>;
 export type SiteDetail = DeepScale<components["schemas"]["SiteDetailResponse"]>;
 
 export const SITES_QUERY_KEY = "sites";
-export const SITE_QUERY_KEY = "site";
+export { SITE_QUERY_KEY };
 
 /**
  * Sorgu seçenekleri AYRI dışa verilir: E5 puantajının şantiye seçicisi aynı

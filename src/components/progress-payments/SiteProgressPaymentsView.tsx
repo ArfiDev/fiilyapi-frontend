@@ -105,7 +105,7 @@ export function SiteProgressPaymentsView() {
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
   const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
 
   if (isForbidden(paymentsQuery.error) || isForbidden(siteQuery.error)) return <AccessDenied />;
 

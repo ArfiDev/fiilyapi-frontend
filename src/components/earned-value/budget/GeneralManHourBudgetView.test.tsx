@@ -19,6 +19,7 @@ vi.mock("@/lib/api/hooks/useEvSettings", () => ({ useEvSiteOptions: vi.fn() }));
 const replace = vi.fn();
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
+  useParams: () => ({}),
   usePathname: () => "/planlama/adam-saat-butcesi",
   useRouter: () => ({ replace }),
   useSearchParams: () => searchParams,

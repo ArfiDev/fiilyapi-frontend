@@ -856,7 +856,7 @@ export interface paths {
         };
         /**
          * Export Catalog Endpoint
-         * @description Fiyatli katalog xlsx — liste ucuyla AYNI suzgecler (`q`, `discipline_id`) ve kapsam.
+         * @description Fiyatli katalog xlsx — liste ucuyla AYNI suzgecler (`q`, `discipline_id`).
          */
         get: operations["export_catalog_endpoint_catalog_items_export_get"];
         put?: never;
@@ -1518,6 +1518,9 @@ export interface paths {
         /**
          * List Disciplines Endpoint
          * @description Sirket disiplinleri (K2) — `sort_order`, sonra `code` sirasiyla.
+         *
+         *     IZN-B3: disiplin atamasi PROJE BASINA oldugu icin sirket katalogu kullanici kapsamina gore
+         *     SUZULMEZ (herkes tum disiplinleri gorur).
          */
         get: operations["list_disciplines_endpoint_earned_value_disciplines_get"];
         put?: never;
@@ -8450,6 +8453,35 @@ export interface paths {
         patch: operations["update_user_endpoint_users__user_id__patch"];
         trace?: never;
     };
+    "/users/{user_id}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get User Access Endpoint
+         * @description Kullanıcının ana rolü, "Tüm projeler" işareti ve proje ekibi (rol + disiplin).
+         *
+         *     `all_projects=true` kişide `projects` boştur. Kapı: Kullanıcılar sayfası Görür.
+         */
+        get: operations["get_user_access_endpoint_users__user_id__access_get"];
+        /**
+         * Set User Access Endpoint
+         * @description Ana rol + "Tüm projeler" + proje ekibini TEK transaction'da TAM DEĞİŞTİRİR (atomik).
+         *
+         *     Kullanıcı satırı `FOR UPDATE` ile kilitlenir; hata → hiçbir şey değişmez. Yanıt GET ile aynı.
+         *     Kapı: Kullanıcılar sayfası Düzenler.
+         */
+        put: operations["set_user_access_endpoint_users__user_id__access_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{user_id}/disciplines": {
         parameters: {
             query?: never;
@@ -8457,9 +8489,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get User Disciplines Endpoint */
+        /**
+         * Get User Disciplines Endpoint
+         * @deprecated
+         * @description KALDIRILDI (IZN-B3): her çağrı 410 döner.
+         */
         get: operations["get_user_disciplines_endpoint_users__user_id__disciplines_get"];
-        /** Set User Disciplines Endpoint */
+        /**
+         * Set User Disciplines Endpoint
+         * @deprecated
+         * @description KALDIRILDI (IZN-B3): her çağrı 410 döner, hiçbir şey yazılmaz.
+         */
         put: operations["set_user_disciplines_endpoint_users__user_id__disciplines_put"];
         post?: never;
         delete?: never;
@@ -8492,9 +8532,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Project Access Endpoint */
+        /**
+         * Get Project Access Endpoint
+         * @deprecated
+         * @description KALDIRILDI (IZN-B3): her çağrı 410 döner.
+         */
         get: operations["get_project_access_endpoint_users__user_id__project_access_get"];
-        /** Set Project Access Endpoint */
+        /**
+         * Set Project Access Endpoint
+         * @deprecated
+         * @description KALDIRILDI (IZN-B3): her çağrı 410 döner, hiçbir şey yazılmaz.
+         */
         put: operations["set_project_access_endpoint_users__user_id__project_access_put"];
         post?: never;
         delete?: never;
@@ -15447,10 +15495,25 @@ export interface components {
          * @enum {string}
          */
         MaritalStatus: "single" | "married";
+        /**
+         * MeProject
+         * @description Proje ekibi satırı (IZN-B3): o projedeki rol (anahtar) + o projedeki disiplinler.
+         */
+        MeProject: {
+            /** Discipline Ids */
+            discipline_ids: string[];
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Role Key */
+            role_key: string;
+        };
         /** MeResponse */
         MeResponse: {
-            /** Disciplines */
-            disciplines: components["schemas"]["DisciplineRef"][];
+            /** All Projects */
+            all_projects: boolean;
             /**
              * Email
              * Format: email
@@ -15475,11 +15538,29 @@ export interface components {
             permissions: {
                 [key: string]: components["schemas"]["AccessLevel"];
             };
+            /** Projects */
+            projects: components["schemas"]["MeProject"][];
             /** Role Key */
             role_key: string;
+            /** Role Pages */
+            role_pages: {
+                [key: string]: components["schemas"]["MeRolePages"];
+            };
             status: components["schemas"]["UserStatus"];
             /** Title */
             title: string;
+        };
+        /**
+         * MeRolePages
+         * @description Ekip rolünün sayfa izinleri + gizli alanları (`MeResponse.pages`/`hidden_fields` biçimi).
+         */
+        MeRolePages: {
+            /** Hidden Fields */
+            hidden_fields: components["schemas"]["HiddenCategory"][];
+            /** Pages */
+            pages: {
+                [key: string]: components["schemas"]["PageGrant"];
+            };
         };
         /**
          * MetricPlaceholder
@@ -18118,23 +18199,6 @@ export interface components {
             /** Period Year */
             period_year?: number | null;
         };
-        /** ProjectAccessInput */
-        ProjectAccessInput: {
-            /**
-             * All Projects
-             * @default false
-             */
-            all_projects: boolean;
-            /** Project Ids */
-            project_ids?: string[];
-        };
-        /** ProjectAccessResponse */
-        ProjectAccessResponse: {
-            /** All Projects */
-            all_projects: boolean;
-            /** Project Ids */
-            project_ids: string[];
-        };
         /**
          * ProjectBudgetInput
          * @description Dört bütçe kalemi (spec §3.3). Toplam `budget`'i servis hesaplar; istemci `budget` yok.
@@ -18487,6 +18551,41 @@ export interface components {
             offset: number;
             /** Total */
             total: number;
+        };
+        /**
+         * ProjectMemberInput
+         * @description Bir projedeki ekip satırı (PUT gövdesi): o projedeki rol + o projedeki disiplinler.
+         */
+        ProjectMemberInput: {
+            /** Discipline Ids */
+            discipline_ids?: string[];
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * Role Id
+             * Format: uuid
+             */
+            role_id: string;
+        };
+        /** ProjectMemberResponse */
+        ProjectMemberResponse: {
+            /** Disciplines */
+            disciplines: components["schemas"]["DisciplineRef"][];
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /**
+             * Role Id
+             * Format: uuid
+             */
+            role_id: string;
         };
         /**
          * ProjectProfitProjection
@@ -25792,6 +25891,42 @@ export interface components {
          * @enum {string}
          */
         UpcomingSourceType: "invoice" | "subcontractor_progress_payment" | "payroll";
+        /**
+         * UserAccessInput
+         * @description `PUT /users/{id}/access` gövdesi: ana rol + proje ekibi, TAM DEĞİŞTİRME (atomik).
+         *
+         *     `all_projects=true` iken `projects` BOŞ olmak zorundadır (422): bu kişi her projeyi ana
+         *     rolüyle görür, ekip satırı ve disiplin kısıtı taşımaz.
+         */
+        UserAccessInput: {
+            /**
+             * All Projects
+             * @default false
+             */
+            all_projects: boolean;
+            /** Projects */
+            projects?: components["schemas"]["ProjectMemberInput"][];
+            /**
+             * Role Id
+             * Format: uuid
+             */
+            role_id: string;
+        };
+        /**
+         * UserAccessResponse
+         * @description `GET`/`PUT /users/{id}/access` yanıtı (ikisi AYNI şema). `projects` ad sırasıyla.
+         */
+        UserAccessResponse: {
+            /** All Projects */
+            all_projects: boolean;
+            /** Projects */
+            projects: components["schemas"]["ProjectMemberResponse"][];
+            /**
+             * Role Id
+             * Format: uuid
+             */
+            role_id: string;
+        };
         /** UserCreate */
         UserCreate: {
             /**
@@ -25816,25 +25951,6 @@ export interface components {
              */
             title: string;
         };
-        /**
-         * UserDisciplinesInput
-         * @description `PUT /users/{id}/disciplines` govdesi: TAM DEGISTIRME. Bos liste = tum atamalar silinir
-         *     = kullanici kisitsiz. Yinelenen id'ler serviste tekillestirilir.
-         */
-        UserDisciplinesInput: {
-            /** Discipline Ids */
-            discipline_ids: string[];
-        };
-        /**
-         * UserDisciplinesRead
-         * @description Kullanicinin atanmis disiplinleri (id'ye gore sirali; atamasiz = []).
-         */
-        UserDisciplinesRead: {
-            /** Discipline Ids */
-            discipline_ids: string[];
-            /** Disciplines */
-            disciplines: components["schemas"]["DisciplineRef"][];
-        };
         /** UserListResponse */
         UserListResponse: {
             /** Items */
@@ -25858,6 +25974,8 @@ export interface components {
         };
         /** UserResponse */
         UserResponse: {
+            /** All Projects */
+            all_projects: boolean;
             /**
              * Email
              * Format: email
@@ -25872,6 +25990,8 @@ export interface components {
             id: string;
             /** Last Login At */
             last_login_at?: string | null;
+            /** Project Count */
+            project_count: number;
             /**
              * Role Id
              * Format: uuid
@@ -47826,6 +47946,8 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                /** @description Ad, e-posta ya da ana rol adında ara (büyük/küçük harf ve Türkçe karakter duyarsız; `İ ı I i` aynı sayılır). Boş = süzgeç yok. */
+                q?: string | null;
             };
             header?: never;
             path?: never;
@@ -48065,7 +48187,7 @@ export interface operations {
             };
         };
     };
-    get_user_disciplines_endpoint_users__user_id__disciplines_get: {
+    get_user_access_endpoint_users__user_id__access_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -48082,7 +48204,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserDisciplinesRead"];
+                    "application/json": components["schemas"]["UserAccessResponse"];
                 };
             };
             /** @description Yetkisiz işlem */
@@ -48110,7 +48232,7 @@ export interface operations {
             };
         };
     };
-    set_user_disciplines_endpoint_users__user_id__disciplines_put: {
+    set_user_access_endpoint_users__user_id__access_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -48121,7 +48243,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserDisciplinesInput"];
+                "application/json": components["schemas"]["UserAccessInput"];
             };
         };
         responses: {
@@ -48131,9 +48253,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserDisciplinesRead"];
+                    "application/json": components["schemas"]["UserAccessResponse"];
                 };
             };
+            /** @description Son aktif Sistem Yöneticisi düşürülemez */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Atanan rol aktörün yetkilerini aşıyor · Sistem Yöneticisi rolünü yalnız Sistem Yöneticisi atar · Sistem Yöneticisi olmayan aktör KENDİ erişimini değiştiremez · `all_projects` işaretini yalnız Sistem Yöneticisi verir/kaldırır · Sistem Yöneticisi'nin ana rolünü yalnız Sistem Yöneticisi değiştirir */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kullanıcı ya da rol bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `all_projects=true` iken ekip dolu · aynı proje iki kez · bilinmeyen proje/rol/disiplin · proje rolü Sistem Yöneticisi · Sistem Yöneticisi'ne ekip satırı */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_user_disciplines_endpoint_users__user_id__disciplines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             /** @description Yetkisiz işlem */
             403: {
                 headers: {
@@ -48147,6 +48310,60 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Uç kaldırıldı: disiplin artık proje ekibinde (`/users/{id}/access`) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_user_disciplines_endpoint_users__user_id__disciplines_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Yetkisiz işlem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Kayıt bulunamadı */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Uç kaldırıldı: disiplin artık proje ekibinde (`/users/{id}/access`) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -48217,15 +48434,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectAccessResponse"];
-                };
-            };
             /** @description Yetkisiz işlem */
             403: {
                 headers: {
@@ -48239,6 +48447,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Uç kaldırıldı: erişim artık ana rol + proje ekibi (`/users/{id}/access`) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -48260,21 +48477,8 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProjectAccessInput"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectAccessResponse"];
-                };
-            };
             /** @description Yetkisiz işlem */
             403: {
                 headers: {
@@ -48288,6 +48492,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Uç kaldırıldı: erişim artık ana rol + proje ekibi (`/users/{id}/access`) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

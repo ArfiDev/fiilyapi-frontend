@@ -24,6 +24,7 @@ export default function SectionDistributionPage() {
   return (
     <SectionDistributionView
       siteId={siteId}
+      projectKey={projectKey}
       isSiteError={siteQuery.isError}
       boqHref={routes.projects.sites.boq({ projectId: projectKey, siteId: siteKey })}
     />

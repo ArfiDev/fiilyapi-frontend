@@ -60,6 +60,8 @@ export interface SectionDistributionViewProps {
   boqHref: string;
   /** Şantiye çözümü başarısız oldu (kimlik hiç gelmeyecek). */
   isSiteError?: boolean;
+  /** IZN-F3.2b · Adres anahtarı (UUID ya da slug): yazma kapısı o projedeki rolden okunur. Opsiyonel. */
+  projectKey?: string;
 }
 
 const NO_FULL_PERMISSION_REASON =
@@ -69,6 +71,7 @@ export function SectionDistributionView({
   siteId,
   boqHref,
   isSiteError = false,
+  projectKey,
 }: SectionDistributionViewProps) {
   const permission = useModulePermission("boq");
   // IZN-F2.x · bölüm dağılımı kaydet = santiye.is_kalemleri/bolum_dagilimi Düzenler (VEYA).
@@ -76,6 +79,7 @@ export function SectionDistributionView({
     pages: BOQ_EDIT,
     need: "edit",
     fallback: hasAtLeast(permission.level, "full"),
+    projectId: projectKey,
   });
   const distributionQuery = useSectionDistribution(siteId);
   const saveMutation = useSaveSectionDistribution(siteId);
