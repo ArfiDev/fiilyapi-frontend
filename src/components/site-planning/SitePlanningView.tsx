@@ -13,7 +13,7 @@ import { useSitePlan } from "@/lib/api/hooks/useSitePlan";
 import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { SITE_DIARY_EDIT } from "@/lib/auth/page-gates";
+import { SITE_DIARY_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { planSectionsState } from "./plan-sections";
@@ -67,6 +67,8 @@ export function SitePlanningView() {
   const permission = useModulePermission("site_diary");
   // IZN-F2.x · plan kaydet = santiye.gunluk_planlama/günlük kayıt Düzenler (VEYA).
   const canWritePlan = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
+  // IZN-F5-ön · görüntüleme kapısı = günlük kayıt sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
   const weekStart = resolveWeekStart(searchParams.get("week"));
   // 🔴 URL-3 — bu ekranin cozumleme kaynagi YOKTU (tek `useSite` cagirmayan
   // santiye ekraniydi). Slug'li adreste `useSitePlan`/`useSiteSections`/dort
@@ -86,7 +88,7 @@ export function SitePlanningView() {
   // Onay bekleyen hafta kaydırması (gün farkı); `null` = bekleyen yok.
   const [pendingWeekShift, setPendingWeekShift] = useState<number | null>(null);
 
-  if (!permission.canView) return <AccessDenied />;
+  if (!canViewDiary) return <AccessDenied />;
   if (isForbidden(planQuery.error) || isForbidden(siteQuery.error)) return <AccessDenied />;
   // 🔴 Şantiye çözülemezse (404/ağ) `siteId` boş kalır ve `planQuery`/
   // `sectionsQuery` `enabled:false` ile sessizce idle'da durur — hiçbir hata

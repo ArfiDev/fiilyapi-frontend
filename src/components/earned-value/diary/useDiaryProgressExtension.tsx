@@ -13,7 +13,7 @@ import type { EvAllocationSave, EvCodeNode, EvDayView } from "@/lib/api/models";
 import { BackendError } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EV_BUDGET_EDIT, EV_UNLOCK_APPROVE, SITE_DIARY_EDIT } from "@/lib/auth/page-gates";
+import { EV_BUDGET_EDIT, EV_UNLOCK_APPROVE, SITE_DIARY_EDIT, EV_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { bandsFromSettings, type PfBandSettings } from "@/lib/earned-value";
 import { routes } from "@/lib/routes";
@@ -48,6 +48,12 @@ export function useDiaryProgressExtension(
   projectKey?: string,
 ): DiaryExtension | undefined {
   const evPermission = useModulePermission("earned_value");
+  const canViewEv = useButtonGate({
+    pages: EV_VIEW,
+    need: "view",
+    fallback: evPermission.canView,
+    projectId: projectKey,
+  });
   const diaryPermission = useModulePermission("site_diary");
   // IZN-F2.x · saat dağıtımı yazma = bütçe Düzenler; Gün Kilidi Aç = bütçe/günlük rapor Onaylar;
   // günlük yazma = günlük kayıt Düzenler. Grant yoksa bugünkü seviye kararı.
@@ -69,7 +75,7 @@ export function useDiaryProgressExtension(
     fallback: diaryPermission.canWrite,
     projectId: projectKey,
   });
-  const siteId = evPermission.canView ? (ctx?.siteId ?? "") : "";
+  const siteId = canViewEv ? (ctx?.siteId ?? "") : "";
   const day = ctx?.day ?? "";
   const dayQuery = useEvDay(siteId, day);
   const hasBaseline = dayQuery.data?.has_baseline === true;

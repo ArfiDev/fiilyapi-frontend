@@ -14,7 +14,7 @@ import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import {
   buildListTruncation,
@@ -73,6 +73,7 @@ export function EquipmentRentalInvoicesView() {
     new URLSearchParams(searchParams.toString()),
   );
   const { level, canWrite: moduleCanWrite } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: level !== "none" });
   // IZN-F2.x · kira hakedişi oluştur = saha.makine_* Düzenler (VEYA).
   const canWrite = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: moduleCanWrite });
 
@@ -335,7 +336,7 @@ export function EquipmentRentalInvoicesView() {
 
       {/* İzin seviyesi bilinmiyorsa gizleme yapılmaz (permissions bilinmezlik
           kuralı); `level` yalnız yazma düğmesinin kapısıdır. */}
-      {level === "none" && <span hidden data-testid="makine-kira-readonly" />}
+      {!canViewEquipment && <span hidden data-testid="makine-kira-readonly" />}
     </div>
   );
 }

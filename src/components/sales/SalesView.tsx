@@ -12,7 +12,7 @@ import { useSales } from "@/lib/api/hooks/useSales";
 import { useSalesSummary } from "@/lib/api/hooks/useSalesSummary";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROJECT_UNITS_EDIT, SALES_EDIT } from "@/lib/auth/page-gates";
+import { PROJECT_UNITS_EDIT, SALES_EDIT, SALES_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { BLOCK_FORM_HREF, UNIT_FORM_HREF } from "@/components/unit-shell/routes";
 
@@ -62,6 +62,8 @@ export function SalesView() {
   // IZN-F2.x · satış kaydı = mali.satis Düzenler; blok/ünite girişi = mali.satis_* Düzenler (VEYA).
   const canCreateSale = useButtonGate({ pages: SALES_EDIT, need: "edit", fallback: permission.canWrite });
   const canCreateUnits = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: unitPermission.canWrite });
+  // IZN-F5-ön · görüntüleme kapısı = mali.satis Görür; grant yoksa `sales` modül izni.
+  const canViewSales = useButtonGate({ pages: SALES_VIEW_PAGES, need: "view", fallback: permission.canView });
 
   const projectsQuery = useProjects();
   const projects = projectsQuery.data?.items ?? [];
@@ -76,7 +78,7 @@ export function SalesView() {
   const unitsQuery = useProjectUnits(selectedProjectId);
 
   if (
-    !permission.canView ||
+    !canViewSales ||
     isForbidden(projectsQuery.error) ||
     isForbidden(salesQuery.error) ||
     isForbidden(summaryQuery.error)

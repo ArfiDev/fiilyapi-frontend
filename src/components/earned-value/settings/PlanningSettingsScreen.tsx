@@ -11,7 +11,7 @@ import { isLoaded } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EV_BUDGET_EDIT } from "@/lib/auth/page-gates";
+import { EV_BUDGET_EDIT, EV_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { PlanningSettingsForm } from "./PlanningSettingsForm";
@@ -49,6 +49,7 @@ export function PlanningSettingsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const permission = useModulePermission("earned_value");
+  const canViewEv = useButtonGate({ pages: EV_VIEW, need: "view", fallback: permission.level !== "none" });
   // IZN-F2.x · planlama ayarı kaydet = ayarlar.planlama/adam-saat bütçesi Düzenler (VEYA).
   const canEditSettings = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "draft") });
   const siteOptions = useEvSiteOptions();
@@ -85,7 +86,7 @@ export function PlanningSettingsScreen() {
     />
   );
 
-  if (permission.level === "none" || isForbidden(settingsQuery.error)) {
+  if (!canViewEv || isForbidden(settingsQuery.error)) {
     return (
       <div className="ev-settings">
         {header}

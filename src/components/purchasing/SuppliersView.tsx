@@ -8,7 +8,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROCUREMENT_EDIT } from "@/lib/auth/page-gates";
+import { PROCUREMENT_EDIT, PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -35,6 +35,12 @@ export function SuppliersView() {
   const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
   // IZN-F2.x · tedarikçi ekle/düzenle = stok.tedarikciler Düzenler (VEYA siparişler/teklif karşılaştırma).
   const canEditSuppliers = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit", fallback: permission.canWrite });
+  // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewProcurement = useButtonGate({
+    pages: PROCUREMENT_VIEW_PAGES,
+    need: "view",
+    fallback: permission.canView,
+  });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Kırpılma korkuluğu (ARCHITECTURE §5): tavan AÇIKÇA gönderilir.
@@ -43,7 +49,7 @@ export function SuppliersView() {
   // mockup'ta böyle bir süzgeç yoktur — pasif kart tonu düşük rozetle görünür.
   const suppliersQuery = useSuppliers({ limit: PURCHASING_LIST_MAX_LIMIT });
 
-  if (!permission.canView || isForbidden(suppliersQuery.error)) return <AccessDenied />;
+  if (!canViewProcurement || isForbidden(suppliersQuery.error)) return <AccessDenied />;
 
   const suppliers = suppliersQuery.data?.items ?? [];
   const truncation = buildListTruncation(suppliers.length, suppliersQuery.data?.total);

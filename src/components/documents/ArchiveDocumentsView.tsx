@@ -16,7 +16,7 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { BackendError } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { DOCUMENTS_EDIT } from "@/lib/auth/page-gates";
+import { DOCUMENTS_EDIT, DOCUMENTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { DocumentCardGrid } from "./DocumentCardGrid";
@@ -96,6 +96,7 @@ export function ArchiveDocumentsView() {
   const searchParams = useSearchParams();
 
   const permission = useModulePermission("documents");
+  const canViewDocuments = useButtonGate({ pages: DOCUMENTS_VIEW, need: "view", fallback: permission.canView });
   // Yazma yüzeyi `full` ister; `documents:admin` (silme) İMA EDİLMEZ — spec §4.
   // IZN-F2.x · belge yükle/klasör = mali.belge_arsivi/proje.belgeler/santiye.belgeler Düzenler (VEYA).
   const canWrite = useButtonGate({
@@ -128,7 +129,7 @@ export function ArchiveDocumentsView() {
     (documentsQuery.error instanceof BackendError && documentsQuery.error.status === 403) ||
     (foldersQuery.error instanceof BackendError && foldersQuery.error.status === 403);
 
-  if (!permission.canView || isForbidden) return <AccessDenied />;
+  if (!canViewDocuments || isForbidden) return <AccessDenied />;
 
   const projects = projectsQuery.data?.items ?? [];
   const folders = selectedProjectId ? (foldersQuery.data?.folders ?? []) : [];

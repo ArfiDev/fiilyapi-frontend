@@ -9,7 +9,7 @@ import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PERSONNEL_EDIT, TIMESHEET_EDIT } from "@/lib/auth/page-gates";
+import { PERSONNEL_EDIT, TIMESHEET_EDIT, TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
@@ -80,6 +80,8 @@ export function SiteTimesheetView() {
   });
   // IZN-F2.x · puantaj kaydet = saha/santiye.puantaj Düzenler; personel ekle = ik.* Düzenler.
   const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
+  // IZN-F5-ön · görüntüleme kapısı = puantaj sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewTimesheet = useButtonGate({ pages: TIMESHEET_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
 
   const week = parseIsoWeek(searchParams.get("iso_year"), searchParams.get("iso_week"));
   const sectionParam = searchParams.get("section") ?? ALL_SECTIONS;
@@ -95,7 +97,7 @@ export function SiteTimesheetView() {
   const siteId = siteQuery.data?.id ?? "";
   const sectionsQuery = useSiteSections(siteId);
 
-  if (!permission.canView) return <AccessDenied />;
+  if (!canViewTimesheet) return <AccessDenied />;
 
   const site = siteQuery.data;
   const sections = sectionsQuery.data?.items ?? [];

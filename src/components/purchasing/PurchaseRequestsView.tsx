@@ -11,7 +11,7 @@ import { usePurchaseRequests } from "@/lib/api/hooks/usePurchaseRequests";
 import { usePurchasingSummary } from "@/lib/api/hooks/usePurchasingSummary";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PURCHASE_REQUEST_EDIT } from "@/lib/auth/page-gates";
+import { PURCHASE_REQUEST_EDIT, PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -55,6 +55,12 @@ export function PurchaseRequestsView() {
   const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
   // IZN-F2.x · talep oluştur = stok.satinalma_talepleri Düzenler.
   const canCreateRequest = useButtonGate({ pages: PURCHASE_REQUEST_EDIT, need: "edit", fallback: permission.canWrite });
+  // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewProcurement = useButtonGate({
+    pages: PROCUREMENT_VIEW_PAGES,
+    need: "view",
+    fallback: permission.canView,
+  });
 
   const status = parsePurchaseRequestStatus(searchParams.get(STATUS_PARAM));
   const projectId = searchParams.get(PROJECT_PARAM) ?? "";
@@ -72,7 +78,7 @@ export function PurchaseRequestsView() {
   // Satır yalnız `project_id` taşır; "Proje" sütununun adı buradan çözülür.
   const projectsQuery = useProjects();
 
-  if (!permission.canView || isForbidden(requestsQuery.error)) return <AccessDenied />;
+  if (!canViewProcurement || isForbidden(requestsQuery.error)) return <AccessDenied />;
 
   const rows = requestsQuery.data?.items;
   const truncation = buildListTruncation(rows?.length ?? 0, requestsQuery.data?.total);

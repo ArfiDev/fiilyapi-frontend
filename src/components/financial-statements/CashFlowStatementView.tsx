@@ -11,6 +11,8 @@ import type { CashFlowStatementResponse } from "@/lib/api/hooks/useCashFlowState
 import { useCashFlowStatement } from "@/lib/api/hooks/useCashFlowStatement";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
 import {
@@ -56,6 +58,7 @@ import "./financial-statements.css";
  */
 export function CashFlowStatementView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
 
   // 🔴 K10 — VARSAYILAN DÖNEM İSTEMCİNİN KARARIDIR: sunucu "bugün"ü hiç
   // okumaz. Yerel takvimden türer (`toISOString()` UTC'ye çevirir ve TR
@@ -65,7 +68,7 @@ export function CashFlowStatementView() {
 
   const statementQuery = useCashFlowStatement(period.year, period.month);
 
-  if (!permission.canView || isForbidden(statementQuery.error)) {
+  if (!canViewAccounting || isForbidden(statementQuery.error)) {
     return <AccessDenied />;
   }
 

@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select/Select";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PERSONNEL_EDIT, TIMESHEET_EDIT } from "@/lib/auth/page-gates";
+import { PERSONNEL_EDIT, TIMESHEET_EDIT, TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { AddPersonnelLink } from "./AddPersonnelLink";
@@ -49,6 +49,8 @@ export function GeneralTimesheetView() {
   });
   // IZN-F2.x · puantaj kaydet = saha/santiye.puantaj Düzenler; personel ekle = ik.* Düzenler.
   const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite });
+  // IZN-F5-ön · görüntüleme kapısı = puantaj sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewTimesheet = useButtonGate({ pages: TIMESHEET_VIEW_PAGES, need: "view", fallback: permission.canView });
 
   const week = parseIsoWeek(searchParams.get("iso_year"), searchParams.get("iso_week"));
   const siteOptions = useSiteOptions();
@@ -69,7 +71,7 @@ export function GeneralTimesheetView() {
         })
     : null;
 
-  if (!permission.canView) return <AccessDenied />;
+  if (!canViewTimesheet) return <AccessDenied />;
 
   const query = searchParams.toString();
   const returnTo = query.length > 0 ? `${pathname}?${query}` : pathname;

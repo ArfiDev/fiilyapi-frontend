@@ -15,7 +15,7 @@ import {
 import { useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { INVOICE_APPROVE, INVOICING_EDIT } from "@/lib/auth/page-gates";
+import { INVOICE_APPROVE, INVOICING_EDIT, INVOICING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrencyTight, formatDateDots } from "@/lib/format";
 
@@ -85,6 +85,7 @@ function PartyBlock({
  */
 export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
   const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
+  const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view", fallback: permission.canView });
   const canEditInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
   const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve", fallback: permission.canWrite });
   const canDeletePayment = useButtonGate({ pages: INVOICING_EDIT, need: "sa", fallback: permission.canDelete });
@@ -97,7 +98,7 @@ export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
   const invoice = detailQuery.data;
   const rentalQuery = useInvoiceRentalMatch(invoice?.equipment_rental_invoice_id ?? null);
 
-  if (!permission.canView || isForbidden(detailQuery.error)) return <AccessDenied />;
+  if (!canViewInvoicing || isForbidden(detailQuery.error)) return <AccessDenied />;
 
   if (detailQuery.isLoading) return <p className="fat-notice">Yükleniyor…</p>;
   if (detailQuery.isError) {

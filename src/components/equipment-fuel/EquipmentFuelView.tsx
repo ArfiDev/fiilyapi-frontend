@@ -20,6 +20,8 @@ import { useUserOptions, userOptionLabel } from "@/lib/api/hooks/useUserOptions"
 import { resolveLookup } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { EquipmentFuelConsumptionList } from "./EquipmentFuelConsumptionList";
 import { EquipmentFuelKpiStrip } from "./EquipmentFuelKpiStrip";
@@ -60,6 +62,7 @@ export function EquipmentFuelView() {
   const searchParams = useSearchParams();
 
   const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
   const period = parsePeriod(searchParams.get("year"), searchParams.get("month"));
   const equipmentFilter = searchParams.get("equipment") ?? "";
 
@@ -75,7 +78,7 @@ export function EquipmentFuelView() {
   const siteOptions = useSiteOptions();
   const userOptions = useUserOptions();
 
-  if (!permission.canView || isForbidden(fuelSummaryQuery.error)) return <AccessDenied />;
+  if (!canViewEquipment || isForbidden(fuelSummaryQuery.error)) return <AccessDenied />;
 
   const siteLabelById = new Map(siteOptions.options.map((option) => [option.siteId, option.label]));
   const normUnitById = new Map(

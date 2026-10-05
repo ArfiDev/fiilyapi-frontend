@@ -19,7 +19,7 @@ import {
   type InvoiceCreateRequest,
 } from "@/lib/api/hooks/useInvoiceMutations";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { INVOICING_EDIT } from "@/lib/auth/page-gates";
+import { INVOICING_EDIT, INVOICING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatPeriod } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -123,6 +123,7 @@ function vatLabel(rates: readonly string[]): string {
 export function InvoiceCreateView() {
   const router = useRouter();
   const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
+  const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view", fallback: permission.canView });
   // IZN-F2.x · fatura oluştur/düzenle = mali.fatura Düzenler.
   const canEditInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
 
@@ -193,7 +194,7 @@ export function InvoiceCreateView() {
   // matrisi yeterli değildir, sunucunun ANLIK 403'ü de AccessDenied'e döner
   // (O5a-131 — rol/kapsam sunucuda değişmiş olabilir).
   if (
-    !permission.canView ||
+    !canViewInvoicing ||
     isForbidden(employersQuery.error) ||
     isForbidden(progressPaymentsQuery.error)
   ) {

@@ -13,7 +13,7 @@ import { useEquipmentDetailScreen } from "@/lib/api/hooks/useEquipmentDetailScre
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 
@@ -41,6 +41,7 @@ const EQUIPMENT_PERMISSION_MODULE = "equipment";
  */
 export function EquipmentDetailView({ equipmentId }: { equipmentId: string }) {
   const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
   // IZN-F2.x · ekipman belgesi ekle = saha.makine_* Düzenler (VEYA).
   const canWrite = useButtonGate({
     pages: EQUIPMENT_EDIT,
@@ -54,7 +55,7 @@ export function EquipmentDetailView({ equipmentId }: { equipmentId: string }) {
   const siteOptions = useSiteOptions();
   const [isDocumentFormOpen, setDocumentFormOpen] = useState(false);
 
-  if (!permission.canView || isForbidden(detailQuery.error)) return <AccessDenied />;
+  if (!canViewEquipment || isForbidden(detailQuery.error)) return <AccessDenied />;
 
   const detail = detailQuery.data;
   // Yazma yüzeyi `full` ister; izinsiz kullanıcıda tetikleyici BASILMAZ (M1).

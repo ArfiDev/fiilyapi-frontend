@@ -9,6 +9,56 @@ import type { PageKey } from "@/lib/api/models";
  */
 const keys = <const T extends readonly PageKey[]>(list: T): T => list;
 
+// ── Görür (V) kapıları (`AccessDenied` / sorgu açma) ─────────────────────────────────
+// Kaynak: backend `VIEW_GATE_PAGES` (GÖRME eşiği tam `(modül, view)` olan sayfalar).
+export const ACCOUNTING_VIEW = keys([
+  "mali.yevmiye",
+  "mali.hesap_plani",
+  "mali.mizan",
+  "mali.kdv_beyani",
+  "mali.banka_mutabakati",
+  "mali.donem_kapanisi",
+  "mali.gelir_tablosu",
+  "mali.bilanco",
+  "mali.nakit_akisi",
+]);
+export const AI_VIEW = keys(["genel.fiil_ai"]);
+export const CONTRACTS_VIEW = keys([
+  "teklif.teklif_hazirlama",
+  "teklif.sablonlar",
+  "teklif.sozlesmeler",
+  "teklif.taseron_firmalar",
+  "teklif.isveren_sozlesme",
+  "teklif.poz_dagilimi",
+  "teklif.taseron_sozlesme",
+  "teklif.is_kalemi_katalogu",
+  "proje.is_kalemleri",
+]);
+export const DOCUMENTS_VIEW = keys(["mali.belge_arsivi", "proje.belgeler", "santiye.belgeler"]);
+export const EV_VIEW = keys([
+  "planlama.panel",
+  "planlama.adam_saat_butcesi",
+  "planlama.gunluk_rapor",
+  "planlama.haftalik_qurr",
+  "planlama.birim_oran_katalogu",
+  "planlama.disiplin_yonetimi",
+  "santiye.adam_saat_butcesi",
+  "santiye.planlama_paneli",
+  "santiye.gunluk_ilerleme_raporu",
+  "santiye.haftalik_qurr",
+  "ayarlar.planlama",
+]);
+export const EQUIPMENT_VIEW = keys([
+  "saha.makine_ekipman",
+  "saha.makine_calisma",
+  "saha.makine_yakit",
+  "saha.makine_kira",
+]);
+export const INVOICING_VIEW = keys(["mali.fatura"]);
+export const PERSONNEL_VIEW = keys(["ik.personel", "ik.izin_yonetimi", "ik.belge_sertifika"]);
+export const PROJECTS_VIEW = keys(["genel.projeler", "genel.proje_takvimi", "proje.ozet", "proje.paylasim_tablosu"]);
+export const TREASURY_VIEW = keys(["mali.hazine", "mali.cek_odeme"]);
+
 // ── Düzenler (E) kapıları ─────────────────────────────────────────────────────────────
 export const ACCOUNTING_EDIT = keys(["mali.yevmiye", "mali.hesap_plani", "mali.donem_kapanisi"]);
 export const BOQ_EDIT = keys(["santiye.is_kalemleri", "santiye.bolum_dagilimi"]);
@@ -100,3 +150,29 @@ export const EV_DAILY_APPROVE = keys(["planlama.gunluk_rapor", "santiye.gunluk_i
 /** Gün Kilidi Aç = bütçe + günlük rapor Onaylar sayfalarının birleşimi. */
 export const EV_UNLOCK_APPROVE = keys([...EV_FREEZE_APPROVE, ...EV_DAILY_APPROVE]);
 export const OFFER_CONVERT_APPROVE = keys(["teklif.teklif_hazirlama"]);
+
+/* IZN-F5-ön · GÖRÜNTÜLEME kümeleri (Ajan B) — backend `VIEW_GATE_PAGES` ile birebir. */
+export const INVENTORY_VIEW_PAGES = keys(["stok.stok_depo", "santiye.stok", "bolum.malzeme"]);
+export const PAYROLL_VIEW_PAGES = keys([
+  "mali.bordro",
+  "mali.bordro_gecmis",
+  "mali.sgk_bildirimi",
+  "ayarlar.bordro_oranlari",
+]);
+export const PROCUREMENT_VIEW_PAGES = keys([
+  "stok.satinalma_talepleri",
+  "stok.siparisler",
+  "stok.tedarikciler",
+  "stok.teklif_karsilastirma",
+]);
+export const SALES_VIEW_PAGES = keys(["mali.satis"]);
+export const SITE_DIARY_VIEW_PAGES = keys([
+  "saha.gunluk_kayit",
+  "santiye.gunluk_kayit",
+  "santiye.gunluk_ozet",
+  "santiye.gunluk_planlama",
+  "bolum.gunluk_kayit",
+  "bolum.gunluk_kayit_detay",
+]);
+export const SITES_VIEW_PAGES = keys(["santiye.bolumler", "bolum.detay"]);
+export const TIMESHEET_VIEW_PAGES = keys(["saha.puantaj", "santiye.puantaj", "bolum.puantaj"]);

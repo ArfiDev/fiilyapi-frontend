@@ -24,7 +24,7 @@ import {
 import { downloadPayrollExport } from "@/lib/api/payroll-client";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PAYROLL_APPROVE, PAYROLL_EDIT } from "@/lib/auth/page-gates";
+import { PAYROLL_APPROVE, PAYROLL_EDIT, PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatDateLong, formatPeriod } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -109,6 +109,8 @@ export function PayrollMonthlyView() {
   // Öde = mali.bordro Onaylar.
   const canEditPayroll = useButtonGate({ pages: PAYROLL_EDIT, need: "edit", fallback: permission.canWrite });
   const canApprovePayroll = useButtonGate({ pages: PAYROLL_APPROVE, need: "approve", fallback: permission.canWrite });
+  // IZN-F5-ön · görüntüleme kapısı = bordro sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view", fallback: permission.canView });
   const periodsQuery = usePayrollPeriods();
 
   // `null` = kullanıcı henüz seçim yapmadı ⇒ varsayılan (en yeni dönem).
@@ -130,7 +132,7 @@ export function PayrollMonthlyView() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  if (!permission.canView || isForbidden(periodsQuery.error) || isForbidden(detailQuery.error)) {
+  if (!canViewPayroll || isForbidden(periodsQuery.error) || isForbidden(detailQuery.error)) {
     return <AccessDenied />;
   }
 

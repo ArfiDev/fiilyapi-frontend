@@ -14,7 +14,7 @@ import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { CONTRACTS_EDIT, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useFileDownload } from "@/lib/use-file-download";
 
@@ -38,9 +38,12 @@ const EXCEL_SOON_TITLE = "Yakında · Excel desteği sonraki sürümde açılaca
 const NO_ITEMS: readonly WorkItemRead[] = [];
 
 /** ÜS-10 — şerit metni; yazma yetkisi yoksa nedene göre. */
-function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean): string {
-  if (level === "view") return "Görüntüleyici · yalnız okuma";
-  if (!hasAtLeast(level, WRITE_LEVEL)) return "Salt okunur · kataloğu yalnız Sözleşmeler tam yetkisi değiştirir";
+function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean, canEdit: boolean): string {
+  if (!canEdit) {
+    return level === "view"
+      ? "Görüntüleyici · yalnız okuma"
+      : "Salt okunur · kataloğu yalnız Sözleşmeler tam yetkisi değiştirir";
+  }
   if (isRestricted) return "Salt okunur · disiplin kısıtlı kullanıcı kataloğu değiştiremez";
   return "";
 }
@@ -52,7 +55,9 @@ function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean):
  */
 export function WorkItemCatalogScreen() {
   const { level } = useModulePermission("contracts");
-  if (level === "none") return <AccessDenied />;
+  // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
+  const canViewCatalog = useButtonGate({ pages: CONTRACTS_VIEW, need: "view", fallback: level !== "none" });
+  if (!canViewCatalog) return <AccessDenied />;
   return <WorkItemCatalogContent level={level} />;
 }
 
@@ -129,7 +134,7 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
     void disciplineQuery.refetch();
   }
 
-  const readOnlyText = canWrite ? "" : readOnlyMessage(level, scope.isRestricted);
+  const readOnlyText = canWrite ? "" : readOnlyMessage(level, scope.isRestricted, canEditCatalog);
 
   return (
     <div className="wik">

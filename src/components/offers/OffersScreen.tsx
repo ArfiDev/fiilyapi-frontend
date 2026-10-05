@@ -13,7 +13,7 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT, OFFER_CONVERT_APPROVE } from "@/lib/auth/page-gates";
+import { CONTRACTS_EDIT, OFFER_CONVERT_APPROVE, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { routes } from "@/lib/routes";
@@ -32,9 +32,17 @@ const OFFERS_LIST_LIMIT = 200;
 const TOAST_MS = 2800;
 
 /** F1 ÜS-10 şeridi, teklif için uyarlandı (TKL-F3 §2.3). */
-export function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean): string {
-  if (level === "view") return "Görüntüleyici · yalnız okuma";
-  if (!hasAtLeast(level, WRITE_LEVEL)) return "Salt okunur · teklifleri yalnız Sözleşmeler tam yetkisi değiştirir";
+export function readOnlyMessage(
+  level: AccessLevel | undefined,
+  isRestricted: boolean,
+  /** IZN-F5-ön · yazma kararı (sayfa izni ya da eski düşüş); verilmezse bugünkü seviye eşiği. */
+  canEdit: boolean = hasAtLeast(level, WRITE_LEVEL),
+): string {
+  if (!canEdit) {
+    return level === "view"
+      ? "Görüntüleyici · yalnız okuma"
+      : "Salt okunur · teklifleri yalnız Sözleşmeler tam yetkisi değiştirir";
+  }
   if (isRestricted) return "Salt okunur · disiplin kısıtlı kullanıcı teklif değiştiremez";
   return "";
 }
@@ -46,7 +54,13 @@ export function readOnlyMessage(level: AccessLevel | undefined, isRestricted: bo
  */
 export function OffersScreen() {
   const { level } = useModulePermission("contracts");
-  if (level === "none") return <AccessDenied />;
+  // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
+  const canViewOffers = useButtonGate({
+    pages: CONTRACTS_VIEW,
+    need: "view",
+    fallback: level !== "none",
+  });
+  if (!canViewOffers) return <AccessDenied />;
   return <OffersContent level={level} />;
 }
 
@@ -168,7 +182,7 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
         onClear={clearFilters}
         employers={employerOptions}
         canWrite={canWrite}
-        readOnlyText={canWrite ? "" : readOnlyMessage(level, scope.isRestricted)}
+        readOnlyText={canWrite ? "" : readOnlyMessage(level, scope.isRestricted, canEditOffers)}
         now={new Date()}
         busyOfferId={busyOfferId}
         onNewRevision={handleNewRevision}

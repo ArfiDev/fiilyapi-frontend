@@ -13,6 +13,8 @@ import type { PayrollPeriodListRow } from "@/lib/api/hooks/usePayroll";
 import { PAYROLL_PERMISSION_MODULE, usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatDateDots, formatPeriod } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -77,6 +79,8 @@ import "./payroll-history.css";
  */
 export function PayrollHistoryView() {
   const permission = useModulePermission(PAYROLL_PERMISSION_MODULE);
+  // IZN-F5-ön · görüntüleme kapısı = bordro sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view", fallback: permission.canView });
   const periodsQuery = usePayrollPeriods();
   const companyQuery = useCompany();
 
@@ -85,7 +89,7 @@ export function PayrollHistoryView() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  if (!permission.canView || isForbidden(periodsQuery.error)) {
+  if (!canViewPayroll || isForbidden(periodsQuery.error)) {
     return <AccessDenied />;
   }
 

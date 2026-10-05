@@ -8,6 +8,8 @@ import { useEvSettings } from "@/lib/api/hooks/useEvSettings";
 import type { EvSettingsRead } from "@/lib/api/models";
 import { BackendError } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { EV_VIEW } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { DEFAULT_PF_BANDS, type PfBandSettings } from "@/lib/earned-value";
 
 import { buildCodeIndex } from "../diary/code-tree";
@@ -30,7 +32,8 @@ const FORBIDDEN_STATUS = 403;
  */
 export function useDiaryDetailExtension(ctx: DiaryDetailContext | null): DiaryDetailExtension | undefined {
   const evPermission = useModulePermission("earned_value");
-  const siteId = evPermission.canView ? (ctx?.siteId ?? "") : "";
+  const canViewEv = useButtonGate({ pages: EV_VIEW, need: "view", fallback: evPermission.canView });
+  const siteId = canViewEv ? (ctx?.siteId ?? "") : "";
   const day = ctx?.day ?? "";
   const dayQuery = useEvDay(siteId, day);
   const hasBaseline = dayQuery.data?.has_baseline === true;
@@ -42,7 +45,7 @@ export function useDiaryDetailExtension(ctx: DiaryDetailContext | null): DiaryDe
   const budget = useEvBudget(activeRevision === null ? "" : activeSite, activeRevision);
 
   if (ctx === null) return undefined;
-  if (!evPermission.canView) return { linesNotice: <PlanningHiddenNotice /> };
+  if (!canViewEv) return { linesNotice: <PlanningHiddenNotice /> };
   if (dayQuery.isError) {
     const status = dayQuery.error instanceof BackendError ? dayQuery.error.status : null;
     if (status === FORBIDDEN_STATUS) return { linesNotice: <PlanningHiddenNotice /> };

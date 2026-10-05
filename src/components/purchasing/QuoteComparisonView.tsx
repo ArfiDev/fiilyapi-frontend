@@ -14,7 +14,7 @@ import { useQuotes } from "@/lib/api/hooks/useQuotes";
 import { downloadQuoteComparisonExport } from "@/lib/api/purchase-quote-client";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROCUREMENT_EDIT, QUOTE_ORDER_APPROVE } from "@/lib/auth/page-gates";
+import { PROCUREMENT_EDIT, QUOTE_ORDER_APPROVE, PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatDateDots, formatQuantity } from "@/lib/format";
 
@@ -64,6 +64,12 @@ export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
   // IZN-F2.x · teklif ekle = stok.teklif_karsilastirma Düzenler; Seç ve Sipariş Ver = stok.teklif_karsilastirma Onaylar.
   const canAddQuote = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit", fallback: permission.canWrite });
   const canOrder = useButtonGate({ pages: QUOTE_ORDER_APPROVE, need: "approve", fallback: permission.canWrite });
+  // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
+  const canViewProcurement = useButtonGate({
+    pages: PROCUREMENT_VIEW_PAGES,
+    need: "view",
+    fallback: permission.canView,
+  });
 
   const requestQuery = usePurchaseRequest(requestId);
   const quotesQuery = useQuotes(requestId);
@@ -76,7 +82,7 @@ export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
   const [actionError, setActionError] = useState<string | null>(null);
 
   if (
-    !permission.canView ||
+    !canViewProcurement ||
     isForbidden(requestQuery.error) ||
     isForbidden(quotesQuery.error)
   ) {

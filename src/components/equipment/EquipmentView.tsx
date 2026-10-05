@@ -18,7 +18,7 @@ import { isLoaded } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -55,6 +55,7 @@ const EQUIPMENT_PERMISSION_MODULE = "equipment";
  */
 export function EquipmentView() {
   const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
 
   // Kırpılma korkuluğu (TB3/F-TH dersi): sunucu varsayılanı 50'dir, tavan
   // AÇIKÇA gönderilir.
@@ -77,7 +78,7 @@ export function EquipmentView() {
   // (VEYA). Bugün bu ikisi izin bakmadan basılıyor → sayfa izni hiç yoksa (fallback) görünür kalır.
   const canEditEquipment = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: true });
 
-  if (!permission.canView || isForbidden(equipmentQuery.error)) return <AccessDenied />;
+  if (!canViewEquipment || isForbidden(equipmentQuery.error)) return <AccessDenied />;
 
   const items = equipmentQuery.data?.items;
   const truncation = buildListTruncation(items?.length ?? 0, equipmentQuery.data?.total);
