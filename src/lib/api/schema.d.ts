@@ -10907,6 +10907,11 @@ export interface components {
             status: components["schemas"]["ContractStatus"];
             /** Title */
             title: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
         };
         /** ContractListResponse */
         ContractListResponse: {
@@ -11221,7 +11226,7 @@ export interface components {
              */
             id: string;
             /** Name */
-            name: string;
+            name: string | null;
             /** National Id */
             national_id: string | null;
             /** Phone */
@@ -16238,11 +16243,11 @@ export interface components {
         /** OfferSettingsRead */
         OfferSettingsRead: {
             /** Default Overhead Pct */
-            default_overhead_pct: string;
+            default_overhead_pct: string | null;
             /** Default Payment Terms */
             default_payment_terms: string;
             /** Default Profit Pct */
-            default_profit_pct: string;
+            default_profit_pct: string | null;
             /** Default Validity Days */
             default_validity_days: number;
             /** Default Vat Pct */

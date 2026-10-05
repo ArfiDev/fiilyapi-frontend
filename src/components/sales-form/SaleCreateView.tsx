@@ -234,7 +234,8 @@ export function SaleCreateView() {
       customerMode: "existing",
       existingCustomerId: customerId,
       buyerType: customer.customer_type,
-      buyerName: customer.name,
+      // IZN-F4.3: maskeli müşteri adı (`null`) → "—"; seçim id ile çalışır, mevcut müşteride ad gövdeye GİRMEZ.
+      buyerName: customer.name ?? "—",
       buyerNationalOrTaxId: customer.national_id ?? customer.tax_number ?? "",
       buyerPhone: customer.phone ?? "",
       buyerEmail: customer.email ?? "",
@@ -381,6 +382,7 @@ export function SaleCreateView() {
             values={values}
             errors={errors}
             customers={customers}
+            projectId={values.projectId || undefined}
             customersDisabled={customersQuery.isLoading || customersQuery.isError}
             advisors={advisors.options}
             advisorsDisabled={advisors.isLoading || advisors.isError}

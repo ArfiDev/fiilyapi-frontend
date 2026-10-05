@@ -71,6 +71,7 @@ const CONTRACTS: ContractListItem[] = [
     progress_pct: null,
     status: "active",
     is_draft: false,
+    project_id: "p-1",
   },
 ];
 

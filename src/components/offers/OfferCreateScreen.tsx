@@ -30,7 +30,7 @@ import { OfferRateFields } from "./OfferRateFields";
 import { OfferStartChoice } from "./OfferStartChoice";
 import {
   BOTH_RATES_MASKED,
-  NO_MASKED_RATES,
+  maskedRatesOfSettings,
   buildOfferCreateBody,
   initialOfferFormValues,
   missingFieldsText,
@@ -171,7 +171,8 @@ function OfferCreateForm({ settings, canAddEmployer, initialTemplate }: OfferCre
   // IZN-F4.2: `maliyet_kar` gizli rol GG/kâr yazamaz (dolu gönderim 403) → iki oran salt okunur "—", gövdeye girmez;
   // sunucu ayardan / kaynaktan kendisi alır.
   const isMaliyetKarHidden = useCategoryHidden("maliyet_kar");
-  const maskedRates = isMaliyetKarHidden ? BOTH_RATES_MASKED : NO_MASKED_RATES;
+  const settingsMasked = useMemo(() => maskedRatesOfSettings(settings), [settings]);
+  const maskedRates = isMaliyetKarHidden ? BOTH_RATES_MASKED : settingsMasked;
   const errors = useMemo(() => (attempted ? validateOfferForm(values, maskedRates) : {}), [attempted, values, maskedRates]);
   const errorCount = Object.keys(errors).length;
 

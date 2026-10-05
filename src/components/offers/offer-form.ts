@@ -62,6 +62,19 @@ export type MaskedRates = ReadonlySet<MaskedRateField>;
 export const NO_MASKED_RATES: MaskedRates = new Set();
 export const BOTH_RATES_MASKED: MaskedRates = new Set<MaskedRateField>(["overheadPct", "profitPct"]);
 
+/**
+ * IZN-F4.3 · ayar varsayılan oranı `null` (`maliyet_kar` gizli) → başlangıç değeri bilinmez: alan salt okunur "—",
+ * doğrulanmaz, gövdeye girmez (sunucu kendi ayarını uygular).
+ */
+export function maskedRatesOfSettings(
+  settings: Pick<OfferSettingsRead, "default_overhead_pct" | "default_profit_pct">,
+): MaskedRates {
+  const masked = new Set<MaskedRateField>();
+  if (settings.default_overhead_pct === null) masked.add("overheadPct");
+  if (settings.default_profit_pct === null) masked.add("profitPct");
+  return masked;
+}
+
 /** "12.00" → "12", "15.50" → "15,5": ekran metni (Türkçe virgül, sondaki sıfırlar atılır). Maskeli (`null`) → boş metin. */
 export function pctToInputText(value: string | null): string {
   if (value === null) return "";

@@ -41,6 +41,7 @@ const EMPLOYER_ROW: ContractListItem = {
   progress_pct: "75.00",
   status: "active",
   is_draft: false,
+  project_id: "p-1",
 };
 
 const SUBCONTRACTOR_ROW: ContractListItem = {

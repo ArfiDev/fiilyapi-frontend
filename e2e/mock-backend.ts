@@ -2210,6 +2210,8 @@ function buildContractsListResponse(
     progress_pct: string | null;
     status: "active" | "completed" | "on_hold";
     is_draft: boolean;
+    /** IZN-F4.3: sözleşmenin bağlı olduğu proje (işverende id = proje id). */
+    project_id: string;
   };
 
   let rows: Row[];
@@ -2229,6 +2231,7 @@ function buildContractsListResponse(
             progress_pct: "75.00",
             status: EMPLOYER_CONTRACT_P1.status,
             is_draft: false,
+            project_id: EMPLOYER_CONTRACT_P1.project_id,
           },
         ]
       : [];
@@ -2258,6 +2261,7 @@ function buildContractsListResponse(
         progress_pct: contractProgressPct(subcontractorCumulativeGross(state, contract.id), amount),
         status: contract.status,
         is_draft: contract.is_draft,
+        project_id: contract.project_id,
       };
     });
   }

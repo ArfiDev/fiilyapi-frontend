@@ -35,14 +35,15 @@ export function parseTemplateRates(overheadText: string, profitText: string): Ra
   };
 }
 
+/** IZN-F4.3: ayar oranları `maliyet_kar` gizli rolde `null` döner → "—" (uydurma/sıfır YOK). */
 export interface RateDefaults {
-  default_overhead_pct: string;
-  default_profit_pct: string;
+  default_overhead_pct: string | null;
+  default_profit_pct: string | null;
 }
 
-function rateText(own: string | null, fallback: string | undefined): string {
+function rateText(own: string | null, fallback: string | null | undefined): string {
   if (own !== null) return `%${pctToInputText(own)}`;
-  return fallback === undefined ? EMPTY_CELL : `%${pctToInputText(fallback)} (ayar)`;
+  return fallback === undefined || fallback === null ? EMPTY_CELL : `%${pctToInputText(fallback)} (ayar)`;
 }
 
 /** TS:326 "GG %12 · K %15"; boş oran → teklif ayarı değeri + "(ayar)" (ÜS-F4-6), ayar yoksa "—". */
