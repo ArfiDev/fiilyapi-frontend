@@ -390,20 +390,22 @@ test.describe("hesap planı yazma sözleşmesi (durum DEĞİŞTİRMEYEN gövdele
     expect((await page.request.get("/api/backend/chart-of-accounts/coa-yok")).status()).toBe(404);
   });
 
-  test("posted fiş PATCH/DELETE ile de değiştirilemez (409) — kapı SUNUCUDADIR", async ({
+  test("posted fiş PATCH ile değiştirilemez (409); önizlemesiz DELETE 428 — kapı SUNUCUDADIR", async ({
     page,
   }) => {
     await loginAt(page, ACCOUNTING_WRITE_TIME);
 
     // `je-2607-post-1` TEMMUZ okuma fikstürüdür; iki istek de REDDEDİLİR,
-    // dolayısıyla T6'nın kadrajı bu testten etkilenmez.
+    // dolayısıyla T6'nın kadrajı bu testten etkilenmez. SIL-B2: silme artık yalnız
+    // önizleme (`/admin/silme/.../onizleme` → `preview_token`) ile; SisYön posted fişi de
+    // silebilir (kapalı dönem durdurmaz), ama token'sız doğrudan DELETE 428 `preview_required`.
     const patch = await page.request.patch("/api/backend/journal-entries/je-2607-post-1", {
       data: { description: "olmaz" },
     });
     expect(patch.status()).toBe(409);
 
     const remove = await page.request.delete("/api/backend/journal-entries/je-2607-post-1");
-    expect(remove.status()).toBe(409);
+    expect(remove.status()).toBe(428);
 
     // Dengesiz satır kümesi de 422'dir (sunucu son sözü söyler).
     const lines = await page.request.put("/api/backend/journal-entries/je-2607-draft-1/lines", {

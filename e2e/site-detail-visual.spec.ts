@@ -128,7 +128,8 @@ test("silme onay penceresi mali gorsel", async ({ page }) => {
   const dialog = page.getByRole("dialog", { name: "Şantiye silinsin mi?" });
   await dialog.getByText("Silinecek muhasebe fişleri (3)").click();
   await expect(dialog.getByText("FIS-2026-0388")).toBeVisible();
-  await expect(dialog.getByText("kapalı dönem")).toBeVisible();
+  // "kapalı dönem" hem uyarı satırında hem rozette geçer → yalnız rozet (tam metin).
+  await expect(dialog.getByText("kapalı dönem", { exact: true })).toBeVisible();
   await expect(dialog.getByText("Kapanmış bordro dönemine ait 6 puantaj satırı", { exact: false })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Sil" })).toBeEnabled();
 
