@@ -50011,6 +50011,92 @@
         ]
       }
     },
+    "/approvals/roles": {
+      "get": {
+        "deprecated": true,
+        "description": "KALDIRILDI (IZN-B3b): her çağrı 410 döner. Onay rolü = proje rolü (K1).",
+        "operationId": "list_approval_role_assignments_endpoint_approvals_roles_get",
+        "responses": {
+          "403": {
+            "description": "Yetkisiz işlem"
+          },
+          "404": {
+            "description": "Kayıt bulunamadı"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Uç kaldırıldı: onay rolü artık proje rolü (`PUT /users/{id}/access`)"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Approval Role Assignments Endpoint",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/approvals/roles/{user_id}": {
+      "put": {
+        "deprecated": true,
+        "description": "KALDIRILDI (IZN-B3b): her çağrı 410 döner, hiçbir şey yazılmaz.",
+        "operationId": "set_approval_roles_endpoint_approvals_roles__user_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Yetkisiz işlem"
+          },
+          "404": {
+            "description": "Kayıt bulunamadı"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Uç kaldırıldı: onay rolü artık proje rolü (`PUT /users/{id}/access`)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Approval Roles Endpoint",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
     "/approvals/settings": {
       "get": {
         "description": "Esik OKUMASI kapisizdir (`GET /company` emsali): ekran, zincirin neden\nPatron adimi tasidigini aciklamak icin esigi bilmek zorundadir.",
