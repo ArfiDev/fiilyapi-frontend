@@ -45,8 +45,8 @@ import {
 
 // Backend `test_izn_b2_sayfa_bayragi_bekcisi.py` sabitleriyle eşleşme bekçisi (düğme → eşik tablosu).
 describe("page-gates · backend kümeleriyle eşleşme", () => {
-  it("Günlük 'Yeniden Aç' YALNIZ kök saha.gunluk_kayit (73/88 ikizleri B3'e kadar işlevsiz)", () => {
-    expect([...DIARY_REOPEN_APPROVE]).toEqual(["saha.gunluk_kayit"]);
+  it("Günlük 'Yeniden Aç' = kök + proje içi ikizler Onaylar (backend site_diary/router_transitions.py `_ADMIN`)", () => {
+    expect([...DIARY_REOPEN_APPROVE]).toEqual(["saha.gunluk_kayit", "santiye.gunluk_kayit", "bolum.gunluk_kayit_detay"]);
   });
 
   it("Gün Kilidi Aç = bütçe + günlük rapor Onaylar sayfalarının birleşimi (4 sayfa)", () => {

@@ -157,8 +157,11 @@ export const PURCHASE_REQUEST_APPROVE = keys(["stok.satinalma_talepleri"]);
 export const EMPLOYER_PAYMENT_APPROVE = keys(["mali.hakedis_isveren", "proje.isveren_hakedis", "santiye.hakedisler"]);
 /** IZN-F5b · madde 6 — taşeron onayı yalnız HT (`santiye.hakedisler` işveren ailesine bağlandı). */
 export const SUBCONTRACTOR_PAYMENT_APPROVE = SUBCONTRACTOR_PAYMENT_EDIT;
-/** Günlük "Yeniden Aç" YALNIZ kök sayfada (73/88 ikizleri B3'e kadar işlevsiz). */
-export const DIARY_REOPEN_APPROVE = keys(["saha.gunluk_kayit"]);
+/**
+ * Günlük "Yeniden Aç" = kök sayfa (12) + proje içi ikizleri (73 şantiye, 88 bölüm detay) Onaylar — backend
+ * `site_diary/router_transitions.py` `_ADMIN` (IZN-B3: rol proje başına; ekip rolünde ikizin Onaylar'ı yeter).
+ */
+export const DIARY_REOPEN_APPROVE = keys(["saha.gunluk_kayit", "santiye.gunluk_kayit", "bolum.gunluk_kayit_detay"]);
 export const PERIOD_REOPEN_APPROVE = keys(["mali.donem_kapanisi"]);
 /** Baseline Dondur (bütçe). */
 export const EV_FREEZE_APPROVE = keys(["planlama.adam_saat_butcesi", "santiye.adam_saat_butcesi"]);
