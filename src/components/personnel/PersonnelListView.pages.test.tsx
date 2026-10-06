@@ -59,13 +59,13 @@ describe("PersonnelListView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (personnel none → AccessDenied, view → açık)", () => {
+  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { personnel: "none" } }));
     const { unmount } = render(<PersonnelListView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
     session(meFixture({ pages: {}, permissions: { personnel: "view" } }));
     render(<PersonnelListView />);
-    expect(screen.getByRole("heading", TITLE)).toBeInTheDocument();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

@@ -15,7 +15,9 @@ import {
 import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { downloadTimesheetExport } from "@/lib/api/timesheet-client";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
+import { TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 /**
  * PUAN-SAAT · ŞP ekranı — 🔴 ONAYLI SAPMA ile HAFTALIK saat çekirdeğine geçti
@@ -57,17 +59,9 @@ vi.mock("@/lib/api/hooks/useSites", () => ({
 /** Kadraj haftası: 2026-W32 = 3–9 Ağustos 2026 (Pazartesi başlangıçlı). */
 const WEEK_QUERY = { iso_year: "2026", iso_week: "32" };
 
-const BASE_ME = {
-  id: "11111111-1111-1111-1111-111111111111",
-  email: "sef@ornek.com",
-  full_name: "Sercan Öztürk",
-  role_key: "site_chief",
-  status: "active",
-} as unknown as MeResponse;
-
 function mockSession(level: string) {
   vi.mocked(useSession).mockReturnValue({
-    me: { ...BASE_ME, permissions: { timesheet: level } } as MeResponse,
+    me: meFixture({ pages: levelPages(TIMESHEET_VIEW_PAGES, level) }),
     isLoading: false,
   });
 }

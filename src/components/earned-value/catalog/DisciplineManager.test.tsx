@@ -6,6 +6,7 @@ import { backendClient } from "@/lib/api/client";
 import type { AccessLevel } from "@/lib/auth/permissions";
 
 import { BETON, DEMIR, DUV, ELK_SITE_ONLY, INC, KAB, SIVA, fail, mockGets, ok, renderScreen } from "./catalog-test-utils";
+import { evMe } from "../ev-session.testkit";
 
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
@@ -19,6 +20,11 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
     canWrite: true,
     canDelete: true,
   }),
+}));
+// IZN-F6a.3 · kapılar oturum sayfa izinlerinden okunur; eski seviye niyeti `permissionLevel`den türetilir
+// (draft = salt okunur: katalog/disiplin yazma eşiği full).
+vi.mock("@/components/shell/SessionProvider", () => ({
+  useSession: () => ({ me: evMe(permissionLevel === "draft" ? "view" : permissionLevel), isLoading: false }),
 }));
 
 beforeEach(() => {

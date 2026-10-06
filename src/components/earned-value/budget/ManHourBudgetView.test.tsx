@@ -395,8 +395,8 @@ describe("Adım 4 · Baseline (B1-7 · M5 · M6)", () => {
     expect(screen.queryByRole("button", { name: "Taslağı sil" })).not.toBeInTheDocument();
   });
 
-  it("taslak sil: onay modalı → DELETE, adım 1'e döner", async () => {
-    const { user } = setup({}, "approve", "adim=4");
+  it("taslak sil: onay modalı → DELETE, adım 1'e döner (silme yalnız sistem yöneticisi)", async () => {
+    const { user } = setup({}, "admin", "adim=4");
     await user.click(await screen.findByRole("button", { name: "Taslağı sil" }));
     const modal = await screen.findByRole("dialog", { name: "Rev 2 taslağı silinsin mi?" });
     expect(within(modal).getByText(/Aktif baseline Rev 1 değişmez/)).toBeInTheDocument();

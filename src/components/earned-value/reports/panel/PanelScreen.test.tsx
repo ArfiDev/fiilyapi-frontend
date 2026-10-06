@@ -18,6 +18,13 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
   useModulePermission: vi.fn(),
 }));
 
+// IZN-F6a.3 · "Dağıt →" yazma kapısı oturum sayfa izninden okunur; eski seviye niyeti `sessionLevel` ile
+// (useModulePermission taklidiyle TUTARLI) kurulur.
+let sessionLevel = "full";
+vi.mock("@/components/shell/SessionProvider", () => ({
+  useSession: () => ({ me: evMe(sessionLevel), isLoading: false }),
+}));
+
 let searchParams = new URLSearchParams();
 const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -65,10 +72,12 @@ function permissionStub(level: AccessLevel, canWrite = true) {
 
 import { usePanel as usePanelMocked } from "@/lib/api/hooks/useEvReports";
 import { useModulePermission as usePermissionMocked } from "@/lib/auth/useModulePermission";
+import { evMe } from "../../ev-session.testkit";
 
 beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
+  sessionLevel = "full";
   vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("full") as never);
 });
 
@@ -271,6 +280,7 @@ describe("PanelScreen · salt okunur (tamamlanmış şantiye)", () => {
   });
 
   it("yazma izni YOK → 'Dağıt →' basılmaz (siteCompleted olmasa bile)", () => {
+    sessionLevel = "view";
     vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("view", false) as never);
     vi.mocked(usePanelMocked).mockReturnValue(queryStub({ data: panelReportFixture() }));
     render(<PanelScreen {...baseProps({ siteCompleted: false })} />);

@@ -75,13 +75,13 @@ describe("GeneralTimesheetView · sayfa izni görüntüleme kapısı (IZN-F5-ön
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (timesheet none → AccessDenied, view → açık)", () => {
+  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { timesheet: "none" } }));
     const { unmount } = renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
     session(meFixture({ pages: {}, permissions: { timesheet: "view" } }));
     renderView();
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

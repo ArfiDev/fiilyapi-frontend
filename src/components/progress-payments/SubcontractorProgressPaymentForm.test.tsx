@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { SubcontractorProgressPaymentForm } from "./SubcontractorProgressPaymentForm";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
 import {
   useSubcontractorContract,
   useSubcontractorProgressPayment,
@@ -21,6 +20,9 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { useSubcontractorDiarySuggestion } from "@/lib/api/hooks/useDiarySuggestion";
 import { BackendError } from "@/lib/api/unwrap";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { SUBCONTRACTOR_PAYMENT_EDIT } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
@@ -156,18 +158,14 @@ function detailFixture(overrides: Record<string, unknown> = {}) {
   };
 }
 
-const BASE_ME = {
-  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  email: "ayse@ornek.com",
-  full_name: "Ayşe Yılmaz",
-  title: null,
-  role_key: "procurement",
-  status: "active",
-} as unknown as MeResponse;
-
 function mockSession(permissions?: Record<string, string>) {
-  const me = permissions === undefined ? BASE_ME : { ...BASE_ME, permissions };
-  vi.mocked(useSession).mockReturnValue({ me: me as MeResponse, isLoading: false });
+  // IZN-F6a.3 · eski modül seviyesi niyeti sayfa izni olarak kurulur (`undefined` = tam yetkili oturum, SA).
+  const level = permissions?.progress_payments;
+  const me =
+    permissions === undefined
+      ? meFixture({ isSystemAdmin: true })
+      : meFixture({ pages: levelPages(SUBCONTRACTOR_PAYMENT_EDIT, level), isSystemAdmin: level === "admin" });
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
 }
 
 function queryResult<T>(value: Partial<{ data: T; isLoading: boolean; isError: boolean; error: unknown }>) {

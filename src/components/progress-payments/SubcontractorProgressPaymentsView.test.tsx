@@ -10,7 +10,9 @@ import {
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
+import { SUBCONTRACTOR_PAYMENT_EDIT } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock(
   "@/lib/api/hooks/useSubcontractorProgressPayments",
@@ -31,18 +33,14 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const BASE_ME = {
-  id: "11111111-1111-1111-1111-111111111111",
-  email: "ayse@ornek.com",
-  full_name: "Ayşe Yılmaz",
-  title: null,
-  role_key: "procurement",
-  status: "active",
-} as unknown as MeResponse;
-
 function mockSession(permissions?: Record<string, string>) {
-  const me = permissions === undefined ? BASE_ME : { ...BASE_ME, permissions };
-  vi.mocked(useSession).mockReturnValue({ me: me as MeResponse, isLoading: false });
+  // IZN-F6a.3 · eski modül seviyesi niyeti sayfa izni olarak kurulur (`undefined` = tam yetkili oturum, SA).
+  const level = permissions?.progress_payments;
+  const me =
+    permissions === undefined
+      ? meFixture({ isSystemAdmin: true })
+      : meFixture({ pages: levelPages(SUBCONTRACTOR_PAYMENT_EDIT, level), isSystemAdmin: level === "admin" });
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
 }
 
 function mockListQuery(value: Partial<ReturnType<typeof useSubcontractorProgressPayments>>) {

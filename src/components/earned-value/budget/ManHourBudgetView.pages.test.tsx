@@ -8,7 +8,7 @@ import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
 import { ManHourBudgetView } from "./ManHourBudgetView";
 import { ACTIVE_REV_1, budgetView } from "./budget-fixtures";
-import { defaultState, mockPermission, renderWithQuery, wireBackend } from "./budget-screen-harness";
+import { defaultState, renderWithQuery, wireBackend } from "./budget-screen-harness";
 
 // IZN-F2.x · Adam-Saat Bütçesi düğme kapıları sayfa izninden gelir:
 // Baseline Dondur = bütçe sayfası ONAYLAR · Taslağı sil = YALNIZ sistem yöneticisi · yazma = bütçe Düzenler.
@@ -27,10 +27,9 @@ vi.mock("next/navigation", () => ({
 
 const SITE_ID = "99999999-0000-0000-0000-000000000001";
 
-function setupWith(me: ReturnType<typeof meFixture> | null) {
+function setupWith(me: ReturnType<typeof meFixture>) {
   wireBackend({ ...defaultState(), view: budgetView({ freeze_blockers: [] }) });
-  if (me === null) mockPermission("approve");
-  else vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
   vi.mocked(useSite).mockReturnValue({ data: { id: SITE_ID, project: { id: "p-1" }, status: "active" } } as never);
   return renderWithQuery(<ManHourBudgetView />);
 }
@@ -65,10 +64,11 @@ describe("Adım 4 · sayfa izni kapıları (IZN-F2.x)", () => {
     expect(screen.getByRole("button", { name: DELETE_DRAFT })).toBeInTheDocument();
   });
 
-  it("pages boş (eski oturum, earned_value approve) → eski davranış: Dondur ve Taslağı sil görünür", async () => {
-    setupWith(null);
-    expect(await screen.findByRole("button", { name: FREEZE })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: DELETE_DRAFT })).toBeInTheDocument();
+  it("pages boş (eski oturum, earned_value approve) → fail-closed: Dondur ve Taslağı sil YOK (IZN-F6a)", async () => {
+    setupWith(meFixture({ pages: {}, permissions: { earned_value: "approve" } }));
+    await screen.findByText("Adım 4 · Baseline'ı dondur");
+    expect(screen.queryByRole("button", { name: FREEZE })).toBeNull();
+    expect(screen.queryByRole("button", { name: DELETE_DRAFT })).toBeNull();
   });
 
   it("DELETE yalnız SA'da çağrılabilir: grant'lı Onaylar kullanıcıda silme düğmesi yok → çağrı yok", async () => {

@@ -11,6 +11,9 @@ import {
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSession } from "@/components/shell/SessionProvider";
 import type { MeResponse } from "@/lib/auth/types";
+import { SUBCONTRACTOR_PAYMENT_EDIT } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useSubcontractorProgressPayments", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useSubcontractorProgressPayments")>()),
@@ -38,8 +41,13 @@ const BASE_ME = {
 } as unknown as MeResponse;
 
 function mockSession(permissions?: Record<string, string>) {
-  const me = permissions === undefined ? BASE_ME : { ...BASE_ME, permissions };
-  vi.mocked(useSession).mockReturnValue({ me: me as MeResponse, isLoading: false });
+  // IZN-F6a.3 · eski modül seviyesi niyeti sayfa izni olarak kurulur (`undefined` = tam yetkili oturum, SA).
+  const level = permissions?.progress_payments;
+  const me =
+    permissions === undefined
+      ? meFixture({ isSystemAdmin: true })
+      : meFixture({ pages: levelPages(SUBCONTRACTOR_PAYMENT_EDIT, level), isSystemAdmin: level === "admin" });
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
 }
 
 const PAYMENT_ID = "22222222-2222-2222-2222-222222222222";
@@ -335,7 +343,9 @@ describe("SubcontractorProgressPaymentDetailView — Bakanlık poz no'su", () =>
 // SIL-F2.2 · "Sil" düğmesi YALNIZ Sistem Yöneticisi (fail-closed).
 describe("SubcontractorProgressPaymentDetailView — Sil düğmesi (SIL-F2.2)", () => {
   function mockAdmin(flag: boolean | undefined) {
-    const me = { ...BASE_ME, ...(flag === undefined ? {} : { is_system_admin: flag }) } as MeResponse;
+    // Tam sayfa erişimli (Düzenler + Onaylar) ama SA olmayan oturum: Sil'i yalnız `is_system_admin` açar.
+    const { is_system_admin: _omitted, ...fullAccess } = meFixture();
+    const me = { ...fullAccess, ...(flag === undefined ? {} : { is_system_admin: flag }) } as MeResponse;
     vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
     mockDetailQuery({ data: baseDetail });
   }

@@ -6,7 +6,9 @@ import { useProgressPayments, useProgressPaymentSummary } from "@/lib/api/hooks/
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
+import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // F-SZLEKR T2 — ÇAĞIRAN-DÜZEYİ BEKÇİ (bkz. ProgressPaymentsView.test.tsx'te
 // aynı desen): şantiye "Hakedişler" sekmesinin düğme etiketi ile boş-durum
@@ -37,18 +39,14 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/projeler/p-1/santiyeler/s-1/hakedisler",
 }));
 
-const BASE_ME = {
-  id: "11111111-1111-1111-1111-111111111111",
-  email: "ayse@ornek.com",
-  full_name: "Ayşe Yılmaz",
-  title: null,
-  role_key: "procurement",
-  status: "active",
-} as unknown as MeResponse;
-
 function mockSession(permissions?: Record<string, string>) {
-  const me = permissions === undefined ? BASE_ME : { ...BASE_ME, permissions };
-  vi.mocked(useSession).mockReturnValue({ me: me as MeResponse, isLoading: false });
+  // IZN-F6a.3 · eski modül seviyesi niyeti sayfa izni olarak kurulur (`undefined` = tam yetkili oturum, SA).
+  const level = permissions?.progress_payments;
+  const me =
+    permissions === undefined
+      ? meFixture({ isSystemAdmin: true })
+      : meFixture({ pages: levelPages(EMPLOYER_PAYMENT_EDIT, level), isSystemAdmin: level === "admin" });
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
 }
 
 function mockPaymentsQuery(value: Partial<ReturnType<typeof useProgressPayments>>) {

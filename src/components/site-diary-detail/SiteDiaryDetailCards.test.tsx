@@ -7,6 +7,7 @@ import { useSiteDiaryEntry, type SiteDiaryEntryDetail, type SiteDiaryLineRead } 
 import { useSection } from "@/lib/api/hooks/useSection";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSession } from "@/components/shell/SessionProvider";
+import { diaryMe } from "../site-diary/diary-session.testkit";
 
 // DET-1.3 · Günlük kayıt detayının KARTLARI + KPI + uzantı yuvası.
 // Mockup: `projedesign/Şantiye - Günlük Kayıt Detay (Salt Okunur).dc.html`.
@@ -102,7 +103,7 @@ function entry(overrides: Partial<SiteDiaryEntryDetail> = {}): SiteDiaryEntryDet
 
 function mockSession(permissions: Record<string, string>) {
   vi.mocked(useSession).mockReturnValue({
-    me: { id: "u1", email: "a@b.c", full_name: "A", role_key: "admin", status: "active", permissions } as never,
+    me: diaryMe(permissions) as never,
     isLoading: false,
   });
 }

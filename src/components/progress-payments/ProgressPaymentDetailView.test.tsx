@@ -11,6 +11,9 @@ import {
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProgressPayments", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useProgressPayments")>()),
@@ -19,9 +22,7 @@ vi.mock("@/lib/api/hooks/useProgressPayments", async (importOriginal) => ({
 }));
 
 // FİNAL İNCELEME düzeltmesi #1 · "Düzenle" linkinin izin kapısı testleri
-// icin gercek oturum verisi lazim — mock'lanmazsa Context default'u
-// (`{ me: null }`) kullanilir, bu da bilinmezlik kurali geregi HER ZAMAN
-// gorunur demektir (asagidaki mevcut testlerin varsaydigi davranis).
+// icin gercek oturum verisi lazim (IZN-F6a.3: me yok = kapilar KAPALI; testler `mockSession` ile oturum kurar).
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 // SIL-F2.2 · yalnız Sistem Yöneticisi için çizilen "Sil" düğmesi `useRouter` kullanır.
 vi.mock("next/navigation", async (importOriginal) => ({
@@ -39,8 +40,13 @@ const BASE_ME = {
 } as unknown as MeResponse;
 
 function mockSession(permissions?: Record<string, string>) {
-  const me = permissions === undefined ? BASE_ME : { ...BASE_ME, permissions };
-  vi.mocked(useSession).mockReturnValue({ me: me as MeResponse, isLoading: false });
+  // IZN-F6a.3 · eski modül seviyesi niyeti sayfa izni olarak kurulur (`undefined` = tam yetkili oturum, SA).
+  const level = permissions?.progress_payments;
+  const me =
+    permissions === undefined
+      ? meFixture({ isSystemAdmin: true })
+      : meFixture({ pages: levelPages(EMPLOYER_PAYMENT_EDIT, level), isSystemAdmin: level === "admin" });
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
 }
 
 // P7 T4: başlık aksiyon alanı artık gerçek (taklit edilmemiş) mutasyon
@@ -338,12 +344,9 @@ describe("ProgressPaymentDetailView", () => {
     expect(screen.queryByRole("button", { name: /PDF/i })).not.toBeInTheDocument();
   });
 
-  it("pending_approval durumunda durum aksiyon butonlari basilir (P7 T4, izin bilinmiyorken bilinmezlik kurali gorunur kilar)", () => {
-    // Bu test dosyasi SessionProvider'i taklit etmiyor — SessionContext
-    // varsayilani `{ me: null }`dir, yani izin seviyesi `undefined` okunur.
-    // Bilinmezlik kurali (permissions.ts) o dalda `true` dondugunden Onayla/
-    // Reddet gorunur olmalidir; izin kapisinin kendi testleri
-    // ProgressPaymentStatusActions.test.tsx'te.
+  it("pending_approval durumunda durum aksiyon butonlari basilir (P7 T4, tam yetkili oturumda gorunur)", () => {
+    // beforeEach `mockSession(undefined)` = tam yetkili (SA) oturum kurar (IZN-F6a.3); izin kapisinin
+    // kendi testleri ProgressPaymentStatusActions.test.tsx'te.
     mockDetailQuery({ data: baseDetail });
     mockSummaryQuery({ data: baseSummary, isSuccess: true });
     renderDetail();
@@ -396,7 +399,7 @@ describe("ProgressPaymentDetailView", () => {
       expect(screen.queryByRole("link", { name: "Düzenle" })).not.toBeInTheDocument();
     });
 
-    it("izin seviyesi bilinmiyorken (level undefined) bilinmezlik kurali geregi görünür", () => {
+    it("tam yetkili oturumda (level undefined) görünür", () => {
       mockSession(undefined);
       mockDetailQuery({ data: { ...baseDetail, status: "draft" } });
       mockSummaryQuery({ data: baseSummary, isSuccess: true });
@@ -420,7 +423,9 @@ describe("ProgressPaymentDetailView", () => {
 // SIL-F2.2 · "Sil" düğmesi YALNIZ Sistem Yöneticisi (fail-closed).
 describe("ProgressPaymentDetailView — Sil düğmesi (SIL-F2.2)", () => {
   function mockAdmin(flag: boolean | undefined) {
-    const me = { ...BASE_ME, ...(flag === undefined ? {} : { is_system_admin: flag }) } as MeResponse;
+    // Tam sayfa erişimli (Düzenler + Onaylar) ama SA olmayan oturum: Sil'i yalnız `is_system_admin` açar.
+    const { is_system_admin: _omitted, ...fullAccess } = meFixture();
+    const me = { ...fullAccess, ...(flag === undefined ? {} : { is_system_admin: flag }) } as MeResponse;
     vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
     mockDetailQuery({ data: baseDetail });
     mockSummaryQuery({ data: baseSummary, isSuccess: true });

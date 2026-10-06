@@ -22,6 +22,13 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
   useModulePermission: vi.fn(),
 }));
 
+// IZN-F6a.3 · Onayla kapısı oturum sayfa izninden okunur; eski seviye niyeti `sessionLevel` ile (useModulePermission
+// taklidiyle TUTARLI) kurulur.
+let sessionLevel = "approve";
+vi.mock("@/components/shell/SessionProvider", () => ({
+  useSession: () => ({ me: evMe(sessionLevel), isLoading: false }),
+}));
+
 let searchParams = new URLSearchParams();
 const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -76,6 +83,7 @@ function approveStub(over: Partial<ReturnType<typeof useApproveDailyReport>> = {
 
 import { useApproveDailyReport as useApproveMocked, useDailyReport as useDailyReportMocked } from "@/lib/api/hooks/useEvReports";
 import { useModulePermission as usePermissionMocked } from "@/lib/auth/useModulePermission";
+import { evMe } from "../../ev-session.testkit";
 
 /** S10 dışı testler için: taslak günlük YOK — Onayla düğmesi etkin. */
 const DRAFT_NO_MISSING_DIARY = { ...DAILY_REPORT_FIXTURE_DRAFT, draft_diary_dates: [] };
@@ -83,6 +91,7 @@ const DRAFT_NO_MISSING_DIARY = { ...DAILY_REPORT_FIXTURE_DRAFT, draft_diary_date
 beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams("tarih=2026-09-24");
+  sessionLevel = "approve";
   vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("approve"));
   vi.mocked(useApproveMocked).mockReturnValue(approveStub());
 });
@@ -216,6 +225,7 @@ describe("DailyReportScreen — GİR (S10, S11, S12, S30)", () => {
   });
 
   it("APPROVE izni YOKKEN Onayla düğmesi hiç basılmaz", () => {
+    sessionLevel = "view";
     vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("view"));
     vi.mocked(useDailyReportMocked).mockReturnValue(queryStub({ data: DRAFT_NO_MISSING_DIARY }));
     render(<DailyReportScreen {...baseProps()} />);

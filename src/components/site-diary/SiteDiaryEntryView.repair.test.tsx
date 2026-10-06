@@ -32,7 +32,7 @@ import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontract
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
+import { diaryMe } from "./diary-session.testkit";
 
 // GKS-F1.4.1 · opus çürütmesinin bulduğu kusurların onarım testleri (ekran
 // düzeyi). Hook'lar mock'lu; mock durumu `bump()` ile ekrana yeniden okutulur
@@ -214,15 +214,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   existingEntryId = null;
   vi.mocked(useSession).mockReturnValue({
-    me: {
-      id: "u-1",
-      email: "m@o.com",
-      full_name: "M",
-      title: null,
-      role_key: "site_chief",
-      status: "active",
-      permissions: { site_diary: "full", progress_payments: "view" },
-    } as unknown as MeResponse,
+    me: diaryMe({ site_diary: "full", progress_payments: "view" }),
     isLoading: false,
   });
   mockEntries();

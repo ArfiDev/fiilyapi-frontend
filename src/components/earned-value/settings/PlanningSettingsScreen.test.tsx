@@ -6,11 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSession } from "@/components/shell/SessionProvider";
 import type { EvSettingsRead, EvSettingsSave } from "@/lib/api/models";
 import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
-import type { MeResponse } from "@/lib/auth/types";
 import { useEvSiteOptions, type EvSiteOption } from "@/lib/api/hooks/useEvSettings";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 import { PlanningSettingsScreen } from "./PlanningSettingsScreen";
+import { evMe } from "../ev-session.testkit";
 
 const replace = vi.fn();
 let searchParams = new URLSearchParams("site=s-a");
@@ -128,7 +128,7 @@ function stubBackend({ settings, save }: Backend = {}) {
 
 function setPermission(level: string | undefined) {
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { earned_value: level } } as unknown as MeResponse,
+    me: level === undefined ? meFixture({ pages: {} }) : evMe(level),
     isLoading: false,
   } as never);
 }

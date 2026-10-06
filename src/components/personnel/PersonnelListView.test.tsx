@@ -9,10 +9,11 @@ import {
   type HrDocumentsSummaryResponse,
 } from "@/lib/api/hooks/useHrDocuments";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
 import type { PersonnelListItem, PersonnelListResponse } from "@/lib/api/hooks/usePersonnel";
 import { EMPTY_PERSONNEL_HR_FIELDS } from "@/lib/api/hooks/personnel-fixtures";
 import { errorResponse, stubExportDownload } from "@/lib/api/export-test-stub";
+import { PERSONNEL_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/usePersonnel", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/usePersonnel")>()),
@@ -83,7 +84,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { personnel: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(usePersonnel).mockReturnValue(queryStub(response()));
@@ -192,7 +193,7 @@ describe("PersonnelListView — başlık, sekmeler, KPI", () => {
 
   it("izinsiz kullanıcı erişim reddi görür", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { personnel: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(PERSONNEL_VIEW, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<PersonnelListView />);

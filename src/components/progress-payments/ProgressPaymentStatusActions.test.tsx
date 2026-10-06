@@ -5,28 +5,26 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ProgressPaymentStatusActions } from "./ProgressPaymentStatusActions";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
 import { PROGRESS_PAYMENT_QUERY_KEY, type ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // Kaynak oturum yüküdür (spec §2.5.2) — hook kendi isteğini ATMAZ, bu yüzden
 // sağlayıcı yerine `useSession` taklit edilir (useModulePermission.test.tsx
 // ile aynı desen).
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
-const BASE_ME = {
-  id: "11111111-1111-1111-1111-111111111111",
-  email: "ayse@ornek.com",
-  full_name: "Ayşe Yılmaz",
-  title: null,
-  role_key: "procurement",
-  status: "active",
-} as unknown as MeResponse;
-
 /** `undefined` = alanı taşımayan eski oturum → bilinmezlik dalı (level undefined). */
 function mockSession(permissions?: Record<string, string>) {
-  const me = permissions === undefined ? BASE_ME : { ...BASE_ME, permissions };
-  vi.mocked(useSession).mockReturnValue({ me: me as MeResponse, isLoading: false });
+  // IZN-F6a.3 · eski modül seviyesi niyeti sayfa izni olarak kurulur (`undefined` = tam yetkili oturum, SA).
+  const level = permissions?.progress_payments;
+  const me =
+    permissions === undefined
+      ? meFixture({ isSystemAdmin: true })
+      : meFixture({ pages: levelPages(EMPLOYER_PAYMENT_EDIT, level), isSystemAdmin: level === "admin" });
+  vi.mocked(useSession).mockReturnValue({ me, isLoading: false });
 }
 
 const PAYMENT_ID = "22222222-2222-2222-2222-222222222222";
@@ -93,7 +91,7 @@ async function flushMutations() {
   });
 }
 
-describe("ProgressPaymentStatusActions — durum eşleşmesi (izin bilinmiyorken bilinmezlik kuralı hepsini gösterir)", () => {
+describe("ProgressPaymentStatusActions — durum eşleşmesi (tam yetkili oturum hepsini gösterir)", () => {
   it("draft: yalnız Onaya Gönder görünür", () => {
     mockSession();
     renderActions(makeDetail("draft"));

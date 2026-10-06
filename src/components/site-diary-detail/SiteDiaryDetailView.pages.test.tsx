@@ -71,13 +71,13 @@ describe("SiteDiaryDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)
     expect(screen.getByText(FORBIDDEN)).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (site_diary none → yetki yok, view → açık)", () => {
+  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { site_diary: "none" } }));
     const { unmount } = render(<SiteDiaryDetailView />);
     expect(screen.getByText(FORBIDDEN)).toBeInTheDocument();
     unmount();
     session(meFixture({ pages: {}, permissions: { site_diary: "view" } }));
     render(<SiteDiaryDetailView />);
-    expect(screen.queryByText(FORBIDDEN)).toBeNull();
+    expect(screen.getByText(FORBIDDEN)).toBeInTheDocument();
   });
 });

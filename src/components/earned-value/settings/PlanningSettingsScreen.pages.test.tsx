@@ -58,7 +58,7 @@ describe("PlanningSettingsScreen · sayfa izni görüntüleme kapısı (IZN-F5-�
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: earned_value:none reddedilir, view açılır", () => {
+  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { earned_value: "none" } }));
     const { unmount } = render(<PlanningSettingsScreen />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
@@ -66,6 +66,6 @@ describe("PlanningSettingsScreen · sayfa izni görüntüleme kapısı (IZN-F5-�
 
     session(meFixture({ pages: {}, permissions: { earned_value: "view" } }));
     render(<PlanningSettingsScreen />);
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });
