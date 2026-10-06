@@ -1,5 +1,7 @@
 import { test, expect, type Page, type Request } from "@playwright/test";
 
+import { withSystemAdmin } from "./with-system-admin";
+
 // F-TH T6 · Taşeron Hakedişi fonksiyonel e2e — `e2e/progress-payments.spec.ts`
 // deseninin AYNISI. Kapsam (brief §Fonksiyonel e2e): sekme gezinmesi, filtre
 // URL state, liste → detay, durum aksiyonları (draft→onaya gönder,
@@ -178,6 +180,7 @@ test("taşeron: form kaydetme + veri kaybı korkuluğu (PUT lines gövdesi)", as
 test("taşeron: durum aksiyonları (draft→onaya gönder→reddet→onayla→geri al→ödendi) + Düzenle giriş noktası", async ({
   page,
 }) => {
+  await withSystemAdmin(page); // IZN-F6d: "Geri al" `need: "sa"` — mock patron SA değil.
   await login(page);
 
   // `scpp-7` — hiddenFromLists:true, sc-1, taze taslak (2 satır). Bu test

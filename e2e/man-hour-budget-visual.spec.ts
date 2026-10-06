@@ -9,6 +9,7 @@ import {
   withEarnedValueLevel,
 } from "./earned-value-helpers";
 import { prepareFrame } from "./visual-scroll";
+import { withSystemAdmin } from "./with-system-admin";
 
 // PLN-F1.7b · `Planlama - Adam-Saat Bütçesi` (BÜT) görsel kadrajları.
 // Kanonik mockup: `projedesign/Planlama - Adam-Saat Bütçesi.dc.html`;
@@ -171,6 +172,7 @@ test("adam saat butcesi adim 4 engeller gorsel", async ({ page }) => {
 //     Modal açılır, ONAYLANMAZ.
 // ---------------------------------------------------------------------------
 test("adam saat butcesi taslak sil modali gorsel", async ({ page }) => {
+  await withSystemAdmin(page); // IZN-F6d: "Taslağı sil" `need: "sa"` — mock patron SA değil.
   await openManHourBudget(page, { step: 4 });
   await page.getByRole("button", { name: "Taslağı sil" }).click();
   const dialog = page.getByRole("dialog", { name: "Rev 2 taslağı silinsin mi?" });

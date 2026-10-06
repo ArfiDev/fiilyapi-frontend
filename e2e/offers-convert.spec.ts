@@ -1,7 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import type { components } from "@/lib/api/schema";
+
 import { openManHourBudget, MAN_HOUR_BUDGET_VIEWPORT } from "./earned-value-helpers";
 import { itemTotal } from "./mock-offer-convert";
+import { withPageLevels } from "./mock-role-pages";
 import {
   ITEM_ROWS,
   STEP1_DEFAULT,
@@ -20,6 +23,8 @@ import {
 } from "./offers-convert-helpers";
 import type { FakeCall } from "./offers-fake-server";
 import { OFFERS_URL } from "./offers-helpers";
+
+type PageGrant = components["schemas"]["PageGrant"];
 
 // TKL-F5.6 · Teklif → Proje DÖNÜŞTÜRME fonksiyonel e2e (plan §8 F5.6).
 //
@@ -179,13 +184,21 @@ test("yetkisiz (projects: full) → detayda pasif 'Projeye Dönüştür' + gerek
   const harness = await setUpConvert(page);
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
-    const me = (await response.json()) as { permissions?: Record<string, string> };
-    await route.fulfill({ response, json: { ...me, permissions: { ...me.permissions, projects: "full" } } });
+    const me = (await response.json()) as { permissions?: Record<string, string>; pages?: Record<string, PageGrant> };
+    // IZN-F6d: sayfa modeli devrede → dönüştürme kapısı `teklif.teklif_hazirlama` Onaylar'ıdır; onay yok.
+    await route.fulfill({
+      response,
+      json: {
+        ...me,
+        permissions: { ...me.permissions, projects: "full" },
+        pages: withPageLevels(me.pages, ["teklif.teklif_hazirlama"], "edit"),
+      },
+    });
   });
   await openWonDetail(page, harness.offerId);
   const button = page.getByRole("button", { name: "Projeye Dönüştür →" });
   await expect(button).toBeDisabled();
-  await expect(page.getByText("Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)")).toBeVisible();
+  await expect(page.getByText("Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir")).toBeVisible();
   await expect(page.getByRole("link", { name: "Projeye Dönüştür →" })).toHaveCount(0);
 
   await page.goto(`${OFFERS_URL}/${harness.offerId}/donustur`);

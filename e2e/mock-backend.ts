@@ -29,7 +29,7 @@ import { createOffersState, handleOffers, tklLastPrices, type OfferCatalogEntry,
 import { addDecimal, multiplyDecimal, quantizeDecimal } from "./mock-offer-calc";
 import { istanbulYear, type ConvertedProjectResult, type ConvertedProjectSpec } from "./mock-offer-types";
 // IZN-F2 · Sayfa İzinleri (`/pages`, `/roles/{id}/pages`, `/roles/{id}/copy`) — katalog + rol matrisi üreticisi AYRI dosyada.
-import { MOCK_PAGE_CATALOG, mockRolePages, mockRoleResponse, rolePagesViolation } from "./mock-role-pages";
+import { MOCK_PAGE_CATALOG, mockFullAccessPages, mockRolePages, mockRoleResponse, rolePagesViolation } from "./mock-role-pages";
 import { handleOfferExport } from "./mock-offer-export";
 
 /* ══════════════ SÖZLEŞME SORGU KISITLARI (F-BORDRO T1) ══════════════════════
@@ -549,9 +549,9 @@ const ME = {
   role_key: "patron",
   status: "active",
   permissions: { earned_value: "admin" },
-  // IZN-F1.2: hücresiz rol = `pages: {}` → bilinmez = GÖRÜNÜR (menü ve kareler değişmez).
+  // IZN-F6d: tam sayfa matrisi (hepsi edit, onay eylemi olanda approve; SA DEĞİL) = bugünkü modül-izni sonucu.
   is_system_admin: false,
-  pages: {},
+  pages: mockFullAccessPages(),
   hidden_fields: [],
   // IZN-B3: proje ekibi yok → proje bağlamlı izin ana role düşer (mevcut kareler DEĞİŞMEZ).
   all_projects: false,
