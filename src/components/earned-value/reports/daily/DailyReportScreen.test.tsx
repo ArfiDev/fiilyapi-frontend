@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BackendError } from "@/lib/api/unwrap";
@@ -241,8 +241,9 @@ describe("DailyReportScreen — GİR (S10, S11, S12, S30)", () => {
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
 
     expect(approve.mutateAsync).toHaveBeenCalledWith({ day: DRAFT_NO_MISSING_DIARY.report_date });
-    await screen.findByText("Taslak"); // modal kapanınca araç çubuğu rozeti yeniden görünür kalır (dom stabilize)
-    expect(screen.queryByText("Devam?", { exact: false })).not.toBeInTheDocument();
+    // Kapanış mutateAsync çözüldükten SONRA olur; "Taslak" rozeti modal açıkken de DOM'da olduğundan onu beklemek
+    // kapanışı beklemez (PR #189 CI yarışı) — doğrudan kapanış beklenir.
+    await waitFor(() => expect(screen.queryByText("Devam?", { exact: false })).not.toBeInTheDocument());
   });
 
   it("onay 422/409 hatasında backendErrorMessage metni modalde görünür", async () => {
