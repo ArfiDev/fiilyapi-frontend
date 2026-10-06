@@ -4,6 +4,7 @@ import { equipmentCategoryIcon } from "@/components/equipment/category-icon";
 import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { CheckIcon, inlineSymbolProps } from "@/components/ui/icons";
 import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import {
   EQUIPMENT_EMPTY_VALUE,
@@ -130,7 +131,10 @@ export function EquipmentDetailHero({
               : workRow === null
                 ? "Bu ay için çalışma özeti satırı yok"
                 : cost === null
-                  ? "Kira bedeli tanımlı olmadığı için hesaplanamadı"
+                  ? // IZN-F4d · maskeli null "bedel tanımsız" demek değildir; gerekçe uydurulmaz.
+                    isCostHidden
+                    ? HIDDEN_FIELD_HINT
+                    : "Kira bedeli tanımlı olmadığı için hesaplanamadı"
                   : [`${formatDecimal(workRow.hours, 2)} saat`, rateNote]
                       .filter(Boolean)
                       .join(" · ")}

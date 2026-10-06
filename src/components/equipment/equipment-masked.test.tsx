@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSession } from "@/components/shell/SessionProvider";
 import { EquipmentWorkSummaryTable } from "@/components/equipment-work/EquipmentWorkSummaryTable";
 import { EquipmentFuelKpiStrip } from "@/components/equipment-fuel/EquipmentFuelKpiStrip";
+import { EquipmentDetailHero } from "@/components/equipment-detail/EquipmentDetailHero";
 import { EquipmentRentalCard } from "@/components/equipment-detail/EquipmentRentalCard";
 import { RentalLinesTable } from "@/components/equipment-rental/RentalLinesTable";
 import { RentalSiteDistributionCard } from "@/components/equipment-rental/RentalSiteDistributionCard";
@@ -14,7 +15,7 @@ import { emptyEquipmentFormValues } from "@/components/equipment-form/form-state
 import { maskedEquipmentMoneyFields } from "@/components/equipment-form/omit-fields";
 import type { EquipmentEditResponse } from "@/lib/api/hooks/useEquipmentDetail";
 import type { EquipmentResponse } from "@/lib/api/hooks/useEquipment";
-import type { EquipmentRentalTotals } from "@/lib/api/hooks/useEquipmentDetailScreen";
+import type { EquipmentMaintenanceBlock, EquipmentRentalTotals } from "@/lib/api/hooks/useEquipmentDetailScreen";
 import type {
   RentalInvoiceDetailResponse,
   RentalInvoiceLineResponse,
@@ -173,16 +174,43 @@ describe("EquipmentRentalCard — kümülatif ödenen", () => {
   const equipment = { ownership: "rented", rate_amount: null, rate_period: "hourly", rental_contract_no: null, rental_start_date: null, rental_end_date: null, rental_min_monthly_hours: null, rental_payment_terms: null } as unknown as EquipmentResponse;
   const rental = { cumulative_paid: null, cumulative_paid_unknown_count: 2, paid_invoice_count: 1 } as unknown as EquipmentRentalTotals;
 
-  it("banka_kasa gizli: '—' + kilit, 'hesaplanamadı' bandı yok", () => {
-    setHidden(["banka_kasa"]);
+  it("maliyet_kar gizli: '—' + kilit, 'hesaplanamadı' bandı yok", () => {
+    setHidden(["maliyet_kar"]);
     render(<EquipmentRentalCard equipment={equipment} rental={rental} supplierName={null} />);
     expect(screen.getByTestId("makine-det-cumulative-paid")).toHaveTextContent("—");
     expect(within(screen.getByTestId("makine-det-cumulative-paid")).getByTestId("hidden-mark")).toBeInTheDocument();
     expect(screen.queryByTestId("makine-det-rental-unknown")).not.toBeInTheDocument();
   });
 
+  it("yalnız banka_kasa gizli (§7.3 — bu alanı gizlemez): null 'veri yok' sayılır, kilit yok", () => {
+    setHidden(["banka_kasa"]);
+    render(<EquipmentRentalCard equipment={equipment} rental={rental} supplierName={null} />);
+    expect(screen.getByTestId("makine-det-cumulative-paid")).toHaveTextContent("—");
+    expect(screen.queryByTestId("hidden-mark")).not.toBeInTheDocument();
+  });
+
   it("gizli değil: kilit yok", () => {
     render(<EquipmentRentalCard equipment={equipment} rental={rental} supplierName={null} />);
+    expect(screen.queryByTestId("hidden-mark")).not.toBeInTheDocument();
+  });
+});
+
+describe("EquipmentDetailHero — bu ay maliyeti notu", () => {
+  const equipment = { name: "Damperli Kamyon FMX", brand: "Volvo", model: "FMX 460", plate_no: null, serial_no: null, category: "truck", ownership: "rented", status: "working", is_active: true, hourmeter_hours: null, rate_amount: null, rate_period: "daily" } as unknown as EquipmentResponse;
+  const maintenance = { remaining_hours: null, next_service_hourmeter: null } as unknown as EquipmentMaintenanceBlock;
+  const workRow = { hours: "96", cost: null } as unknown as WorkSummaryRow;
+
+  it("gizli: '—' + kilit, not 'rolünüz için gizli' ('tanımlı değil' gerekçesi YOK)", () => {
+    setHidden(["maliyet_kar"]);
+    render(<EquipmentDetailHero equipment={equipment} maintenance={maintenance} workRow={workRow} siteLabel={null} />);
+    expect(within(screen.getByTestId("makine-det-monthly-cost")).getByTestId("hidden-mark")).toBeInTheDocument();
+    expect(screen.getByText(HINT, { selector: ".makine-det__hero-money-note" })).toBeInTheDocument();
+    expect(screen.queryByText("Kira bedeli tanımlı olmadığı için hesaplanamadı")).not.toBeInTheDocument();
+  });
+
+  it("gizli değil (null = bedel yok): eski 'tanımlı değil' notu aynen, kilit yok", () => {
+    render(<EquipmentDetailHero equipment={equipment} maintenance={maintenance} workRow={workRow} siteLabel={null} />);
+    expect(screen.getByText("Kira bedeli tanımlı olmadığı için hesaplanamadı")).toBeInTheDocument();
     expect(screen.queryByTestId("hidden-mark")).not.toBeInTheDocument();
   });
 });

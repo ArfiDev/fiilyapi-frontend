@@ -81,9 +81,10 @@ const nullRows = (rows: unknown, field: string) =>
 
 test("ekipman detay maliyet gizli gorsel (kiralik)", async ({ page }) => {
   await maskJson(page, /\/api\/auth\/me$/, (me) => ({ ...me, hidden_fields: ["maliyet_kar"] }));
-  await maskJson(page, /\/api\/backend\/equipment\/eq-3(\?.*)?$/, (body) => ({ ...body, rate_amount: null, purchase_amount: null, market_value: null }));
+  // Detay ekranı ekipmanı `/equipment/{id}/detail` yanıtının `equipment` alanından okur (§2: makine bedelleri null).
   await maskJson(page, /\/api\/backend\/equipment\/eq-3\/detail(\?.*)?$/, (body) => ({
     ...body,
+    equipment: { ...(body.equipment as JsonRecord), rate_amount: null, purchase_amount: null, market_value: null },
     rental: { ...(body.rental as JsonRecord), cumulative_paid: null },
   }));
   await maskJson(page, /\/api\/backend\/equipment\/work-summary(\?.*)?$/, (body) => ({
