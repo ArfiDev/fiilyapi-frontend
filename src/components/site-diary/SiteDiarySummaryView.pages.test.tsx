@@ -80,12 +80,18 @@ describe("SiteDiarySummaryView · Hakediş Oluştur bağlantısı = işveren hak
   const isLink = () => screen.getByText(CTA).closest("a") !== null;
 
   it("mali.hakedis_isveren Düzenler → gerçek bağlantı; taşeron hakediş Düzenler → devre dışı", () => {
-    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("edit") } }));
+    // IZN-F5c · model devredeyken ekranı açan günlük Görür hücresi de gerekir (hücresiz = kapalı).
+    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("edit"), "santiye.gunluk_ozet": pageGrant("view") } }));
     const { unmount } = render(<SiteDiarySummaryView />);
     expect(isLink()).toBe(true);
     unmount();
 
-    session(meFixture({ pages: { "mali.hakedis_taseron": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    session(
+      meFixture({
+        pages: { "mali.hakedis_taseron": pageGrant("edit"), "santiye.gunluk_ozet": pageGrant("view") },
+        permissions: { progress_payments: "view" },
+      }),
+    );
     render(<SiteDiarySummaryView />);
     expect(isLink()).toBe(false);
   });

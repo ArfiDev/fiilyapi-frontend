@@ -76,9 +76,9 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
     fallback: hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL),
   });
   const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
-  // Grant yoksa `undefined` → bugünkü kural (`canWrite` ∧ `projects ≥ admin`).
+  // Sayfa modeli yoksa `undefined` → bugünkü kural (`canWrite` ∧ `projects ≥ admin`); model devredeyken hücresiz = kapalı (IZN-F5c).
   const canConvert =
-    convertPermission.isSystemAdmin || convertPermission.hasGrant
+    convertPermission.isSystemAdmin || convertPermission.isModelActive
       ? convertPermission.canApprove && !scope.isRestricted
       : undefined;
   const detailQuery = useOffer(offerId);

@@ -68,13 +68,14 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
   const router = useRouter();
   const scope = useDisciplineScope();
   // IZN-F2.x · teklif yaz = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; Dönüştür =
-  // teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (grant yoksa bugünkü `projects ≥ admin` kuralı).
+  // teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (sayfa modeli yoksa bugünkü `projects ≥ admin` kuralı;
+  // model devredeyken hücresiz = kapalı, IZN-F5c).
   const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
   const canWrite = canEditOffers && !scope.isRestricted;
   const projects = useModulePermission("projects");
   const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
   const canConvert =
-    convertPermission.isSystemAdmin || convertPermission.hasGrant
+    convertPermission.isSystemAdmin || convertPermission.isModelActive
       ? convertPermission.canApprove && !scope.isRestricted
       : canWrite && hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL);
 
