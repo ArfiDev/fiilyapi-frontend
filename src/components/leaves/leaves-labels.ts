@@ -167,7 +167,7 @@ export const REQUEST_DOCUMENT_TWO_STEP_NOTE =
  * adım koşamaz. Sessiz atlama YOK — form durur ve gerekçeyi basar.
  */
 export const REQUEST_NO_PROJECT_UPLOAD_REASON =
-  "Seçili personelin atanmış projesi yok; dosya arşive yüklenemiyor (arşiv yüklemesi proje zorunlu tutuyor). Personele proje atayın ya da belge istemeyen bir izin tipi seçin.";
+  "Personelin projesi yok ya da görme yetkiniz dışında; dosya arşive yüklenemiyor.";
 
 /** T 149-158 · hak aşımı bandı. */
 export const OVERRUN_TITLE = "Hak aşımı — talep kaydedilemez"; // T 152
