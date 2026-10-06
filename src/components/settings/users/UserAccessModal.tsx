@@ -8,6 +8,7 @@ import { PasswordResetModal } from "@/components/settings/PasswordResetModal";
 import { UserAvatar } from "@/components/settings/primitives/UserAvatar";
 import { useSession } from "@/components/shell/SessionProvider";
 import { useRoles } from "@/lib/api/hooks/useRoles";
+import { useCanReadRoles } from "@/lib/auth/useCanReadRoles";
 import { useProjects, PROJECT_LIST_MAX_LIMIT } from "@/lib/api/hooks/useProjects";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
 import { useUserAccess, useSetUserAccess } from "@/lib/api/hooks/useUserAccess";
@@ -56,7 +57,7 @@ type SubDialog = "password" | "delete" | null;
 export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
   const isEdit = user !== undefined;
   const { me, refresh } = useSession();
-  const rolesQuery = useRoles();
+  const rolesQuery = useRoles(useCanReadRoles());
   const projectsQuery = useProjects({ limit: PROJECT_LIST_MAX_LIMIT });
   const disciplinesQuery = useEvDisciplines();
   const accessQuery = useUserAccess(user?.id ?? "");

@@ -21,7 +21,7 @@ import {
 import { usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PAYROLL_EDIT, TAX_BRACKETS_EDIT } from "@/lib/auth/page-gates";
+import { TAX_BRACKETS_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
 import { normalizeDecimalInput, sumDecimalStrings } from "@/lib/decimal";
@@ -89,10 +89,10 @@ export function PayrollRatesScreen() {
   const { level } = useModulePermission("payroll");
   // 🔴 İKİ AYRI KAPI — ölçüldü, varsayılmadı: oran `full`, tarife `admin`.
   // Bilinmezlik kuralı (seviye yoksa `true`) korunur.
-  // IZN-F2.x · KOD kazanır: `PUT /payroll/rates` = payroll:full → mali.bordro VEYA mali.sgk_bildirimi Düzenler
-  // (ayarlar.bordro_oranlari bu kapıdan ÇIKTI); vergi dilimi = yalnız ayarlar.bordro_oranlari Düzenler.
+  // IZN-F5a · KOD kazanır: `PUT /payroll/rates/{year}/{source}` ve vergi dilimi = ayarlar.bordro_oranlari Düzenler
+  // (mali.bordro / mali.sgk_bildirimi Düzenler bu uca artık 403). Sayfa yoksa eski `payroll:full` eşiği.
   const canEditRates = useButtonGate({
-    pages: PAYROLL_EDIT,
+    pages: TAX_BRACKETS_EDIT,
     need: "edit",
     fallback: hasAtLeast(level, "full"),
   });

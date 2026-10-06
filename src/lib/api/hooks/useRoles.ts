@@ -5,8 +5,14 @@ import type { RoleResponse } from "@/lib/api/models";
 
 export const ROLES_QUERY_KEY = "roles";
 
-export function useRoles(): UseQueryResult<RoleResponse[], Error> {
+/**
+ * `enabled=false` → istek ATILMAZ (GET /roles = rol_yonetimi/sayfa_izinleri Görür VEYA kullanicilar Düzenler;
+ * yetkisiz kişide 403). Varsayılan `true`: mevcut çağıranlar değişmez. `skipToken` KULLANILMAZ (paylaşılan
+ * sorgu seçeneklerini ezer).
+ */
+export function useRoles(enabled = true): UseQueryResult<RoleResponse[], Error> {
   return useQuery({
+    enabled,
     queryKey: [ROLES_QUERY_KEY],
     queryFn: async () => unwrap(await backendClient.GET("/roles", {})),
   });

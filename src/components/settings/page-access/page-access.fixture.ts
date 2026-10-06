@@ -31,7 +31,7 @@ const NAMES: Partial<Record<PageKey, string>> = {
 };
 
 /** Onay eylemi olan sayfalar (fikstür alt kümesi). */
-const APPROVAL_KEYS: readonly PageKey[] = ["genel.onay_kutusu", "saha.makine_kira", "saha.gunluk_kayit"];
+const APPROVAL_KEYS: readonly PageKey[] = ["saha.makine_kira", "saha.gunluk_kayit"];
 
 export function pageKeysFromContract(): PageKey[] {
   const contract = JSON.parse(readFileSync(resolve(process.cwd(), "openapi/openapi.json"), "utf8")) as {
@@ -59,7 +59,7 @@ export function buildCatalogFixture(): PageCatalogEntry[] {
   });
 }
 
-/** Şantiye Şefi benzeri matris: saha "edit", gerisi "view"; Kira Hakedişi "view"; Onay Kutusu "edit"+onaylı. */
+/** Şantiye Şefi benzeri matris: saha "edit", gerisi "view"; Kira Hakedişi "view"; Onay Kutusu "edit" (IZN-B5a: onay eylemi YOK, has_approval=false); Günlük Kayıt "edit"+onaylı. */
 export function buildRolePagesFixture(
   roleId: string,
   overrides: { is_locked?: boolean; hidden_fields?: RolePagesResponse["hidden_fields"]; extra?: object } = {},
@@ -69,7 +69,8 @@ export function buildRolePagesFixture(
     pages[key] = { level: key.startsWith("saha.") ? "edit" : "view", approve: false };
   }
   pages["saha.makine_kira"] = { level: "view", approve: false };
-  pages["genel.onay_kutusu"] = { level: "edit", approve: true };
+  pages["genel.onay_kutusu"] = { level: "edit", approve: false };
+  pages["saha.gunluk_kayit"] = { level: "edit", approve: true };
   return {
     role_id: roleId,
     is_locked: overrides.is_locked ?? false,

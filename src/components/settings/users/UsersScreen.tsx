@@ -10,6 +10,7 @@ import { RolePill } from "@/components/settings/primitives/RolePill";
 import { StatusBadge } from "@/components/settings/StatusBadge";
 import { useUsers, PAGE_SIZE } from "@/lib/api/hooks/useUsers";
 import { useRoles } from "@/lib/api/hooks/useRoles";
+import { useCanReadRoles } from "@/lib/auth/useCanReadRoles";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { UserAccessModal } from "./UserAccessModal";
 import { USERS_EDIT } from "@/lib/auth/page-gates";
@@ -63,7 +64,7 @@ export function UsersScreen() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
   const usersQuery = useUsers({ limit: PAGE_SIZE, offset, q: debouncedSearch });
-  const rolesQuery = useRoles();
+  const rolesQuery = useRoles(useCanReadRoles());
   // IZN-F2.x · ekle/düzenle (rol, proje ekibi, disiplin dahil) = ayarlar.kullanicilar Düzenler; grant yoksa görünür.
   const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: true });
 

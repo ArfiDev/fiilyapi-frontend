@@ -44,7 +44,7 @@ type CatalogRow = readonly [PageKey, string, PageGroup, string | null, string, b
 
 const CATALOG_ROWS = [
   ["genel.gosterge_paneli", "Gösterge Paneli", "genel", null, "/", false, []],
-  ["genel.onay_kutusu", "Onay Kutusu", "genel", null, "/onay-kutusu", true, []],
+  ["genel.onay_kutusu", "Onay Kutusu", "genel", null, "/onay-kutusu", false, []],
   ["genel.fiil_ai", "FİİL AI", "genel", null, "/asistan", false, []],
   ["genel.raporlar", "Raporlar", "genel", null, "/raporlar", false, []],
   ["genel.projeler", "Projeler", "genel", null, "/projeler", false, []],
