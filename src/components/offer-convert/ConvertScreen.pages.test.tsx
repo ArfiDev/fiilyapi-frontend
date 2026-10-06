@@ -55,7 +55,8 @@ describe("ConvertScreen · sayfa izni Onaylar kapısı (IZN-F5-ön)", () => {
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: projects:admin ∧ contracts:full açılır, eksikse reddedilir", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → ekran KAPALI (projects:admin ∧ contracts:full olsa da)", () => {
     session(meFixture({ pages: {}, permissions: { projects: "full", contracts: "full" } }));
     const { unmount } = renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
@@ -63,7 +64,7 @@ describe("ConvertScreen · sayfa izni Onaylar kapısı (IZN-F5-ön)", () => {
 
     session(meFixture({ pages: {}, permissions: ADMIN }));
     renderView();
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: Onaylar yokken de ekran açılır", () => {

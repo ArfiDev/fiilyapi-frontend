@@ -53,7 +53,8 @@ describe("OfferPrintScreen · sayfa izni görüntüleme kapısı (IZN-F5-ön)", 
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: modül none reddedilir, view açılır", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → ekran KAPALI (modül izni karar vermez)", () => {
     session(meFixture({ pages: {}, permissions: { [MODULE]: "none" } }));
     const { unmount } = renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
@@ -61,7 +62,7 @@ describe("OfferPrintScreen · sayfa izni görüntüleme kapısı (IZN-F5-ön)", 
 
     session(meFixture({ pages: {}, permissions: { [MODULE]: "view" } }));
     renderView();
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da ekran açılır", () => {

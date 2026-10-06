@@ -18,6 +18,7 @@ import {
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import type { SiteSubcontractorPaymentItem } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { sectionNav } from "./section-nav.testkit";
+import { ALL_PAGE_KEYS, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 // F-BLMSEK T2 · Bölüm Detay › "Hakediş" sekmesinin EKRAN BAĞLANTISI.
 // AYRI dosyadır: `SectionDetailView.test.tsx` 770 satırla 800 tavanındadır.
@@ -92,7 +93,7 @@ function mockAll(items: SiteSubcontractorPaymentItem[], partial = false) {
       full_name: "A",
       role_key: "admin",
       status: "active",
-      permissions: { sites: "view" },
+      pages: pagesFor(ALL_PAGE_KEYS, "view"),
     },
     isLoading: false,
   } as never);

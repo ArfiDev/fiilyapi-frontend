@@ -20,7 +20,6 @@ import { usePersonnel, PERSONNEL_MAX_LIMIT } from "@/lib/api/hooks/usePersonnel"
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { isLoaded, resolveLookup } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -40,7 +39,6 @@ import "./equipment-work.css";
 import { routes } from "@/lib/routes";
 
 /** İzin matrisi anahtarı — MK-1: 21. izin modülü `equipment`. */
-const EQUIPMENT_PERMISSION_MODULE = "equipment";
 
 /** "Son Kayıtlar" bilerek kısa bir listedir (mockup dört kayıt çizer). */
 const RECENT_LOG_LIMIT = 8;
@@ -79,8 +77,7 @@ export function EquipmentWorkView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
-  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view" });
   const period = parsePeriod(searchParams.get("year"), searchParams.get("month"));
   const siteParam = searchParams.get("site") ?? "";
 

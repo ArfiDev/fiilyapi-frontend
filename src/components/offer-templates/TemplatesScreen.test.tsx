@@ -20,6 +20,26 @@ vi.mock("@/lib/api/client", () => ({
 vi.mock("@/lib/auth/useModulePermission", () => ({
   useModulePermission: () => ({ level: perm.level, canView: perm.level !== "none", canWrite: true, canDelete: true }),
 }));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.level` (modül niyeti) oturum sayfa iznine çevrilir —
+// none/view = sözleşme/teklif sayfaları None/Görür, full = Düzenler (SA değil), admin = sistem yöneticisi (Sil `need: "sa"`).
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture, pagesFor } = await import("@/lib/auth/page-grants.testkit");
+  const { CONTRACTS_VIEW } = await import("@/lib/auth/page-gates");
+  return {
+    ...actual,
+    useSession: () => {
+      const level = perm.level;
+      const me =
+        level === "admin"
+          ? meFixture({ isSystemAdmin: true })
+          : level === "full"
+            ? meFixture()
+            : meFixture({ pages: pagesFor(CONTRACTS_VIEW, level === "view" ? "view" : "none") });
+      return { ...actual.SESSION_CONTEXT_DEFAULT, me, isLoading: false };
+    },
+  };
+});
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: nav.replace, push: vi.fn() }) }));
 
@@ -358,6 +378,7 @@ describe("Varsayılan yap · Kopyala · Sil", () => {
   });
 
   it("Sil → modal metni AYNEN; onayda URL ÖNCE ilk kalan şablona döner, SONRA DELETE; toast '{ad} silindi'", async () => {
+    perm.level = "admin"; // IZN-F6a · Sil = yalnız sistem yöneticisi
     const user = userEvent.setup();
     renderScreen("tpl-b");
     await loaded();
@@ -377,6 +398,7 @@ describe("Varsayılan yap · Kopyala · Sil", () => {
   });
 
   it("silinen tek şablon: URL çıplak adrese döner, boş durum basılır", async () => {
+    perm.level = "admin"; // IZN-F6a · Sil = yalnız sistem yöneticisi
     const user = userEvent.setup();
     wire(options({ templates: [options().templates[0] as never] }));
     renderScreen();
@@ -585,6 +607,7 @@ describe("TKL-F4.6b · backend her PUT'ta grup/kalem kimliklerini YENİDEN üret
   });
 
   it("🔴 D1: tek şablon silinince liste tazelenmesi BEKLENMEDEN boş duruma geçilir; silinen kimliğe GET atılmaz, 'Şablon bulunamadı' hiç görünmez", async () => {
+    perm.level = "admin"; // IZN-F6a · Sil = yalnız sistem yöneticisi
     const user = userEvent.setup();
     wire(options({ templates: [options().templates[0] as never] }));
     renderScreen();

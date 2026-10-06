@@ -4,8 +4,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { StockView } from "./StockView";
 import { useStockSummary } from "@/lib/api/hooks/useStockSummary";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
 import type { StockSummaryResponse, StockSummaryRow } from "@/lib/api/hooks/useStockSummary";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useStockSummary", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useStockSummary")>()),
@@ -99,7 +99,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { inventory: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useStockSummary).mockReturnValue(queryStub(summary()));
@@ -188,7 +188,7 @@ describe("StockView — aksiyonlar", () => {
 
   it("yazma izni yoksa iki tetikleyici de BASILMAZ (devre dışı düğme kalır)", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { inventory: "view" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<StockView />);
@@ -199,7 +199,7 @@ describe("StockView — aksiyonlar", () => {
 
   it("izinsiz kullanıcı erişim reddi görür", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { inventory: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<StockView />);

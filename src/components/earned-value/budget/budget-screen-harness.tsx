@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 
 import { backendClient } from "@/lib/api/client";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
 import type {
   EvBudgetView,
   EvFillOut,
@@ -15,6 +14,7 @@ import type {
   EvSuggestionsOut,
 } from "@/lib/api/models";
 
+import { evMe } from "../ev-session.testkit";
 import { ACTIVE_REV_1, D_KAB, budgetView, diffOut, previewOut, revision, scheduleOut } from "./budget-fixtures";
 
 /**
@@ -105,16 +105,12 @@ export function wireBackend(state: BackendState) {
   asMock(backendClient.DELETE).mockImplementation((() => ok(undefined, 204)) as never);
 }
 
+/**
+ * IZN-F6a.3 · eski `earned_value` modül seviyesi niyeti sayfa izni oturumu olarak kurulur (`evMe`);
+ * `null` = tam yetkili sistem yöneticisi (eski "bilinmezlik" = her şey açık).
+ */
 export function mockPermission(level: string | null) {
-  const me = {
-    id: "u-1",
-    email: "sef@ornek.com",
-    full_name: "Ahmet Yılmaz",
-    role_key: "boss",
-    status: "active",
-    ...(level ? { permissions: { earned_value: level } } : {}),
-  } as unknown as MeResponse;
-  asMock(useSession).mockReturnValue({ me, isLoading: false } as never);
+  asMock(useSession).mockReturnValue({ me: evMe(level), isLoading: false } as never);
 }
 
 export function renderWithQuery(ui: ReactElement) {

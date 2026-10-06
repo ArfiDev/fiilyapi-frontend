@@ -30,7 +30,7 @@ import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontract
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
+import { diaryMe } from "./diary-session.testkit";
 
 // PLN-F2.2 · çekirdek günlük ekranının UZANTI YUVALARI (§2.7) ve genişlemesi
 // (G1–G10, K16). Planlama kodu import EDİLMEZ — uzantı burada elle kurulur.
@@ -72,15 +72,7 @@ const TODAY = isoDate(new Date());
 
 function mockSession(permissions: Record<string, string>) {
   vi.mocked(useSession).mockReturnValue({
-    me: {
-      id: "u-1",
-      email: "m@ornek.com",
-      full_name: "Mühendis",
-      title: null,
-      role_key: "site_chief",
-      status: "active",
-      permissions,
-    } as unknown as MeResponse,
+    me: diaryMe(permissions),
     isLoading: false,
   });
 }

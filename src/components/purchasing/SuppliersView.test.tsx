@@ -5,8 +5,8 @@ import { SuppliersView } from "./SuppliersView";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import type { SupplierCard, SupplierListResponse } from "@/lib/api/hooks/useSuppliers";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useSuppliers", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useSuppliers")>()),
@@ -53,7 +53,7 @@ function queryStub(
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { procurement: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useSuppliers).mockReturnValue(queryStub(list()));
@@ -77,7 +77,7 @@ describe("SuppliersView — TED başlık, şerit ve yetki", () => {
 
   it("yazma yetkisi yoksa ne düğme ne ekleme kartı basılır", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { procurement: "view" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<SuppliersView />);

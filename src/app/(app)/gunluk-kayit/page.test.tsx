@@ -16,6 +16,7 @@ import { useBoq } from "@/lib/api/hooks/useBoq";
 import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import type { MeResponse } from "@/lib/auth/types";
+import { fullAccessPages } from "@/lib/auth/page-grants.testkit";
 
 // F-NAVSAHA · `/gunluk-kayit` GERÇEK rota: [...slug] catch-all bu segment için
 // devre dışı kalır. Bu test sayfanın ComingSoon YERİNE gerçek günlük kayıt
@@ -82,7 +83,7 @@ beforeEach(() => {
       email: "sef@ornek.com",
       role_key: "site_chief",
       status: "active",
-      permissions: { site_diary: "full", progress_payments: "view" },
+      pages: fullAccessPages(),
     } as unknown as MeResponse,
     isLoading: false,
   });

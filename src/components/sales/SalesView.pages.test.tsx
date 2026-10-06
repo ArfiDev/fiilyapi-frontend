@@ -54,14 +54,10 @@ describe("SalesView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
     expect(screen.queryByRole("heading", TITLE)).toBeNull();
   });
 
-  it("pages boş → eski davranış (sales none → AccessDenied, view → açık)", () => {
-    session(meFixture({ pages: {}, permissions: { sales: "none" } }));
-    const { unmount } = render(<SalesView />);
-    expect(screen.getByText(DENIED)).toBeInTheDocument();
-    unmount();
-    session(meFixture({ pages: {}, permissions: { sales: "view" } }));
+  it("pages boş → fail-closed: sales full olsa bile AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { sales: "full" } }));
     render(<SalesView />);
-    expect(screen.getByRole("heading", TITLE)).toBeInTheDocument();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });
 

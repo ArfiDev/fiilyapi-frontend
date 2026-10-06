@@ -61,13 +61,13 @@ describe("PersonnelDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)
     expect(screen.queryByTestId("personnel-header-card")).toBeNull();
   });
 
-  it("pages boş → eski davranış (personnel none → AccessDenied, view → kart)", () => {
+  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { personnel: "none" } }));
     const { unmount } = render(<PersonnelDetailView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
     session(meFixture({ pages: {}, permissions: { personnel: "view" } }));
     render(<PersonnelDetailView />);
-    expect(screen.getByTestId("personnel-header-card")).toBeInTheDocument();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

@@ -106,13 +106,9 @@ describe("SectionDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (sites none → AccessDenied, view → açık)", () => {
-    session(meFixture({ pages: {}, permissions: { sites: "none" } }));
-    const { unmount } = renderView();
-    expect(screen.getByText(DENIED)).toBeInTheDocument();
-    unmount();
-    session(meFixture({ pages: {}, permissions: { sites: "view" } }));
+  it("pages boş → fail-closed: sites full olsa bile AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { sites: "full" } }));
     renderView();
-    expect(screen.getByText(LOADING)).toBeInTheDocument();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

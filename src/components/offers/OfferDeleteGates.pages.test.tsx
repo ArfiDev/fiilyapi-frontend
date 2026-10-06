@@ -39,9 +39,10 @@ describe("OfferGroupHeaderRow · boş grubu silme = yalnız SA", () => {
     expect(screen.getByRole("button", { name: DELETE })).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (canEdit): var", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → Sil YOK", () => {
     session(meFixture({ pages: {} }));
     renderRow();
-    expect(screen.getByRole("button", { name: DELETE })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: DELETE })).toBeNull();
   });
 });

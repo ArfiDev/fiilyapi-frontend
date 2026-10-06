@@ -20,7 +20,6 @@ import {
 import { useProgressPayment } from "@/lib/api/hooks/useProgressPayments";
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { PERIOD_MONTHS, formatPercent } from "@/lib/format";
@@ -78,7 +77,6 @@ const COEFFICIENT_INPUT_MAX_LENGTH = 10;
  */
 export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   const router = useRouter();
-  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   const isEdit = props.mode === "edit";
   const detailQuery = useProgressPayment(isEdit ? props.paymentId : "");
   const detail = isEdit ? detailQuery.data : undefined;
@@ -88,7 +86,6 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   const canWrite = useButtonGate({
     pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
     projectId: resolvedProjectId,
   });
   const projectQuery = useProject(resolvedProjectId);

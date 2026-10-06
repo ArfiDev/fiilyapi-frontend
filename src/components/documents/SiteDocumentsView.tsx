@@ -14,8 +14,6 @@ import { useDocumentFolders } from "@/lib/api/hooks/useDocumentFolders";
 import { useDocuments, type DocumentRead } from "@/lib/api/hooks/useDocuments";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { BackendError } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { DOCUMENTS_EDIT, DOCUMENTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -64,11 +62,9 @@ export function SiteDocumentsView() {
     siteId: string;
   }>();
 
-  const permission = useModulePermission("documents");
   const canViewDocuments = useButtonGate({
     pages: DOCUMENTS_VIEW,
     need: "view",
-    fallback: permission.canView,
     projectId: projectKey,
   });
   // Yazma yüzeyi (yükleme + klasör açma) `full` ister. `documents:admin`
@@ -77,7 +73,6 @@ export function SiteDocumentsView() {
   const canWrite = useButtonGate({
     pages: DOCUMENTS_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permission.level, "full"),
     projectId: projectKey,
   });
 

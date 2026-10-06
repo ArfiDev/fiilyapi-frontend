@@ -76,8 +76,8 @@ describe("SiteDetailPage · '+ Bölüm Ekle' sayfa kapısı (IZN-F5c)", () => {
     expect(screen.queryAllByRole("link", ADD)).toHaveLength(0);
   });
 
-  it("pages boş (eski oturum) → bugünkü davranış: iki bağlantı da var", () => {
+  it("pages boş (eski oturum) → fail-closed: bağlantı yok (IZN-F6a)", () => {
     renderPage(meFixture({ pages: {} }));
-    expect(screen.getAllByRole("link", ADD)).toHaveLength(2);
+    expect(screen.queryAllByRole("link", ADD)).toHaveLength(0);
   });
 });

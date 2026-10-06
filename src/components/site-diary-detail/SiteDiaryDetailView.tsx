@@ -7,7 +7,6 @@ import { useSection } from "@/lib/api/hooks/useSection";
 import { useSiteDiaryEntry } from "@/lib/api/hooks/useSiteDiary";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SITE_DIARY_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
@@ -61,11 +60,10 @@ export function SiteDiaryDetailView({ extension, onExtensionContext }: DiaryDeta
   // istenir. Bölüm okunamazsa (ör. `sites` 403) sayfa takılmaz: bağlamsız istenir.
   const sectionResolved = section !== undefined || sectionQuery.isError;
   const entryQuery = useSiteDiaryEntry(entryId, { sectionId: section?.id, enabled: sectionResolved });
-  const permission = useModulePermission("site_diary");
   // IZN-F2.x · "Günlük kayıtta aç" = günlük kayıt Düzenler (VEYA).
-  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
+  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", projectId: projectKey });
   // IZN-F5-ön · görüntüleme kapısı = günlük kayıt sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
+  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", projectId: projectKey });
 
   const entry = entryQuery.data;
   // Adresteki şantiyeye ait olmayan kayıt (kimlik elle değiştirilmiş) —

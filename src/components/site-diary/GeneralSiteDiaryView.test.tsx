@@ -23,7 +23,7 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { useBoq } from "@/lib/api/hooks/useBoq";
 import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
-import type { MeResponse } from "@/lib/auth/types";
+import { diaryMe } from "./diary-session.testkit";
 
 /**
  * F-NAVSAHA · `/gunluk-kayit` ekranının KENDİ davranışları. Ortak gövde
@@ -74,17 +74,9 @@ vi.mock("@/lib/api/hooks/useSiteSubcontractorPayments", () => ({
 // beri kayıt yanıtında: `own_crew_from_timesheet`).
 vi.mock("@/lib/api/hooks/useSubcontractors", () => ({ useSubcontractors: vi.fn() }));
 
-const BASE_ME = {
-  id: "11111111-1111-1111-1111-111111111111",
-  email: "sef@ornek.com",
-  full_name: "Sercan Öztürk",
-  role_key: "site_chief",
-  status: "active",
-} as unknown as MeResponse;
-
 function mockSession(permissions: Record<string, string>) {
   vi.mocked(useSession).mockReturnValue({
-    me: { ...BASE_ME, permissions } as MeResponse,
+    me: diaryMe(permissions),
     isLoading: false,
   });
 }

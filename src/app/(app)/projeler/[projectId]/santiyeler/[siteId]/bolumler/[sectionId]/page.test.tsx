@@ -6,6 +6,7 @@ import SectionDetailPage from "./page";
 import { useSection } from "@/lib/api/hooks/useSection";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // Sayfa yalnız orkestrasyon bileşenini bağlar — davranış SectionDetailView.test.tsx'te
 // kapsamlı test edilir, bu dosya sadece "rota bileşene bağlanıyor mu" duman testi.
@@ -29,7 +30,8 @@ vi.mock("next/navigation", async () =>
 
 describe("SectionDetailPage — duman testi", () => {
   it("yukleniyor durumunu basar", () => {
-    vi.mocked(useSession).mockReturnValue({ me: undefined, isLoading: true } as never);
+    // IZN-F6a · oturum tam erişimli: duman testi rotanın ekrana bağlandığını sınar; yükleniyor durumu SORGUDAN gelir.
+    vi.mocked(useSession).mockReturnValue({ me: meFixture(), isLoading: false } as never);
     vi.mocked(useSection).mockReturnValue({
       data: undefined,
       isLoading: true,

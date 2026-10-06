@@ -13,9 +13,11 @@ import type {
 import { usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import { errorResponse, stubExportDownload } from "@/lib/api/export-test-stub";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { PayrollHistoryView } from "./PayrollHistoryView";
+import { PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/bordro/gecmis" }));
 vi.mock("@/lib/api/hooks/usePayroll", async (importOriginal) => ({
@@ -90,8 +92,11 @@ function queryResult<T>(partial: Record<string, unknown>) {
 }
 
 function setSession(level: string | undefined) {
+  // IZN-F6a.3 · eski bordro seviyesi niyeti sayfa izni olarak kurulur (full = Düzenler + Onaylar).
+  const pages = levelPages(PAYROLL_VIEW_PAGES, level === "full" ? "approve" : level);
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { payroll: level } } as unknown as MeResponse,
+    me: meFixture({ pages }),
+    isLoading: false,
   } as unknown as ReturnType<typeof useSession>);
 }
 

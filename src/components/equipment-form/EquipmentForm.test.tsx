@@ -17,7 +17,7 @@ import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
+import { ALL_PAGE_KEYS, fullAccessPages, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 const push = vi.fn();
 
@@ -40,7 +40,7 @@ const updateMutate = vi.fn();
 
 function mockSession(level: string) {
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { equipment: level } } as unknown as MeResponse,
+    me: meFixture({ pages: level === "full" ? fullAccessPages() : pagesFor(ALL_PAGE_KEYS, level === "view" ? "view" : "none") }),
     isLoading: false,
   });
 }

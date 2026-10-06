@@ -17,7 +17,6 @@ import {
 } from "@/lib/api/hooks/useProgressPaymentMutations";
 import { PROGRESS_PAYMENT_QUERY_KEY, type ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EMPLOYER_PAYMENT_APPROVE, EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -53,9 +52,9 @@ export function ProgressPaymentStatusActions({ detail }: ProgressPaymentStatusAc
   const projectId = detail.project_id;
   // IZN-F2.x · Gönder = hakediş sayfaları Düzenler; Onayla/Reddet/Ödendi = hakediş Onaylar; Onayı Geri Al = yalnız SA.
   // Grant yoksa bugünkü seviye eşikleri (`permittedPaymentActions` varsayılanı).
-  const canSubmit = useButtonGate({ pages: EMPLOYER_PAYMENT_EDIT, need: "edit", fallback: hasAtLeast(level, "draft"), projectId });
-  const canApprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "approve", fallback: hasAtLeast(level, "approve"), projectId });
-  const canUnapprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "sa", fallback: hasAtLeast(level, "admin"), projectId });
+  const canSubmit = useButtonGate({ pages: EMPLOYER_PAYMENT_EDIT, need: "edit", projectId });
+  const canApprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "approve", projectId });
+  const canUnapprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "sa", projectId });
   const queryClient = useQueryClient();
 
   const submit = useSubmitProgressPayment();

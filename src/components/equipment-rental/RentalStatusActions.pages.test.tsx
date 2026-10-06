@@ -58,14 +58,8 @@ describe("RentalStatusActions · sayfa izni kapısı (IZN-F2.x)", () => {
     expect(screen.queryByTestId("makine-kira-approve")).toBeNull();
   });
 
-  it("pages boş + modül izni full → eski davranış: onay düğmesi var", () => {
+  it("pages boş → fail-closed: modül izni full olsa bile eylem yok (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { equipment: "full" } }));
-    renderActions("pending_verification");
-    expect(screen.getByTestId("makine-kira-approve")).toBeInTheDocument();
-  });
-
-  it("pages boş + modül izni draft → eski davranış: eylem yok", () => {
-    session(meFixture({ pages: {}, permissions: { equipment: "draft" } }));
     renderActions("pending_verification");
     expect(screen.queryByTestId("makine-kira-actions")).toBeNull();
   });

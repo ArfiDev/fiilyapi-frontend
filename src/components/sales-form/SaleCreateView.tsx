@@ -23,7 +23,6 @@ import {
 import type { SaleType } from "@/lib/api/hooks/useSales";
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SALES_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -78,9 +77,8 @@ const UNIT_PARAM = "unit";
 export function SaleCreateView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const permission = useModulePermission("sales");
   // IZN-F2.x · satış kaydı yazma kapısı = mali.satis Düzenler.
-  const canEdit = useButtonGate({ pages: SALES_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEdit = useButtonGate({ pages: SALES_EDIT, need: "edit" });
 
   const [values, setValues] = useState<SaleFormValues>(() => emptySaleFormValues());
   const [errors, setErrors] = useState<SaleFormErrors>({});

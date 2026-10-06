@@ -14,8 +14,6 @@ import { useDocumentFolders } from "@/lib/api/hooks/useDocumentFolders";
 import { useDocuments, type DocumentRead } from "@/lib/api/hooks/useDocuments";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { BackendError } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { DOCUMENTS_EDIT, DOCUMENTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -95,14 +93,12 @@ export function ArchiveDocumentsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission("documents");
-  const canViewDocuments = useButtonGate({ pages: DOCUMENTS_VIEW, need: "view", fallback: permission.canView });
+  const canViewDocuments = useButtonGate({ pages: DOCUMENTS_VIEW, need: "view" });
   // Yazma yüzeyi `full` ister; `documents:admin` (silme) İMA EDİLMEZ — spec §4.
   // IZN-F2.x · belge yükle/klasör = mali.belge_arsivi/proje.belgeler/santiye.belgeler Düzenler (VEYA).
   const canWrite = useButtonGate({
     pages: DOCUMENTS_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permission.level, "full"),
   });
 
   const selectedProjectId = searchParams.get(PROJECT_PARAM) ?? "";

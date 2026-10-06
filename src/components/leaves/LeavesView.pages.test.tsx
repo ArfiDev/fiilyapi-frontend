@@ -219,11 +219,12 @@ describe("LeavesView · sayfa izni kapıları (IZN-F2.x)", () => {
     expect(screen.getByTestId("iz-new-request")).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış: kapısız düğmeler etkin/görünür", () => {
-    session(meFixture({ pages: {}, permissions: { personnel: "view" } }));
+  it("pages boş → fail-closed: modül izni full olsa bile erişim reddi, talep/karar düğmesi YOK (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { personnel: "full" } }));
     render(<LeavesView currentYear={2026} />);
-    expect(screen.getByTestId("iz-new-request")).toBeInTheDocument();
-    expect(screen.getByTestId("iz-approve-lr-1")).toBeEnabled();
+    expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
+    expect(screen.queryByTestId("iz-new-request")).toBeNull();
+    expect(screen.queryByTestId("iz-approve-lr-1")).toBeNull();
   });
 
   it("sistem yöneticisi: grant none olsa da karar verebilir", () => {

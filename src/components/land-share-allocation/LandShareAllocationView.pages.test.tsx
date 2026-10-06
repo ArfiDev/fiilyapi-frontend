@@ -53,15 +53,10 @@ describe("LandShareAllocationView · sayfa izni görüntüleme kapısı (IZN-F5-
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: modül view reddedilir, draft açılır", () => {
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "view" } }));
-    const { unmount } = renderView();
-    expect(screen.getByText(DENIED)).toBeInTheDocument();
-    unmount();
-
+  it("pages boş → fail-closed: modül draft olsa bile AccessDenied (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { [MODULE]: "draft" } }));
     renderView();
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da form açılır", () => {

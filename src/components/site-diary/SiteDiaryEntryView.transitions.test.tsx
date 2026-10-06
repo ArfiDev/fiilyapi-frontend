@@ -31,7 +31,7 @@ import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
+import { diaryMe } from "./diary-session.testkit";
 
 // GKS-F1.4 · bölüm/tarih değişiminde onay diyalogları (Ü3, Ü3b, Ü5). Hook'lar
 // mock'lu; iskelet çekimi `fetchSiteDiarySkeleton` mock'u + gerçek QueryClient.
@@ -210,7 +210,7 @@ function mockEntries(listedEntry?: SiteDiaryEntryDetail, byId: Record<string, Si
 
 function mockSession(permissions: Record<string, string> = { site_diary: "full", progress_payments: "view" }) {
   vi.mocked(useSession).mockReturnValue({
-    me: { id: "u-1", email: "m@o.com", full_name: "M", title: null, role_key: "site_chief", status: "active", permissions } as unknown as MeResponse,
+    me: diaryMe(permissions),
     isLoading: false,
   });
 }

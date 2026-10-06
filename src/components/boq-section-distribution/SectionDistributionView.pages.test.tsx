@@ -63,12 +63,8 @@ describe("SectionDistributionView · sayfa izni kapısı (IZN-F2.x)", () => {
     expect(firstShareInputs().every((input) => input.disabled)).toBe(true);
   });
 
-  it("pages boş → eski davranış: boq full yazar, view yazamaz", () => {
+  it("pages boş → fail-closed: boq full olsa bile yazamaz (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { boq: "full" } }));
-    const { unmount } = renderView();
-    expect(firstShareInputs().some((input) => !input.disabled)).toBe(true);
-    unmount();
-    session(meFixture({ pages: {}, permissions: { boq: "view" } }));
     renderView();
     expect(firstShareInputs().every((input) => input.disabled)).toBe(true);
   });

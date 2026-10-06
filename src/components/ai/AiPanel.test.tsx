@@ -8,7 +8,11 @@ import { GERI_BILDIRIM_KAPALI } from "./AiMessage";
 import type { AiBlok, AiEvent } from "@/lib/api/ai-chat-client";
 
 const mockSession = vi.hoisted(() => ({
-  me: { full_name: "Ahmet Yılmaz", permissions: { ai: "view", projects: "view" } } as unknown,
+  // IZN-F6a · sayfa izni: genel.fiil_ai (AI_VIEW) + genel.projeler (PROJECTS_VIEW) Görür.
+  me: {
+    full_name: "Ahmet Yılmaz",
+    pages: { "genel.fiil_ai": { level: "view", approve: false }, "genel.projeler": { level: "view", approve: false } },
+  } as unknown,
 }));
 vi.mock("@/components/shell/SessionProvider", () => ({
   useSession: () => ({ me: mockSession.me, isLoading: false }),
@@ -63,7 +67,10 @@ async function sor(metin: string) {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  mockSession.me = { full_name: "Ahmet Yılmaz", permissions: { ai: "view", projects: "view" } };
+  mockSession.me = {
+    full_name: "Ahmet Yılmaz",
+    pages: { "genel.fiil_ai": { level: "view", approve: false }, "genel.projeler": { level: "view", approve: false } },
+  };
 });
 
 describe("AiPanel", () => {
@@ -75,7 +82,7 @@ describe("AiPanel", () => {
 
   it("ai:none olan rol AccessDenied gorur", () => {
     stubFetch(sse([]));
-    mockSession.me = { full_name: "X", permissions: { ai: "none" } };
+    mockSession.me = { full_name: "X", pages: { "genel.fiil_ai": { level: "none", approve: false } } };
     ciz(<AiPanel />);
     expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
     expect(screen.queryByLabelText("FİİL AI'ya sorun")).not.toBeInTheDocument();
@@ -673,7 +680,7 @@ describe("AiPanel · Sohbet Bağlamı (AI-BAĞLAM)", () => {
   it("🔴 KAYIT NO 22 — projects görüntüleme izni yokken GET /projects ağa çıkmaz", async () => {
     mockSession.me = {
       full_name: "Ahmet Yılmaz",
-      permissions: { ai: "view", projects: "none" },
+      pages: { "genel.fiil_ai": { level: "view", approve: false }, "genel.projeler": { level: "none", approve: false } },
     };
     baglamStub([SANTIYE_DOLU]);
     ciz(<AiPanel />);

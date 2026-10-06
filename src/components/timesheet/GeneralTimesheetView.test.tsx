@@ -11,7 +11,9 @@ import { usePersonnel } from "@/lib/api/hooks/usePersonnel";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useTimesheetWeek, type TimesheetWeek } from "@/lib/api/hooks/useTimesheet";
 import { useSaveTimesheetWeek } from "@/lib/api/hooks/useTimesheetMutations";
-import type { MeResponse } from "@/lib/auth/types";
+import { PERSONNEL_EDIT, TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 /**
  * PUAN-SAAT · E5 ekranının KENDİ davranışları. Ortak çekirdek
@@ -43,17 +45,9 @@ vi.mock("@/lib/api/hooks/useSiteOptions", () => ({ useSiteOptions: vi.fn() }));
 
 const WEEK_QUERY = { site: "s-1", iso_year: "2026", iso_week: "32" };
 
-const BASE_ME = {
-  id: "11111111-1111-1111-1111-111111111111",
-  email: "patron@ornek.com",
-  full_name: "Ahmet Yılmaz",
-  role_key: "patron",
-  status: "active",
-} as unknown as MeResponse;
-
 function mockSession(level: string) {
   vi.mocked(useSession).mockReturnValue({
-    me: { ...BASE_ME, permissions: { timesheet: level, personnel: "none" } } as MeResponse,
+    me: meFixture({ pages: { ...levelPages(TIMESHEET_VIEW_PAGES, level), ...pagesFor(PERSONNEL_EDIT, "none") } }),
     isLoading: false,
   });
 }

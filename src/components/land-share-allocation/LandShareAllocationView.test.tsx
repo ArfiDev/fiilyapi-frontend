@@ -27,6 +27,7 @@ import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // `isLandShareMissing` ve sayfa boyutu GERÇEK kalır: 404 dallanmasını
 // taklit etmek, tam da ölçmek istediğimiz davranışı sahteleştirirdi.
@@ -192,7 +193,7 @@ beforeEach(() => {
   searchParams = new URLSearchParams("proje=prj-1");
   mutateAsync.mockResolvedValue(allocationResponse([]));
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { projects: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useProjects).mockReturnValue(

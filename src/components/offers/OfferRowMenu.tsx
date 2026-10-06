@@ -29,7 +29,7 @@ export function OfferRowMenu({ item, canWrite, isOpen, isBusy, onToggle, onClose
   const rules = rowMenuRules(item, canWrite);
   // IZN-F2.x · taslak teklif silme = yalnız sistem yöneticisi (SIL-B1 `require_system_admin`; durum kuralı korunur).
   const canDeleteOffer =
-    useButtonGate({ pages: OFFERS_EDIT, need: "sa", fallback: rules.canDelete }) && rowMenuRules(item, true).canDelete;
+    useButtonGate({ pages: OFFERS_EDIT, need: "sa" }) && rowMenuRules(item, true).canDelete;
   const download = useFileDownload();
   // Başarıda menü kapanır (dosya tarayıcıya indi); hata menüde kalır (aşağıda).
   useEffect(() => {

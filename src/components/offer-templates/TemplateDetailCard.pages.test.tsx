@@ -56,9 +56,10 @@ describe("TemplateDetailCard · silme = yalnız SA (IZN-F2.x)", () => {
     expect(screen.getByRole("button", { name: "Sil" })).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış: Sil görünür", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → Sil YOK (modül full olsa da)", () => {
     session(meFixture({ pages: {}, permissions: { contracts: "full" } }));
     renderCard();
-    expect(screen.getByRole("button", { name: "Sil" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sil" })).toBeNull();
   });
 });

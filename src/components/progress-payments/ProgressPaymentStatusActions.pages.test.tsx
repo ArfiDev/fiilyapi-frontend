@@ -97,15 +97,16 @@ describe("İşveren hakediş durum eylemleri · sayfa izni kapıları (IZN-F2.x)
     expect(button("Onayı Geri Al")).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış: modül izni approve onaylar, admin geri alır", () => {
+  it("pages boş → fail-closed: modül izni approve/admin olsa bile Ödendi İşaretle ve Onayı Geri Al YOK (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { progress_payments: "approve" } }));
     const { unmount } = employer("approved");
-    expect(button("Ödendi İşaretle")).toBeInTheDocument();
+    expect(button("Ödendi İşaretle")).toBeNull();
     expect(button("Onayı Geri Al")).toBeNull();
     unmount();
     session(meFixture({ pages: {}, permissions: { progress_payments: "admin" } }));
     employer("approved");
-    expect(button("Onayı Geri Al")).toBeInTheDocument();
+    expect(button("Ödendi İşaretle")).toBeNull();
+    expect(button("Onayı Geri Al")).toBeNull();
   });
 });
 

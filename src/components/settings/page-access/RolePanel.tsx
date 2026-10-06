@@ -33,7 +33,7 @@ export function RolePanel({ role, access, catalog, editor, isSaving, saveError, 
   const sections = buildSections(catalog);
   const isLockedRole = access.is_locked || role.is_locked;
   // IZN-F2.x · Kaydet = ayarlar.sayfa_izinleri Düzenler (bugün KAPISIZ → grant yoksa serbest).
-  const canEditPages = useButtonGate({ pages: PAGE_ACCESS_EDIT, need: "edit", fallback: true });
+  const canEditPages = useButtonGate({ pages: PAGE_ACCESS_EDIT, need: "edit" });
   const isReadOnly = isLockedRole || !canEditPages;
 
   function toggleGroup(group: string) {

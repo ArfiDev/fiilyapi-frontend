@@ -38,39 +38,43 @@ describe("usePagePermission", () => {
 describe("useButtonGate", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("pages alanı olmayan eski oturum → fallback", () => {
+  it("IZN-F6a · pages alanı olmayan eski oturum → modül izni full olsa da KAPALI (fallback yok)", () => {
     session(meFixture({ permissions: { invoicing: "full" } }));
-    const allowed = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit", fallback: true }));
-    const denied = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit", fallback: false }));
-    expect(allowed.result.current).toBe(true);
-    expect(denied.result.current).toBe(false);
+    const { result } = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit" }));
+    expect(result.current).toBe(false);
   });
 
-  it("pages boş ({}) → fallback", () => {
+  it("IZN-F6a · pages boş ({}) → KAPALI", () => {
     session(meFixture({ pages: {} }));
-    const { result } = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "approve", fallback: true }));
-    expect(result.current).toBe(true);
+    const { result } = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "approve" }));
+    expect(result.current).toBe(false);
   });
 
-  it("grant varken fallback yok sayılır: view → edit kapısı kapalı", () => {
+  it("IZN-F6a · oturum yükleniyor (me yok) → KAPALI", () => {
+    vi.mocked(useSession).mockReturnValue({ me: null, isLoading: true } as ReturnType<typeof useSession>);
+    const { result } = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "view" }));
+    expect(result.current).toBe(false);
+  });
+
+  it("grant view → edit kapısı kapalı", () => {
     session(meFixture({ pages: { "mali.fatura": pageGrant("view") } }));
-    const { result } = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit", fallback: true }));
+    const { result } = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit" }));
     expect(result.current).toBe(false);
   });
 
   it("approve bayrağı varsa approve kapısı açık, edit kapısı kapalı", () => {
     session(meFixture({ pages: { "mali.fatura": pageGrant("view", true) } }));
-    const approve = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "approve", fallback: false }));
-    const edit = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit", fallback: false }));
+    const approve = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "approve" }));
+    const edit = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit" }));
     expect(approve.result.current).toBe(true);
     expect(edit.result.current).toBe(false);
   });
 
   it("sa kapısı: sistem yöneticisi geçer, edit+approve yetmez", () => {
     session(meFixture({ pages: { "mali.fatura": pageGrant("edit", true) } }));
-    expect(renderHook(() => useButtonGate({ pages: "mali.fatura", need: "sa", fallback: true })).result.current).toBe(false);
+    expect(renderHook(() => useButtonGate({ pages: "mali.fatura", need: "sa" })).result.current).toBe(false);
     session(meFixture({ pages: { "mali.fatura": pageGrant("none") }, isSystemAdmin: true }));
-    expect(renderHook(() => useButtonGate({ pages: "mali.fatura", need: "sa", fallback: false })).result.current).toBe(true);
+    expect(renderHook(() => useButtonGate({ pages: "mali.fatura", need: "sa" })).result.current).toBe(true);
   });
 });
 
@@ -93,21 +97,21 @@ describe("usePagePermission / useButtonGate · proje bağlamı", () => {
     expect(company.result.current.canEdit).toBe(false);
   });
 
-  it("useButtonGate({ projectId }): proje rolü edit verince fallback false iken de açar; başka projede ana rol", () => {
+  it("useButtonGate({ projectId }): proje rolü edit verince açar; başka projede ana rol", () => {
     session(meFixture(member));
     const gate = (projectId: string | undefined) =>
       renderHook(() =>
-        useButtonGate({ pages: "proje.isveren_hakedis", need: "edit", fallback: false, projectId }),
+        useButtonGate({ pages: "proje.isveren_hakedis", need: "edit", projectId }),
       ).result.current;
     expect(gate(PROJECT)).toBe(true);
     expect(gate(undefined)).toBe(false);
     expect(gate("99999999-9999-9999-9999-999999999999")).toBe(false);
   });
 
-  it("IZN-F5c · proje rolünün haritasında anahtar yoksa (model devrede) KAPALI — fallback true yok sayılır", () => {
+  it("IZN-F5c · proje rolünün haritasında anahtar yoksa (model devrede) KAPALI", () => {
     session(meFixture({ ...member, rolePages: { site_chief: {} } }));
     const allowed = renderHook(() =>
-      useButtonGate({ pages: "proje.isveren_hakedis", need: "edit", fallback: true, projectId: PROJECT }),
+      useButtonGate({ pages: "proje.isveren_hakedis", need: "edit", projectId: PROJECT }),
     );
     expect(allowed.result.current).toBe(false);
   });
@@ -120,7 +124,7 @@ describe("usePagePermission / useButtonGate · proje bağlamı", () => {
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
     const { result } = renderHook(
-      () => useButtonGate({ pages: "proje.isveren_hakedis", need: "edit", fallback: false, projectId: "kule-a" }),
+      () => useButtonGate({ pages: "proje.isveren_hakedis", need: "edit", projectId: "kule-a" }),
       { wrapper },
     );
     expect(result.current).toBe(true);

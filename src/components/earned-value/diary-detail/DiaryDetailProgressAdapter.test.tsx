@@ -11,6 +11,7 @@ import { useSite } from "@/lib/api/hooks/useSites";
 
 import { DAY, ITEM_KALIP, SEC_K610, SITE_ID, codeTree, dayView } from "../diary/diary-fixtures";
 import { SiteDiaryDetailProgressView } from "./DiaryDetailProgressAdapter";
+import { evDiaryMe } from "../ev-session.testkit";
 
 // DET-1.3 · Adaptör ↔ çekirdek ENTEGRASYONU: çekirdek bağlamı bildirir, adaptör
 // yuvaları doldurur, çekirdek basar (sonsuz döngü yok, planlamasızda kartlar tam).
@@ -93,7 +94,7 @@ const ENTRY = {
 
 function mockSession(permissions: Record<string, string>) {
   vi.mocked(useSession).mockReturnValue({
-    me: { id: "u-1", email: "m@ornek.com", role_key: "engineer", status: "active", permissions } as never,
+    me: evDiaryMe(permissions),
     isLoading: false,
   });
 }

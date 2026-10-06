@@ -6,12 +6,13 @@ import type { ReactNode } from "react";
 
 import { Modal } from "@/components/settings/Modal";
 import { useSession } from "@/components/shell/SessionProvider";
+import { PERSONNEL_VIEW, TIMESHEET_EDIT, TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 import { GeneralTimesheetView } from "@/components/timesheet/GeneralTimesheetView";
 import { usePersonnel } from "@/lib/api/hooks/usePersonnel";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useTimesheetWeek, type TimesheetWeek } from "@/lib/api/hooks/useTimesheet";
 import { useSaveTimesheetWeek } from "@/lib/api/hooks/useTimesheetMutations";
-import type { MeResponse } from "@/lib/auth/types";
 import { openTab } from "@/lib/workspace-tabs/tabs-reducer";
 import { workspaceTabsStore } from "@/lib/workspace-tabs/tabs-store";
 import { WorkspaceTabsBar } from "./WorkspaceTabsBar";
@@ -44,13 +45,10 @@ vi.mock("@/lib/api/hooks/useTimesheetMutations", () => ({ useSaveTimesheetWeek: 
 vi.mock("@/lib/api/timesheet-client", () => ({ downloadTimesheetExport: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSiteOptions", () => ({ useSiteOptions: vi.fn() }));
 
-const ME = {
-  id: "11111111-1111-1111-1111-111111111111",
-  full_name: "Ahmet Yılmaz",
-  role_key: "patron",
-  status: "active",
-  permissions: { timesheet: "full", personnel: "none" },
-} as unknown as MeResponse;
+// IZN-F6a · sayfa izni: puantaj sayfaları Düzenler (eski timesheet:full), personel sayfaları Görmez (personnel:none).
+const ME = meFixture({
+  pages: { ...pagesFor(TIMESHEET_EDIT, "edit"), ...pagesFor(TIMESHEET_VIEW_PAGES, "edit"), ...pagesFor(PERSONNEL_VIEW, "none") },
+});
 
 const WEEK = {
   site_id: "s-1",

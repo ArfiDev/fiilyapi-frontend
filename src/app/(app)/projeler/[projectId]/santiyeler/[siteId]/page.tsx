@@ -36,7 +36,7 @@ export default function SiteDetailPage() {
   // cagride belirsizlik 404 olurdu (fail-closed).
   const siteQuery = useSite(siteKey, { project: projectKey });
   // IZN-F5c · "+ Bölüm Ekle" (POST /sites/{id}/sections) = santiye.bolumler Düzenler; grant yoksa bugünkü (görünür) davranış.
-  const canCreateSection = useButtonGate({ pages: SECTION_CREATE_EDIT, need: "edit", fallback: true, projectId: projectKey });
+  const canCreateSection = useButtonGate({ pages: SECTION_CREATE_EDIT, need: "edit", projectId: projectKey });
 
   if (isForbidden(siteQuery.error)) return <AccessDenied />;
   if (siteQuery.isError) {

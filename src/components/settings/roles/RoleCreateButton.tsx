@@ -10,7 +10,7 @@ import { useButtonGate } from "@/lib/auth/usePagePermission";
 export function RoleCreateButton() {
   const [isOpen, setIsOpen] = useState(false);
   // IZN-F2.x · + Yeni rol = ayarlar.rol_yonetimi Düzenler (bugün KAPISIZ → grant yoksa görünür).
-  const canCreateRole = useButtonGate({ pages: ROLES_EDIT, need: "edit", fallback: true });
+  const canCreateRole = useButtonGate({ pages: ROLES_EDIT, need: "edit" });
   if (!canCreateRole) return null;
   return (
     <>

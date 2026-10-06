@@ -49,13 +49,13 @@ describe("PayrollHistoryView · sayfa izni görüntüleme kapısı (IZN-F5-ön)"
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (payroll none → AccessDenied, view → açık)", () => {
+  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { payroll: "none" } }));
     const { unmount } = render(<PayrollHistoryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
     session(meFixture({ pages: {}, permissions: { payroll: "view" } }));
     render(<PayrollHistoryView />);
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

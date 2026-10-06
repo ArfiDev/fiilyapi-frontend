@@ -36,6 +36,21 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
     canDelete: permissionLevel === "full",
   }),
 }));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `permissionLevel` (modül niyeti) oturum sayfa iznine çevrilir
+// ("read" = tüm sözleşme sayfaları Görür; aksi = tam erişim). Modül mock'u kapı DIŞI mantık için kalır.
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture, pagesFor } = await import("@/lib/auth/page-grants.testkit");
+  const { CONTRACTS_VIEW } = await import("@/lib/auth/page-gates");
+  return {
+    ...actual,
+    useSession: () => ({
+      ...actual.SESSION_CONTEXT_DEFAULT,
+      me: permissionLevel === "read" ? meFixture({ pages: pagesFor(CONTRACTS_VIEW, "view") }) : meFixture(),
+      isLoading: false,
+    }),
+  };
+});
 
 /**
  * POZ fikstürü: İKİ şantiye + iki grup. Üçüncü kalem HİÇ dağıtılmamıştır

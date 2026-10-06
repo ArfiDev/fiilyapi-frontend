@@ -3,10 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MeResponse } from "@/lib/auth/types";
 import { BackendError } from "@/lib/api/unwrap";
 import { useApprovalSettings, useUpdateApprovalSettings } from "@/lib/api/hooks/useApprovals";
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
 import { ApprovalRolesScreen } from "./ApprovalRolesScreen";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
@@ -24,17 +24,12 @@ function q(data: unknown, extra: Record<string, unknown> = {}) {
   return { data, error: null, isError: false, isLoading: false, ...extra } as never;
 }
 
-/** `permissions` yükü olan/olmayan oturum — eşik kapısı BUNDAN okunur. */
+/** Sayfa izni yükü olan/olmayan oturum — eşik kapısı `ayarlar.onay_rolleri` sayfa izninden okunur (IZN-F6a). */
 function mockSession(approvalsLevel: string | undefined) {
-  const me = {
-    id: "me",
-    email: "me@fiil.com",
-    full_name: "Deneme",
-    title: "",
-    role_key: "accounting",
-    status: "active",
-    ...(approvalsLevel === undefined ? {} : { permissions: { approvals: approvalsLevel } }),
-  } as unknown as MeResponse;
+  const me =
+    approvalsLevel === undefined
+      ? meFixture({ pages: {} })
+      : meFixture({ pages: { "ayarlar.onay_rolleri": pageGrant(approvalsLevel === "admin" ? "edit" : "view") } });
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as never);
 }
 
@@ -100,10 +95,12 @@ describe("ApprovalRolesScreen — eşik kapısı", () => {
     expect(screen.getByText(/salt okunur/)).toBeInTheDocument();
   });
 
-  it("seviye BİLİNMİYORSA kapı AÇIK kalır (bilinmezlik kuralı, ters çevrilemez)", () => {
+  // IZN-F6a · bilinmezlik kuralı KALKTI: sayfa izni hiç yoksa kapı KAPALI (fail-closed).
+  it("sayfa izni YOKSA kapı KAPALI kalır: alan kilitli, Kaydet yok", () => {
     mockSession(undefined);
     renderScreen();
-    expect(screen.getByTestId("okr-threshold-save")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Patron Onay Eşiği/)).toHaveAttribute("readonly");
+    expect(screen.queryByTestId("okr-threshold-save")).not.toBeInTheDocument();
   });
 
   it("🔴 KORKULUK: sözleşmenin reddedeceği değer İSTEK ÜRETMEZ, gerekçe basar", async () => {

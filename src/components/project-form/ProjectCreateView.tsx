@@ -67,7 +67,7 @@ export function ProjectCreateView() {
   const router = useRouter();
   // IZN-F2.y · POST /projects = genel.projeler Düzenler (backend `require_page`). Bugün kapı yok →
   // sayfa izni hiç yoksa (fallback) form açık kalır.
-  const canCreate = useButtonGate({ pages: PROJECT_CREATE_EDIT, need: "edit", fallback: true });
+  const canCreate = useButtonGate({ pages: PROJECT_CREATE_EDIT, need: "edit" });
   const createProject = useCreateProject();
   const usersQuery = useUsers({ limit: MANAGER_OPTIONS_LIMIT, offset: 0 });
   const managerNames = (usersQuery.data?.items ?? []).map((u) => u.full_name);

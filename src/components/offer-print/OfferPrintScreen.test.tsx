@@ -20,6 +20,20 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
     return { level, canView: level !== "none", canWrite: true, canDelete: true };
   },
 }));
+// IZN-F6a · kapı yalnız sayfa izninden karar verir: contracts modül niyeti → sözleşme/teklif sayfaları (none = hiçbiri).
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture, pagesFor } = await import("@/lib/auth/page-grants.testkit");
+  const { CONTRACTS_VIEW } = await import("@/lib/auth/page-gates");
+  return {
+    ...actual,
+    useSession: () => ({
+      ...actual.SESSION_CONTEXT_DEFAULT,
+      me: meFixture({ pages: pagesFor(CONTRACTS_VIEW, perm.levels.contracts === "none" ? "none" : "view") }),
+      isLoading: false,
+    }),
+  };
+});
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
 

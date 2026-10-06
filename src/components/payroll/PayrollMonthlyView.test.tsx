@@ -23,9 +23,11 @@ import {
 } from "@/lib/api/hooks/usePayrollMutations";
 import { downloadPayrollExport } from "@/lib/api/payroll-client";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { PayrollMonthlyView } from "./PayrollMonthlyView";
+import { PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/usePayroll", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/usePayroll")>()),
@@ -204,8 +206,11 @@ function mutationResult<TData, TVars>(partial: Record<string, unknown> = {}) {
 }
 
 function setSession(level: string | undefined) {
+  // IZN-F6a.3 · eski bordro seviyesi niyeti sayfa izni olarak kurulur (full = Düzenler + Onaylar).
+  const pages = levelPages(PAYROLL_VIEW_PAGES, level === "full" ? "approve" : level);
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { payroll: level } } as unknown as MeResponse,
+    me: meFixture({ pages }),
+    isLoading: false,
   } as unknown as ReturnType<typeof useSession>);
 }
 

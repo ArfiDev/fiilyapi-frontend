@@ -15,10 +15,8 @@ import { useCreateOffer } from "@/lib/api/hooks/useOfferMutations";
 import { useOfferSettings } from "@/lib/api/hooks/useOffers";
 import { useOfferTemplates, type OfferTemplateListItem } from "@/lib/api/hooks/useOfferTemplates";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { OFFERS_EDIT, PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
@@ -46,9 +44,7 @@ import { useOfferCreateStart } from "./useOfferCreateStart";
 import "./offer-create.css";
 
 /** T25: teklif YAZMA = `contracts:full` + disiplin kısıtsız. */
-const WRITE_LEVEL = "full";
 /** ÜS-F3-8: işveren kartoteksine yazma proje yönetici yetkisidir (`projects:admin`). */
-const EMPLOYER_ADD_LEVEL = "admin";
 const EMPLOYER_ADD_DENIED_TITLE = "İşveren eklemek proje yönetici yetkisi ister";
 const SETTINGS_ERROR_TEXT = "Teklif ayarları yüklenemedi";
 
@@ -58,8 +54,6 @@ const SETTINGS_ERROR_TEXT = "Teklif ayarları yüklenemedi";
  * form açılışta `GET /offers/settings` ön değerlerini bekler.
  */
 export function OfferCreateScreen({ initialTemplateId }: { initialTemplateId?: string } = {}) {
-  const { level } = useModulePermission("contracts");
-  const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
 
   // IZN-F2.x · teklif oluştur = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; işveren ekle =
@@ -67,12 +61,10 @@ export function OfferCreateScreen({ initialTemplateId }: { initialTemplateId?: s
   const canEditOffers = useButtonGate({
     pages: OFFERS_EDIT,
     need: "edit",
-    fallback: hasAtLeast(level, WRITE_LEVEL) && level !== "none",
   });
   const canAddEmployer = useButtonGate({
     pages: PROJECT_CREATE_EDIT,
     need: "edit",
-    fallback: hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL),
   });
   const canWrite = canEditOffers && !scope.isRestricted;
   // Yetkisiz kullanıcı için HİÇBİR uç çağrılmaz: ayar sorgusu bu kapının ALTINDAKİ bileşendedir.

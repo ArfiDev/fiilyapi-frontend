@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { TREASURY_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type {
   FinancialInstrumentListResponse,
   FinancialInstrumentResponse,
@@ -14,7 +16,6 @@ import {
   useFinancialInstrumentSummary,
 } from "@/lib/api/hooks/useFinancialInstruments";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { FinancialInstrumentsView } from "./FinancialInstrumentsView";
 
@@ -130,9 +131,9 @@ function summaryResult(partial: Record<string, unknown>) {
  * değil `"none"` kullanır — `{}` ile yazılan bir test hiçbir şey kanıtlamazdı.
  */
 function setSession(level: string) {
-  vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { treasury: level } } as unknown as MeResponse,
-  } as unknown as ReturnType<typeof useSession>);
+  // IZN-F6a · modül düzeyi → sayfa izni (mali.hazine + mali.cek_odeme = TREASURY_VIEW/EDIT).
+  const pages = pagesFor(TREASURY_VIEW, level === "none" ? "none" : level === "view" ? "view" : "edit");
+  vi.mocked(useSession).mockReturnValue({ me: meFixture({ pages }) } as unknown as ReturnType<typeof useSession>);
 }
 
 function list(items: FinancialInstrumentResponse[], total = items.length) {

@@ -12,10 +12,10 @@ import { useEvSettings } from "@/lib/api/hooks/useEvSettings";
 import { useEvBudget, useEvBudgetRevisions } from "@/lib/api/hooks/useEvBudget";
 import { useSite } from "@/lib/api/hooks/useSites";
 import type { EvDayView } from "@/lib/api/models";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { DAY, ITEM_KALIP, SEC_K610, codeTree, dayView } from "./diary-fixtures";
 import { useDiaryProgressExtension } from "./useDiaryProgressExtension";
+import { evDiaryMe } from "../ev-session.testkit";
 
 // PLN-F2.5e · adaptörün ÜRETTİĞİ yuvalar (çekirdek ekran render EDİLMEZ —
 // çekirdek davranışı `DiaryProgressAdapter.test.tsx` entegrasyonundadır).
@@ -44,7 +44,7 @@ function query(data: unknown) {
 
 function mockSession(permissions: Record<string, string>) {
   vi.mocked(useSession).mockReturnValue({
-    me: { id: "u-1", email: "m@ornek.com", role_key: "engineer", status: "active", permissions } as unknown as MeResponse,
+    me: evDiaryMe(permissions),
     isLoading: false,
   });
 }

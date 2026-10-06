@@ -6,10 +6,11 @@ import {
   useHrDocumentsSummary,
   type HrDocumentsSummaryResponse,
 } from "@/lib/api/hooks/useHrDocuments";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { HrDocumentsView } from "./HrDocumentsView";
 import { FILTER_PENDING_REASON, STATUS_COLUMN_PENDING_REASON } from "./hr-documents-labels";
+import { PERSONNEL_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 vi.mock("@/lib/api/hooks/useHrDocuments", async (importOriginal) => ({
@@ -87,7 +88,7 @@ function summary(overrides: Partial<HrDocumentsSummaryResponse> = {}): HrDocumen
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { personnel: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useHrDocumentsSummary).mockReturnValue(queryStub(summary()));
@@ -239,7 +240,7 @@ describe("HrDocumentsView — BT", () => {
 
   it("görüntüleme izni yoksa AccessDenied basar", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { personnel: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(PERSONNEL_VIEW, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<HrDocumentsView />);

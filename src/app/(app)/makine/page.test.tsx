@@ -7,7 +7,7 @@ import { useEquipment } from "@/lib/api/hooks/useEquipment";
 import { useEquipmentSummary } from "@/lib/api/hooks/useEquipmentSummary";
 import { usePersonnel } from "@/lib/api/hooks/usePersonnel";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
-import type { MeResponse } from "@/lib/auth/types";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // F-MK T2 · `/makine` gerçek rota eklenince [...slug] catch-all bu segment
 // için devre dışı kalır — bu test sayfanın ComingSoon YERİNE gerçek M1
@@ -31,7 +31,7 @@ vi.mock("@/lib/api/hooks/usePersonnel", async (importOriginal) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { equipment: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useEquipment).mockReturnValue({

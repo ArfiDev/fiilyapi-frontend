@@ -66,7 +66,7 @@ export function UserAccessModal({ user, onClose }: UserAccessModalProps) {
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
   // Parola sıfırlama: bugünkü SA kapısı (IZN-F2.x). Silme ise FAIL-CLOSED: yalnız `me.is_system_admin === true`.
-  const canResetPassword = useButtonGate({ pages: USERS_EDIT, need: "sa", fallback: true });
+  const canResetPassword = useButtonGate({ pages: USERS_EDIT, need: "sa" });
   const isSystemAdmin = me?.is_system_admin === true;
   const canDelete = isSystemAdmin;
   // GECE KARARI (IZN-F3.1e): kişi KENDİ kaydını açtıysa ve Sistem Yöneticisi değilse erişim alanları salt okunur

@@ -11,7 +11,7 @@ import { cx } from "@/lib/cx";
 import { useCatalogDisciplines, useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
 import { isForbidden } from "@/lib/api/unwrap";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
-import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
+import { type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { CONTRACTS_VIEW, WORK_ITEM_CATALOG_EDIT } from "@/lib/auth/page-gates";
@@ -28,7 +28,6 @@ import { countByDiscipline, filterWorkItems, sortByPozNo } from "./work-item-mod
 import "./work-item-catalog.css";
 
 /** T25: katalog YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
-const WRITE_LEVEL = "full";
 /** KIK:91-93 / :237 — başarı bildiriminin ekranda kalma süresi. */
 const TOAST_MS = 2800;
 /** Yalnız "Excel'den İçe Aktar" için kalır (TKL-F4.3: "Excel İndir" açıldı). */
@@ -56,7 +55,7 @@ function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean, 
 export function WorkItemCatalogScreen() {
   const { level } = useModulePermission("contracts");
   // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
-  const canViewCatalog = useButtonGate({ pages: CONTRACTS_VIEW, need: "view", fallback: level !== "none" });
+  const canViewCatalog = useButtonGate({ pages: CONTRACTS_VIEW, need: "view" });
   if (!canViewCatalog) return <AccessDenied />;
   return <WorkItemCatalogContent level={level} />;
 }
@@ -64,7 +63,7 @@ export function WorkItemCatalogScreen() {
 function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
   const scope = useDisciplineScope();
   // IZN-F2.x · katalog kalemi ekle/düzenle = teklif.is_kalemi_katalogu/sözleşme sayfaları Düzenler (VEYA) ∧ kısıtsız.
-  const canEditCatalog = useButtonGate({ pages: WORK_ITEM_CATALOG_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canEditCatalog = useButtonGate({ pages: WORK_ITEM_CATALOG_EDIT, need: "edit" });
   const canWrite = canEditCatalog && !scope.isRestricted;
 
   const exportDownload = useFileDownload();

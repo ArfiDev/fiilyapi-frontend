@@ -25,7 +25,6 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
 import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SUBCONTRACTOR_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -90,7 +89,6 @@ const PENDING_SEQUENCE_HINT = "Sıra numarası ilk kayıtta backend tarafından 
  */
 export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPaymentFormProps) {
   const router = useRouter();
-  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   const isAmountHidden = useCategoryHidden(SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES);
   const isEdit = props.mode === "edit";
   const detailQuery = useSubcontractorProgressPayment(isEdit ? props.paymentId : "");
@@ -103,7 +101,6 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
   const canWrite = useButtonGate({
     pages: SUBCONTRACTOR_PAYMENT_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
     projectId: contract?.project_id,
   });
 

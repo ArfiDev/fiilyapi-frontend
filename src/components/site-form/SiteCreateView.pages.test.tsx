@@ -71,10 +71,10 @@ describe("SiteCreateView · sayfa izni kapısı (IZN-F5c)", () => {
     expect(screen.queryByRole("heading", FORM)).toBeNull();
   });
 
-  it("pages boş → bugünkü davranış: form açık", () => {
+  it("pages boş → fail-closed: form açılmaz (IZN-F6a)", () => {
     session(meFixture({ pages: {} }));
     render(<SiteCreateView />);
-    expect(screen.getByRole("heading", FORM)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", FORM)).toBeNull();
   });
 
   it("sistem yöneticisi: grant none olsa da form var", () => {

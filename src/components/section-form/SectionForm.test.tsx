@@ -17,6 +17,7 @@ import { MESSAGES } from "./validate";
 import { GANTT_AUTO_ADD_REASON } from "./SectionForm";
 import { CREATE_MODE_DISABLED_REASON } from "@/components/boq-assignment/BoqAssignmentCard";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { ALL_PAGE_KEYS, fullAccessPages, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
@@ -85,8 +86,8 @@ const BASE_ME = {
   status: "active",
 } as unknown as MeResponse;
 
-function mockSession(permissions?: Record<string, string>) {
-  const me = permissions === undefined ? BASE_ME : { ...BASE_ME, permissions };
+function mockSession(pages: ReturnType<typeof fullAccessPages>) {
+  const me = { ...BASE_ME, pages };
   vi.mocked(useSession).mockReturnValue({ me: me as MeResponse, isLoading: false });
 }
 
@@ -160,7 +161,7 @@ const updateMutate = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSession({ sites: "full" });
+  mockSession(fullAccessPages());
   vi.mocked(useSite).mockReturnValue(queryResult({ data: SITE }));
   vi.mocked(useSiteSections).mockReturnValue(queryResult({ data: SITE_SECTIONS }));
   vi.mocked(useProject).mockReturnValue(queryResult({ data: PROJECT }));
@@ -186,8 +187,8 @@ function renderEdit(detailOverrides: Record<string, unknown> = {}) {
 }
 
 describe("SectionForm — izin", () => {
-  it("sites:full yoksa AccessDenied basar", () => {
-    mockSession({ sites: "view" });
+  it("sayfa Düzenler değilse (yalnız Görür) AccessDenied basar", () => {
+    mockSession(pagesFor(ALL_PAGE_KEYS, "view"));
     renderCreate();
     expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
   });

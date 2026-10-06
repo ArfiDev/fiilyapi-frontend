@@ -65,15 +65,10 @@ describe("SiteDocumentsView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: documents:none reddedilir, view açılır", () => {
-    session(meFixture({ pages: {}, permissions: { documents: "none" } }));
-    const { unmount } = render(<SiteDocumentsView />);
-    expect(screen.getByText(DENIED)).toBeInTheDocument();
-    unmount();
-
-    session(meFixture({ pages: {}, permissions: { documents: "view" } }));
+  it("pages boş → fail-closed: documents full olsa bile AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { documents: "full" } }));
     render(<SiteDocumentsView />);
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("proje ekibinde: proje rolü belge sayfasını gizlerse ana rol Görür olsa da reddedilir", () => {

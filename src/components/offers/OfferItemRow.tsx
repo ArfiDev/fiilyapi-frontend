@@ -65,7 +65,7 @@ export function OfferItemRow({ ctx, catalogItem, isQuantityMissing, editor, canE
   const offerEnabled = isOfferPriceEnabled(item);
   const disabled = !canEdit;
   // IZN-F2.x · kalem silme = yalnız sistem yöneticisi (SIL-B1; grant yoksa bugünkü `canEdit`).
-  const canRemove = useButtonGate({ pages: OFFERS_EDIT, need: "sa", fallback: canEdit });
+  const canRemove = useButtonGate({ pages: OFFERS_EDIT, need: "sa" });
   const catalogMhr = ctx.catalogUnitMhr;
   return (
     <tr

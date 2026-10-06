@@ -7,13 +7,12 @@ import { Alert, Badge, Button } from "@/components/ui";
 import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { PayrollPeriodListRow } from "@/lib/api/hooks/usePayroll";
-import { PAYROLL_PERMISSION_MODULE, usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
+import { usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import type { PayrollSgkSummaryResponse } from "@/lib/api/hooks/usePayrollSgk";
 import { usePayrollSgkSummary, useSubmitPayrollSgk } from "@/lib/api/hooks/usePayrollSgk";
 import { isForbidden } from "@/lib/api/unwrap";
 import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SGK_APPROVE, PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrencyTight, formatDateLong, formatPeriod } from "@/lib/format";
@@ -81,11 +80,10 @@ import "./payroll-sgk.css";
  * `Suspense` sarmalayıcısı gerekmez (mali tablolar kanonu).
  */
 export function PayrollSgkView() {
-  const permission = useModulePermission(PAYROLL_PERMISSION_MODULE);
   // IZN-F2.x · SGK'ya Gönder = mali.sgk_bildirimi Onaylar.
-  const canSubmitSgk = useButtonGate({ pages: SGK_APPROVE, need: "approve", fallback: permission.canWrite });
+  const canSubmitSgk = useButtonGate({ pages: SGK_APPROVE, need: "approve" });
   // IZN-F5-ön · görüntüleme kapısı = bordro sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view", fallback: permission.canView });
+  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view" });
   const periodsQuery = usePayrollPeriods();
 
   // `null` = kullanıcı henüz seçim yapmadı ⇒ varsayılan (en yeni dönem).

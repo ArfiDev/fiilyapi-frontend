@@ -7,9 +7,15 @@ import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 import { AHMET, AHMET_ACCESS, AYSE, createUsersBackend, type FakeBackendOptions } from "./users-fake-backend.testkit";
 
 const session = vi.hoisted(() => ({ isAdmin: false, refresh: vi.fn() }));
+// IZN-F6a · rol listesini okuma kapısı (`useCanReadRoles`) yalnız sayfa izninden karar verir: kullanıcıyı düzenleyen
+// kişi `ayarlar.kullanicilar` Düzenler (SA olmayan açıcı dahil).
 vi.mock("@/components/shell/SessionProvider", () => ({
   useSession: () => ({
-    me: { id: "me-1", is_system_admin: session.isAdmin, pages: {} },
+    me: {
+      id: "me-1",
+      is_system_admin: session.isAdmin,
+      pages: { "ayarlar.kullanicilar": { level: "edit", approve: false } },
+    },
     isLoading: false,
     refresh: session.refresh,
   }),

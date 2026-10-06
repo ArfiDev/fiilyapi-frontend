@@ -9,7 +9,7 @@ import { useSales } from "@/lib/api/hooks/useSales";
 import { useSalesSummary } from "@/lib/api/hooks/useSalesSummary";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
+import { ALL_PAGE_KEYS, meFixture, pageGrant, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useProjectUnits", () => ({ useProjectUnits: vi.fn() }));
@@ -45,7 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { sales: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useProjects).mockReturnValue(queryStub(PROJECTS));
@@ -139,7 +139,7 @@ describe("SalesView — satış formu girişi (25)", () => {
   // bilinmezlik kuralına düşerek yazma yüzeyini AÇIK bırakırdı).
   it("yalnız okuma ('view') yetkisi olan kullanıcıya form girişi BASILMAZ", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { sales: "view" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<SalesView />);
@@ -150,7 +150,7 @@ describe("SalesView — satış formu girişi (25)", () => {
   // AÇIKÇA "none" kapatır — test bu yüzden "none" verir.
   it("izni 'none' olan kullanıcı ekranı göremez", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { sales: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<SalesView />);
@@ -226,22 +226,29 @@ describe("SalesView — ünite 403'ü ekranı düşürmez", () => {
  * ikisinden biri sessizce yanlış kapıya bağlanmış demektir.
  */
 describe("SalesView — blok/ünite form girişleri (F-UNIT1 T3)", () => {
-  function grantProjects(level: string) {
+  /** IZN-F6a · satış sayfası Düzenler; blok/ünite sayfaları (AYRI kapı) `level` düzeyinde. */
+  function grantProjects(level: "edit" | "view") {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { sales: "full", projects: level } } as unknown as MeResponse,
+      me: meFixture({
+        pages: {
+          "mali.satis": pageGrant("edit"),
+          "mali.satis_blok": pageGrant(level),
+          "mali.satis_unite": pageGrant(level),
+        },
+      }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
   }
 
   it("'projects' yazma yetkisiyle iki giriş de basılır", () => {
-    grantProjects("full");
+    grantProjects("edit");
     render(<SalesView />);
     expect(screen.getByRole("link", { name: "+ Blok Ekle" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "+ Ünite Ekle" })).toBeInTheDocument();
   });
 
   it("seçili proje `?proje=` ile forma TAŞINIR (bağlam kaybolmaz)", () => {
-    grantProjects("full");
+    grantProjects("edit");
     searchParams = new URLSearchParams("proje=p-2");
     render(<SalesView />);
     expect(screen.getByRole("link", { name: "+ Blok Ekle" })).toHaveAttribute(
@@ -255,7 +262,7 @@ describe("SalesView — blok/ünite form girişleri (F-UNIT1 T3)", () => {
   });
 
   it("URL'de seçim yoksa listenin İLK projesi taşınır", () => {
-    grantProjects("full");
+    grantProjects("edit");
     render(<SalesView />);
     expect(screen.getByRole("link", { name: "+ Blok Ekle" })).toHaveAttribute(
       "href",
@@ -264,7 +271,7 @@ describe("SalesView — blok/ünite form girişleri (F-UNIT1 T3)", () => {
   });
 
   it("hiç proje yokken bağlamsız (çıplak) rotaya gider", () => {
-    grantProjects("full");
+    grantProjects("edit");
     vi.mocked(useProjects).mockReturnValue(queryStub({ items: [] }));
     render(<SalesView />);
     expect(screen.getByRole("link", { name: "+ Ünite Ekle" })).toHaveAttribute(
@@ -288,7 +295,13 @@ describe("SalesView — blok/ünite form girişleri (F-UNIT1 T3)", () => {
   // satış kaydı görünmez. İki kapının GERÇEKTEN ayrı olduğunu bu kanıtlar.
   it("'projects' yazar / 'sales' okur kullanıcıda yalnız blok-ünite girişleri kalır", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { sales: "view", projects: "full" } } as unknown as MeResponse,
+      me: meFixture({
+        pages: {
+          "mali.satis": pageGrant("view"),
+          "mali.satis_blok": pageGrant("edit"),
+          "mali.satis_unite": pageGrant("edit"),
+        },
+      }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<SalesView />);
@@ -301,7 +314,7 @@ describe("SalesView — blok/ünite form girişleri (F-UNIT1 T3)", () => {
   // şeridinde çizilir, `/satis` başlığında DEĞİL. İkinci bir devre-dışı kopya
   // basmak mockup'ın hiç çizmediği bir yüzeyi icat etmek olurdu.
   it("F-UNIT2 sekmeleri `/satis` başlığında BASILMAZ (mockup onları forma çizer)", () => {
-    grantProjects("full");
+    grantProjects("edit");
     render(<SalesView />);
     for (const label of ["Toplu Üretim", "Excel İçe Aktar", "Paylaşım Girişi"]) {
       expect(screen.queryByText(label)).not.toBeInTheDocument();

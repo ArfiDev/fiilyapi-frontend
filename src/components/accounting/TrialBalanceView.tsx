@@ -9,13 +9,11 @@ import { downloadTrialBalanceExport } from "@/lib/api/accounting-export-client";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useTrialBalance } from "@/lib/api/hooks/useTrialBalance";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
 import {
-  ACCOUNTING_PERMISSION_MODULE,
   ACCOUNTING_REASONS,
   ACCOUNTING_URL,
   currentPeriod,
@@ -44,8 +42,7 @@ import "./accounting.css";
  * yoktur ve `Suspense` sarmalayıcısı GEREKMEZ (`muhasebe/page.tsx` kanonu).
  */
 export function TrialBalanceView() {
-  const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
-  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view" });
 
   // 🔴 K4 · varsayılan dönem YEREL takvimden (`currentPeriod`); `toISOString()`
   // UTC'ye çevirir ve TR saatinde ayın ilk/son gününde dönemi kaydırırdı (TB5).

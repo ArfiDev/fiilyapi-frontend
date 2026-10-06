@@ -94,7 +94,7 @@ export function SubcontractorContractDetailView({
   // IZN-F2.y · poz ekle/fiyat/şartlar (POST/PATCH /subcontractor-contracts…) = sözleşme sayfaları
   // Düzenler (VEYA, backend `contracts:full`). Bugün kapı yok → sayfa izni hiç yoksa (fallback) açık.
   // Görüntüleme DEĞİŞMEZ.
-  const canWrite = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "edit", fallback: true });
+  const canWrite = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "edit" });
   const contractQuery = useSubcontractorContract(contractId);
   const detail = contractQuery.data;
   const projectId = detail?.project_id ?? "";

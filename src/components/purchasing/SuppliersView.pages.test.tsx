@@ -91,12 +91,8 @@ describe("SuppliersView · sayfa izni kapısı (IZN-F2.x)", () => {
     expect(screen.queryByRole("button", { name: ADD })).toBeNull();
   });
 
-  it("pages boş → eski davranış (procurement full → var, view → yok)", () => {
+  it("pages boş → fail-closed: procurement full olsa bile düğme yok (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { procurement: "full" } }));
-    const { unmount } = render(<SuppliersView />);
-    expect(screen.getByRole("button", { name: ADD })).toBeInTheDocument();
-    unmount();
-    session(meFixture({ pages: {}, permissions: { procurement: "view" } }));
     render(<SuppliersView />);
     expect(screen.queryByRole("button", { name: ADD })).toBeNull();
   });

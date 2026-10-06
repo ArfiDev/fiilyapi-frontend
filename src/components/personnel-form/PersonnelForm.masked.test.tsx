@@ -8,9 +8,10 @@ import { usePersonnelDetail } from "@/lib/api/hooks/usePersonnelDetail";
 import { useCreatePersonnel, useUpdatePersonnel } from "@/lib/api/hooks/usePersonnelMutations";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { PersonnelForm } from "./PersonnelForm";
+import type { HiddenCategory } from "@/lib/api/models";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -59,7 +60,7 @@ const DETAIL = {
 
 function mockSession(hidden: readonly string[]) {
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { personnel: "full" }, hidden_fields: hidden } as unknown as MeResponse,
+    me: meFixture({ hiddenFields: hidden as readonly HiddenCategory[] }),
     isLoading: false,
   });
 }

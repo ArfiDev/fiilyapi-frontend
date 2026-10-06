@@ -9,7 +9,6 @@ import {
   useSubcontractorProgressPaymentSummary,
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SUBCONTRACTOR_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -45,12 +44,10 @@ export function SubcontractorProgressPaymentsView() {
 
   const paymentsQuery = useSubcontractorProgressPayments(listFilter);
   const summaryQuery = useSubcontractorProgressPaymentSummary(listFilter);
-  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = taşeron hakediş ailesi Düzenler (IZN-F5b, HT).
   const canWrite = useButtonGate({
     pages: SUBCONTRACTOR_PAYMENT_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
     projectId: filters.projectId,
   });
 

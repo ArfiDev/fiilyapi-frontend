@@ -18,8 +18,10 @@ import {
 } from "@/lib/api/hooks/useTimesheetMutations";
 import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { routes } from "@/lib/routes";
+import { TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 /**
  * PLN-F2.4 · ŞP ekranında KİLİTLİ GÜN — mockup
@@ -206,14 +208,7 @@ beforeEach(() => {
   saveBodies = [];
   saveErrors = [];
   vi.mocked(useSession).mockReturnValue({
-    me: {
-      id: "u-1",
-      email: "sef@ornek.com",
-      full_name: "Sercan Öztürk",
-      role_key: "site_chief",
-      status: "active",
-      permissions: { timesheet: "full" },
-    } as unknown as MeResponse,
+    me: meFixture({ pages: levelPages(TIMESHEET_VIEW_PAGES, "full") }),
     isLoading: false,
   });
   vi.mocked(useSaveTimesheetWeek).mockReturnValue({

@@ -210,7 +210,6 @@ export function SiteHeroBar({ site }: SiteHeroBarProps) {
   const canCreateSection = useButtonGate({
     pages: SECTION_CREATE_EDIT,
     need: "edit",
-    fallback: true,
     projectId: site.project.id,
   });
 

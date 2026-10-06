@@ -16,7 +16,6 @@ import { downloadQuoteComparisonExport } from "@/lib/api/purchase-quote-client";
 import { isForbidden } from "@/lib/api/unwrap";
 import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PROCUREMENT_EDIT, QUOTE_ORDER_APPROVE, PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatDateDots, formatQuantity } from "@/lib/format";
@@ -29,7 +28,6 @@ import {
   PROJECT_NAME_UNRESOLVED_REASON,
   PURCHASE_PRIORITY_LABELS,
   PURCHASING_ROOT_HREF,
-  PURCHASING_PERMISSION_MODULE,
 } from "./purchasing-labels";
 import "./purchasing.css";
 
@@ -63,15 +61,13 @@ export interface QuoteComparisonViewProps {
 }
 
 export function QuoteComparisonView({ requestId }: QuoteComparisonViewProps) {
-  const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
   // IZN-F2.x · teklif ekle = stok.teklif_karsilastirma Düzenler; Seç ve Sipariş Ver = stok.teklif_karsilastirma Onaylar.
-  const canAddQuote = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit", fallback: permission.canWrite });
-  const canOrder = useButtonGate({ pages: QUOTE_ORDER_APPROVE, need: "approve", fallback: permission.canWrite });
+  const canAddQuote = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit" });
+  const canOrder = useButtonGate({ pages: QUOTE_ORDER_APPROVE, need: "approve" });
   // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
   const canViewProcurement = useButtonGate({
     pages: PROCUREMENT_VIEW_PAGES,
     need: "view",
-    fallback: permission.canView,
   });
 
   const requestQuery = usePurchaseRequest(requestId);

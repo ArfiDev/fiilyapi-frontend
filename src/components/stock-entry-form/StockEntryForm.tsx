@@ -17,7 +17,6 @@ import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { useWarehouses } from "@/lib/api/hooks/useWarehouses";
 import { stockErrorMessage } from "@/lib/api/stock-error";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { INVENTORY_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -88,9 +87,8 @@ export function StockEntryForm() {
     siteId: string;
   }>();
 
-  const permission = useModulePermission("inventory");
   // IZN-F2.x · stok hareketi = stok.stok_depo/santiye.stok Düzenler (VEYA).
-  const canEdit = useButtonGate({ pages: INVENTORY_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEdit = useButtonGate({ pages: INVENTORY_EDIT, need: "edit" });
   const siteQuery = useSite(siteKey, { project: projectKey });
   // 🔴 SLUG -> KANONIK KIMLIK. Burada AYRICA bir SESSIZ kusur kapaniyor:
   // `defaultWarehouseId(...)` asagida `warehouse.site_id` (UUID) ile

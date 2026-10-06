@@ -17,8 +17,19 @@ import {
 
 const downloadOfferExport = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api/offer-export-client", () => ({ downloadOfferExport }));
+// IZN-F6a · "Taslağı sil" = `need: "sa"` (yalnız sistem yöneticisi): varsayılan oturum SA; SA olmayan test kapatır.
+const session = vi.hoisted(() => ({ isSystemAdmin: true }));
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture } = await import("@/lib/auth/page-grants.testkit");
+  return {
+    ...actual,
+    useSession: () => ({ ...actual.SESSION_CONTEXT_DEFAULT, me: meFixture({ isSystemAdmin: session.isSystemAdmin }), isLoading: false }),
+  };
+});
 
 beforeEach(() => {
+  session.isSystemAdmin = true;
   downloadOfferExport.mockReset();
   downloadOfferExport.mockResolvedValue("TKL-2026-0013-Rev2-isveren.xlsx");
 });
@@ -249,6 +260,14 @@ describe("⋯ menüsü", () => {
     const del = screen.getByRole("button", { name: "Taslağı sil" });
     await user.click(del);
     expect(props.onDelete).toHaveBeenCalledWith(OFFER_DRAFT);
+  });
+
+  it("SA olmayan (yazabilen) kullanıcıda tek revizyonlu taslakta bile 'Taslağı sil' YOK; menü açılır", async () => {
+    session.isSystemAdmin = false;
+    renderView({ body: { kind: "ready", data: makeResponse([OFFER_DRAFT, OFFER_SENT]) } });
+    await openMenu("TKL-2026-0014");
+    expect(screen.getByRole("button", { name: "Kopyala (yeni rev)" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Taslağı sil" })).not.toBeInTheDocument();
   });
 
   it("çok revizyonlu taslakta ve gönderilmişte 'Taslağı sil' YOK", async () => {

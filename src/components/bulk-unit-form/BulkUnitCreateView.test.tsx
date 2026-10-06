@@ -22,6 +22,7 @@ import {
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
@@ -104,7 +105,7 @@ beforeEach(() => {
   previewAsync.mockResolvedValue(makePreview());
   createAsync.mockResolvedValue({ blocks: [] });
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { projects: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useProjects).mockReturnValue(
@@ -224,9 +225,9 @@ describe("BulkUnitCreateView — TAM SAYFA kabuğu (TU 31-56)", () => {
     expect(screen.queryByTestId("toplu-form-govde")).not.toBeInTheDocument();
   });
 
-  it("`projects` yetkisi `draft` iken AccessDenied basılır (sunucu yalnız `full` ister)", () => {
+  it("sayfa izni yalnız Görür iken (yazar değil) AccessDenied basılır (sunucu yalnız tam yetkiyi ister)", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { projects: "draft" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<BulkUnitCreateView />);

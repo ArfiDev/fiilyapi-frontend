@@ -23,9 +23,7 @@ import { readOnlyMessage } from "./OffersScreen";
 import "./offers.css";
 
 /** T25: teklif YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
-const WRITE_LEVEL = "full";
 /** ÜS-F3-8: işveren eklemek `projects:admin`. */
-const EMPLOYER_ADD_LEVEL = "admin";
 /** TKL-F5.5 · SO-42: `POST /offers/{id}/convert` `projects:admin` ister. */
 const PROJECTS_ADMIN_LEVEL = "admin";
 const NOT_FOUND_STATUS = 404;
@@ -52,12 +50,10 @@ interface OfferDetailScreenProps {
  * Kapı: `contracts:none` → AccessDenied; 403 (SO-19 kısıtlı kullanıcı / izin yarışı) da AccessDenied.
  */
 export function OfferDetailScreen(props: OfferDetailScreenProps) {
-  const { level } = useModulePermission("contracts");
   // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
   const canViewOffer = useButtonGate({
     pages: CONTRACTS_VIEW,
     need: "view",
-    fallback: level !== "none",
   });
   if (!canViewOffer) return <AccessDenied />;
   return <OfferDetailContent {...props} />;
@@ -68,12 +64,11 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
   const { level } = useModulePermission("contracts");
   const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
-  const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit" });
   const canWrite = canEditOffers && !scope.isRestricted;
   const canAddEmployer = useButtonGate({
     pages: PROJECT_CREATE_EDIT,
     need: "edit",
-    fallback: hasAtLeast(projects.level, EMPLOYER_ADD_LEVEL),
   });
   const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
   // Sayfa modeli yoksa `undefined` → bugünkü kural (`canWrite` ∧ `projects ≥ admin`); model devredeyken hücresiz = kapalı (IZN-F5c).

@@ -19,10 +19,10 @@ import {
   type LeaveRequestResponse,
 } from "@/lib/api/hooks/useLeaves";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { LeavesView } from "./LeavesView";
 import { DECISION_PENDING_REASON } from "./leaves-labels";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 vi.mock("@/lib/api/hooks/useLeaves", async (importOriginal) => ({
@@ -158,7 +158,7 @@ function requestList(
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { personnel: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useApproveLeaveRequest).mockReturnValue({

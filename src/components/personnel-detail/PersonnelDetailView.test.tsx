@@ -7,8 +7,10 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { usePersonnelDocuments } from "@/lib/api/hooks/useHrDocuments";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { EMPTY_PERSONNEL_HR_FIELDS } from "@/lib/api/hooks/personnel-fixtures";
+import { PERSONNEL_VIEW } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "per-9" }),
@@ -53,7 +55,7 @@ const PROJECTS = { items: [{ id: "p-1", name: "Güneşkent A-Blok" }] };
 
 function mockSession(level: string) {
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { personnel: level } } as unknown as MeResponse,
+    me: meFixture({ pages: levelPages(PERSONNEL_VIEW, level) }),
     isLoading: false,
   });
 }
@@ -270,12 +272,20 @@ describe("PersonnelDetailView · 4 pending kart", () => {
   // `PersonnelDocumentsSummaryCard.test.tsx`tedir). F-BLG T2c: "+ Ekle" de
   // gerçek oldu (form mockup'ı geldi). Burada yalnız kartın detay ekranına
   // DOĞRU personel kimliğiyle bağlandığı sınanır.
-  it("Belgeler kartı personelin KENDİ kimliğiyle sorgular; '+ Ekle' AÇIKtır", () => {
+  it("Belgeler kartı personelin KENDİ kimliğiyle sorgular; Düzenler yetkisiyle '+ Ekle' AÇIKtır", () => {
+    mockSession("full");
     render(<PersonnelDetailView />);
     const card = screen.getByTestId("personnel-documents-card");
 
     expect(card.querySelector(".pd-card__add-btn")).toBeEnabled();
     expect(vi.mocked(usePersonnelDocuments)).toHaveBeenCalledWith("per-9");
+  });
+
+  it("yalnız Görür yetkisinde (kart görünür) '+ Ekle' GÖRÜNMEZ (IZN-F6a)", () => {
+    render(<PersonnelDetailView />);
+    const card = screen.getByTestId("personnel-documents-card");
+
+    expect(card.querySelector(".pd-card__add-btn")).toBeNull();
   });
 
   it("Puantaj Özeti kartı EK SORGU ATMAZ — usePersonnelDetail YALNIZ BİR KEZ çağrılır", () => {

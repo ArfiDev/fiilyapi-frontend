@@ -16,9 +16,11 @@ import type {
 } from "@/lib/api/hooks/usePayrollSgk";
 import { usePayrollSgkSummary, useSubmitPayrollSgk } from "@/lib/api/hooks/usePayrollSgk";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { PayrollSgkView } from "./PayrollSgkView";
+import { PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/bordro/sgk" }));
 vi.mock("@/lib/api/hooks/usePayroll", async (importOriginal) => ({
@@ -114,8 +116,11 @@ function mutationResult(partial: Record<string, unknown> = {}) {
 }
 
 function setSession(level: string | undefined) {
+  // IZN-F6a.3 · eski bordro seviyesi niyeti sayfa izni olarak kurulur (full = Düzenler + Onaylar).
+  const pages = levelPages(PAYROLL_VIEW_PAGES, level === "full" ? "approve" : level);
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { payroll: level } } as unknown as MeResponse,
+    me: meFixture({ pages }),
+    isLoading: false,
   } as unknown as ReturnType<typeof useSession>);
 }
 

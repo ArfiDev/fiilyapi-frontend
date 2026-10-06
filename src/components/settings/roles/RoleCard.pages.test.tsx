@@ -54,10 +54,11 @@ describe("RoleCard · sayfa izni kapıları (IZN-F2.x)", () => {
     expect(screen.queryByRole("button", { name: "Sil" })).toBeNull();
   });
 
-  it("pages boş → eski davranış: Sil ve Kopyala görünür", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → Sil ve Kopyala YOK", () => {
     session(meFixture({ pages: {} }));
     renderCard();
-    expect(screen.getByRole("button", { name: "Sil" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Kopyala" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sil" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Kopyala" })).toBeNull();
   });
 });

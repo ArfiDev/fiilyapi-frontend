@@ -28,7 +28,7 @@ import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontract
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
+import { diaryMe } from "./diary-session.testkit";
 
 // GKS-F1.3 · kayıtsız günde önizleme (iskelet) ile çalışan "Kayıt Gir" ekranı:
 // tek POST + satırlar, kilit sınıfları, existing_entry_id yarışı, boş/yükleniyor
@@ -204,7 +204,7 @@ function mockSkeleton(state: SkeletonMock = { data: skeletonData() }) {
 
 function mockSession(permissions: Record<string, string> = { site_diary: "full", progress_payments: "view" }) {
   vi.mocked(useSession).mockReturnValue({
-    me: { id: "u-1", email: "m@o.com", full_name: "M", title: null, role_key: "site_chief", status: "active", permissions } as unknown as MeResponse,
+    me: diaryMe(permissions),
     isLoading: false,
   });
 }

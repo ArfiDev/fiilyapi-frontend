@@ -32,8 +32,6 @@ import {
 } from "@/lib/api/hooks/useSitePlanDaySummary";
 import { backendErrorMessage, submitBlockedReasons } from "@/lib/api/error-message";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { DIARY_REOPEN_APPROVE, EMPLOYER_PAYMENT_EDIT, SITE_DIARY_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -140,16 +138,14 @@ export function DiaryEntryScreen({
   const siteId = siteQuery.data?.id ?? "";
   const projectId = siteQuery.data?.project.id ?? "";
   const boqQuery = useBoq(siteId);
-  const permission = useModulePermission("site_diary");
   // IZN-F2.x · günlük aç/düzenle/satır/Gönder = günlük kayıt Düzenler (VEYA); Yeniden Aç = YALNIZ kök
   // saha.gunluk_kayit Onaylar (73/88 ikizleri B3'e kadar işlevsiz).
-  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
+  const canWriteDiary = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", projectId: projectKey });
   // IZN-F5-ön · görüntüleme kapısı = günlük kayıt sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
+  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", projectId: projectKey });
   const canReopen = useButtonGate({
     pages: DIARY_REOPEN_APPROVE,
     need: "approve",
-    fallback: hasAtLeast(permission.level, "admin"),
     projectId: projectKey,
   });
 
@@ -223,12 +219,10 @@ export function DiaryEntryScreen({
   // süzülür. Ay süzmesi istemcide (`computeDiaryAccrual`).
   const employerPaymentsQuery = useProgressPayments({ project_id: projectId });
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
-  const paymentsPermission = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur bağlantısı = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
   const canCreatePayment = useButtonGate({
     pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
-    fallback: paymentsPermission.canWrite,
     projectId: projectKey,
   });
 

@@ -16,9 +16,9 @@ import {
   useUpdatePurchaseRequest,
 } from "@/lib/api/hooks/usePurchaseRequestMutations";
 import { useApprovalSettings } from "@/lib/api/hooks/useApprovals";
-import type { MeResponse } from "@/lib/auth/types";
 import type { components } from "@/lib/api/schema";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -100,7 +100,7 @@ beforeEach(() => {
     .mockResolvedValue({ ...createdRequest, status: "pending_approval" });
 
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { procurement: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   // Sunucu eşiği (`approval_threshold_try`) — bu kümenin hükümleri onunla kurulur.
@@ -220,7 +220,7 @@ describe("FST · başlık ve talep numarası", () => {
 
   it("yazma yetkisi yoksa form hiç basılmaz", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { procurement: "view" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
 

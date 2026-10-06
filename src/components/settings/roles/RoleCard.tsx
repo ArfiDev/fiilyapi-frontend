@@ -22,8 +22,8 @@ export function RoleCard({ role, onCopy, onDelete }: RoleCardProps) {
   const isLocked = role.is_locked;
   // IZN-F2.x · rol sil = yalnız sistem yöneticisi; Kopyala = ayarlar.rol_yonetimi Düzenler. İkisi de bugün
   // KAPISIZ/durum kuralıdır → grant yoksa eski davranış (fallback true).
-  const isSystemAdminOnly = useButtonGate({ pages: ROLES_EDIT, need: "sa", fallback: true });
-  const canCopyRole = useButtonGate({ pages: ROLES_EDIT, need: "edit", fallback: true });
+  const isSystemAdminOnly = useButtonGate({ pages: ROLES_EDIT, need: "sa" });
+  const canCopyRole = useButtonGate({ pages: ROLES_EDIT, need: "edit" });
   return (
     <article className={cx("role-card", isLocked && "role-card--locked")} aria-label={role.name}>
       <div className="role-card__head">

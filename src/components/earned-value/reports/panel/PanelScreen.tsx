@@ -10,7 +10,6 @@ import { ReportDateNav } from "../kit/ReportDateNav";
 import { TreeTable } from "../../common/tree-table/TreeTable";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EV_BUDGET_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { usePanel, type ContractorFilter, type PanelRange } from "@/lib/api/hooks/useEvReports";
@@ -61,7 +60,6 @@ const OWNER_LABEL: Record<OwnerValue, string> = { own: "Kendi", subcon: "Taşero
 // ortak sözleşmesinin parçası (GİR/QURR eyebrow'unda TÜKETİLİR), Panel
 // mockup'ta o alt satırı BASMAZ — kırıntı zaten aynı bilgiyi taşır.
 export function PanelScreen({ siteId, siteCompleted, links, picker }: ReportScreenProps) {
-  const permission = useModulePermission("earned_value");
   const url = usePanelUrlState();
   const report = usePanel(siteId, {
     date: url.date,
@@ -82,7 +80,7 @@ export function PanelScreen({ siteId, siteCompleted, links, picker }: ReportScre
   const ownerValue: OwnerValue = url.contractorType ?? "all";
   const scope = useDisciplineScope();
   // IZN-F2.x · saat dağıtımı bağlantısı = adam-saat bütçesi/ayarlar.planlama Düzenler (VEYA).
-  const canWriteAllocation = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit", fallback: permission.canWrite });
+  const canWriteAllocation = useButtonGate({ pages: EV_BUDGET_EDIT, need: "edit" });
   const canDistribute = canWriteAllocation && !siteCompleted;
   // Küm./hafta PF (KPI 2/3 + uyarılar kartı) AYNI eşik kümesini paylaşır —
   // `bandsFromReport` API'nin `cumulative` alanını kod tarafının `weekly`

@@ -4,7 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@/components/shell/SessionProvider";
-import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pageGrant, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type { AccountingPeriodListItem, AccountingPeriodResponse } from "@/lib/api/hooks/useAccountingPeriods";
 import { useAccountingPeriods } from "@/lib/api/hooks/useAccountingPeriods";
 import {
@@ -14,7 +15,6 @@ import {
 import { useJournalEntries } from "@/lib/api/hooks/useJournalEntries";
 import { useTrialBalance } from "@/lib/api/hooks/useTrialBalance";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import {
   draftBlockedTitle,
@@ -96,9 +96,14 @@ function mutationStub(mutateAsync: ReturnType<typeof vi.fn>, isPending = false) 
 }
 
 function setSession(level: string | undefined) {
-  vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { accounting: level } } as unknown as MeResponse,
-  } as unknown as ReturnType<typeof useSession>);
+  // IZN-F6a · modül düzeyi → sayfa izni. admin = Onaylar (Geri Aç `need: "approve"`); full = Düzenler, Onaylamaz.
+  const me =
+    level === undefined || level === "none"
+      ? meFixture({ pages: pagesFor(ACCOUNTING_VIEW, "none") })
+      : level === "view"
+        ? meFixture({ pages: pagesFor(ACCOUNTING_VIEW, "view") })
+        : meFixture({ pages: pagesFor(ACCOUNTING_VIEW, "edit", level === "admin") });
+  vi.mocked(useSession).mockReturnValue({ me } as unknown as ReturnType<typeof useSession>);
 }
 
 const closeMutate = vi.fn();

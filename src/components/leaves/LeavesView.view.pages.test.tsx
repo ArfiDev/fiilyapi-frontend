@@ -53,7 +53,7 @@ describe("LeavesView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => 
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: modül none reddedilir, view açılır", () => {
+  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { [MODULE]: "none" } }));
     const { unmount } = renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe("LeavesView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => 
 
     session(meFixture({ pages: {}, permissions: { [MODULE]: "view" } }));
     renderView();
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da ekran açılır", () => {

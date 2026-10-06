@@ -22,7 +22,7 @@ import { routes } from "@/lib/routes";
 // IZN-F5c: POST /projects/{id}/sites = proje.santiyeler Düzenler; grant yoksa
 // bugünkü davranış (düğme görünür — önceden kapısızdı).
 function AddSiteLink({ projectKey, className }: { projectKey: string; className?: string }) {
-  const canCreate = useButtonGate({ pages: SITE_EDIT, need: "edit", fallback: true, projectId: projectKey });
+  const canCreate = useButtonGate({ pages: SITE_EDIT, need: "edit", projectId: projectKey });
   if (!canCreate) return null;
   return (
     <Link

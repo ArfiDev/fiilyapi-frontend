@@ -8,6 +8,7 @@ import type { AccessLevel } from "@/lib/auth/permissions";
 
 import { DisciplineManagementScreen } from "./DisciplineManagementScreen";
 import { BETON, DUV, INC, KAB, mockGets, ok } from "./catalog-test-utils";
+import { evMe } from "../ev-session.testkit";
 
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
@@ -16,6 +17,11 @@ vi.mock("@/lib/api/client", () => ({
 let permissionLevel: AccessLevel | undefined = "admin";
 vi.mock("@/lib/auth/useModulePermission", () => ({
   useModulePermission: () => ({ level: permissionLevel, canView: true, canWrite: true, canDelete: true }),
+}));
+// IZN-F6a.3 · kapılar oturum sayfa izinlerinden okunur; eski seviye niyeti `permissionLevel`den türetilir
+// (draft = salt okunur: katalog/disiplin yazma eşiği full).
+vi.mock("@/components/shell/SessionProvider", () => ({
+  useSession: () => ({ me: evMe(permissionLevel === "draft" ? "view" : permissionLevel), isLoading: false }),
 }));
 
 function renderPage() {

@@ -76,13 +76,9 @@ describe("StockView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (inventory none → AccessDenied, view → açık)", () => {
-    session(meFixture({ pages: {}, permissions: { inventory: "none" } }));
-    const { unmount } = render(<StockView />);
-    expect(screen.getByText(DENIED)).toBeInTheDocument();
-    unmount();
-    session(meFixture({ pages: {}, permissions: { inventory: "view" } }));
+  it("pages boş → fail-closed: inventory full olsa bile AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { inventory: "full" } }));
     render(<StockView />);
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

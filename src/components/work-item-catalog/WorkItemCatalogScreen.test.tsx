@@ -34,6 +34,24 @@ vi.mock("@/lib/api/client", () => ({
 vi.mock("@/lib/auth/useModulePermission", () => ({
   useModulePermission: () => ({ level: perm.level, canView: perm.level !== "none", canWrite: true, canDelete: true }),
 }));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.level` (modül niyeti) oturum sayfa iznine çevrilir —
+// none = sayfalar None; view/draft = Görür (yazma eşiği 'full'); full ve bilinmeyen = Düzenler.
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture, pagesFor } = await import("@/lib/auth/page-grants.testkit");
+  const { CONTRACTS_VIEW } = await import("@/lib/auth/page-gates");
+  return {
+    ...actual,
+    useSession: () => {
+      const level = perm.level;
+      const me =
+        level === "none" || level === "view" || level === "draft"
+          ? meFixture({ pages: pagesFor(CONTRACTS_VIEW, level === "none" ? "none" : "view") })
+          : meFixture();
+      return { ...actual.SESSION_CONTEXT_DEFAULT, me, isLoading: false };
+    },
+  };
+});
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 
 const STRIP_VIEW = "Görüntüleyici · yalnız okuma";

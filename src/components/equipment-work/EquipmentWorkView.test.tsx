@@ -18,9 +18,9 @@ import type {
 import { usePersonnel } from "@/lib/api/hooks/usePersonnel";
 import type { PersonnelListItem } from "@/lib/api/hooks/usePersonnel";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
-import type { MeResponse } from "@/lib/auth/types";
 import { errorResponse, stubExportDownload } from "@/lib/api/export-test-stub";
 import { BackendError } from "@/lib/api/unwrap";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 // F-MK T4 · M3 (`/makine/calisma`) ekranının davranış iddiaları. Odak, spec'in
 // KIRMIZI kararlarıdır: §0 (toplam sunucudan) · K3 (`null` ⇒ "—") · K2 (yüzde
@@ -188,7 +188,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams("year=2026&month=7");
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { equipment: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useEquipmentWorkSummary).mockReturnValue(queryStub(summary()));
@@ -307,7 +307,7 @@ describe("EquipmentWorkView — M3 iskeleti", () => {
 
   it("izinsiz kullanıcı erişim reddi görür", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { equipment: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<EquipmentWorkView />);

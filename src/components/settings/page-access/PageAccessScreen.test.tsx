@@ -15,9 +15,12 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(search),
   usePathname: () => "/ayarlar/izin-matrisi",
 }));
-vi.mock("@/components/shell/SessionProvider", () => ({
-  useSession: () => ({ me: null, isLoading: false, refresh: refreshMock }),
-}));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir (`me` yok = KAPALI): ekran tam erişimli (SA olmayan) oturumla sınanır.
+vi.mock("@/components/shell/SessionProvider", async () => {
+  const { meFixture } = await import("@/lib/auth/page-grants.testkit");
+  const me = meFixture();
+  return { useSession: () => ({ me, isLoading: false, refresh: refreshMock }) };
+});
 
 const base = { is_assignable: true, is_locked: false, is_system: false };
 const roles = [

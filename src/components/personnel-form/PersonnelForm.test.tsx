@@ -11,8 +11,10 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { EMPTY_PERSONNEL_HR_FIELDS } from "@/lib/api/hooks/personnel-fixtures";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { levelPages } from "@/lib/auth/legacy-level.testkit";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 const push = vi.fn();
 let searchParams = new URLSearchParams();
@@ -35,7 +37,7 @@ const updateMutate = vi.fn();
 
 function mockSession(level: string) {
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { personnel: level } } as unknown as MeResponse,
+    me: meFixture({ pages: levelPages(PERSONNEL_EDIT, level) }),
     isLoading: false,
   });
 }

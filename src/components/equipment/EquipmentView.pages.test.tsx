@@ -98,11 +98,11 @@ describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
     expect(screen.getByText("Tower Crane TC-48")).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: düğme ve 'Düzenle' var", () => {
-    session(meFixture({ pages: {}, permissions: VIEW_MODULE }));
+  it("pages boş → fail-closed: modül izni full olsa bile düğme ve 'Düzenle' yok (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { equipment: "full" } }));
     render(<EquipmentView />);
-    expect(screen.getByRole("link", { name: ADD })).toBeInTheDocument();
-    expect(screen.getByTestId(EDIT_LINK)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: ADD })).toBeNull();
+    expect(screen.queryByTestId(EDIT_LINK)).toBeNull();
   });
 
   it("sistem yöneticisi: grant none olsa da düğme var", () => {

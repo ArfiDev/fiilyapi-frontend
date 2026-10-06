@@ -13,7 +13,6 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateBlock } from "@/lib/api/hooks/useUnitMutations";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SALES_BLOCK_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -67,9 +66,8 @@ export function BlockCreateView() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const permission = useModulePermission("projects");
   // IZN-F2.x · blok/ünite/toplu/Excel/paylaşım yazma kapısı = mali.satis_* Düzenler (VEYA).
-  const canEdit = useButtonGate({ pages: SALES_BLOCK_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEdit = useButtonGate({ pages: SALES_BLOCK_EDIT, need: "edit" });
 
   const [values, setValues] = useState<BlockFormValues>(() => emptyBlockFormValues());
   const [touched, setTouched] = useState<ReadonlySet<BlockFormField>>(

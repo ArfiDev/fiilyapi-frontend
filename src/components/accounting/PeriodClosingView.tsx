@@ -14,14 +14,11 @@ import {
 } from "@/lib/api/hooks/useAccountingPeriodMutations";
 import { useJournalEntries } from "@/lib/api/hooks/useJournalEntries";
 import { isForbidden } from "@/lib/api/unwrap";
-import { canDelete, hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERIOD_CLOSE_EDIT, PERIOD_REOPEN_APPROVE, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrency } from "@/lib/format";
 
 import {
-  ACCOUNTING_PERMISSION_MODULE,
   ACCOUNTING_URL,
   currentPeriod,
 } from "./accounting-labels";
@@ -63,11 +60,10 @@ import "./accounting.css";
  * TÜRETİLİR.
  */
 export function PeriodClosingView() {
-  const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
-  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
-  const closeGate = useButtonGate({ pages: PERIOD_CLOSE_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view" });
+  const closeGate = useButtonGate({ pages: PERIOD_CLOSE_EDIT, need: "edit" });
   // DELETE_LEVELS = ["admin"] — K1'in `_ADMIN`i (grant yoksa eski kural).
-  const reopenGate = useButtonGate({ pages: PERIOD_REOPEN_APPROVE, need: "approve", fallback: canDelete(permission.level) });
+  const reopenGate = useButtonGate({ pages: PERIOD_REOPEN_APPROVE, need: "approve" });
   const [year, setYear] = useState(() => currentPeriod(new Date()).year);
   const [confirmRow, setConfirmRow] = useState<PeriodRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);

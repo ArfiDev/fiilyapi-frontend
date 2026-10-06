@@ -27,14 +27,12 @@ import { LEDGER_MAX_LIMIT, useLedger } from "@/lib/api/hooks/useLedger";
 import { isForbidden } from "@/lib/api/unwrap";
 import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { JOURNAL_EDIT, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatCurrency } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
 import {
-  ACCOUNTING_PERMISSION_MODULE,
   ACCOUNTING_REASONS,
   currentPeriod,
   hasCarriedBalance,
@@ -76,11 +74,10 @@ export type JournalEntryDialogState =
  * satırlar sessizce kaybolurdu.
  */
 export function AccountingView() {
-  const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
   const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
-  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view" });
   // IZN-F5b · fiş oluştur/düzenle/Ters Kayıt (POST/PATCH/PUT/reverse /journal-entries) = mali.yevmiye Düzenler.
-  const canEditAccounting = useButtonGate({ pages: JOURNAL_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEditAccounting = useButtonGate({ pages: JOURNAL_EDIT, need: "edit" });
 
   // 📅 Dönem penceresinin TEK referansı; mount başına bir kez üretilir
   // (`InvoicesView` deseni) — alt bileşenler `new Date()` çağırmaz, testler

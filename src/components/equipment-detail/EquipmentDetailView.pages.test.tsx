@@ -53,15 +53,10 @@ describe("EquipmentDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: modül none reddedilir, view açılır", () => {
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "none" } }));
-    const { unmount } = renderView();
-    expect(screen.getByText(DENIED)).toBeInTheDocument();
-    unmount();
-
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "view" } }));
+  it("pages boş → fail-closed: modül full olsa bile AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { [MODULE]: "full" } }));
     renderView();
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da ekran açılır", () => {

@@ -16,7 +16,6 @@ import { useTrialBalance } from "@/lib/api/hooks/useTrialBalance";
 import { isForbidden } from "@/lib/api/unwrap";
 import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount } from "@/lib/format";
@@ -24,7 +23,6 @@ import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncatio
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
 import {
-  ACCOUNTING_PERMISSION_MODULE,
   ACCOUNTING_REASONS,
   ACCOUNTING_URL,
   currentPeriod,
@@ -75,8 +73,7 @@ import "./bank-reconciliation.css";
  * kartı ile defter hesabı arasında sözleşmede BAĞ YOK).
  */
 export function BankReconciliationView() {
-  const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
-  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view" });
 
   const [period, setPeriod] = useState<Period>(() => currentPeriod(new Date()));
   const [accountId, setAccountId] = useState("");

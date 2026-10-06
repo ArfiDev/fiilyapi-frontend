@@ -8,6 +8,7 @@ import { useSection } from "@/lib/api/hooks/useSection";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
+import { diaryMe } from "../site-diary/diary-session.testkit";
 
 // DET-1.2 · Günlük kayıt detay sayfasının İSKELETİ — başlık kartının
 // sözleşmeden (DET-1.B) BAĞIMSIZ kısmı + yükleniyor / 404 / 403 / hata hâlleri.
@@ -86,9 +87,8 @@ function entry(overrides: Partial<SiteDiaryEntryDetail> = {}): SiteDiaryEntryDet
 }
 
 function mockSession(siteDiaryLevel?: string) {
-  const base = { id: "u1", email: "a@b.c", full_name: "A", role_key: "admin", status: "active" };
   vi.mocked(useSession).mockReturnValue({
-    me: (siteDiaryLevel === undefined ? base : { ...base, permissions: { site_diary: siteDiaryLevel } }) as never,
+    me: diaryMe(siteDiaryLevel === undefined ? undefined : { site_diary: siteDiaryLevel }) as never,
     isLoading: false,
   });
 }

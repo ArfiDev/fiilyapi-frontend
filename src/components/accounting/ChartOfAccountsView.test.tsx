@@ -4,7 +4,8 @@ import userEvent from "@testing-library/user-event";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { useSession } from "@/components/shell/SessionProvider";
-import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pageGrant, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type {
   ChartAccountListResponse,
   ChartAccountResponse,
@@ -21,7 +22,6 @@ import {
 } from "@/lib/api/hooks/useChartOfAccountMutations";
 import { errorResponse, stubExportDownload } from "@/lib/api/export-test-stub";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { ChartOfAccountsView } from "./ChartOfAccountsView";
 
@@ -125,9 +125,14 @@ function queryResult(partial: Record<string, unknown>) {
 }
 
 function setSession(level: string | undefined) {
-  vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { accounting: level } } as unknown as MeResponse,
-  } as unknown as ReturnType<typeof useSession>);
+  // IZN-F6a · modül düzeyi → sayfa izni. admin = sistem yöneticisi (silme `need: "sa"`).
+  const me =
+    level === undefined || level === "none"
+      ? meFixture({ pages: pagesFor(ACCOUNTING_VIEW, "none") })
+      : level === "view"
+        ? meFixture({ pages: pagesFor(ACCOUNTING_VIEW, "view") })
+        : meFixture({ pages: pagesFor(ACCOUNTING_VIEW, "edit"), isSystemAdmin: level === "admin" });
+  vi.mocked(useSession).mockReturnValue({ me } as unknown as ReturnType<typeof useSession>);
 }
 
 beforeEach(() => {

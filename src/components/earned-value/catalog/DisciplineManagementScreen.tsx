@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { DISCIPLINES_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
@@ -16,8 +14,6 @@ import "./catalog.css";
 import "./catalog-modals.css";
 
 /** B1-8: disiplin YAZMA = full; SİLME = admin (B1-9) — Birim Oran Kataloğu ile aynı. */
-const WRITE_LEVEL = "full";
-const DELETE_LEVEL = "admin";
 
 type OpenModal = { kind: "form"; discipline: EvDisciplineRead | null } | { kind: "delete"; discipline: EvDisciplineRead };
 
@@ -26,10 +22,9 @@ type OpenModal = { kind: "form"; discipline: EvDisciplineRead | null } | { kind:
  * yine M6 modalları. Birim Oran Kataloğu'ndaki "Disiplinler" modalı (DisciplineManager) yerinde kalır.
  */
 export function DisciplineManagementScreen() {
-  const { level } = useModulePermission("earned_value");
   // IZN-F5b · disiplin ekle/düzenle (POST/PATCH /earned-value/disciplines) = planlama.disiplin_yonetimi Düzenler; SİLME = yalnız SA.
-  const canWrite = useButtonGate({ pages: DISCIPLINES_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
-  const canDelete = useButtonGate({ pages: DISCIPLINES_EDIT, need: "sa", fallback: hasAtLeast(level, DELETE_LEVEL) });
+  const canWrite = useButtonGate({ pages: DISCIPLINES_EDIT, need: "edit" });
+  const canDelete = useButtonGate({ pages: DISCIPLINES_EDIT, need: "sa" });
 
   const disciplines = useEvDisciplines();
   const [modal, setModal] = useState<OpenModal | null>(null);

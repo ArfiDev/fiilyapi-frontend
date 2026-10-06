@@ -4,7 +4,8 @@ import userEvent from "@testing-library/user-event";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { useSession } from "@/components/shell/SessionProvider";
-import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pageGrant, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type { ChartAccountListResponse } from "@/lib/api/hooks/useChartOfAccounts";
 import { useChartOfAccounts } from "@/lib/api/hooks/useChartOfAccounts";
 import type {
@@ -27,7 +28,6 @@ import type { VatReturnResponse } from "@/lib/api/hooks/useVatReturn";
 import { useVatReturn } from "@/lib/api/hooks/useVatReturn";
 import { errorResponse, stubExportDownload } from "@/lib/api/export-test-stub";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { useJournalEntry } from "@/lib/api/hooks/useJournalEntry";
 import {
@@ -261,11 +261,14 @@ function mutationStub(mutate: ReturnType<typeof vi.fn>) {
 }
 
 function setSession(level: string | undefined = "full") {
-  vi.mocked(useSession).mockReturnValue({
-    me: (level === undefined
-      ? { permissions: {} }
-      : { permissions: { accounting: level } }) as unknown as MeResponse,
-  } as ReturnType<typeof useSession>);
+  // IZN-F6a · modül düzeyi (full/view/none) → sayfa izni: görür kümesi + yevmiye yazma kapısı.
+  const me =
+    level === "admin"
+      ? meFixture({ isSystemAdmin: true })
+      : level === "full"
+        ? meFixture()
+        : meFixture({ pages: pagesFor(ACCOUNTING_VIEW, level === "view" ? "view" : "none") });
+  vi.mocked(useSession).mockReturnValue({ me } as ReturnType<typeof useSession>);
 }
 
 /**
@@ -621,6 +624,7 @@ describe("Taslak Fişler paneli (onaylı sapma adayı)", () => {
   // SIL-F2.2 · taslak fiş silme ARTIK doğrudan DELETE atmaz (sunucu preview_token ister, yoksa 428):
   // satır "Sil"i ortak silme penceresini FİŞ KİMLİĞİYLE açar.
   it("'Sil' ortak silme penceresini FIS KIMLIGIYLE acar (dogrudan DELETE YOK)", async () => {
+    setSession("admin"); // IZN-F6a · taslak fiş silme = need "sa" (yalnız sistem yöneticisi)
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<AccountingView />);
     expect(screen.queryByTestId("delete-dialog-stub")).not.toBeInTheDocument();

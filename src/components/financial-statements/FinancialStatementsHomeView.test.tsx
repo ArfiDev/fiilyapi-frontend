@@ -4,10 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type { IncomeStatementResponse } from "@/lib/api/hooks/useIncomeStatement";
 import { useIncomeStatement } from "@/lib/api/hooks/useIncomeStatement";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 
 import { FinancialStatementsHomeView } from "./FinancialStatementsHomeView";
@@ -92,11 +93,9 @@ function queryResult(partial: Record<string, unknown>) {
 }
 
 function setSession(level: string | undefined) {
-  vi.mocked(useSession).mockReturnValue({
-    me: {
-      permissions: level === undefined ? {} : { accounting: level },
-    } as unknown as MeResponse,
-  } as unknown as ReturnType<typeof useSession>);
+  // IZN-F6a · modül düzeyi → sayfa izni (ACCOUNTING_VIEW kümesi); izin hiç yoksa kapı KAPALI (fail-closed).
+  const pages = level === undefined ? {} : pagesFor(ACCOUNTING_VIEW, level === "none" ? "none" : level === "view" ? "view" : "edit");
+  vi.mocked(useSession).mockReturnValue({ me: meFixture({ pages }) } as unknown as ReturnType<typeof useSession>);
 }
 
 beforeEach(() => {
@@ -353,12 +352,18 @@ describe("yetki", () => {
     expect(screen.queryByRole("heading", { name: "Mali Tablolar" })).toBeNull();
   });
 
-  it("seviye BİLİNMİYORSA ekran AÇIK kalır (bilinmezlik kuralı)", () => {
+  // IZN-F6a · bilinmezlik kuralı KALKTI: sayfa izni hiç yoksa ekran KAPALI (fail-closed).
+  it("sayfa izni YOKSA ekran KAPALI kalır (fail-closed)", () => {
     setSession(undefined);
     render(<FinancialStatementsHomeView />);
-    expect(
-      screen.getByRole("heading", { name: "Mali Tablolar", level: 1 }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Mali Tablolar", level: 1 })).toBeNull();
+  });
+
+  it("yalnız Görür sayfa izni → ekran AÇIK", () => {
+    setSession("view");
+    render(<FinancialStatementsHomeView />);
+    expect(screen.getByRole("heading", { name: "Mali Tablolar", level: 1 })).toBeInTheDocument();
   });
 });
 

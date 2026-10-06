@@ -34,11 +34,11 @@ import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontract
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { useTimesheetWeek } from "@/lib/api/hooks/useTimesheet";
 import type { EvDayView } from "@/lib/api/models";
-import type { MeResponse } from "@/lib/auth/types";
 import { BackendError } from "@/lib/api/unwrap";
 
 import { ITEM_BETON, ITEM_KALIP, ITEM_PRIZ, P_RECEP, LEAF_KALIP, SEC_K610, codeTree, dayView } from "./diary-fixtures";
 import { useDiaryProgressExtension } from "./useDiaryProgressExtension";
+import { evDiaryMe } from "../ev-session.testkit";
 
 // PLN-F2.3 · ENTEGRASYON: rota sayfası → planlama adaptörü → GERÇEK çekirdek
 // (`SiteDiaryEntryView` / `GeneralSiteDiaryView`) → adaptörün yuvaları. Çekirdek
@@ -113,7 +113,7 @@ function mockDay(view: EvDayView) {
 
 function mockSession(permissions: Record<string, string>) {
   vi.mocked(useSession).mockReturnValue({
-    me: { id: "u-1", email: "m@ornek.com", role_key: "engineer", status: "active", permissions } as unknown as MeResponse,
+    me: evDiaryMe(permissions),
     isLoading: false,
   });
 }

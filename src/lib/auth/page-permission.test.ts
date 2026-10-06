@@ -99,51 +99,50 @@ describe("decidePagePermission · hasGrant ve sistem yöneticisi", () => {
   });
 });
 
-describe("decideGate · geri uyum düşüşü ve eşikler", () => {
+describe("decideGate · fail-closed ve eşikler (IZN-F6a: modül-izni fallback'i YOK)", () => {
   const withGrant = (level: "none" | "view" | "edit", approve = false) =>
     decidePagePermission(me({ [PUANTAJ]: pageGrant(level, approve) }), [PUANTAJ]);
   const withoutGrant = decidePagePermission(me({}), [PUANTAJ]);
 
-  it("sayfa modeli YOKKEN (me.pages boş: eski oturum/yükleniyor) her eşikte fallback döner", () => {
-    for (const need of ["view", "edit", "approve", "sa"] as const) {
-      expect(decideGate(withoutGrant, need, true)).toBe(true);
-      expect(decideGate(withoutGrant, need, false)).toBe(false);
-    }
+  it("IZN-F6a · me yok (yükleniyor) ya da pages boş → her eşikte KAPALI", () => {
     const loading = decidePagePermission(null, [PUANTAJ]);
-    expect(decideGate(loading, "edit", true)).toBe(true);
+    for (const need of ["view", "edit", "approve", "sa"] as const) {
+      expect(decideGate(withoutGrant, need)).toBe(false);
+      expect(decideGate(loading, need)).toBe(false);
+    }
   });
 
-  it("IZN-F5c · model DEVREDEYKEN kümede hücre yoksa KAPALI (fail-closed), fallback true olsa da", () => {
+  it("IZN-F5c · model DEVREDEYKEN kümede hücre yoksa KAPALI (fail-closed)", () => {
     const cellless = decidePagePermission(me({ "ik.personel": pageGrant("edit", true) }), [PUANTAJ]);
     expect(cellless).toMatchObject({ hasGrant: false, isModelActive: true });
     for (const need of ["view", "edit", "approve", "sa"] as const) {
-      expect(decideGate(cellless, need, true)).toBe(false);
+      expect(decideGate(cellless, need)).toBe(false);
     }
   });
 
-  it("grant varsa fallback YOK SAYILIR", () => {
-    expect(decideGate(withGrant("view"), "edit", true)).toBe(false);
-    expect(decideGate(withGrant("edit"), "edit", false)).toBe(true);
+  it("grant varsa sayfa kararı verir", () => {
+    expect(decideGate(withGrant("view"), "edit")).toBe(false);
+    expect(decideGate(withGrant("edit"), "edit")).toBe(true);
   });
 
   it("view / edit / approve eşikleri kendi bayrağına bakar", () => {
-    expect(decideGate(withGrant("view"), "view", false)).toBe(true);
-    expect(decideGate(withGrant("view"), "edit", false)).toBe(false);
-    expect(decideGate(withGrant("edit"), "approve", false)).toBe(false);
-    expect(decideGate(withGrant("view", true), "approve", false)).toBe(true);
-    expect(decideGate(withGrant("none"), "view", true)).toBe(false);
+    expect(decideGate(withGrant("view"), "view")).toBe(true);
+    expect(decideGate(withGrant("view"), "edit")).toBe(false);
+    expect(decideGate(withGrant("edit"), "approve")).toBe(false);
+    expect(decideGate(withGrant("view", true), "approve")).toBe(true);
+    expect(decideGate(withGrant("none"), "view")).toBe(false);
   });
 
   it("sa eşiği: grant varken yalnız sistem yöneticisi geçer (edit + approve yetmez)", () => {
-    expect(decideGate(withGrant("edit", true), "sa", true)).toBe(false);
+    expect(decideGate(withGrant("edit", true), "sa")).toBe(false);
     const admin = decidePagePermission(me({ [PUANTAJ]: pageGrant("none") }, true), [PUANTAJ]);
-    expect(decideGate(admin, "sa", false)).toBe(true);
+    expect(decideGate(admin, "sa")).toBe(true);
   });
 
-  it("sistem yöneticisi grant olmasa da fallback false iken geçer", () => {
+  it("sistem yöneticisi grant olmasa da geçer", () => {
     const admin = decidePagePermission(me({}, true), [PUANTAJ]);
-    expect(decideGate(admin, "edit", false)).toBe(true);
-    expect(decideGate(admin, "sa", false)).toBe(true);
+    expect(decideGate(admin, "edit")).toBe(true);
+    expect(decideGate(admin, "sa")).toBe(true);
   });
 });
 
@@ -191,12 +190,12 @@ describe("decidePagePermission · proje bağlamı (IZN-F3.2)", () => {
     expect(decidePagePermission(me, [HAKEDIS], PROJECT_A)).toMatchObject({ canView: false, canEdit: false, hasGrant: true });
   });
 
-  it("IZN-F5c · proje rolünün haritasında anahtar yoksa (model devrede) KAPALI — fallback yok sayılır", () => {
+  it("IZN-F5c · proje rolünün haritasında anahtar yoksa (model devrede) KAPALI", () => {
     const me = projectMe({ role_pages: { site_chief: { pages: {} } } });
     const permission = decidePagePermission(me, [HAKEDIS], PROJECT_A);
     expect(permission).toMatchObject({ hasGrant: false, isModelActive: true });
-    expect(decideGate(permission, "edit", true)).toBe(false);
-    expect(decideGate(permission, "edit", false)).toBe(false);
+    expect(decideGate(permission, "edit")).toBe(false);
+    expect(decideGate(permission, "edit")).toBe(false);
   });
 
   it("sistem yöneticisi proje bağlamında da her kapıyı geçer", () => {

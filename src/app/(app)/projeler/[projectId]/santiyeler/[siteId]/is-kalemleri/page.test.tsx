@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ALL_PAGE_KEYS, fullAccessPages, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 import BoqPage from "./page";
 import { downloadBoqExport } from "@/lib/api/boq-client";
@@ -45,11 +46,21 @@ vi.mock("@/lib/api/boq-client", () => ({ downloadBoqExport: vi.fn() }));
 // hook calisir, yalniz oturum kaynagi taklit edilir.
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
-/** `level` verilmezse alanı taşımayan eski oturum (bilinmezlik dalı, §2.5.3). */
+/**
+ * IZN-F6a · eski modül düzeyi → sayfa izni: full = tam erişim (SA değil), admin = tam erişim + sistem yöneticisi, view = her sayfada Görür, none = her sayfada Yok.
+ * `level` verilmezse sayfa izni taşımayan oturum (grant yok → kapılar KAPALI).
+ */
 function mockPermission(level?: string) {
   const base = { id: "u1", email: "a@b.c", full_name: "A", role_key: "admin", status: "active" };
   vi.mocked(useSession).mockReturnValue({
-    me: (level === undefined ? base : { ...base, permissions: { boq: level } }) as never,
+    me: (level === undefined
+      ? base
+      : {
+          ...base,
+          // admin = sistem yöneticisi (silme kapısı `need: "sa"`).
+          is_system_admin: level === "admin",
+          pages: level === "full" || level === "admin" ? fullAccessPages() : pagesFor(ALL_PAGE_KEYS, level === "view" ? "view" : "none"),
+        }) as never,
     isLoading: false,
   });
 }
@@ -123,7 +134,7 @@ function mockBoq(value: Partial<ReturnType<typeof useBoq>>) {
 describe("BoqPage — durum dalları (spec §9)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPermission();
+    mockPermission("full");
     mockSite({ data: SITE });
   });
 
@@ -150,7 +161,7 @@ describe("BoqPage — durum dalları (spec §9)", () => {
 describe("BoqPage — başlık şeridi ve breadcrumb (mockup 62–67)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPermission();
+    mockPermission("full");
     mockSite({ data: SITE });
     mockBoq({ data: EMPTY_BOQ });
   });
@@ -255,12 +266,11 @@ describe("BoqPage — istemci izin kapısı (spec §2.5)", () => {
     expect(screen.getAllByRole("button", { name: "+ İş Kalemi" }).length).toBeGreaterThan(0);
   });
 
-  // ⚠️ Bilinmezlik kuralı (spec §2.5.3): alanı taşımayan ESKİ oturum. Kural ters
-  // çevrilirse tam yetkili kullanıcı ekranı salt-okunur görür.
-  it("izin alanı yokken yazma butonu görünür kalır (eski oturum)", () => {
+  // IZN-F6a: bilinmezlik kuralı (spec §2.5.3) KALKTI — grant yoksa (sayfa izni taşımayan oturum) yazma yüzeyi KAPALI.
+  it("sayfa izni yokken (grant yok) yazma butonu görünmez (fail-closed)", () => {
     mockPermission();
     render(<BoqPage />);
-    expect(screen.getAllByRole("button", { name: "+ İş Kalemi" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "+ İş Kalemi" })).not.toBeInTheDocument();
   });
 
   // Boş durumdaki buton başlık şeridindeki butonun ikizidir; aynı kapıya bağlanır,
@@ -326,7 +336,7 @@ describe("BoqPage — BoqItemFormModal bağlantısı (spec §7)", () => {
     expect(screen.queryByRole("button", { name: "Sil" })).not.toBeInTheDocument();
   });
 
-  it("boq: 'admin' kullanıcı Sil'i görür", () => {
+  it("boq: sistem yöneticisi ('admin') Sil'i görür", () => {
     mockPermission("admin");
     render(<BoqPage />);
     fireEvent.click(
@@ -335,14 +345,14 @@ describe("BoqPage — BoqItemFormModal bağlantısı (spec §7)", () => {
     expect(screen.getByRole("button", { name: "Sil" })).toBeInTheDocument();
   });
 
-  // Bilinmezlik kurali: alani tasimayan eski oturumda silme yuzeyi KALIR.
-  it("izin alanı yokken (eski oturum) Sil görünür kalır", () => {
+  // IZN-F6a: bilinmezlik kuralı KALKTI — sayfa izni taşımayan oturumda satır düzenleme/silme yüzeyi KAPALI.
+  it("sayfa izni yokken (grant yok) satır düzenleme yüzeyi (Sil) görünmez", () => {
     mockPermission();
     render(<BoqPage />);
-    fireEvent.click(
-      screen.getByRole("button", { name: "01.001 — Kazı (Makine ile) kalemini düzenle" }),
-    );
-    expect(screen.getByRole("button", { name: "Sil" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "01.001 — Kazı (Makine ile) kalemini düzenle" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sil" })).not.toBeInTheDocument();
   });
 
   it("Vazgeç modalı kapatır", () => {

@@ -11,6 +11,7 @@ import { useCreateBlock } from "@/lib/api/hooks/useUnitMutations";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
@@ -37,7 +38,7 @@ beforeEach(() => {
   searchParams = new URLSearchParams();
   mutateAsync.mockResolvedValue({ id: "blk-yeni" });
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { projects: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useProjects).mockReturnValue(

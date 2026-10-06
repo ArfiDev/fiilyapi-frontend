@@ -4,7 +4,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 
 import { EquipmentDetailView } from "./EquipmentDetailView";
 import { useSession } from "@/components/shell/SessionProvider";
-import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
+import { ALL_PAGE_KEYS, meFixture, pageGrant, pagesFor } from "@/lib/auth/page-grants.testkit";
 import { useEquipmentDetailScreen } from "@/lib/api/hooks/useEquipmentDetailScreen";
 import { useEquipmentDocuments } from "@/lib/api/hooks/useEquipmentDocuments";
 import { useEquipmentFuelSummary } from "@/lib/api/hooks/useEquipmentFuelSummary";
@@ -12,7 +12,6 @@ import { useEquipmentRentalInvoices } from "@/lib/api/hooks/useEquipmentRentalIn
 import { useEquipmentWorkSummary } from "@/lib/api/hooks/useEquipmentWorkSummary";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSupplier } from "@/lib/api/hooks/useSuppliers";
-import type { MeResponse } from "@/lib/auth/types";
 import type { EquipmentResponse } from "@/lib/api/hooks/useEquipment";
 import type { EquipmentDetailScreenResponse } from "@/lib/api/hooks/useEquipmentDetailScreen";
 import type { WorkSummaryResponse } from "@/lib/api/hooks/useEquipmentWorkSummary";
@@ -139,7 +138,7 @@ const OUR_ROW = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { equipment: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useEquipmentDetailScreen).mockReturnValue(queryStub(detail()));
@@ -341,7 +340,7 @@ describe("EquipmentDetailView", () => {
   // `useModulePermission` `level !== "none"` diyor.
   it("izni AÇIKÇA 'none' olan kullanıcı ekranı GÖRMEZ", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { equipment: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<EquipmentDetailView equipmentId="eq-1" />);
