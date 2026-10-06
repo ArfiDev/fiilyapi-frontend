@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 
 import { Alert, Badge, Button, Field, Input, Select } from "@/components/ui";
 import { AccessDenied } from "@/components/settings/AccessDenied";
+import { MaskedReadonlyField } from "@/components/ui/hidden-mark/MaskedReadonlyField";
+import { EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
@@ -85,6 +88,7 @@ export function EquipmentRentalInvoiceDetailView({
    * yalnız GERÇEKTEN değişen alanlar konur (`exclude_unset` karşılığı —
    * gönderilmeyen alan ile `null` gönderilen alan sunucuda FARKLIDIR).
    */
+  const isInvoiceAmountCategoryHidden = useCategoryHidden(EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES);
   const [draft, setDraft] = useState<{
     supplierId: string;
     invoiceNo: string;
@@ -113,12 +117,14 @@ export function EquipmentRentalInvoiceDetailView({
   // yeniden hizalanır (yukarıda), bu yüzden dirty hesabı da AYNI 7 alanı
   // karşılaştırır — kayıt sonrası invalidation `detail`i tazeler, efekt
   // `draft`ı sunucuyla hizalar ve dirty kendiliğinden false'a döner.
+  // IZN-F4d.2: kategori gizli VE sunucu değeri `null` → alan salt okunur "—" + kilit, PATCH gövdesine KOYMA (dolu → 403).
+  const isInvoiceAmountMasked = isInvoiceAmountCategoryHidden && detail !== undefined && detail.invoice_amount === null;
   const isDirty =
     draft !== null &&
     detail !== undefined &&
     (draft.supplierId !== detail.supplier_id ||
       (draft.invoiceNo || null) !== detail.invoice_no ||
-      (draft.invoiceAmount || null) !== detail.invoice_amount ||
+      (!isInvoiceAmountMasked && (draft.invoiceAmount || null) !== detail.invoice_amount) ||
       Number(draft.periodYear) !== detail.period_year ||
       Number(draft.periodMonth) !== detail.period_month ||
       (draft.siteId || null) !== detail.site_id ||
@@ -165,7 +171,7 @@ export function EquipmentRentalInvoiceDetailView({
       body.supplier_id = draft.supplierId;
     if ((draft.invoiceNo || null) !== detail.invoice_no)
       body.invoice_no = draft.invoiceNo || null;
-    if ((draft.invoiceAmount || null) !== detail.invoice_amount)
+    if (!isInvoiceAmountMasked && (draft.invoiceAmount || null) !== detail.invoice_amount)
       body.invoice_amount = draft.invoiceAmount || null;
     if (Number(draft.periodYear) !== detail.period_year)
       body.period_year = Number(draft.periodYear);
@@ -306,6 +312,14 @@ export function EquipmentRentalInvoiceDetailView({
             )}
           </Field>
 
+          {isInvoiceAmountMasked ? (
+            <MaskedReadonlyField
+              label="Fatura Tutarı"
+              className="makine-kira__inline-field"
+              inputClassName="makine-kira__mono makine-kira__amount-input"
+              testId="makine-kira-invoice-amount-input"
+            />
+          ) : (
           <Field label="Fatura Tutarı" className="makine-kira__inline-field">
             {(control) => (
               <Input
@@ -322,6 +336,7 @@ export function EquipmentRentalInvoiceDetailView({
               />
             )}
           </Field>
+          )}
 
           <div className="makine-kira__incoming-end">
             {/* M5:65 — durum rozeti. */}

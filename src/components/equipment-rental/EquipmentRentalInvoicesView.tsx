@@ -13,6 +13,9 @@ import {
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -91,6 +94,7 @@ export function EquipmentRentalInvoicesView() {
     limit: EQUIPMENT_RENTAL_INVOICES_MAX_LIMIT,
   });
   const siteOptions = useSiteOptions();
+  const isPaymentHidden = useCategoryHidden(EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES);
 
   if (isForbidden(invoicesQuery.error)) return <AccessDenied />;
 
@@ -256,6 +260,7 @@ export function EquipmentRentalInvoicesView() {
               <th scope="col">Kira Tipi</th>
               <th scope="col" className="makine-kira__num">
                 Ödenecek
+                <MaskedMark isHidden={isPaymentHidden} values={items.map((invoice) => invoice.payable_total)} />
               </th>
               <th scope="col">Durum</th>
             </tr>

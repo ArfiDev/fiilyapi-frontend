@@ -45,3 +45,23 @@ export const PAYROLL_HIDDEN_CATEGORIES: readonly HiddenCategory[] = ["maas_kisis
 
 /** Personel kimlik/iletişim alanları (tc_no, iban, sgk_no, phone, email, address, acil durum, doğum tarihi): yalnız `maas_kisisel`. */
 export const PERSONNEL_PII_HIDDEN_CATEGORIES: readonly HiddenCategory[] = ["maas_kisisel"];
+
+/**
+ * IZN-F4d.2 — makine / stok / satınalma tutarları (alış-piyasa değeri, kira, yakıt, birim fiyat, stok değeri,
+ * teklif/sipariş/talep tutarı): `maliyet_kar` + `tum_tutarlar`. Sözleşme `IZN-B4d-SOZLESME.md` §1.
+ * (Makine kira ödenen toplamı + ödenecek tutar da yalnız bu kümeyle gizlenir: `EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES`, §7.3.)
+ */
+export const COST_HIDDEN_CATEGORIES: readonly HiddenCategory[] = ["maliyet_kar", "tum_tutarlar"];
+
+/**
+ * Makine kira faturası ödenecek tutar / ödenen kümülatif: YALNIZ `maliyet_kar` gizliyse `null` (§7.3 — `banka_kasa`
+ * etiketi kalktı; yalnız `banka_kasa` gizleyen rol bu alanları GÖRÜR).
+ */
+export const EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES: readonly HiddenCategory[] = ["maliyet_kar", "tum_tutarlar"];
+
+/** Günlük kayıt birim fiyat / satır tutarı / günlük toplamı / özet tutarları: `sozlesme_fiyat` + `maliyet_kar` + `tum_tutarlar`. */
+export const SITE_DIARY_HIDDEN_CATEGORIES: readonly HiddenCategory[] = [
+  "sozlesme_fiyat",
+  "maliyet_kar",
+  "tum_tutarlar",
+];

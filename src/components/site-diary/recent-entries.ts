@@ -32,7 +32,7 @@ export interface DiaryRecentEntryRow {
   sectionLabel: string | null;
   /**
    * GK364: "₺ 182.400 hakediş katkısı" — `lines_total`. İlerleme görünümünde
-   * (İ:313-327) bu satır YOKTUR → `null`.
+   * (İ:313-327) bu satır YOKTUR → `null`. Maskeli rolde (IZN-F4d.2) `lines_total` `null` → "— hakediş katkısı" (0 DEĞİL).
    */
   amountLabel: string | null;
 }

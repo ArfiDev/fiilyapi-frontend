@@ -27,6 +27,7 @@ import type { DeepScale } from "@/lib/api/scale";
 export type PurchaseRequestCreate = DeepScale<components["schemas"]["PurchaseRequestCreate"]>;
 export type PurchaseRequestUpdate = DeepScale<components["schemas"]["PurchaseRequestUpdate"]>;
 export type PurchaseRequestLineCreate = DeepScale<components["schemas"]["PurchaseRequestLineCreate"]>;
+export type PurchaseRequestLineUpdate = DeepScale<components["schemas"]["PurchaseRequestLineUpdate"]>;
 export type PurchaseRequestResponse = DeepScale<components["schemas"]["PurchaseRequestResponse"]>;
 
 /**

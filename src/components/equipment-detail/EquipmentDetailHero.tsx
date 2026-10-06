@@ -1,5 +1,11 @@
+"use client";
+
 import { equipmentCategoryIcon } from "@/components/equipment/category-icon";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { CheckIcon, inlineSymbolProps } from "@/components/ui/icons";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import {
   EQUIPMENT_EMPTY_VALUE,
   EQUIPMENT_OWNERSHIP_LABELS,
@@ -59,6 +65,7 @@ export function EquipmentDetailHero({
   ].filter((part): part is string => Boolean(part));
 
   const statusVariant = EQUIPMENT_STATUS_BADGE_VARIANTS[equipment.status];
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   // MD:79-81 — mockup `Bu Ay Kira Bedeli` yazıyor; ekran `Bu Ay Maliyeti`
   // basar. SAPMA ve gerekçesi rapordadır: bu sayı `WorkSummaryRow.cost`tur
@@ -116,6 +123,7 @@ export function EquipmentDetailHero({
           <div className="makine-det__hero-money-label">Bu Ay Maliyeti</div>
           <div className="makine-det__hero-money-value" data-testid="makine-det-monthly-cost">
             {cost === null ? EQUIPMENT_EMPTY_VALUE : formatCurrencyTight(cost)}
+            <MaskedMark isHidden={isCostHidden} values={[cost]} />
           </div>
           <div className="makine-det__hero-money-note">
             {workRow === undefined
@@ -123,7 +131,10 @@ export function EquipmentDetailHero({
               : workRow === null
                 ? "Bu ay için çalışma özeti satırı yok"
                 : cost === null
-                  ? "Kira bedeli tanımlı olmadığı için hesaplanamadı"
+                  ? // IZN-F4d · maskeli null "bedel tanımsız" demek değildir; gerekçe uydurulmaz.
+                    isCostHidden
+                    ? HIDDEN_FIELD_HINT
+                    : "Kira bedeli tanımlı olmadığı için hesaplanamadı"
                   : [`${formatDecimal(workRow.hours, 2)} saat`, rateNote]
                       .filter(Boolean)
                       .join(" · ")}

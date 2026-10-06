@@ -427,7 +427,8 @@ describe("Günlük iskelet önizlemesi tip üretimi (GKS-F1.1 kapısı)", () => 
     expectTypeOf<Skeleton["locked"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Skeleton["lock_report_date"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Skeleton["lines"]>().toEqualTypeOf<SkeletonLine[]>();
-    expectTypeOf<Skeleton["lines_total"]>().toEqualTypeOf<string>();
+    // IZN-F4d.2: maskeli rolde `null` (0 DEĞİL).
+    expectTypeOf<Skeleton["lines_total"]>().toEqualTypeOf<string | null>();
   });
 
   it("SiteDiarySkeletonLine 'id' TAŞIMAZ ama hesap alanlarını taşır", () => {

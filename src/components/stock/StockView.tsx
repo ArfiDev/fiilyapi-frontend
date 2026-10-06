@@ -135,7 +135,8 @@ export function StockView() {
         </p>
       )}
 
-      {kpis !== undefined && kpis.items_without_price > 0 && (
+      {/* IZN-F4d.2: değer toplamı gizliyse (`null`) "hesabına girmedi" notu yalan olurdu. */}
+      {kpis !== undefined && kpis.total_value !== null && kpis.items_without_price > 0 && (
         <p className="stok__notice" data-testid="stok-price-notice">
           {kpis.items_without_price} kalemin birim fiyatı yok — bu kalemler
           “Toplam Stok Değeri” hesabına GİRMEDİ.

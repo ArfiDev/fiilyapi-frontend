@@ -14121,6 +14121,40 @@ export function startMockBackend(port: number): { server: Server; close: () => P
           if (request.status !== "draft") {
             return send(409, { detail: "Yalnızca taslak talepler düzenlenebilir." });
           }
+          // IZN-F4d.3 · `lines` TAM DEĞİŞTİRME + SATIR `id` BİRLEŞTİRMESİ (sözleşme §7.1), alan mutasyonundan ÖNCE
+          // doğrulanır: id'li satır YERİNDE güncellenir (gönderilmeyen alan KORUNUR — maskeli rolün fiyatı bu yüzden
+          // silinmez), id'siz satır yeni, gövdede olmayan eski satır silinir; yabancı id 404, mükerrer id 422.
+          let mergedLines: MockPurchaseRequest["lines"] | null = null;
+          if (Array.isArray(body.lines)) {
+            const rawLines = body.lines as Array<Record<string, unknown>>;
+            const sentIds = rawLines.flatMap((line) => (typeof line.id === "string" ? [line.id] : []));
+            if (new Set(sentIds).size !== sentIds.length) {
+              return send(422, { detail: "Aynı talep kalemi birden çok kez gönderildi." });
+            }
+            const existingById = new Map(request.lines.map((line) => [line.id, line]));
+            if (sentIds.some((id) => !existingById.has(id))) {
+              return send(404, { detail: "Seçilen talep kalemi bulunamadı" });
+            }
+            const textOf = (value: unknown): string | null => (typeof value === "string" ? value : null);
+            mergedLines = rawLines.map((line, index) => {
+              const previous = typeof line.id === "string" ? existingById.get(line.id) : undefined;
+              const has = (key: string) => key in line;
+              const sentStock = has("stock_item_id") && line.stock_item_id !== null;
+              const sentFree = has("free_text_name") && line.free_text_name !== null;
+              return {
+                id: previous?.id ?? `prl-${request.id}-new-${state.purchasingSeq}-${index}`,
+                sort_order: index,
+                stock_item_id: sentFree ? null : has("stock_item_id") ? textOf(line.stock_item_id) : (previous?.stock_item_id ?? null),
+                free_text_name: sentStock ? null : has("free_text_name") ? textOf(line.free_text_name) : (previous?.free_text_name ?? null),
+                free_text_unit: sentStock ? null : has("free_text_unit") ? textOf(line.free_text_unit) : (previous?.free_text_unit ?? null),
+                quantity: has("quantity") && line.quantity !== null ? String(line.quantity) : (previous?.quantity ?? "0"),
+                estimated_unit_price: has("estimated_unit_price")
+                  ? line.estimated_unit_price === null ? null : String(line.estimated_unit_price)
+                  : (previous?.estimated_unit_price ?? null),
+              };
+            });
+            state.purchasingSeq += 1;
+          }
           if (body.priority !== undefined) {
             request.priority = body.priority as MockPurchaseRequest["priority"];
           }
@@ -14134,22 +14168,7 @@ export function startMockBackend(port: number): { server: Server; close: () => P
             request.quote_deadline =
               body.quote_deadline === null ? null : String(body.quote_deadline);
           }
-          // `lines` KISMİ DEĞİL TAM DEĞİŞTİRMEDİR (sunucu sözleşmesi).
-          if (Array.isArray(body.lines)) {
-            const rawLines = body.lines as Array<Record<string, unknown>>;
-            request.lines = rawLines.map((line, index) => ({
-              id: `prl-${request.id}-${index}`,
-              sort_order: index,
-              stock_item_id: typeof line.stock_item_id === "string" ? line.stock_item_id : null,
-              free_text_name: typeof line.free_text_name === "string" ? line.free_text_name : null,
-              free_text_unit: typeof line.free_text_unit === "string" ? line.free_text_unit : null,
-              quantity: String(line.quantity ?? "0"),
-              estimated_unit_price:
-                line.estimated_unit_price === undefined || line.estimated_unit_price === null
-                  ? null
-                  : String(line.estimated_unit_price),
-            }));
-          }
+          if (mergedLines !== null) request.lines = mergedLines;
           return send(200, buildPurchaseRequestDetail(state, request));
         });
       }
@@ -14527,8 +14546,14 @@ export function startMockBackend(port: number): { server: Server; close: () => P
       const fuelRows = FUEL_SUMMARY_FIXTURE.rows.filter(
         (row) => row.equipment_id === fuelEquipmentId,
       );
-      const fuelSum = (pick: (row: (typeof fuelRows)[number]) => string) =>
-        fuelRows.reduce((total, row) => total + Number(pick(row)), 0).toFixed(2);
+      // IZN-F4d.2: `amount` artık `string | null` (maskeli rolde null) — ikiz de sunucu gibi davranır: bir bileşen
+      // null ise toplam null (0 SAYILMAZ). Varsayılan fikstürde hepsi dolu.
+      const fuelSum = (pick: (row: (typeof fuelRows)[number]) => string | null) => {
+        const parts = fuelRows.map(pick);
+        return parts.some((part) => part === null)
+          ? null
+          : parts.reduce((total, part) => total + Number(part), 0).toFixed(2);
+      };
       return send(200, {
         ...FUEL_SUMMARY_FIXTURE,
         rows: fuelRows,

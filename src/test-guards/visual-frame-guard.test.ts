@@ -386,7 +386,7 @@ const KASTEN_DISARIDA: Record<string, Muafiyet> = {
   "contract-distribution-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
   "contracts-visual.spec.ts": { kadraj: 2, gerekce: ROUTE_GRAPH_CLEAN },
   "dashboard.visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },
-  "equipment-detail-visual.spec.ts": { kadraj: 2, gerekce: "OZEL: `/makine/eq-1` + `/makine/eq-3` (yani `makine/[id]`) bilesen grafigi AST ile tarandi, tarih yeri YOK. Uyari: bu spec `equipment-helpers.ts`i ithal eder ve o dosya `EQUIPMENT_PERIOD_QUERY` tasir, ama BU spec o URL'lere hic gitmez" },
+  "equipment-detail-visual.spec.ts": { kadraj: 3, gerekce: "OZEL: `/makine/eq-1` + `/makine/eq-3` (yani `makine/[id]`) bilesen grafigi AST ile tarandi, tarih yeri YOK. Uyari: bu spec `equipment-helpers.ts`i ithal eder ve o dosya `EQUIPMENT_PERIOD_QUERY` tasir, ama BU spec o URL'lere hic gitmez" },
   "equipment-visual.spec.ts": { kadraj: 4, gerekce: "OLCULDU (ileri damga kadraj mutasyonu): damga 2031-06-15 yapildiginda dort karenin dordu de BAYT AYNI. `/makine/calisma` ve `/makine/yakit` donemi URL'den okur (`EQUIPMENT_PERIOD_QUERY = year=2026&month=8`); `timesheet/month.ts:27 currentPeriod()` yalniz parametre gecersizken devreye girer. Liste ve form kadrajlarinin rota grafiginde tarih yeri YOK" },
   "financial-instruments-visual.spec.ts": { kadraj: 3, gerekce: ROUTE_GRAPH_CLEAN },
   "hr-documents-visual.spec.ts": { kadraj: 1, gerekce: ROUTE_GRAPH_CLEAN },

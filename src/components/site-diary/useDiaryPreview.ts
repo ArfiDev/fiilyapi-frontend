@@ -118,7 +118,8 @@ export function useExistingEntryRaceNotice(input: {
 /** Ağacın okuduğu kaynak: kayıtta `entry.lines`, önizlemede `skeleton.lines`. */
 export interface DiaryTreeSource {
   lines: readonly DiaryTreeLine[];
-  linesTotal: string;
+  /** `null` = gizli (IZN-F4d.2); kayıt/iskelet yoksa "0". */
+  linesTotal: string | null;
   isPreview: boolean;
 }
 
@@ -127,7 +128,7 @@ export function diaryTreeSource(
   skeleton: SiteDiarySkeleton | undefined,
 ): DiaryTreeSource {
   if (entry) return { lines: entry.lines, linesTotal: entry.lines_total, isPreview: false };
-  return { lines: skeleton?.lines ?? [], linesTotal: skeleton?.lines_total ?? "0", isPreview: true };
+  return { lines: skeleton?.lines ?? [], linesTotal: skeleton ? skeleton.lines_total : "0", isPreview: true };
 }
 
 /**

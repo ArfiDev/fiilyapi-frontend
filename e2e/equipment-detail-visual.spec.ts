@@ -56,3 +56,63 @@ test("ekipman detay gorsel (kiralik — bakim penceresi YOK, belge rozetleri)", 
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("makine-detay-kiralik.png", { fullPage: true });
 });
+
+// IZN-F4d.2 · ekipman detay (kiralık) — rol için GİZLİ maliyet (maliyet_kar)
+// ---------------------------------------------------------------------------
+// `/auth/me.hidden_fields = ["maliyet_kar"]` ve ilgili yanıtlardaki tutarlar `null` (IZN-B4d-SOZLESME §1:
+// kira bedeli · çalışma maliyeti · yakıt tutarı · kira hakedişi ödenecek · kümülatif ödenen). YALNIZ bu testte
+// (`page.route`); paylaşılan mock backend'e YAZILMAZ. Beklenen: tutarlar "—", yanlarında kilit; saat/litre açık.
+type JsonRecord = Record<string, unknown>;
+
+async function maskJson(
+  page: import("@playwright/test").Page,
+  pattern: RegExp,
+  mutate: (body: JsonRecord) => JsonRecord,
+) {
+  await page.route(pattern, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as JsonRecord;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mutate(body)) });
+  });
+}
+
+const nullRows = (rows: unknown, field: string) =>
+  (Array.isArray(rows) ? rows : []).map((row) => ({ ...(row as JsonRecord), [field]: null }));
+
+test("ekipman detay maliyet gizli gorsel (kiralik)", async ({ page }) => {
+  await maskJson(page, /\/api\/auth\/me$/, (me) => ({ ...me, hidden_fields: ["maliyet_kar"] }));
+  // Detay ekranı ekipmanı `/equipment/{id}/detail` yanıtının `equipment` alanından okur (§2: makine bedelleri null).
+  await maskJson(page, /\/api\/backend\/equipment\/eq-3\/detail(\?.*)?$/, (body) => ({
+    ...body,
+    equipment: { ...(body.equipment as JsonRecord), rate_amount: null, purchase_amount: null, market_value: null },
+    rental: { ...(body.rental as JsonRecord), cumulative_paid: null },
+  }));
+  await maskJson(page, /\/api\/backend\/equipment\/work-summary(\?.*)?$/, (body) => ({
+    ...body,
+    rows: nullRows(body.rows, "cost"),
+    totals: { ...(body.totals as JsonRecord), cost: null },
+  }));
+  await maskJson(page, /\/api\/backend\/equipment\/fuel-summary(\?.*)?$/, (body) => ({
+    ...body,
+    rows: nullRows(body.rows, "amount"),
+    total_amount: null,
+    avg_unit_price: null,
+  }));
+  await maskJson(page, /\/api\/backend\/equipment\/rental-invoices(\?.*)?$/, (body) => ({
+    ...body,
+    items: nullRows(body.items, "payable_total"),
+  }));
+
+  await visualLogin(page);
+  await page.goto(`${EQUIPMENT_URL}/eq-3`);
+  await expect(page.getByRole("heading", { level: 1, name: "Damperli Kamyon FMX" })).toBeVisible();
+  await waitForDetailSources(page);
+  // Maliyet kutusu + yakıt maliyeti + kira bedeli + kümülatif ödenen + hakediş bağlantısı: tutar YOK, kilit VAR.
+  await expect(page.getByTestId("makine-det-monthly-cost")).toContainText("—");
+  await expect(page.getByTestId("makine-det-monthly-cost").getByTestId("hidden-mark")).toHaveCount(1);
+  await expect(page.getByTestId("makine-det-fuel-amount").getByTestId("hidden-mark")).toHaveCount(1);
+  await expect(page.getByTestId("makine-det-cumulative-paid").getByTestId("hidden-mark")).toHaveCount(1);
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("makine-detay-maliyet-gizli.png", { fullPage: true });
+});

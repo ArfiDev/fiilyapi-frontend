@@ -29,10 +29,15 @@ export interface QuoteComparison {
   highest: PurchaseQuoteCard | null;
   /** 125 "En İyi Teklif Farkı" = en düşük toplam − talebin tahmini bütçesi. */
   differenceToBudget: number | null;
+  /**
+   * IZN-F4d.2 — en az bir kartın `total_cost`u `null` (maskeli rol). Toplamlar KARŞILAŞTIRILAMAZ: `Number(null)` 0'dır ve
+   * "en yüksek"/"fark" sahte sıfırlarla hesaplanırdı. Rozet (`is_best_price`) ve tedarikçi adı BUNDAN ETKİLENMEZ.
+   */
+  isTotalMasked: boolean;
 }
 
-function totalCost(card: PurchaseQuoteCard): number {
-  return Number(card.total_cost);
+function totalCost(card: PurchaseQuoteCard): number | null {
+  return card.total_cost === null ? null : Number(card.total_cost);
 }
 
 /**
@@ -51,18 +56,18 @@ export function buildQuoteComparison(
 ): QuoteComparison {
   const best = bestPriceQuotes(items);
   const lowest = best[0] ?? null;
+  const isTotalMasked = items.some((item) => item.total_cost === null);
   const highest =
-    items.length === 0
+    items.length === 0 || isTotalMasked
       ? null
-      : items.reduce((max, item) => (totalCost(item) > totalCost(max) ? item : max));
+      : items.reduce((max, item) => ((totalCost(item) ?? 0) > (totalCost(max) ?? 0) ? item : max));
 
   const budget = estimatedTotal === null ? null : Number(estimatedTotal);
+  const lowestTotal = lowest === null ? null : totalCost(lowest);
   const differenceToBudget =
-    lowest === null || budget === null || !Number.isFinite(budget)
-      ? null
-      : totalCost(lowest) - budget;
+    lowestTotal === null || budget === null || !Number.isFinite(budget) ? null : lowestTotal - budget;
 
-  return { lowest, isBestPriceTied: best.length > 1, highest, differenceToBudget };
+  return { lowest, isBestPriceTied: best.length > 1, highest, differenceToBudget, isTotalMasked };
 }
 
 /**

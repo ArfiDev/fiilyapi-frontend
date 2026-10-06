@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { EQUIPMENT_EMPTY_VALUE } from "@/components/equipment/equipment-labels";
 
 export type DetailKvTone = "mono" | "warning" | "success" | "muted";
@@ -8,10 +10,12 @@ export interface DetailKvProps {
   value: string | null;
   tones?: DetailKvTone[];
   testId?: string;
+  /** IZN-F4d.2 — maskeli değerin yanına kilit (`MaskedMark`). */
+  mark?: ReactNode;
 }
 
 /** MD `.kv` satırı (MD:20-24) — Teknik/Kiralama/Bakım kartlarının ortak öğesi. */
-export function DetailKv({ label, value, tones = [], testId }: DetailKvProps) {
+export function DetailKv({ label, value, tones = [], testId, mark }: DetailKvProps) {
   const isEmpty = value === null;
   const applied = isEmpty ? ["muted" as const] : tones;
   return (
@@ -22,6 +26,7 @@ export function DetailKv({ label, value, tones = [], testId }: DetailKvProps) {
         data-testid={testId}
       >
         {isEmpty ? EQUIPMENT_EMPTY_VALUE : value}
+        {mark}
       </span>
     </div>
   );

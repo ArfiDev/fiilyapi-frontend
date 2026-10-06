@@ -1,3 +1,8 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrencyTight } from "@/lib/format";
 import type { PurchasingSummaryResponse } from "@/lib/api/hooks/usePurchasingSummary";
 
@@ -27,6 +32,7 @@ const EMPTY_VALUE = "—";
  * pending ile karıştırılmaz, bu yüzden burada tek bir pending dalı yoktur.
  */
 export function PurchasingKpiStrip({ summary }: PurchasingKpiStripProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   return (
     <div className="sat-kpi" data-testid="sat-kpi-strip">
       {/* 70-73 */}
@@ -50,6 +56,7 @@ export function PurchasingKpiStrip({ summary }: PurchasingKpiStripProps) {
         <div className="sat-kpi__label">Bu Ay Sipariş</div>
         <div className="sat-kpi__value sat-kpi__value--neutral">
           {summary ? formatCompactCurrencyTight(summary.orders_this_month_total) : EMPTY_VALUE}
+          <MaskedMark isHidden={isCostHidden} values={[summary?.orders_this_month_total]} />
         </div>
       </div>
 

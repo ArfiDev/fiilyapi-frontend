@@ -1,5 +1,9 @@
-import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
+"use client";
+
+import { HiddenMark, MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrency } from "@/lib/format";
 import { pendingModuleHint } from "@/lib/pending-modules";
 import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
@@ -31,6 +35,7 @@ const EMPTY_VALUE = "—";
  * ekrana gömülü bir sayı yoktur.
  */
 export function StockKpiStrip({ kpis }: StockKpiStripProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const pending = kpis?.pending_orders;
   const isPendingOrdersReal =
     pending !== undefined && pending.available && pending.value !== null && pending.value !== undefined;
@@ -45,6 +50,7 @@ export function StockKpiStrip({ kpis }: StockKpiStripProps) {
         <div className="stok-kpi__label">Toplam Stok Değeri</div>
         <div className="stok-kpi__value stok-kpi__value--neutral">
           {kpis ? formatCompactCurrency(kpis.total_value) : EMPTY_VALUE}
+          <MaskedMark isHidden={isCostHidden} values={[kpis?.total_value]} />
         </div>
       </div>
 

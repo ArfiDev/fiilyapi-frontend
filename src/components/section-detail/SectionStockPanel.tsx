@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
 
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatQuantity } from "@/lib/format";
 import type {
   SectionStockKpis,
@@ -106,6 +111,7 @@ function SectionStockBody({
   isLoading,
   isError,
 }: Pick<SectionStockPanelProps, "rows" | "kpis" | "isLoading" | "isError">) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   if (isError) {
     return (
       <p className="section-detail__message" data-testid="section-stock-error">
@@ -127,8 +133,9 @@ function SectionStockBody({
 
   return (
     <>
-      <SectionStockKpiStrip kpis={kpis} />
-      {kpis.lines_without_price > 0 && (
+      <SectionStockKpiStrip kpis={kpis} isCostHidden={isCostHidden} />
+      {/* IZN-F4d.2: tutar toplamı gizliyse (`null`) "toplamına girmedi" notu yalan olurdu. */}
+      {kpis.total_value !== null && kpis.lines_without_price > 0 && (
         <p className="section-stock__hint" data-testid="section-stock-price-notice">
           {kpis.lines_without_price} satırın birim fiyatı yok — bu satırlar
           “Tutar” toplamına GİRMEDİ.
@@ -151,6 +158,7 @@ function SectionStockBody({
             </th>
             <th scope="col" className="section-stock__num">
               Tutar
+              <MaskedMark isHidden={isCostHidden} values={(rows ?? []).map((row) => row.total_value)} />
             </th>
           </tr>
         </thead>
@@ -192,7 +200,7 @@ function SectionStockBody({
                 <td className="section-stock__num">
                   {formatQuantity(row.net_quantity)} {row.unit}
                 </td>
-                <td className="section-stock__num">₺{formatAmount(row.total_value)}</td>
+                <td className="section-stock__num">{rupees(row.total_value)}</td>
               </tr>
             );
           })}
@@ -202,21 +210,32 @@ function SectionStockBody({
   );
 }
 
+/** `null` (maskeli, IZN-F4d.2) → "—"; `₺—` ya da `₺0` BASILMAZ. */
+function rupees(value: string | null): string {
+  return value === null ? "—" : `₺${formatAmount(value)}`;
+}
+
 /**
  * Bölüm malzeme şeridi. **YER TUTUCU YOKTUR** — dördü de gerçek sayıdır
  * (backend `SectionStockKpis`: "dördü de gerçek sayıdır"). `MetricPlaceholder`
  * zarfı bu uçta HİÇ dönmez, o yüzden burada zarf açan bir dal da yoktur.
  */
-function SectionStockKpiStrip({ kpis }: { kpis: SectionStockKpis }) {
+function SectionStockKpiStrip({ kpis, isCostHidden }: { kpis: SectionStockKpis; isCostHidden: boolean }) {
   return (
     <dl className="section-stock__kpis" data-testid="section-stock-kpis">
       <div className="section-stock__kpi">
         <dt>Sarf Değeri</dt>
-        <dd data-testid="section-stock-kpi-issued-value">₺{formatAmount(kpis.issued_value)}</dd>
+        <dd data-testid="section-stock-kpi-issued-value">
+          {rupees(kpis.issued_value)}
+          <MaskedMark isHidden={isCostHidden} values={[kpis.issued_value]} />
+        </dd>
       </div>
       <div className="section-stock__kpi">
         <dt>Toplam Tutar</dt>
-        <dd data-testid="section-stock-kpi-total-value">₺{formatAmount(kpis.total_value)}</dd>
+        <dd data-testid="section-stock-kpi-total-value">
+          {rupees(kpis.total_value)}
+          <MaskedMark isHidden={isCostHidden} values={[kpis.total_value]} />
+        </dd>
       </div>
       <div className="section-stock__kpi">
         <dt>Malzeme Çeşidi</dt>

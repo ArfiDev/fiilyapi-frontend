@@ -1,3 +1,8 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { CheckIcon, WarningTriangleIcon, inlineSymbolProps } from "@/components/ui/icons";
 import { formatCurrencyPrecise, formatDecimal, formatPercent } from "@/lib/format";
 import type { EquipmentNormUnit } from "@/lib/api/hooks/useEquipment";
@@ -56,10 +61,14 @@ export function EquipmentFuelConsumptionList({
   resolveNormUnit,
   isLoading,
 }: EquipmentFuelConsumptionListProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   return (
     <section className="makine-yakit-panel" data-testid="makine-yakit-consumption">
       {/* 47 */}
-      <h2 className="makine-yakit-panel__title">Ekipman Bazlı Tüketim</h2>
+      <h2 className="makine-yakit-panel__title">
+        Ekipman Bazlı Tüketim
+        <MaskedMark isHidden={isCostHidden} values={(rows ?? []).map((row) => row.amount)} />
+      </h2>
 
       {isLoading && <p className="makine-yakit-panel__note">Yükleniyor…</p>}
       {!isLoading && rows?.length === 0 && (

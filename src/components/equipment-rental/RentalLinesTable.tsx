@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 
 import { Badge, Input } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES, EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatDecimal, formatPeriod } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import type {
@@ -52,7 +55,17 @@ export function RentalLinesTable({
 }: RentalLinesTableProps) {
   const variance = rentalHoursVarianceTotal(detail.lines);
   const unknownWarning = rentalUnknownWarning(detail.totals);
-  const payableUnavailable = rentalPayableUnavailable(detail.totals);
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
+  const isPaymentHidden = useCategoryHidden(EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES);
+  const payableUnavailable = rentalPayableUnavailable(
+    detail.totals,
+    isPaymentHidden && detail.totals.payable_total === null,
+  );
+  // IZN-F4d.2: sütun başlığı başına TEK kilit (değerler satırlardan).
+  const columnMarkValues: Partial<Record<(typeof RENTAL_COLUMNS)[number], readonly (string | null)[]>> = {
+    rateAmount: detail.lines.filter((line) => line.line_kind !== "owned").map((line) => line.effective_rate_amount),
+    ourAmount: detail.lines.map((line) => (line.line_kind === "breakdown" ? line.breakdown_amount : line.our_amount)),
+  };
 
   return (
     <section className="makine-kira__card" aria-labelledby="makine-kira-lines-title">
@@ -72,6 +85,9 @@ export function RentalLinesTable({
               {RENTAL_COLUMNS.map((column) => (
                 <th key={column} scope="col" className={`makine-kira__col--${column}`}>
                   {RENTAL_COLUMN_LABEL[column]}
+                  {columnMarkValues[column] !== undefined && (
+                    <MaskedMark isHidden={isCostHidden} values={columnMarkValues[column]} />
+                  )}
                 </th>
               ))}
             </tr>
@@ -83,6 +99,7 @@ export function RentalLinesTable({
                 key={line.id}
                 line={line}
                 isEditable={isEditable}
+                isRateLocked={isCostHidden}
                 isSaving={isSaving}
                 onSaveLine={onSaveLine}
               />
@@ -101,8 +118,8 @@ export function RentalLinesTable({
             <tr className="makine-kira__foot makine-kira__foot--ours">
               <td colSpan={6}>Bizim Hesap (Çalışma Kaydından)</td>
               <td className="makine-kira__num makine-kira__mono" data-testid="makine-kira-our-total">
-                {"₺"}
-                {formatAmount(detail.totals.our_total)}
+                {detail.totals.our_total === null ? RENTAL_EMPTY_CELL : `₺${formatAmount(detail.totals.our_total)}`}
+                <MaskedMark isHidden={isCostHidden} values={[detail.totals.our_total]} />
               </td>
               <td colSpan={2} />
             </tr>
@@ -118,6 +135,7 @@ export function RentalLinesTable({
                 {detail.totals.invoice_amount === null
                   ? RENTAL_EMPTY_CELL
                   : `₺${formatAmount(detail.totals.invoice_amount)}`}
+                <MaskedMark isHidden={isPaymentHidden} values={[detail.totals.invoice_amount]} />
               </td>
               <td className="makine-kira__center">
                 {/* 🔴 K6 — ROZET İSTEMCİDE TÜRETİLİR ve SAAT farkını basar.
@@ -143,6 +161,7 @@ export function RentalLinesTable({
                 {detail.totals.vat_amount === null
                   ? RENTAL_EMPTY_CELL
                   : `₺${formatAmount(detail.totals.vat_amount)}`}
+                <MaskedMark isHidden={isPaymentHidden} values={[detail.totals.vat_amount]} />
               </td>
             </tr>
 
@@ -156,6 +175,7 @@ export function RentalLinesTable({
                 {detail.totals.payable_total === null
                   ? RENTAL_EMPTY_CELL
                   : `₺${formatAmount(detail.totals.payable_total)}`}
+                <MaskedMark isHidden={isPaymentHidden} values={[detail.totals.payable_total]} />
               </td>
             </tr>
           </tfoot>
@@ -184,11 +204,13 @@ export function RentalLinesTable({
 interface RentalLineRowProps {
   line: RentalInvoiceLineResponse;
   isEditable: boolean;
+  /** IZN-F4d.2: kira B.F. kategorisi gizli → hücre SALT OKUNUR (dolu gönderim 403). */
+  isRateLocked: boolean;
   isSaving: boolean;
   onSaveLine: (lineId: string, field: RentalEditableField, value: string | null) => void;
 }
 
-function RentalLineRow({ line, isEditable, isSaving, onSaveLine }: RentalLineRowProps) {
+function RentalLineRow({ line, isEditable, isRateLocked, isSaving, onSaveLine }: RentalLineRowProps) {
   const cells = rentalRowCells(line);
   return (
     <tr data-rental-line-id={line.id} data-line-kind={line.line_kind}>
@@ -202,6 +224,7 @@ function RentalLineRow({ line, isEditable, isSaving, onSaveLine }: RentalLineRow
             content={cell.content}
             lineId={line.id}
             isEditable={isEditable}
+            isRateLocked={isRateLocked}
             isSaving={isSaving}
             onSaveLine={onSaveLine}
           />
@@ -215,6 +238,7 @@ interface RentalCellViewProps {
   content: RentalCellContent;
   lineId: string;
   isEditable: boolean;
+  isRateLocked: boolean;
   isSaving: boolean;
   onSaveLine: (lineId: string, field: RentalEditableField, value: string | null) => void;
 }
@@ -223,6 +247,7 @@ function RentalCellView({
   content,
   lineId,
   isEditable,
+  isRateLocked,
   isSaving,
   onSaveLine,
 }: RentalCellViewProps) {
@@ -266,7 +291,7 @@ function RentalCellView({
           field={content.field}
           value={content.value}
           placeholder={content.placeholder}
-          isEditable={isEditable}
+          isEditable={isEditable && !(content.field === "rate_amount" && isRateLocked)}
           isSaving={isSaving}
           onSaveLine={onSaveLine}
         />

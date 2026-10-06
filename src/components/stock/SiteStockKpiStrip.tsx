@@ -1,3 +1,8 @@
+"use client";
+
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCompactCurrency } from "@/lib/format";
 import type { SiteStockKpis } from "@/lib/api/hooks/useSiteStock";
 
@@ -24,6 +29,7 @@ const EMPTY_VALUE = "—";
  * yeniden TOPLAMAZ (spec §3).
  */
 export function SiteStockKpiStrip({ kpis }: SiteStockKpiStripProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   return (
     <div className="stok-kpi" data-testid="santiye-stok-kpi-strip">
       {/* 87 */}
@@ -55,6 +61,7 @@ export function SiteStockKpiStrip({ kpis }: SiteStockKpiStripProps) {
         <div className="stok-kpi__label">Stok Değeri</div>
         <div className="stok-kpi__value stok-kpi__value--neutral">
           {kpis ? formatCompactCurrency(kpis.total_value) : EMPTY_VALUE}
+          <MaskedMark isHidden={isCostHidden} values={[kpis?.total_value]} />
         </div>
       </div>
     </div>

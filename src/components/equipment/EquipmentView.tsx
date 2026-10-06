@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { EquipmentDocumentFormModal } from "@/components/document-form/EquipmentDocumentFormModal";
 import { AccessDenied } from "@/components/settings/AccessDenied";
+import { MaskedNote } from "@/components/ui/hidden-mark/HiddenMark";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import {
   EQUIPMENT_LIST_MAX_LIMIT,
@@ -16,7 +17,9 @@ import { usePersonnel, PERSONNEL_MAX_LIMIT } from "@/lib/api/hooks/usePersonnel"
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { isLoaded } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { hasAtLeast } from "@/lib/auth/permissions";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -77,6 +80,7 @@ export function EquipmentView() {
   // IZN-F2.y · "+ Ekipman Ekle" ve kartlardaki "Düzenle" = POST/PATCH /equipment = saha.makine_* Düzenler
   // (VEYA). Bugün bu ikisi izin bakmadan basılıyor → sayfa izni hiç yoksa (fallback) görünür kalır.
   const canEditEquipment = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: true });
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   if (!canViewEquipment || isForbidden(equipmentQuery.error)) return <AccessDenied />;
 
@@ -143,6 +147,8 @@ export function EquipmentView() {
       )}
 
       {/* 86-166 */}
+      {/* IZN-F4d.2: kartlarda maskeli kira bedeli varsa listenin üstünde TEK kilit notu. */}
+      <MaskedNote isHidden={isCostHidden} values={(items ?? []).map((equipment) => equipment.rate_amount)} />
       {items !== undefined && items.length > 0 && (
         <div className="makine-grid" data-testid="makine-grid">
           {items.map((equipment) => (

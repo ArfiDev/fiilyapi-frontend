@@ -107,7 +107,7 @@ export function SubtotalRow({
 }: {
   sectionId: string;
   sectionName: string;
-  amountTotal: string;
+  amountTotal: string | null;
   shape: LineTableShape;
 }) {
   const extra = shape.columns?.renderSectionSubtotal(sectionId) ?? null;

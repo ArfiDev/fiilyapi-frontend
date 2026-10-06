@@ -1,5 +1,9 @@
 "use client";
 
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
+
 import { Badge, Button } from "@/components/ui";
 import { formatCurrency, formatDateDots } from "@/lib/format";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -89,6 +93,7 @@ export function PurchaseOrdersTable({
   hasFilter,
 }: PurchaseOrdersTableProps) {
   const visibleRows = rows ?? [];
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const message =
     visibleRows.length === 0
       ? emptyMessage({ isLoading, isError, errorMessage, hasFilter })
@@ -117,6 +122,7 @@ export function PurchaseOrdersTable({
             </th>
             <th scope="col" className="sat-table__th sat-table__th--right">
               Toplam
+              <MaskedMark isHidden={isCostHidden} values={visibleRows.map((row) => row.total_amount)} />
             </th>
             <th scope="col" className="sat-table__th sat-table__th--center">
               Teslimat

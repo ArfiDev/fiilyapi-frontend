@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
 
 import { Badge } from "@/components/ui";
 import { WarningTriangleIcon, inlineSymbolProps } from "@/components/ui/icons";
 import type { EquipmentResponse } from "@/lib/api/hooks/useEquipment";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatCurrency, formatDateLong } from "@/lib/format";
 
 import { equipmentCategoryIcon } from "./category-icon";
@@ -61,6 +66,7 @@ export function EquipmentCard({
   onAddDocumentClick,
   canEdit = true,
 }: EquipmentCardProps) {
+  const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
   const tone = equipmentCardTone(equipment.status);
   const showWarningBox = equipment.status === "broken" || equipment.status === "maintenance";
 
@@ -125,7 +131,8 @@ export function EquipmentCard({
               {equipment.rate_amount ? (
                 formatCurrency(equipment.rate_amount)
               ) : (
-                <span title={EQUIPMENT_RATE_UNKNOWN_HINT}>{EQUIPMENT_EMPTY_VALUE}</span>
+                // IZN-F4d.2: gizli kategoride `null` = maske ("tanımlı değil" DEĞİL); kilit listenin üstündeki tek nottadır.
+                <span title={isCostHidden ? HIDDEN_FIELD_HINT : EQUIPMENT_RATE_UNKNOWN_HINT}>{EQUIPMENT_EMPTY_VALUE}</span>
               )}
             </div>
           </div>
