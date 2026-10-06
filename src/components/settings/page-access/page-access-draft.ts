@@ -73,10 +73,3 @@ export function toUpdateBody(draft: AccessDraft): RolePagesUpdate {
   return { pages, hidden_fields };
 }
 
-/**
- * Backend gizli alan maskesini UYGULUYOR mu? (`hidden_fields_effective`, IZN-B2 final sözleşmesi;
- * maske B4 ile devreye girer.) Yanıtta yoksa ya da `true` değilse "etkin değil" sayılır.
- */
-export function isHiddenFieldsEffective(response: object): boolean {
-  return (response as { hidden_fields_effective?: unknown }).hidden_fields_effective === true;
-}

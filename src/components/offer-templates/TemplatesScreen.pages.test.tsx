@@ -14,9 +14,6 @@ vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), PUT: vi.fn(), DELETE: vi.fn() },
 }));
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: "view", canView: true, canWrite: false, canDelete: false }),
-}));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => ({ isRestricted: false, names: [] }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 

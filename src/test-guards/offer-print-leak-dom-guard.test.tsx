@@ -21,9 +21,6 @@ import { buildCustomerPrintModel } from "@/components/offer-print/print-model-cu
 import { buildInternalPrintModel } from "@/components/offer-print/print-model-internal";
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn() } }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: "view", canView: true, canWrite: true, canDelete: true }),
-}));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => ({ isRestricted: false, names: [] }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 

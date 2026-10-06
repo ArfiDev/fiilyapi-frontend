@@ -16,9 +16,8 @@ import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateUnit } from "@/lib/api/hooks/useUnitMutations";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
-import { meFixture } from "@/lib/auth/page-grants.testkit";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
@@ -116,9 +115,9 @@ describe("UnitCreateView — TAM SAYFA kabuğu (UE 32-58)", () => {
     }
   });
 
-  it("`projects` yetkisi yoksa AccessDenied basılır (`sales` DEĞİL)", () => {
+  it("Ünite sayfasında (mali.satis_unite) Düzenler yoksa AccessDenied basılır (kardeş satış sayfası Düzenler olsa da)", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { projects: "none", sales: "full" } } as unknown as MeResponse,
+      me: meFixture({ pages: { "mali.satis": pageGrant("edit"), "mali.satis_unite": pageGrant("view") } }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<UnitCreateView />);

@@ -57,7 +57,6 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
   const router = useRouter();
   const scope = useDisciplineScope();
   const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit" });
-  const canViewOffers = usePagePermission(CONTRACTS_VIEW).canView;
   const canWrite = canEditOffers && !scope.isRestricted;
   const canAddEmployer = useButtonGate({
     pages: PROJECT_CREATE_EDIT,
@@ -102,7 +101,7 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
       canWrite={canWrite}
       canAddEmployer={canAddEmployer}
       canConvert={canConvert}
-      readOnlyText={readOnlyMessage(canViewOffers, canEditOffers, scope.isRestricted)}
+      readOnlyText={readOnlyMessage(canEditOffers, scope.isRestricted)}
       renderItems={renderItems}
       toast={toast?.text ?? null}
       onToast={(text) => setToast({ text })}

@@ -62,7 +62,7 @@ beforeEach(() => {
 
 describe("SuppliersView · sayfa izni kapısı (IZN-F2.x)", () => {
   it("stok.tedarikciler Düzenler → ekleme düğmesi ve kartı var", () => {
-    session(meFixture({ pages: { "stok.tedarikciler": pageGrant("edit") }, permissions: { procurement: "view" } }));
+    session(meFixture({ pages: { "stok.tedarikciler": pageGrant("edit") } }));
     render(<SuppliersView />);
     expect(screen.getByRole("button", { name: ADD })).toBeInTheDocument();
     expect(screen.getByTestId("ted-add-card")).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("SuppliersView · sayfa izni kapısı (IZN-F2.x)", () => {
   });
 
   it("yalnız Görür → düğme YOK (modül izni full olsa bile)", () => {
-    session(meFixture({ pages: { "stok.tedarikciler": pageGrant("view") }, permissions: { procurement: "full" } }));
+    session(meFixture({ pages: { "stok.tedarikciler": pageGrant("view") } }));
     render(<SuppliersView />);
     expect(screen.queryByRole("button", { name: ADD })).toBeNull();
     expect(screen.queryByTestId("ted-add-card")).toBeNull();
@@ -92,7 +92,7 @@ describe("SuppliersView · sayfa izni kapısı (IZN-F2.x)", () => {
   });
 
   it("pages boş → fail-closed: procurement full olsa bile düğme yok (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { procurement: "full" } }));
+    session(meFixture({ pages: {} }));
     render(<SuppliersView />);
     expect(screen.queryByRole("button", { name: ADD })).toBeNull();
   });

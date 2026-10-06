@@ -12,9 +12,6 @@ import { DailyReportScreen } from "./DailyReportScreen";
 const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 vi.mock("@/lib/api/hooks/useEvReports", () => ({ useDailyReport: vi.fn(), useApproveDailyReport: vi.fn() }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: vi.fn(() => ({ level: "approve", canView: true, canWrite: true, canDelete: false })),
-}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
   usePathname: () => "/gunluk-rapor",

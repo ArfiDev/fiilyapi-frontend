@@ -53,23 +53,23 @@ beforeEach(() => {
 
 describe("SiteDiarySummaryView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("santiye.gunluk_ozet Görür → açılır (site_diary none olsa bile)", () => {
-    session(meFixture({ pages: { "santiye.gunluk_ozet": pageGrant("view") }, permissions: { site_diary: "none" } }));
+    session(meFixture({ pages: { "santiye.gunluk_ozet": pageGrant("view") } }));
     render(<SiteDiarySummaryView />);
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
   it("günlük kayıt sayfalarında yalnız none → AccessDenied (site_diary full olsa bile)", () => {
-    session(meFixture({ pages: { "santiye.gunluk_ozet": pageGrant("none") }, permissions: { site_diary: "full" } }));
+    session(meFixture({ pages: { "santiye.gunluk_ozet": pageGrant("none") } }));
     render(<SiteDiarySummaryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { site_diary: "none" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = render(<SiteDiarySummaryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: {}, permissions: { site_diary: "view" } }));
+    session(meFixture({ pages: {} }));
     render(<SiteDiarySummaryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
@@ -89,7 +89,6 @@ describe("SiteDiarySummaryView · Hakediş Oluştur bağlantısı = işveren hak
     session(
       meFixture({
         pages: { "mali.hakedis_taseron": pageGrant("edit"), "santiye.gunluk_ozet": pageGrant("view") },
-        permissions: { progress_payments: "view" },
       }),
     );
     render(<SiteDiarySummaryView />);

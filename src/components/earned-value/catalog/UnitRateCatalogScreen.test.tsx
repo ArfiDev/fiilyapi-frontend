@@ -3,7 +3,6 @@ import { screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { backendClient } from "@/lib/api/client";
-import type { AccessLevel } from "@/lib/auth/permissions";
 
 import {
   BETON,
@@ -24,17 +23,7 @@ vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
 }));
 
-// Ekran kapıyı `level`den `hasAtLeast` ile kurar; canWrite/canDelete bilerek
-// hep true — "full kapısı view'e/draft'a inerse" testler bunu yakalamalı.
-let permissionLevel: AccessLevel | undefined = "full";
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({
-    level: permissionLevel,
-    canView: true,
-    canWrite: true,
-    canDelete: true,
-  }),
-}));
+let permissionLevel: string | undefined = "full";
 // IZN-F6a.3 · kapılar oturum sayfa izinlerinden okunur; eski seviye niyeti `permissionLevel`den türetilir
 // (draft = salt okunur: katalog/disiplin yazma eşiği full).
 vi.mock("@/components/shell/SessionProvider", () => ({

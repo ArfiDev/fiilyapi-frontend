@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 
 import { backendClient } from "@/lib/api/client";
+import { pageGrant } from "@/lib/auth/page-grants.testkit";
 
 import { permissionState, resetPermissions, scopeState } from "./convert-permission.testkit";
 import {
@@ -9,7 +10,6 @@ import {
 } from "./convert-screen.testkit";
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn(), POST: vi.fn() } }));
-vi.mock("@/lib/auth/useModulePermission", async () => import("./convert-permission.testkit").then((m) => m.modulePermissionMock));
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
   const { sessionMockFor } = await import("./convert-permission.testkit");
@@ -42,15 +42,15 @@ describe("TKL-F5.3 · Dönüştür — erişim durumları (plan §1 'Erişim dur
     expect(screen.queryByLabelText("Proje adı")).not.toBeInTheDocument();
   });
 
-  it("projects < admin → AccessDenied; AĞ İSTEĞİ de atılmaz (izin kapısı yüklemeden önce)", async () => {
-    permissionState.levels = { contracts: "full", projects: "full" };
+  it("Teklif Hazırlama Düzenler ama Onaylar yok → AccessDenied; AĞ İSTEĞİ de atılmaz (izin kapısı yüklemeden önce)", async () => {
+    permissionState.grant = pageGrant("edit");
     renderConvert();
     expect(await screen.findByText("Bu alana yetkiniz yok")).toBeInTheDocument();
     expect(backendClient.GET).not.toHaveBeenCalled();
   });
 
-  it("contracts < full → AccessDenied", async () => {
-    permissionState.levels = { contracts: "view", projects: "admin" };
+  it("Teklif Hazırlama yalnız Görür → AccessDenied", async () => {
+    permissionState.grant = pageGrant("view");
     renderConvert();
     expect(await screen.findByText("Bu alana yetkiniz yok")).toBeInTheDocument();
   });
@@ -64,7 +64,7 @@ describe("TKL-F5.3 · Dönüştür — erişim durumları (plan §1 'Erişim dur
 
   // IZN-F6a · bilinmezlik kuralı KALKTI: sayfa izni hiç yoksa ekran KAPALI (fail-closed).
   it("sayfa izni YOK (oturumda hücre yok) → AccessDenied; AĞ İSTEĞİ de atılmaz", async () => {
-    permissionState.levels = { contracts: undefined, projects: undefined };
+    permissionState.grant = undefined;
     renderConvert();
     expect(await screen.findByText("Bu alana yetkiniz yok")).toBeInTheDocument();
     expect(backendClient.GET).not.toHaveBeenCalled();

@@ -17,9 +17,6 @@ const nav = vi.hoisted(() => ({ replace: vi.fn(), setParam: null as null | ((val
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), PUT: vi.fn(), DELETE: vi.fn() },
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: perm.level, canView: perm.level !== "none", canWrite: true, canDelete: true }),
-}));
 // IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.level` (modül niyeti) oturum sayfa iznine çevrilir —
 // none/view = sözleşme/teklif sayfaları None/Görür, full = Düzenler (SA değil), admin = sistem yöneticisi (Sil `need: "sa"`).
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {

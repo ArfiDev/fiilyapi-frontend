@@ -13,9 +13,6 @@ vi.mock("@/lib/api/client", () => ({
 }));
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 // Modül izni bilerek view: grant'sız (geri uyum) karar KAPALI olsun.
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: "view", canView: true, canWrite: false, canDelete: false }),
-}));
 
 function session(me: ReturnType<typeof meFixture>) {
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
@@ -65,6 +62,6 @@ describe("UnitRateCatalogScreen · yazma kapısı UNIT_RATE_CATALOG_EDIT (IZN-F5
     session(meFixture({ pages: { "planlama.birim_oran_katalogu": pageGrant("none") } }));
     renderScreen();
     await screen.findByRole("button", { name: "Beton döküm" });
-    expect(screen.getByRole("note")).toHaveTextContent("Salt okunur · kataloğu yalnız tam yetki (full) değiştirir");
+    expect(screen.getByRole("note")).toHaveTextContent("Salt okunur · Birim Oran Kataloğu sayfasında Düzenler yetkisi gerekir");
   });
 });

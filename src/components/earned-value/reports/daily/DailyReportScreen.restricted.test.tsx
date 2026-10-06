@@ -16,9 +16,6 @@ vi.mock("@/lib/api/hooks/useEvReports", () => ({
   useDailyReport: vi.fn(),
   useApproveDailyReport: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: vi.fn(() => ({ level: "approve", canView: true, canWrite: true, canDelete: false })),
-}));
 vi.mock("@/lib/api/hooks/useCompany", () => ({ useCompany: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSite: vi.fn() }));
 

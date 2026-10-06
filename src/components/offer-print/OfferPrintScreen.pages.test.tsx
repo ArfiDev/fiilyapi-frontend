@@ -18,7 +18,6 @@ vi.mock("next/navigation", () => ({
 
 const DENIED = "Bu alana yetkiniz yok";
 const PAGE = "teklif.teklif_hazirlama";
-const MODULE = "contracts";
 
 function session(me: ReturnType<typeof meFixture>) {
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
@@ -42,31 +41,31 @@ describe("OfferPrintScreen · sayfa izni görüntüleme kapısı (IZN-F5-ön)", 
   afterEach(() => vi.unstubAllGlobals());
 
   it("teklif.teklif_hazirlama Görür → ekran açılır (modül none olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("view") }, permissions: { [MODULE]: "none" } }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("view") } }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
   it("teklif.teklif_hazirlama none → AccessDenied (modül full olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, permissions: { [MODULE]: "full" } }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("none") } }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
   it("pages boş → ekran KAPALI (modül izni karar vermez)", () => {
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "none" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
 
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "view" } }));
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da ekran açılır", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true, permissions: { [MODULE]: "none" } }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });

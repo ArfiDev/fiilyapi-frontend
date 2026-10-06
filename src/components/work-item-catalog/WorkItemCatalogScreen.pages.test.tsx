@@ -16,9 +16,6 @@ vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() },
 }));
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: perm.level, canView: perm.level !== "none", canWrite: true, canDelete: true }),
-}));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => ({ isRestricted: false, names: [] }) }));
 
 function session(me: ReturnType<typeof meFixture>) {

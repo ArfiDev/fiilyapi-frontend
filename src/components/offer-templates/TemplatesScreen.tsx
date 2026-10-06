@@ -17,7 +17,7 @@ import { isForbidden } from "@/lib/api/unwrap";
 import type { WorkItemRead } from "@/lib/api/models";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { CONTRACTS_VIEW, OFFER_TEMPLATES_EDIT } from "@/lib/auth/page-gates";
-import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
 import { TemplateCardList } from "./TemplateCardList";
@@ -63,7 +63,6 @@ function TemplatesContent({ templateParam }: { templateParam: string | null }) {
     need: "edit",
   });
   const canWrite = canEditTemplates && !scope.isRestricted;
-  const canViewTemplates = usePagePermission(CONTRACTS_VIEW).canView;
   const list = useOfferTemplates();
   const catalog = useCatalogItems();
   const settings = useOfferSettings();
@@ -136,7 +135,7 @@ function TemplatesContent({ templateParam }: { templateParam: string | null }) {
     }
   }
 
-  const readOnlyText = readOnlyMessage(canViewTemplates, canEditTemplates, scope.isRestricted);
+  const readOnlyText = readOnlyMessage(canEditTemplates, scope.isRestricted);
   return (
     <div className="offers">
       <OfferTabs offerCount={null} listHref={routes.offers.list()} isActive={false} />

@@ -11,7 +11,7 @@ import { meFixture } from "@/lib/auth/page-grants.testkit";
 import { BackendError } from "@/lib/api/unwrap";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
-// `useModulePermission` ağ isteği atmaz, kaynağı `useSession`'dır.
+// Sayfa izinleri ağ isteği atmaz, kaynağı `useSession`'dır.
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 vi.mock("@/lib/api/hooks/useEmployers", () => ({ useEmployers: vi.fn() }));
 vi.mock("@/lib/api/hooks/useProgressPayments", () => ({ useProgressPayments: vi.fn() }));

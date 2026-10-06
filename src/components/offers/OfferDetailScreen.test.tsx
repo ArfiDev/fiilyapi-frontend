@@ -17,14 +17,8 @@ const nav = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() },
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: (moduleKey: string) => {
-    const level = perm.levels[moduleKey];
-    return { level, canView: level !== "none", canWrite: true, canDelete: true };
-  },
-}));
 // IZN-F6a · kapılar yalnız sayfa izninden karar verir: modül niyeti (`perm`) oturum sayfa iznine çevrilir
-// (offers-session.testkit). `useModulePermission` mock'u kapı DIŞI mantık (şerit metni vb.) için kalır.
+// (offers-session.testkit).
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
   const { offersSessionMe } = await import("./offers-session.testkit");

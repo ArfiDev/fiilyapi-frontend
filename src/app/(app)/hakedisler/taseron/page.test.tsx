@@ -9,7 +9,7 @@ import {
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock(
   "@/lib/api/hooks/useSubcontractorProgressPayments",
@@ -38,7 +38,7 @@ describe("TaseronHakedisPage rotasi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { progress_payments: "view" } } as unknown as MeResponse,
+      me: meFixture(),
       isLoading: false,
     });
     vi.mocked(useProjects).mockReturnValue({

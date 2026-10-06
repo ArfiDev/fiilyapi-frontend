@@ -230,7 +230,9 @@ describe("TEK SAYFA KAPISI (ayarlar.bordro_oranlari: oran + tarife)", () => {
     mockSession("view");
     render(<PayrollRatesScreen />);
     expect(screen.queryByTestId("bro-save-rates")).toBeNull();
-    expect(screen.getByTestId("bro-no-permission")).toBeInTheDocument();
+    expect(screen.getByTestId("bro-no-permission")).toHaveTextContent(
+      "Oranları ve vergi dilimlerini düzenlemek için Bordro Oranları sayfasında Düzenler yetkisi gerekir",
+    );
   });
   // IZN-F6a · bilinmezlik kuralı KALKTI: sayfa izni hiç yoksa ikisi de KAPALI (fail-closed).
   it("sayfa izni YOKSA ikisi de kapalıdır (fail-closed)", () => {

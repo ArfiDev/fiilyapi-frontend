@@ -8,7 +8,7 @@ import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { PlanningSettingsScreen } from "./PlanningSettingsScreen";
 
 // IZN-F5-ön — Planlama Ayarları GÖRÜNTÜLEME kapısı earned_value Görür sayfalarından karar verir
-// (backend `earned_value:view`). Grant yoksa bugünkü modül kararı (`level === "none"` → reddet) aynen kalır.
+// (backend `earned_value:view`).
 vi.mock("next/navigation", () => ({
   usePathname: () => "/ayarlar/planlama",
   useRouter: () => ({ replace: vi.fn() }),
@@ -45,26 +45,26 @@ describe("PlanningSettingsScreen · sayfa izni görüntüleme kapısı (IZN-F5-�
     } as unknown as ReturnType<typeof useEvSettings>);
   });
 
-  it("ayarlar.planlama Görür → ekran açılır (modül earned_value:none olsa da)", () => {
-    session(meFixture({ pages: { "ayarlar.planlama": pageGrant("view") }, permissions: { earned_value: "none" } }));
+  it("ayarlar.planlama Görür → ekran açılır", () => {
+    session(meFixture({ pages: { "ayarlar.planlama": pageGrant("view") } }));
     render(<PlanningSettingsScreen />);
     expect(screen.queryByText(DENIED)).toBeNull();
     expect(screen.getByText(LOADING)).toBeInTheDocument();
   });
 
-  it("planlama sayfalarında yalnız none → AccessDenied (modül full olsa da)", () => {
-    session(meFixture({ pages: { "ayarlar.planlama": pageGrant("none") }, permissions: { earned_value: "full" } }));
+  it("planlama sayfalarında yalnız none → AccessDenied", () => {
+    session(meFixture({ pages: { "ayarlar.planlama": pageGrant("none") } }));
     render(<PlanningSettingsScreen />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { earned_value: "none" } }));
+  it("pages boş → fail-closed: reddedilir (IZN-F6a)", () => {
+    session(meFixture({ pages: {} }));
     const { unmount } = render(<PlanningSettingsScreen />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
 
-    session(meFixture({ pages: {}, permissions: { earned_value: "view" } }));
+    session(meFixture({ pages: {} }));
     render(<PlanningSettingsScreen />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

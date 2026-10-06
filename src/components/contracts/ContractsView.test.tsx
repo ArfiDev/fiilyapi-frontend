@@ -21,16 +21,8 @@ vi.mock("next/navigation", () => ({
 
 // M5_3 #400 — "+ Yeni Sözleşme" izin kapısı testi (ContractDistributionView.test.tsx deseni).
 let permissionLevel: string | undefined = "full";
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({
-    level: permissionLevel,
-    canView: true,
-    canWrite: permissionLevel !== "read",
-    canDelete: permissionLevel === "full",
-  }),
-}));
-// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `permissionLevel` (modül niyeti) oturum sayfa iznine çevrilir
-// ("read" = tüm sözleşme sayfaları Görür; aksi = tam erişim). Modül mock'u kapı DIŞI mantık için kalır.
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `permissionLevel` oturum sayfa iznine çevrilir
+// ("read" = tüm sözleşme sayfaları Görür; aksi = tam erişim).
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
   const { meFixture, pagesFor } = await import("@/lib/auth/page-grants.testkit");

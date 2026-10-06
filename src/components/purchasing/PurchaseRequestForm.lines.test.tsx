@@ -102,7 +102,7 @@ let updateMutateAsync: ReturnType<typeof vi.fn>;
 
 function setHidden(hidden: readonly HiddenCategory[]) {
   vi.mocked(useSession).mockReturnValue({
-    me: { ...meFixture({ hiddenFields: hidden }), permissions: { procurement: "full" } },
+    me: meFixture({ hiddenFields: hidden }),
     isLoading: false,
   } as unknown as ReturnType<typeof useSession>);
 }

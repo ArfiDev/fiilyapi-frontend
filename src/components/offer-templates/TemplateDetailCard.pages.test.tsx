@@ -58,7 +58,7 @@ describe("TemplateDetailCard · silme = yalnız SA (IZN-F2.x)", () => {
 
   // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
   it("pages boş → Sil YOK (modül full olsa da)", () => {
-    session(meFixture({ pages: {}, permissions: { contracts: "full" } }));
+    session(meFixture({ pages: {} }));
     renderCard();
     expect(screen.queryByRole("button", { name: "Sil" })).toBeNull();
   });

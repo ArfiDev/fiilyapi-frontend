@@ -334,10 +334,7 @@ describe("EquipmentDetailView", () => {
     );
   });
 
-  // 🔴 Depo kanonu (spec §2.5.3 "bilinmezlik kuralı"): seviyesi BİLİNMEYEN
-  // kullanıcı ekranı GÖRÜR; kapı yalnız AÇIKÇA `none` iken kapanır. Test
-  // önce `permissions: {}` ile yazılmıştı ve KODU değil KENDİSİNİ yalanladı —
-  // `useModulePermission` `level !== "none"` diyor.
+  // Tüm sayfalar AÇIKÇA `none` iken kapı kapanır.
   it("izni AÇIKÇA 'none' olan kullanıcı ekranı GÖRMEZ", () => {
     vi.mocked(useSession).mockReturnValue({
       me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
@@ -382,8 +379,8 @@ describe("IZN-F5b-A madde 11 · '+ Belge Ekle' = saha.makine_ekipman Düzenler (
     vi.mocked(useSession).mockReturnValue({ me: meFixture(options), isLoading: false } as ReturnType<typeof useSession>);
   }
 
-  it("yalnız saha.makine_ekipman Düzenler → '+ Belge Ekle' var (modül view olsa da)", () => {
-    setPages({ pages: { "saha.makine_ekipman": pageGrant("edit") }, permissions: { equipment: "view" } });
+  it("yalnız saha.makine_ekipman Düzenler → '+ Belge Ekle' var", () => {
+    setPages({ pages: { "saha.makine_ekipman": pageGrant("edit") } });
     render(<EquipmentDetailView equipmentId="eq-1" />);
     expect(screen.getByRole("button", { name: "+ Belge Ekle" })).toBeInTheDocument();
   });
@@ -396,7 +393,6 @@ describe("IZN-F5b-A madde 11 · '+ Belge Ekle' = saha.makine_ekipman Düzenler (
         "saha.makine_yakit": pageGrant("edit"),
         "saha.makine_kira": pageGrant("edit"),
       },
-      permissions: { equipment: "full" },
     });
     render(<EquipmentDetailView equipmentId="eq-1" />);
     expect(screen.queryByRole("button", { name: "+ Belge Ekle" })).toBeNull();

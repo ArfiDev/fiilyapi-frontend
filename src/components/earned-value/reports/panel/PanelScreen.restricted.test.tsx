@@ -16,9 +16,6 @@ vi.mock("@/lib/api/hooks/useEvReports", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useEvReports")>()),
   usePanel: vi.fn(),
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: vi.fn(() => ({ level: "full", canView: true, canWrite: true, canDelete: false })),
-}));
 
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({

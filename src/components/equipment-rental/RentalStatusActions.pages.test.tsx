@@ -32,8 +32,8 @@ describe("RentalStatusActions · sayfa izni kapısı (IZN-F2.x)", () => {
     expect(screen.getByTestId("makine-kira-approve")).toBeInTheDocument();
   });
 
-  it("saha.makine_kira Düzenler (Onaylar YOK) → onay düğmesi YOK (modül izni full olsa bile)", () => {
-    session(meFixture({ pages: { "saha.makine_kira": pageGrant("edit") }, permissions: { equipment: "full" } }));
+  it("saha.makine_kira Düzenler (Onaylar YOK) → onay düğmesi YOK", () => {
+    session(meFixture({ pages: { "saha.makine_kira": pageGrant("edit") } }));
     renderActions("pending_verification");
     expect(screen.queryByTestId("makine-kira-approve")).toBeNull();
     expect(screen.queryByTestId("makine-kira-actions")).toBeNull();
@@ -58,8 +58,8 @@ describe("RentalStatusActions · sayfa izni kapısı (IZN-F2.x)", () => {
     expect(screen.queryByTestId("makine-kira-approve")).toBeNull();
   });
 
-  it("pages boş → fail-closed: modül izni full olsa bile eylem yok (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { equipment: "full" } }));
+  it("pages boş → fail-closed: eylem yok (IZN-F6a)", () => {
+    session(meFixture({ pages: {} }));
     renderActions("pending_verification");
     expect(screen.queryByTestId("makine-kira-actions")).toBeNull();
   });

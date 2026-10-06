@@ -51,7 +51,6 @@ function session(me: ReturnType<typeof meFixture>) {
 const ADD = "+ Ekipman Ekle";
 const EDIT_LINK = "makine-card-edit-link";
 // Modül izni görmeye yeter; yazma kararı sayfa izninden gelir.
-const VIEW_MODULE = { equipment: "view" };
 
 describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
   beforeEach(() => {
@@ -65,7 +64,7 @@ describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
   });
 
   it("saha.makine_ekipman Düzenler → '+ Ekipman Ekle' ve 'Düzenle' var", () => {
-    session(meFixture({ pages: { "saha.makine_ekipman": pageGrant("edit") }, permissions: VIEW_MODULE }));
+    session(meFixture({ pages: { "saha.makine_ekipman": pageGrant("edit") } }));
     render(<EquipmentView />);
     expect(screen.getByRole("link", { name: ADD })).toBeInTheDocument();
     expect(screen.getByTestId(EDIT_LINK)).toBeInTheDocument();
@@ -80,7 +79,6 @@ describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
           "saha.makine_yakit": pageGrant("edit"),
           "saha.makine_kira": pageGrant("edit"),
         },
-        permissions: VIEW_MODULE,
       }),
     );
     render(<EquipmentView />);
@@ -90,7 +88,7 @@ describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
 
   it("saha.makine_ekipman Görür → '+ Ekipman Ekle' ve 'Düzenle' YOK, liste görünür", () => {
     session(
-      meFixture({ pages: { "saha.makine_ekipman": pageGrant("view", true) }, permissions: { equipment: "full" } }),
+      meFixture({ pages: { "saha.makine_ekipman": pageGrant("view", true) } }),
     );
     render(<EquipmentView />);
     expect(screen.queryByRole("link", { name: ADD })).toBeNull();
@@ -98,8 +96,8 @@ describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
     expect(screen.getByText("Tower Crane TC-48")).toBeInTheDocument();
   });
 
-  it("pages boş → fail-closed: modül izni full olsa bile düğme ve 'Düzenle' yok (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { equipment: "full" } }));
+  it("pages boş → fail-closed: düğme ve 'Düzenle' yok (IZN-F6a)", () => {
+    session(meFixture({ pages: {} }));
     render(<EquipmentView />);
     expect(screen.queryByRole("link", { name: ADD })).toBeNull();
     expect(screen.queryByTestId(EDIT_LINK)).toBeNull();
@@ -107,7 +105,7 @@ describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
 
   it("sistem yöneticisi: grant none olsa da düğme var", () => {
     session(
-      meFixture({ pages: { "saha.makine_ekipman": pageGrant("none") }, isSystemAdmin: true, permissions: VIEW_MODULE }),
+      meFixture({ pages: { "saha.makine_ekipman": pageGrant("none") }, isSystemAdmin: true }),
     );
     render(<EquipmentView />);
     expect(screen.getByRole("link", { name: ADD })).toBeInTheDocument();

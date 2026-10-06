@@ -8,7 +8,7 @@ import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { EquipmentWorkView } from "./EquipmentWorkView";
 
 // IZN-F5-ön — Makine çalışma ekranının GÖRÜNTÜLEME kapısı (AccessDenied) saha.makine_* sayfalarından karar verir
-// (backend VIEW_GATE_PAGES). Grant yoksa bugünkü modül kararı (`equipment`) aynen kalır.
+// (backend VIEW_GATE_PAGES).
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/x",
@@ -18,7 +18,6 @@ vi.mock("next/navigation", () => ({
 
 const DENIED = "Bu alana yetkiniz yok";
 const PAGE = "saha.makine_calisma";
-const MODULE = "equipment";
 
 function session(me: ReturnType<typeof meFixture>) {
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
@@ -41,26 +40,26 @@ describe("EquipmentWorkView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("saha.makine_calisma Görür → ekran açılır (modül none olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("view") }, permissions: { [MODULE]: "none" } }));
+  it("saha.makine_calisma Görür → ekran açılır", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("view") } }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
-  it("saha.makine_calisma none → AccessDenied (modül full olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, permissions: { [MODULE]: "full" } }));
+  it("saha.makine_calisma none → AccessDenied", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("none") } }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → fail-closed: modül full olsa bile AccessDenied (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "full" } }));
+  it("pages boş → fail-closed: AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da ekran açılır", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true, permissions: { [MODULE]: "none" } }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });

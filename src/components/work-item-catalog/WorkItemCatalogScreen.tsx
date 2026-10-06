@@ -13,7 +13,7 @@ import { isForbidden } from "@/lib/api/unwrap";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { CONTRACTS_VIEW, WORK_ITEM_CATALOG_EDIT } from "@/lib/auth/page-gates";
-import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useFileDownload } from "@/lib/use-file-download";
 
 import { WorkItemDisciplineChips } from "./WorkItemDisciplineChips";
@@ -35,12 +35,8 @@ const EXCEL_SOON_TITLE = "Yakında · Excel desteği sonraki sürümde açılaca
 const NO_ITEMS: readonly WorkItemRead[] = [];
 
 /** ÜS-10 — şerit metni; yazma yetkisi yoksa nedene göre. */
-function readOnlyMessage(canView: boolean, canEdit: boolean, isRestricted: boolean): string {
-  if (!canEdit) {
-    return canView
-      ? "Görüntüleyici · yalnız okuma"
-      : "Salt okunur · kataloğu yalnız Sözleşmeler tam yetkisi değiştirir";
-  }
+function readOnlyMessage(canEdit: boolean, isRestricted: boolean): string {
+  if (!canEdit) return "Görüntüleyici · yalnız okuma";
   if (isRestricted) return "Salt okunur · disiplin kısıtlı kullanıcı kataloğu değiştiremez";
   return "";
 }
@@ -62,7 +58,6 @@ function WorkItemCatalogContent() {
   // IZN-F2.x · katalog kalemi ekle/düzenle = teklif.is_kalemi_katalogu/sözleşme sayfaları Düzenler (VEYA) ∧ kısıtsız.
   const canEditCatalog = useButtonGate({ pages: WORK_ITEM_CATALOG_EDIT, need: "edit" });
   const canWrite = canEditCatalog && !scope.isRestricted;
-  const canViewCatalog = usePagePermission(CONTRACTS_VIEW).canView;
 
   const exportDownload = useFileDownload();
   const catalog = useCatalogItems();
@@ -131,7 +126,7 @@ function WorkItemCatalogContent() {
     void disciplineQuery.refetch();
   }
 
-  const readOnlyText = canWrite ? "" : readOnlyMessage(canViewCatalog, canEditCatalog, scope.isRestricted);
+  const readOnlyText = canWrite ? "" : readOnlyMessage(canEditCatalog, scope.isRestricted);
 
   return (
     <div className="wik">

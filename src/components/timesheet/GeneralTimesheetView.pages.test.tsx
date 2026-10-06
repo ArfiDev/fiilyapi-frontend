@@ -64,23 +64,23 @@ beforeEach(() => {
 
 describe("GeneralTimesheetView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("saha.puantaj Görür → açılır (timesheet none olsa bile)", () => {
-    session(meFixture({ pages: { "saha.puantaj": pageGrant("view") }, permissions: { timesheet: "none" } }));
+    session(meFixture({ pages: { "saha.puantaj": pageGrant("view") } }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
   it("puantaj sayfalarında yalnız none → AccessDenied (timesheet full olsa bile)", () => {
-    session(meFixture({ pages: { "saha.puantaj": pageGrant("none") }, permissions: { timesheet: "full" } }));
+    session(meFixture({ pages: { "saha.puantaj": pageGrant("none") } }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { timesheet: "none" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: {}, permissions: { timesheet: "view" } }));
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

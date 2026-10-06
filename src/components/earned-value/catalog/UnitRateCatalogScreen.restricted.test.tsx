@@ -11,9 +11,6 @@ vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scop
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: "full", canView: true, canWrite: true, canDelete: true }),
-}));
 
 beforeEach(() => {
   vi.clearAllMocks();

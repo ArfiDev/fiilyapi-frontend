@@ -76,7 +76,7 @@ beforeEach(() => {
 
 describe("SectionDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("bolum.detay Görür → ekran açılır (sites none olsa bile)", () => {
-    session(meFixture({ pages: { "bolum.detay": pageGrant("view") }, permissions: { sites: "none" } }));
+    session(meFixture({ pages: { "bolum.detay": pageGrant("view") } }));
     renderView();
     expect(screen.getByText(LOADING)).toBeInTheDocument();
     expect(screen.queryByText(DENIED)).toBeNull();
@@ -86,7 +86,6 @@ describe("SectionDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
     session(
       meFixture({
         pages: { "santiye.bolumler": pageGrant("none"), "bolum.detay": pageGrant("none") },
-        permissions: { sites: "full" },
       }),
     );
     renderView();
@@ -99,7 +98,6 @@ describe("SectionDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
         pages: { "bolum.detay": pageGrant("edit") },
         projects: [{ project_id: PROJECT_ID, role_key: "viewer" }],
         rolePages: { viewer: { "bolum.detay": pageGrant("none") } },
-        permissions: { sites: "full" },
       }),
     );
     renderView();
@@ -107,7 +105,7 @@ describe("SectionDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
   });
 
   it("pages boş → fail-closed: sites full olsa bile AccessDenied (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { sites: "full" } }));
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

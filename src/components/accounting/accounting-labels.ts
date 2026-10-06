@@ -156,5 +156,5 @@ export const ACCOUNTING_REASONS = {
   /** BM:76 "Mutabakat Yap" + BM:100 "Fark" kartı — F-MUP. */
   bankReconciliationRun: "bank_reconciliation_run",
   /** Yazma yetkisi yoksa. */
-  write: "Muhasebe modülünde yazma yetkiniz yok.",
+  write: "Bu muhasebe sayfasında Düzenler yetkisi gerekir.",
 } as const;

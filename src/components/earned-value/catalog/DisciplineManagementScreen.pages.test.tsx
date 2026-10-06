@@ -15,9 +15,6 @@ vi.mock("@/lib/api/client", () => ({
 }));
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 // Modül izni bilerek view: grant'sız (geri uyum) karar KAPALI olsun.
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: "view", canView: true, canWrite: false, canDelete: false }),
-}));
 
 function session(me: ReturnType<typeof meFixture>) {
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);

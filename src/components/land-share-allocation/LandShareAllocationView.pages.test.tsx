@@ -8,7 +8,7 @@ import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { LandShareAllocationView } from "./LandShareAllocationView";
 
 // IZN-F5-ön — Arsa payı dağıtım ekranının YAZMA kapısı (Düzenler) (AccessDenied) mali.satis_paylasim sayfalarından karar verir
-// (backend EDIT_GATE_PAGES). Grant yoksa bugünkü modül kararı (`personnel`) aynen kalır.
+// (backend EDIT_GATE_PAGES).
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/x",
@@ -18,7 +18,6 @@ vi.mock("next/navigation", () => ({
 
 const DENIED = "Bu alana yetkiniz yok";
 const PAGE = "mali.satis_paylasim";
-const MODULE = "projects";
 
 function session(me: ReturnType<typeof meFixture>) {
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
@@ -41,26 +40,26 @@ describe("LandShareAllocationView · sayfa izni görüntüleme kapısı (IZN-F5-
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("mali.satis_paylasim Düzenler → form açılır (modül none olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("edit") }, permissions: { [MODULE]: "none" } }));
+  it("mali.satis_paylasim Düzenler → form açılır", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("edit") } }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
-  it("mali.satis_paylasim yalnız Görür → AccessDenied (modül full olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("view") }, permissions: { [MODULE]: "full" } }));
+  it("mali.satis_paylasim yalnız Görür → AccessDenied", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("view") } }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → fail-closed: modül draft olsa bile AccessDenied (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "draft" } }));
+  it("pages boş → fail-closed: AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da form açılır", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true, permissions: { [MODULE]: "none" } }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });

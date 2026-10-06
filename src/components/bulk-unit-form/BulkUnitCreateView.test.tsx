@@ -21,7 +21,6 @@ import {
 } from "@/lib/api/hooks/useUnitBulk";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
@@ -214,15 +213,6 @@ describe("BulkUnitCreateView — TAM SAYFA kabuğu (TU 31-56)", () => {
     render(<BulkUnitCreateView />);
     expect(screen.getByTestId("toplu-form-iptal")).toHaveAttribute("href", "/satis");
     expect(screen.getByTestId("toplu-form-iptal-ust")).toHaveAttribute("href", "/satis");
-  });
-
-  it("`projects` yetkisi yoksa AccessDenied basılır (`sales` DEĞİL)", () => {
-    vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { projects: "none", sales: "full" } } as unknown as MeResponse,
-      isLoading: false,
-    } as ReturnType<typeof useSession>);
-    render(<BulkUnitCreateView />);
-    expect(screen.queryByTestId("toplu-form-govde")).not.toBeInTheDocument();
   });
 
   it("sayfa izni yalnız Görür iken (yazar değil) AccessDenied basılır (sunucu yalnız tam yetkiyi ister)", () => {

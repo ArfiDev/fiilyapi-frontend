@@ -7,7 +7,7 @@ import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { AiPanel } from "./AiPanel";
 
 // IZN-F5-ön — FİİL AI görüntüleme kapısı (genel.fiil_ai) ve `GET /projects` açma kapısı (proje sayfaları)
-// sayfa izninden karar verir. Grant yoksa bugünkü modül kararı aynen kalır.
+// sayfa izninden karar verir.
 const mockSession = vi.hoisted(() => ({ me: undefined as unknown }));
 vi.mock("@/components/shell/SessionProvider", () => ({
   useSession: () => ({ me: mockSession.me, isLoading: false }),
@@ -50,43 +50,41 @@ afterEach(() => {
 });
 
 describe("AiPanel · sayfa izni kapıları (IZN-F5-ön)", () => {
-  it("genel.fiil_ai Görür → panel açılır (modül ai:none olsa da)", () => {
+  it("genel.fiil_ai Görür → panel açılır", () => {
     stubFetch();
-    mockSession.me = meFixture({ pages: { "genel.fiil_ai": pageGrant("view") }, permissions: { ai: "none" } });
+    mockSession.me = meFixture({ pages: { "genel.fiil_ai": pageGrant("view") } });
     ciz();
     expect(screen.getByLabelText(INPUT)).toBeInTheDocument();
   });
 
-  it("genel.fiil_ai none → AccessDenied (modül ai:view olsa da)", () => {
+  it("genel.fiil_ai none → AccessDenied", () => {
     stubFetch();
-    mockSession.me = meFixture({ pages: { "genel.fiil_ai": pageGrant("none") }, permissions: { ai: "view" } });
+    mockSession.me = meFixture({ pages: { "genel.fiil_ai": pageGrant("none") } });
     ciz();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("pages boş → bugünkü davranış: ai:none reddedilir", () => {
     stubFetch();
-    mockSession.me = meFixture({ pages: {}, permissions: { ai: "none" } });
+    mockSession.me = meFixture({ pages: {} });
     ciz();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("proje sayfaları none → GET /projects ağa çıkmaz (modül projects:view olsa da)", async () => {
+  it("proje sayfaları none → GET /projects ağa çıkmaz", async () => {
     stubFetch();
     mockSession.me = meFixture({
       pages: { "genel.fiil_ai": pageGrant("view"), "genel.projeler": pageGrant("none") },
-      permissions: { ai: "view", projects: "view" },
     });
     ciz();
     await screen.findByLabelText(INPUT);
     expect(projectCalls()).toHaveLength(0);
   });
 
-  it("genel.projeler Görür → GET /projects çıkar (modül projects:none olsa da)", async () => {
+  it("genel.projeler Görür → GET /projects çıkar", async () => {
     stubFetch();
     mockSession.me = meFixture({
       pages: { "genel.fiil_ai": pageGrant("view"), "genel.projeler": pageGrant("view") },
-      permissions: { ai: "view", projects: "none" },
     });
     ciz();
     await waitFor(() => expect(projectCalls().length).toBeGreaterThan(0));

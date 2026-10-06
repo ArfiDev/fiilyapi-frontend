@@ -10,9 +10,6 @@ import { DailyReportScreen } from "./DailyReportScreen";
 
 // DSC-F2 FAZ B · GERÇEK SessionProvider + useDisciplineScope (mock yok): /auth/me.projects[].discipline_ids → etiket.
 vi.mock("@/lib/api/hooks/useEvReports", () => ({ useDailyReport: vi.fn(), useApproveDailyReport: vi.fn() }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: vi.fn(() => ({ level: "approve", canView: true, canWrite: true, canDelete: false })),
-}));
 vi.mock("next/navigation", () => ({
   useParams: () => ({}),
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),

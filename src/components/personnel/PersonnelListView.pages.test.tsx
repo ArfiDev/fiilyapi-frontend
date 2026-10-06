@@ -48,23 +48,23 @@ beforeEach(() => {
 
 describe("PersonnelListView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("ik.personel Görür → açılır (personnel none olsa bile)", () => {
-    session(meFixture({ pages: { "ik.personel": pageGrant("view") }, permissions: { personnel: "none" } }));
+    session(meFixture({ pages: { "ik.personel": pageGrant("view") } }));
     render(<PersonnelListView />);
     expect(screen.getByRole("heading", TITLE)).toBeInTheDocument();
   });
 
   it("ik.* sayfalarında yalnız none → AccessDenied (personnel full olsa bile)", () => {
-    session(meFixture({ pages: { "ik.personel": pageGrant("none") }, permissions: { personnel: "full" } }));
+    session(meFixture({ pages: { "ik.personel": pageGrant("none") } }));
     render(<PersonnelListView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { personnel: "none" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = render(<PersonnelListView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: {}, permissions: { personnel: "view" } }));
+    session(meFixture({ pages: {} }));
     render(<PersonnelListView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

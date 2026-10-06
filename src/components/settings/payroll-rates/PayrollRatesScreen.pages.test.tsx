@@ -86,7 +86,7 @@ const SAVE_BRACKETS = "Tarifeyi Kaydet";
 
 describe("PayrollRatesScreen · sayfa izni kapıları (IZN-F2.x / IZN-F5a)", () => {
   it("ayarlar.bordro_oranlari Düzenler → oran Kaydet VAR, tarife Kaydet VAR", () => {
-    session(meFixture({ pages: { "ayarlar.bordro_oranlari": pageGrant("edit") }, permissions: { payroll: "view" } }));
+    session(meFixture({ pages: { "ayarlar.bordro_oranlari": pageGrant("edit") } }));
     render(<PayrollRatesScreen />);
     expect(screen.getByTestId(SAVE_RATES)).toBeInTheDocument();
     expect(screen.queryByTestId("bro-no-permission")).toBeNull();
@@ -101,20 +101,20 @@ describe("PayrollRatesScreen · sayfa izni kapıları (IZN-F2.x / IZN-F5a)", () 
   });
 
   it("mali.sgk_bildirimi Düzenler tek başına → oran Kaydet YOK (PUT /payroll/rates artık bordro_oranlari ister)", () => {
-    session(meFixture({ pages: { "mali.sgk_bildirimi": pageGrant("edit") }, permissions: { payroll: "view" } }));
+    session(meFixture({ pages: { "mali.sgk_bildirimi": pageGrant("edit") } }));
     render(<PayrollRatesScreen />);
     expect(screen.queryByTestId(SAVE_RATES)).toBeNull();
   });
 
   it("Onaylar bayrağı yazma kapısını AÇMAZ", () => {
-    session(meFixture({ pages: { "mali.bordro": pageGrant("view", true) }, permissions: { payroll: "view" } }));
+    session(meFixture({ pages: { "mali.bordro": pageGrant("view", true) } }));
     render(<PayrollRatesScreen />);
     expect(screen.queryByTestId(SAVE_RATES)).toBeNull();
   });
 
   // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
   it("pages boş → KAPALI: oran yazma da tarife de yok (modül full olsa da)", () => {
-    session(meFixture({ pages: {}, permissions: { payroll: "full" } }));
+    session(meFixture({ pages: {} }));
     render(<PayrollRatesScreen />);
     expect(screen.queryByTestId(SAVE_RATES)).toBeNull();
     expect(screen.queryByRole("button", { name: SAVE_BRACKETS })).toBeNull();

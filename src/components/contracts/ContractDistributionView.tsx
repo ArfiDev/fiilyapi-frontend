@@ -252,7 +252,7 @@ export function ContractDistributionView({ projectId }: ContractDistributionView
 
           {!canEditContracts && (
             <p className="cdist__message" data-testid="cdist-readonly-notice">
-              Sözleşme modülünde yazma izniniz yok — kotalar salt okunur.
+              Poz Dağılımı sayfasında Düzenler yetkisi gerekir — kotalar salt okunur.
             </p>
           )}
 

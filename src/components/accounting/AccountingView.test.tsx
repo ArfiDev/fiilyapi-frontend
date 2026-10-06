@@ -1427,7 +1427,7 @@ describe("IZN-F5b-A madde 4 · '+ Yevmiye Kaydı' = mali.yevmiye Düzenler (sekm
   }
 
   it("yalnız mali.yevmiye Düzenler → düğme AÇIK (accounting none olsa da)", () => {
-    setPages({ pages: { "mali.yevmiye": pageGrant("edit") }, permissions: { accounting: "none" } });
+    setPages({ pages: { "mali.yevmiye": pageGrant("edit") } });
     render(<AccountingView />);
     expect(screen.getByTestId("mu-create-entry")).toBeEnabled();
   });
@@ -1439,7 +1439,6 @@ describe("IZN-F5b-A madde 4 · '+ Yevmiye Kaydı' = mali.yevmiye Düzenler (sekm
         "mali.hesap_plani": pageGrant("edit"),
         "mali.donem_kapanisi": pageGrant("edit"),
       },
-      permissions: { accounting: "full" },
     });
     render(<AccountingView />);
     expect(screen.getByTestId("mu-create-entry")).toBeDisabled();

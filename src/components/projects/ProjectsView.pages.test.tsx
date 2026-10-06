@@ -81,13 +81,13 @@ describe("ProjectsView · sayfa izni kapısı (IZN-F2.x)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("genel.projeler Düzenler → '+ Yeni Proje' bağlantısı var", () => {
-    session(meFixture({ pages: { "genel.projeler": pageGrant("edit") }, permissions: { projects: "view" } }));
+    session(meFixture({ pages: { "genel.projeler": pageGrant("edit") } }));
     renderView();
     expect(screen.getByRole("link", { name: NEW_PROJECT })).toBeInTheDocument();
   });
 
   it("genel.projeler Görür → bağlantı YOK, devre-dışı öğe (modül izni full olsa bile)", () => {
-    session(meFixture({ pages: { "genel.projeler": pageGrant("view") }, permissions: { projects: "full" } }));
+    session(meFixture({ pages: { "genel.projeler": pageGrant("view") } }));
     renderView();
     expect(screen.queryByRole("link", { name: NEW_PROJECT })).toBeNull();
     expect(screen.getByText(NEW_PROJECT)).toHaveAttribute("aria-disabled", "true");
@@ -100,7 +100,7 @@ describe("ProjectsView · sayfa izni kapısı (IZN-F2.x)", () => {
   });
 
   it("pages boş → fail-closed: modül izni full olsa bile bağlantı yok (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { projects: "full" } }));
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.queryByRole("link", { name: NEW_PROJECT })).toBeNull();
   });

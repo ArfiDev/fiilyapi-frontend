@@ -25,7 +25,6 @@ import { useProjectBlocks } from "@/lib/api/hooks/useProjectBlocks";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 import { meFixture } from "@/lib/auth/page-grants.testkit";
 
@@ -260,15 +259,6 @@ describe("LandShareAllocationView — TAM SAYFA kabuğu (PG 31-56)", () => {
     expect(checkbox).not.toBeChecked();
     // Gerekçe `title`da SAKLANMAZ.
     expect(screen.getByText(ALLOCATION_PDF_PENDING_REASON)).toBeInTheDocument();
-  });
-
-  it("`projects` yetkisi yoksa AccessDenied basılır (`sales` DEĞİL)", () => {
-    vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { projects: "none", sales: "full" } } as unknown as MeResponse,
-      isLoading: false,
-    } as ReturnType<typeof useSession>);
-    render(<LandShareAllocationView />);
-    expect(screen.queryByTestId("paylasim-form-govde")).not.toBeInTheDocument();
   });
 });
 

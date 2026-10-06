@@ -322,7 +322,7 @@ export function PayrollRatesScreen() {
       {!locked && !canEdit && (
         <p className="bro-band bro-band--locked" data-testid="bro-no-permission">
           <LockIcon {...inlineSymbolProps} />
-          Oranları değiştirmek için Bordro modülünde “tam” yetki gerekir; ekran salt-okunurdur.
+          Oranları ve vergi dilimlerini düzenlemek için Bordro Oranları sayfasında Düzenler yetkisi gerekir; ekran salt-okunurdur.
         </p>
       )}
       {copiedFrom !== null && (

@@ -8,7 +8,7 @@ import type { RolePagesResponse, RoleResponse } from "@/lib/api/models";
 import { HiddenFieldsBox } from "./HiddenFieldsBox";
 import { PageGroupSection } from "./PageGroupSection";
 import { buildSections } from "./page-access-derive";
-import { isHiddenFieldsEffective, type AccessDraft } from "./page-access-draft";
+import { type AccessDraft } from "./page-access-draft";
 import type { PageAccessEditor } from "./usePageAccessDraft";
 import { PAGE_ACCESS_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -90,7 +90,6 @@ export function RolePanel({ role, access, catalog, editor, isSaving, saveError, 
 
       <HiddenFieldsBox
         hidden={editor.draft.hidden}
-        isEffective={isHiddenFieldsEffective(access)}
         disabled={isReadOnly}
         onToggle={editor.toggleHidden}
       />

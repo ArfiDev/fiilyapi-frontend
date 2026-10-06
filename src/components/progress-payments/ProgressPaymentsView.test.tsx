@@ -15,8 +15,7 @@ vi.mock("@/lib/api/hooks/useProgressPayments", async (importOriginal) => ({
   useProgressPayments: vi.fn(),
 }));
 
-// `useModulePermission` ağ isteği atmaz, kaynağı `useSession`'dır — kapı
-// testlerinde o taklit edilir (bkz. `useModulePermission.test.tsx`).
+// Kapı kaynağı `useSession`'dır (ağ isteği yok) — kapı testlerinde o taklit edilir.
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
 // F-PRJTAB T3: görünüm artık proje süzgecini URL'den okur ve süzgeç çubuğu
