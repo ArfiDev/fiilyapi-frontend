@@ -11,13 +11,19 @@ import { SiteTotalsStrip } from "@/components/project-detail/SiteTotalsStrip";
 import { useProject, type ProjectType } from "@/lib/api/hooks/useProjects";
 import { useSites } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
+import { SITE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import "@/components/project-detail/project-detail.css";
 import { routes } from "@/lib/routes";
 
 // "+ Şantiye Ekle" eylemi hem ust bardaki butonda hem bos durum icinde
 // gorunur (spec §7.4); ikisi de AYNI tam sayfa forma gider (§2.3) — modal
 // kaldirildi. `project-detail__add-btn` sinifi KORUNUR: gorsel stil degismez.
+// IZN-F5c: POST /projects/{id}/sites = proje.santiyeler Düzenler; grant yoksa
+// bugünkü davranış (düğme görünür — önceden kapısızdı).
 function AddSiteLink({ projectKey, className }: { projectKey: string; className?: string }) {
+  const canCreate = useButtonGate({ pages: SITE_EDIT, need: "edit", fallback: true, projectId: projectKey });
+  if (!canCreate) return null;
   return (
     <Link
       href={routes.projects.sites.new({ projectId: projectKey })}

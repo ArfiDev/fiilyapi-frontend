@@ -18,6 +18,7 @@ import { BackendError } from "@/lib/api/unwrap";
 import type { SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import type { SiteDetail } from "@/lib/api/hooks/useSites";
 import { sectionNav } from "./section-nav.testkit";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useSection", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useSection")>()),
@@ -393,6 +394,24 @@ describe("SectionDetailView — izin kapısı (Düzenle butonu)", () => {
 
   it("sites:full yoksa (view) 'Düzenle' basılmaz", () => {
     mockPermission("view");
+    mockQueries();
+    renderView();
+    expect(screen.queryByRole("link", { name: "Düzenle" })).not.toBeInTheDocument();
+  });
+
+  // IZN-F5c — PATCH /sections/{id} = bolum.detay Düzenler (santiye.bolumler artık bu uca yetmez).
+  it("bolum.detay Düzenler → 'Düzenle' görünür", () => {
+    vi.mocked(useSession).mockReturnValue({ me: meFixture({ pages: { "bolum.detay": pageGrant("edit") } }), isLoading: false } as never);
+    mockQueries();
+    renderView();
+    expect(screen.getByRole("link", { name: "Düzenle" })).toBeInTheDocument();
+  });
+
+  it("bolum.detay Görür + santiye.bolumler Düzenler (eski kardeş) → 'Düzenle' YOK", () => {
+    vi.mocked(useSession).mockReturnValue({
+      me: meFixture({ pages: { "bolum.detay": pageGrant("view"), "santiye.bolumler": pageGrant("edit") } }),
+      isLoading: false,
+    } as never);
     mockQueries();
     renderView();
     expect(screen.queryByRole("link", { name: "Düzenle" })).not.toBeInTheDocument();

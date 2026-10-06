@@ -21,6 +21,10 @@ import {
   OFFER_TEMPLATES_EDIT,
   OFFERS_EDIT,
   PERIOD_CLOSE_EDIT,
+  SECTION_CREATE_EDIT,
+  SECTION_EDIT,
+  SECTION_TYPE_CREATE_EDIT,
+  SITES_VIEW_PAGES,
   SUBCONTRACTOR_CONTRACT_CREATE_EDIT,
   SUBCONTRACTOR_CONTRACT_EDIT,
   SUBCONTRACTOR_CREATE_EDIT,
@@ -63,6 +67,9 @@ describe("page-gates · Görür kümeleri (IZN-F5-ön)", () => {
     ["fatura", INVOICING_EDIT, INVOICING_VIEW],
     ["personel", PERSONNEL_EDIT, PERSONNEL_VIEW],
     ["hazine", TREASURY_EDIT, TREASURY_VIEW],
+    ["bölüm (oluştur)", SECTION_CREATE_EDIT, SITES_VIEW_PAGES],
+    ["bölüm (düzenle)", SECTION_EDIT, SITES_VIEW_PAGES],
+    ["bölüm (tip)", SECTION_TYPE_CREATE_EDIT, SITES_VIEW_PAGES],
   ] as const)("%s: Düzenler sayfaları Görür kümesinin içindedir", (_name, edit, view) => {
     const viewKeys: readonly string[] = view;
     expect(edit.every((key) => viewKeys.includes(key))).toBe(true);

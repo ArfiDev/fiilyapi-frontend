@@ -8,8 +8,8 @@ import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { useSession } from "@/components/shell/SessionProvider";
 import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
-// IZN-F2.y — "Yeni Şantiye" formu santiye.bolumler / bolum.detay Düzenler kapısından açılır
-// (POST /projects/{id}/sites = backend `sites:full`).
+// IZN-F5c — "Yeni Şantiye" formu proje.santiyeler Düzenler kapısından açılır
+// (POST /projects/{id}/sites = backend proje.santiyeler Düzenler).
 const PROJECT_ID = "11111111-1111-1111-1111-111111111111";
 vi.mock("next/navigation", () => ({
   useParams: () => ({ projectId: PROJECT_ID }),
@@ -32,7 +32,7 @@ function session(me: ReturnType<typeof meFixture>) {
 
 const FORM = { name: /Yeni Şantiye/, level: 1 } as const;
 
-describe("SiteCreateView · sayfa izni kapısı (IZN-F2.y)", () => {
+describe("SiteCreateView · sayfa izni kapısı (IZN-F5c)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useProject).mockReturnValue({
@@ -50,20 +50,22 @@ describe("SiteCreateView · sayfa izni kapısı (IZN-F2.y)", () => {
     } as never);
   });
 
-  it("santiye.bolumler Düzenler → form var", () => {
-    session(meFixture({ pages: { "santiye.bolumler": pageGrant("edit") } }));
+  it("proje.santiyeler Düzenler → form var", () => {
+    session(meFixture({ pages: { "proje.santiyeler": pageGrant("edit") } }));
     render(<SiteCreateView />);
     expect(screen.getByRole("heading", FORM)).toBeInTheDocument();
   });
 
-  it("bolum.detay Düzenler (ikiz sayfa, VEYA) → form var", () => {
-    session(meFixture({ pages: { "santiye.bolumler": pageGrant("view"), "bolum.detay": pageGrant("edit") } }));
-    render(<SiteCreateView />);
-    expect(screen.getByRole("heading", FORM)).toBeInTheDocument();
-  });
-
-  it("santiye.bolumler Görür → AccessDenied, form YOK", () => {
-    session(meFixture({ pages: { "santiye.bolumler": pageGrant("view", true) } }));
+  it("proje.santiyeler Görür + santiye.bolumler/bolum.detay Düzenler (eski küme) → AccessDenied, form YOK", () => {
+    session(
+      meFixture({
+        pages: {
+          "proje.santiyeler": pageGrant("view", true),
+          "santiye.bolumler": pageGrant("edit"),
+          "bolum.detay": pageGrant("edit"),
+        },
+      }),
+    );
     render(<SiteCreateView />);
     expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
     expect(screen.queryByRole("heading", FORM)).toBeNull();
@@ -76,7 +78,7 @@ describe("SiteCreateView · sayfa izni kapısı (IZN-F2.y)", () => {
   });
 
   it("sistem yöneticisi: grant none olsa da form var", () => {
-    session(meFixture({ pages: { "santiye.bolumler": pageGrant("none") }, isSystemAdmin: true }));
+    session(meFixture({ pages: { "proje.santiyeler": pageGrant("none") }, isSystemAdmin: true }));
     render(<SiteCreateView />);
     expect(screen.getByRole("heading", FORM)).toBeInTheDocument();
   });

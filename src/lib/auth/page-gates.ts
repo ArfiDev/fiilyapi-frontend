@@ -122,7 +122,14 @@ export const SITE_DIARY_EDIT = keys([
   "santiye.gunluk_planlama",
   "bolum.gunluk_kayit_detay",
 ]);
-export const SITES_EDIT = keys(["santiye.bolumler", "bolum.detay"]);
+/** IZN-F5c — POST /projects/{id}/sites + PATCH /sites/{id}: proje.santiyeler Düzenler. */
+export const SITE_EDIT = keys(["proje.santiyeler"]);
+/** IZN-F5c — POST /sites/{id}/sections: santiye.bolumler Düzenler. */
+export const SECTION_CREATE_EDIT = keys(["santiye.bolumler"]);
+/** IZN-F5c — PATCH /sections/{id}: bolum.detay Düzenler. */
+export const SECTION_EDIT = keys(["bolum.detay"]);
+/** IZN-F5c — POST /section-types: santiye.bolumler VEYA bolum.detay Düzenler. */
+export const SECTION_TYPE_CREATE_EDIT = keys(["santiye.bolumler", "bolum.detay"]);
 export const TIMESHEET_EDIT = keys(["saha.puantaj", "santiye.puantaj"]);
 export const TREASURY_EDIT = keys(["mali.hazine", "mali.cek_odeme"]);
 export const USERS_EDIT = keys(["ayarlar.kullanicilar"]);

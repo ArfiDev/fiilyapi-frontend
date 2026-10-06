@@ -16,7 +16,7 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { listTruncationMessage } from "@/lib/list-truncation";
 import { formatPeriod } from "@/lib/format";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { SITES_EDIT, SITES_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { SECTION_EDIT, SITES_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { groupSectionWorkers } from "./section-workers";
 import { SectionBoqCard } from "./SectionBoqCard";
@@ -150,8 +150,8 @@ export function SectionDetailView() {
   const { canView: moduleCanView, canWrite: moduleCanWrite } = useModulePermission("sites");
   // IZN-F5-ön · görüntüleme kapısı = santiye.bolumler/bolum.detay Görür (VEYA); grant yoksa modül izni.
   const canView = useButtonGate({ pages: SITES_VIEW_PAGES, need: "view", fallback: moduleCanView, projectId: projectKey });
-  // IZN-F2.x · bölüm düzenle = santiye.bolumler/bolum.detay Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
+  // IZN-F5c · bölüm düzenle = bolum.detay Düzenler (PATCH /sections/{id}).
+  const canWrite = useButtonGate({ pages: SECTION_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
   // DET-1.2 · S4 — açık sekme URL'dedir (`?sekme=`): günlük kayıt detayının
   // kırıntısı/geri tuşu "Günlük Kayıt"a DÖNER. Tek kaynak URL; yerel kopya yok.
   const router = useRouter();

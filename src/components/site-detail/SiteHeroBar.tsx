@@ -9,6 +9,8 @@ import { isRestrictedEnvelope } from "@/lib/placeholder-cell";
 import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import type { SiteDetail } from "@/lib/api/hooks/useSites";
 import { routes, routeKeyOf } from "@/lib/routes";
+import { SECTION_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { physicalLabel } from "@/lib/auth/physicalLabel";
 
@@ -204,6 +206,13 @@ export function SiteHeroBar({ site }: SiteHeroBarProps) {
     siteId: routeKeyOf(site),
   });
   const meta = metaParts(site);
+  // IZN-F5c · POST /sites/{id}/sections = santiye.bolumler Düzenler; grant yoksa bugünkü (görünür) davranış.
+  const canCreateSection = useButtonGate({
+    pages: SECTION_CREATE_EDIT,
+    need: "edit",
+    fallback: true,
+    projectId: site.project.id,
+  });
 
   return (
     <div className="site-hero">
@@ -232,9 +241,11 @@ export function SiteHeroBar({ site }: SiteHeroBarProps) {
           </Link>
           {/* SectionFormModal EMEKLİ edildi (F-P6 T3) — "+ Bölüm Ekle" artık
               tam sayfa forma link verir. */}
-          <Link href={`${base}/bolumler/yeni`} className="site-hero__btn site-hero__btn--solid">
-            + Bölüm Ekle
-          </Link>
+          {canCreateSection && (
+            <Link href={`${base}/bolumler/yeni`} className="site-hero__btn site-hero__btn--solid">
+              + Bölüm Ekle
+            </Link>
+          )}
           {/* SIL-F1.2 — yalnız Sistem Yöneticisi görür; silince projeye döner. */}
           <DeleteRecordButton
             kind="site"

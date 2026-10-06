@@ -16,7 +16,7 @@ import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { SITES_EDIT } from "@/lib/auth/page-gates";
+import { SECTION_CREATE_EDIT, SECTION_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 import { isUserListUnavailable } from "@/components/site-form/user-picker";
@@ -65,9 +65,14 @@ function InfoIcon() {
 export function SectionForm(props: SectionFormProps) {
   const router = useRouter();
   const { canWrite: moduleCanWrite } = useModulePermission("sites");
-  // IZN-F2.x · bölüm ekle/düzenle = santiye.bolumler/bolum.detay Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: moduleCanWrite, projectId: props.projectKey });
   const isEdit = props.mode === "edit";
+  // IZN-F5c · oluştur = santiye.bolumler (POST /sites/{id}/sections), düzenle = bolum.detay (PATCH /sections/{id}) Düzenler.
+  const canWrite = useButtonGate({
+    pages: isEdit ? SECTION_EDIT : SECTION_CREATE_EDIT,
+    need: "edit",
+    fallback: moduleCanWrite,
+    projectId: props.projectKey,
+  });
 
   const siteQuery = useSite(props.siteKey, { project: props.projectKey });
   const projectQuery = useProject(props.projectKey);
