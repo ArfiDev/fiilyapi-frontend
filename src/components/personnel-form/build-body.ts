@@ -43,7 +43,10 @@ export type OmittablePersonnelField =
   | "emergency_contact_phone"
   | "iban"
   | "sgk_no"
-  | "wage_amount";
+  | "wage_amount"
+  // 🔴 IZN-F5a.2 — atama görünmeyen personelde sunucudan `null` gelir ve atama alanı içeren PATCH 404 verir;
+  // yalnız kullanıcı atamaya dokunduysa gönderilir.
+  | "assigned_project_id";
 
 /** Boş/boşluk dizesi `null`a düşer — sunucuya "" yazmak veri değil gürültüdür. */
 function textOrNull(value: string): string | null {

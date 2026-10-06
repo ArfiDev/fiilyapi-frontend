@@ -9,6 +9,8 @@ export interface FakeUser {
   full_name: string;
   title: string;
   role_id: string;
+  role_name: string;
+  role_key: string;
   status: "active" | "on_leave" | "passive";
   all_projects: boolean;
   project_count: number;
@@ -60,6 +62,8 @@ export const AHMET: FakeUser = {
   full_name: "Ahmet Yılmaz",
   title: "Şantiye Şefi",
   role_id: "r-site",
+  role_name: "Şantiye Şefi",
+  role_key: "site_chief",
   status: "active",
   all_projects: false,
   project_count: 2,
@@ -70,6 +74,8 @@ export const AYSE: FakeUser = {
   full_name: "Ayşe Demir",
   title: "Muhasebe",
   role_id: "r-patron",
+  role_name: "Patron",
+  role_key: "patron",
   status: "active",
   all_projects: true,
   project_count: 0,
@@ -80,6 +86,8 @@ export const KADIR: FakeUser = {
   full_name: "Kadir Arslan",
   title: "Proje Müdürü",
   role_id: "r-pm",
+  role_name: "Proje Müdürü",
+  role_key: "project_manager",
   status: "on_leave",
   all_projects: false,
   project_count: 0,

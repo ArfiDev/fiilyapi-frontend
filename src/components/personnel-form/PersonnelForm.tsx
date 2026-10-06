@@ -211,6 +211,9 @@ export function PersonnelForm(props: PersonnelFormProps) {
       ? []
       : [
           ...maskedApiFields,
+          // 🔴 IZN-F5a.2 — atamaya dokunulmadıysa anahtar gitmez (görünmeyen atamada PATCH 404);
+          // kasıtlı kaldırma (null) dokunulmuş sayılır ve açıkça gider.
+          ...(touched.has("assignedProjectId") ? [] : (["assigned_project_id"] as const)),
           ...(detail.wage_type === null && !touched.has("wageType")
             ? (["wage_type"] as const)
             : []),

@@ -26243,6 +26243,10 @@ export interface components {
              * Format: uuid
              */
             role_id: string;
+            /** Role Key */
+            role_key: string;
+            /** Role Name */
+            role_name: string;
             status: components["schemas"]["UserStatus"];
             /** Title */
             title: string;
