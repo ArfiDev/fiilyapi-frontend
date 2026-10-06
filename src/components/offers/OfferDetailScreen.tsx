@@ -10,9 +10,7 @@ import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { useOffer, useOfferRevision } from "@/lib/api/hooks/useOffers";
 import type { OfferDetailRead } from "@/lib/api/hooks/useOffers";
 import { parseCountInput } from "@/lib/decimal";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { OFFERS_EDIT, OFFER_CONVERT_APPROVE, PROJECT_CREATE_EDIT, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
@@ -22,10 +20,6 @@ import { OfferTabs } from "./OfferTabs";
 import { readOnlyMessage } from "./OffersScreen";
 import "./offers.css";
 
-/** T25: teklif YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
-/** ÜS-F3-8: işveren eklemek `projects:admin`. */
-/** TKL-F5.5 · SO-42: `POST /offers/{id}/convert` `projects:admin` ister. */
-const PROJECTS_ADMIN_LEVEL = "admin";
 const NOT_FOUND_STATUS = 404;
 const REV_DIGITS = /^\d+$/;
 /** Başarı bildiriminin ekranda kalma süresi (KIK/KAT emsali). */
@@ -61,21 +55,17 @@ export function OfferDetailScreen(props: OfferDetailScreenProps) {
 
 function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScreenProps) {
   const router = useRouter();
-  const { level } = useModulePermission("contracts");
-  const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
   const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit" });
+  const canViewOffers = usePagePermission(CONTRACTS_VIEW).canView;
   const canWrite = canEditOffers && !scope.isRestricted;
   const canAddEmployer = useButtonGate({
     pages: PROJECT_CREATE_EDIT,
     need: "edit",
   });
   const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
-  // Sayfa modeli yoksa `undefined` → bugünkü kural (`canWrite` ∧ `projects ≥ admin`); model devredeyken hücresiz = kapalı (IZN-F5c).
-  const canConvert =
-    convertPermission.isSystemAdmin || convertPermission.isModelActive
-      ? convertPermission.canApprove && !scope.isRestricted
-      : undefined;
+  // IZN-F6b · `POST /offers/{id}/convert` = teklif.teklif_hazirlama Onaylar (projects:admin GEREKMEZ); yükleniyorken kapalı.
+  const canConvert = convertPermission.canApprove && !scope.isRestricted;
   const detailQuery = useOffer(offerId);
   // Toast revizyon ANAHTARININ ÜSTÜNDE yaşar: yeni revizyona geçişte görünüm yeniden kurulur, bildirim kalır.
   const [toast, setToast] = useState<{ text: string } | null>(null);
@@ -111,9 +101,8 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
       revNo={revNo}
       canWrite={canWrite}
       canAddEmployer={canAddEmployer}
-      canAdminProjects={hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL)}
       canConvert={canConvert}
-      readOnlyText={readOnlyMessage(level, scope.isRestricted, canEditOffers)}
+      readOnlyText={readOnlyMessage(canViewOffers, canEditOffers, scope.isRestricted)}
       renderItems={renderItems}
       toast={toast?.text ?? null}
       onToast={(text) => setToast({ text })}
@@ -129,9 +118,7 @@ interface OfferRevisionLoaderProps {
   revNo: number;
   canWrite: boolean;
   canAddEmployer: boolean;
-  /** TKL-F5.5 · SO-42: dönüştürme `projects ≥ admin` ister. */
-  canAdminProjects: boolean;
-  canConvert: boolean | undefined;
+  canConvert: boolean;
   readOnlyText: string;
   renderItems?: (context: OfferItemsSlotContext) => ReactNode;
   onSelectRevision: (revNo: number | null) => void;

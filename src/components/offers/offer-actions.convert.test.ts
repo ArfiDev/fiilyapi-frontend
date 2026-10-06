@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { OFFER_ACTION_REASONS, offerConvertGate, type OfferConvertInput } from "./offer-actions";
+import { offerConvertGate, type OfferConvertInput } from "./offer-actions";
 import type { OfferStatus } from "./offer-types";
 
 /**
  * TKL-F5.5 · "Projeye Dönüştür" ekseni (plan §4, §6, ÜS-F5-2/3): görünür yalnız son revizyon `won` ∧
- * `conversion_state = won_not_converted`; etkin yalnız `projects ≥ admin` ∧ `contracts ≥ full` ∧ kısıtsız.
+ * `conversion_state = won_not_converted`; etkin yalnız `canConvert` (teklif_hazirlama Onaylar ∧ kısıtsız).
  */
 
 const STATUSES: readonly OfferStatus[] = ["draft", "sent", "won", "lost", "withdrawn"];
 const STATES: ReadonlyArray<OfferConvertInput["conversionState"]> = ["won_not_converted", "converted", null, undefined];
 
-const ALLOWED: OfferConvertInput = { status: "won", conversionState: "won_not_converted", canWrite: true, canAdminProjects: true, isLatest: true };
+const ALLOWED: OfferConvertInput = { status: "won", conversionState: "won_not_converted", canConvert: true, isLatest: true };
 
 describe("offerConvertGate · görünürlük matrisi (durum × dönüştürme durumu)", () => {
   for (const status of STATUSES) {
@@ -27,29 +27,17 @@ describe("offerConvertGate · görünürlük matrisi (durum × dönüştürme du
 });
 
 describe("offerConvertGate · yetki (SO-42)", () => {
-  it("contracts < full ya da kısıtlı (canWrite=false) → GEREKÇELİ PASİF (mevcut salt-okunur gerekçesi)", () => {
-    expect(offerConvertGate({ ...ALLOWED, canWrite: false })).toEqual({
+  it("canConvert=false → GEREKÇELİ PASİF (Onaylar metni)", () => {
+    expect(offerConvertGate({ ...ALLOWED, canConvert: false })).toEqual({
       visible: true,
       enabled: false,
-      reason: OFFER_ACTION_REASONS.readOnlyUser,
+      reason: "Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir",
     });
   });
 
-  it("projects < admin → GEREKÇELİ PASİF (ÜS-F5-3 metni)", () => {
-    expect(offerConvertGate({ ...ALLOWED, canAdminProjects: false })).toEqual({
-      visible: true,
-      enabled: false,
-      reason: "Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)",
-    });
-  });
-
-  it("ikisi de yok → contracts gerekçesi önce gelir; yetkisiz DURUMLARDA (converted/not won) düğme yine GİZLİ", () => {
-    expect(offerConvertGate({ ...ALLOWED, canWrite: false, canAdminProjects: false })).toMatchObject({
-      enabled: false,
-      reason: OFFER_ACTION_REASONS.readOnlyUser,
-    });
-    expect(offerConvertGate({ ...ALLOWED, canWrite: false, conversionState: "converted" })).toEqual({ visible: false });
-    expect(offerConvertGate({ ...ALLOWED, canAdminProjects: false, status: "sent" })).toEqual({ visible: false });
+  it("yetkisiz DURUMLARDA (converted/not won) düğme yine GİZLİ", () => {
+    expect(offerConvertGate({ ...ALLOWED, canConvert: false, conversionState: "converted" })).toEqual({ visible: false });
+    expect(offerConvertGate({ ...ALLOWED, canConvert: false, status: "sent" })).toEqual({ visible: false });
   });
 });
 
@@ -58,8 +46,7 @@ describe("offerConvertGate · eski revizyon (T41)", () => {
     expect(offerConvertGate({ ...ALLOWED, isLatest: false })).toEqual({ visible: false });
   });
 
-  it("yetkisiz kombinasyonda (canWrite=false / projects<admin) isLatest=false → yine GİZLİ, gerekçeli pasif DEĞİL", () => {
-    expect(offerConvertGate({ ...ALLOWED, canWrite: false, isLatest: false })).toEqual({ visible: false });
-    expect(offerConvertGate({ ...ALLOWED, canAdminProjects: false, isLatest: false })).toEqual({ visible: false });
+  it("yetkisiz kombinasyonda (canConvert=false) isLatest=false → yine GİZLİ, gerekçeli pasif DEĞİL", () => {
+    expect(offerConvertGate({ ...ALLOWED, canConvert: false, isLatest: false })).toEqual({ visible: false });
   });
 });

@@ -76,10 +76,8 @@ interface OfferDetailViewProps {
   revision: OfferRevisionRead;
   canWrite: boolean;
   canAddEmployer: boolean;
-  /** TKL-F5.5 · SO-42: `projects ≥ admin` (dönüştürme ekseni). */
-  canAdminProjects: boolean;
-  /** IZN-F2.x · sayfa izni dönüştürme kararı (`offerConvertGate.canConvert`); yoksa bugünkü kural. */
-  canConvert?: boolean;
+  /** IZN-F6b · sayfa izni dönüştürme kararı (`offerConvertGate.canConvert`) — ZORUNLU. */
+  canConvert: boolean;
   /** Salt okunur şerit metni (yazamayan kullanıcı); boş = şerit yok. */
   readOnlyText: string;
   renderItems?: (context: OfferItemsSlotContext) => ReactNode;
@@ -175,8 +173,6 @@ export function OfferDetailView(props: OfferDetailViewProps) {
   const convert = offerConvertGate({
     status: detail.status,
     conversionState: detail.conversion_state,
-    canWrite,
-    canAdminProjects: props.canAdminProjects,
     canConvert: props.canConvert,
     isLatest,
   });

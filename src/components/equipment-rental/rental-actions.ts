@@ -1,4 +1,3 @@
-import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import type { RentalInvoiceStatus } from "@/lib/api/hooks/useEquipmentRentalInvoices";
 
 /**
@@ -16,26 +15,21 @@ import type { RentalInvoiceStatus } from "@/lib/api/hooks/useEquipmentRentalInvo
  * | paid                 | 409     | 409 | 409    | 409       |
  *
  * 🔴 EMSALDEN SAPMA — İZİN EŞİĞİ. `progress-payments/shared/status-actions.ts`
- * `approve`/`admin` eşikleri kullanır. KİRADA HEPSİ `full`tur:
+ * ayrı kapılar kullanır. KİRADA TEK kapı vardır (backend eşiği `full`):
  * `rental_router.py:54-55` `_FULL = require_permission(…, AccessLevel.full)`
  * ve sekiz yazma ucunun HEPSİ `dependencies=[_FULL]` taşır. Emsal
  * kopyalansaydı `approve` seviyeli kullanıcı 403 veren düğmeler görürdü.
  */
 export type RentalActionKind = "approve" | "pay" | "reject";
 
-/** Yazma uçlarının backend eşiği — tek yerde. */
-export const RENTAL_WRITE_LEVEL: AccessLevel = "full";
-
 /**
- * IZN-F2.x: `canAct` verilirse (saha.makine_kira ONAYLAR kararı, `useButtonGate`) seviye
- * eşiğinin YERİNE geçer; verilmezse bugünkü `full` eşiği uygulanır.
+ * IZN-F6b: `canAct` = saha.makine_kira ONAYLAR kararı (`useButtonGate`) — ZORUNLU.
  */
 export function permittedRentalActions(
   status: RentalInvoiceStatus,
-  level: AccessLevel | undefined,
-  canAct?: boolean,
+  canAct: boolean,
 ): RentalActionKind[] {
-  if (!(canAct ?? hasAtLeast(level, RENTAL_WRITE_LEVEL))) return [];
+  if (!canAct) return [];
 
   switch (status) {
     case "draft":

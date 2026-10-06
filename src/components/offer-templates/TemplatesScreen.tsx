@@ -15,11 +15,9 @@ import { useDeleteOfferTemplate } from "@/lib/api/hooks/useOfferTemplateMutation
 import { useOfferTemplates, type OfferTemplateDetail } from "@/lib/api/hooks/useOfferTemplates";
 import { isForbidden } from "@/lib/api/unwrap";
 import type { WorkItemRead } from "@/lib/api/models";
-import { type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { CONTRACTS_VIEW, OFFER_TEMPLATES_EDIT } from "@/lib/auth/page-gates";
-import { useButtonGate } from "@/lib/auth/usePagePermission";
+import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
 import { TemplateCardList } from "./TemplateCardList";
@@ -47,17 +45,16 @@ interface TemplatesScreenProps {
  * Kapı: `contracts:none` → AccessDenied; 403 (R5/T40 kısıtlı kullanıcı) da AccessDenied.
  */
 export function TemplatesScreen(props: TemplatesScreenProps) {
-  const { level } = useModulePermission("contracts");
   // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
   const canViewTemplates = useButtonGate({
     pages: CONTRACTS_VIEW,
     need: "view",
   });
   if (!canViewTemplates) return <AccessDenied />;
-  return <TemplatesContent level={level} templateParam={props.templateParam} />;
+  return <TemplatesContent templateParam={props.templateParam} />;
 }
 
-function TemplatesContent({ level, templateParam }: { level: AccessLevel | undefined; templateParam: string | null }) {
+function TemplatesContent({ templateParam }: { templateParam: string | null }) {
   const router = useRouter();
   const scope = useDisciplineScope();
   // IZN-F2.x · şablon işlemleri = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız.
@@ -66,6 +63,7 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
     need: "edit",
   });
   const canWrite = canEditTemplates && !scope.isRestricted;
+  const canViewTemplates = usePagePermission(CONTRACTS_VIEW).canView;
   const list = useOfferTemplates();
   const catalog = useCatalogItems();
   const settings = useOfferSettings();
@@ -138,7 +136,7 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
     }
   }
 
-  const readOnlyText = readOnlyMessage(level, scope.isRestricted, canEditTemplates);
+  const readOnlyText = readOnlyMessage(canViewTemplates, canEditTemplates, scope.isRestricted);
   return (
     <div className="offers">
       <OfferTabs offerCount={null} listHref={routes.offers.list()} isActive={false} />

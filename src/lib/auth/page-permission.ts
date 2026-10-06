@@ -67,17 +67,11 @@ export interface PagePermission {
   isSystemAdmin: boolean;
   /**
    * `true`: istenen anahtarlardan en az birinin grant'ı oturumda VAR (yeni sayfa-izni modeli devrede).
-   * `false`: `me.pages` boş/yok ya da anahtarların HİÇBİRİNİN grant'ı yok (eski mock, hücresiz rol,
-   * oturum yükleniyor) → çağıran bugünkü `useModulePermission` kararına DÜŞER (`decideGate`).
+   * `false`: `me.pages` boş/yok ya da anahtarların HİÇBİRİNİN grant'ı yok (hücresiz rol, oturum yükleniyor)
+   * → `decideGate` KAPALI döner (IZN-F6a, modül-izni düşüşü yok).
    * Anahtar verilmediyse (`[]`) "devrede mi" sorusu `me.pages`'in boş olup olmadığına bakar.
    */
   hasGrant: boolean;
-  /**
-   * IZN-F5c · sayfa-izni modeli bu oturumda DEVREDE mi (`me.pages` ANA ROL haritası dolu). Devredeyken
-   * kümede hücre yokluğu "yetki yok" demektir (fail-closed). IZN-F6a'dan beri kapı kararı için gerekmez (hücre yoksa
-   * her durumda KAPALI); yalnız modül kuralına bağlı kalan F6b çağrı yerleri (ör. teklif Dönüştür) okur.
-   */
-  isModelActive: boolean;
 }
 
 export function decidePagePermission(
@@ -89,14 +83,12 @@ export function decidePagePermission(
   const pages = pagesForProject(me, projectId);
   const grants = pageKeys.map((key) => pages[key]).filter((grant): grant is PageGrant => grant !== undefined);
   const hasGrant = pageKeys.length === 0 ? Object.keys(pages).length > 0 : grants.length > 0;
-  const isModelActive = Object.keys(me?.pages ?? {}).length > 0;
   return {
     canView: isSystemAdmin || grants.some((grant) => grant.level !== "none"),
     canEdit: isSystemAdmin || grants.some((grant) => grant.level === "edit"),
     canApprove: isSystemAdmin || grants.some((grant) => grant.approve === true),
     isSystemAdmin,
     hasGrant,
-    isModelActive,
   };
 }
 

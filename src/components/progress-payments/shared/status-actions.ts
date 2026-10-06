@@ -1,5 +1,3 @@
-import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
-
 import type { PaymentLifecycleStatus } from "./status";
 
 /** Durum aksiyon butonlarının türleri — İşveren (`ProgressPaymentStatusActions`)
@@ -7,32 +5,29 @@ import type { PaymentLifecycleStatus } from "./status";
 export type PaymentActionKind = "submit" | "reject" | "approve" | "unapprove" | "markPaid";
 
 /**
- * IZN-F2.x · sayfa izni kararları (`useButtonGate`): verilen kapı seviye eşiğinin YERİNE geçer.
+ * IZN-F6b · sayfa izni kararları (`useButtonGate`) — ZORUNLU.
  * Gönder = hakediş sayfaları Düzenler · Onayla/Reddet/Ödendi = hakediş Onaylar · Onayı Geri Al = yalnız SA.
  */
 export interface PaymentActionGates {
-  canSubmit?: boolean;
-  canApprove?: boolean;
-  canUnapprove?: boolean;
+  canSubmit: boolean;
+  canApprove: boolean;
+  canUnapprove: boolean;
 }
 
 /**
- * Durum + izin seviyesi → izinli aksiyon kümesi. `ProgressPaymentStatusActions.tsx`
+ * Durum + sayfa izin kapıları → izinli aksiyon kümesi. `ProgressPaymentStatusActions.tsx`
  * (P7 T4) içindeki koşullardan çıkarıldı — backend `transitions.py` §7
  * tablosunun görünürlük yansıması. Güvenlik sınırı HER ZAMAN backend'dedir;
  * bu yalnız çalışmayacak butonu göstermemek içindir.
  *
- * draft → submit (≥draft) · pending_approval → reject+approve (≥approve) ·
- * approved → unapprove (≥admin) + markPaid (≥approve) · paid → (boş).
+ * draft → submit (canSubmit) · pending_approval → reject+approve (canApprove) ·
+ * approved → unapprove (canUnapprove) + markPaid (canApprove) · paid → (boş).
  */
 export function permittedPaymentActions(
   status: PaymentLifecycleStatus,
-  level: AccessLevel | undefined,
-  gates: PaymentActionGates = {},
+  gates: PaymentActionGates,
 ): PaymentActionKind[] {
-  const canSubmit = gates.canSubmit ?? hasAtLeast(level, "draft");
-  const canApprove = gates.canApprove ?? hasAtLeast(level, "approve");
-  const canUnapprove = gates.canUnapprove ?? hasAtLeast(level, "admin");
+  const { canSubmit, canApprove, canUnapprove } = gates;
   switch (status) {
     case "draft":
       return canSubmit ? ["submit"] : [];

@@ -3,7 +3,8 @@ import { fullAccessPages, meFixture, pageGrant, pagesFor } from "@/lib/auth/page
 
 /**
  * IZN-F6a · teklif ekranı testleri: modül düzeyi niyet (`contracts` / `projects` seviyesi) → oturum sayfa izni.
- * Kapılar YALNIZ `me.pages`'ten karar verir; `useModulePermission` mock'u kapı DIŞI mantık (şerit metni vb.) için kalır.
+ * Kapılar ve şerit metni YALNIZ `me.pages`'ten karar verir (IZN-F6b); testlerdeki `useModulePermission` mock'ları artık
+ * okunmuyor (F6c'de temizlenecek).
  *
  * - contracts none/view → sözleşme/teklif sayfaları None/Görür (yazma yok);
  * - contracts full (ya da bilinmeyen) → Düzenler; Dönüştür Onaylar'ı ⇔ projects admin;

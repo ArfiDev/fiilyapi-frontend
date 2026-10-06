@@ -19,7 +19,6 @@ import {
   type SubcontractorProgressPaymentDetail,
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SUBCONTRACTOR_PAYMENT_EDIT, SUBCONTRACTOR_PAYMENT_APPROVE } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -46,11 +45,9 @@ const REJECT_REASON_MAX_LENGTH = 500;
 export function SubcontractorProgressPaymentStatusActions({
   detail,
 }: SubcontractorProgressPaymentStatusActionsProps) {
-  const { level } = useModulePermission("progress_payments");
   // IZN-F3.2b · kapılar bu hakedişin projesindeki rolden okunur (yeni istek yok: `detail.project_id`).
   const projectId = detail.project_id;
   // IZN-F2.x · Gönder = hakediş sayfaları Düzenler; Onayla/Reddet/Ödendi = hakediş Onaylar; Onayı Geri Al = yalnız SA.
-  // Grant yoksa bugünkü seviye eşikleri (`permittedPaymentActions` varsayılanı).
   const canSubmit = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_EDIT, need: "edit", projectId });
   const canApprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "approve", projectId });
   const canUnapprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "sa", projectId });
@@ -134,7 +131,7 @@ export function SubcontractorProgressPaymentStatusActions({
     });
   }
 
-  const actions = permittedPaymentActions(detail.status, level, { canSubmit, canApprove, canUnapprove });
+  const actions = permittedPaymentActions(detail.status, { canSubmit, canApprove, canUnapprove });
 
   return (
     <div className="pp-detail__actions" data-testid="th-detail-actions">

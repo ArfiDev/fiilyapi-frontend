@@ -7,9 +7,8 @@ import { Button } from "@/components/ui";
 import { BooksIcon } from "@/components/ui/icons";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { DISCIPLINES_EDIT, UNIT_RATE_CATALOG_EDIT } from "@/lib/auth/page-gates";
-import { useButtonGate } from "@/lib/auth/usePagePermission";
+import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { useEvCatalog } from "@/lib/api/hooks/useEvCatalog";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
 import type { EvCatalogItemRead } from "@/lib/api/models";
@@ -37,11 +36,11 @@ const SKELETON_ROWS = 4;
  * çipler TÜM kataloğu ister (KAT:520-525); tek istek, üç süzgeç.
  */
 export function UnitRateCatalogScreen() {
-  const { level } = useModulePermission("earned_value");
   // IZN-F5b · iş tipi ekle/düzenle (POST/PATCH /earned-value/catalog) = planlama.birim_oran_katalogu Düzenler.
   // "Disiplinleri yönet" modalı AYRI uca (/earned-value/disciplines) yazar: ekle/düzenle = planlama.disiplin_yonetimi
   // Düzenler; SİLME = yalnız sistem yöneticisi.
   const canWrite = useButtonGate({ pages: UNIT_RATE_CATALOG_EDIT, need: "edit" });
+  const isViewOnly = usePagePermission(UNIT_RATE_CATALOG_EDIT).canView && !canWrite;
   const canWriteDisciplines = useButtonGate({ pages: DISCIPLINES_EDIT, need: "edit" });
   const canDelete = useButtonGate({ pages: DISCIPLINES_EDIT, need: "sa" });
 
@@ -118,7 +117,7 @@ export function UnitRateCatalogScreen() {
 
       {!canWrite && (
         <ReadOnlyStrip>
-          {level === "view"
+          {isViewOnly
             ? "Görüntüleyici · yalnız okuma"
             : "Salt okunur · kataloğu yalnız tam yetki (full) değiştirir"}
         </ReadOnlyStrip>

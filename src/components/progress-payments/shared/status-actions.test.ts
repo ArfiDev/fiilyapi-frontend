@@ -1,34 +1,36 @@
 import { describe, expect, it } from "vitest";
 
-import { permittedPaymentActions } from "./status-actions";
+import { permittedPaymentActions, type PaymentActionKind, type PaymentActionGates } from "./status-actions";
+import type { PaymentLifecycleStatus } from "./status";
 
-describe("permittedPaymentActions", () => {
-  it("draft — ≥draft seviyesinde yalniz submit", () => {
-    expect(permittedPaymentActions("draft", "draft")).toEqual(["submit"]);
-    expect(permittedPaymentActions("draft", "full")).toEqual(["submit"]);
-  });
-  it("draft — view seviyesinde bos", () => {
-    expect(permittedPaymentActions("draft", "view")).toEqual([]);
-  });
-  it("pending_approval — ≥approve seviyesinde reject+approve", () => {
-    expect(permittedPaymentActions("pending_approval", "approve")).toEqual(["reject", "approve"]);
-  });
-  it("pending_approval — draft seviyesinde bos (yetersiz)", () => {
-    expect(permittedPaymentActions("pending_approval", "draft")).toEqual([]);
-  });
-  it("approved — admin seviyesinde unapprove+markPaid", () => {
-    expect(permittedPaymentActions("approved", "admin")).toEqual(["unapprove", "markPaid"]);
-  });
-  it("approved — yalniz approve seviyesinde markPaid (unapprove yok)", () => {
-    expect(permittedPaymentActions("approved", "approve")).toEqual(["markPaid"]);
-  });
-  it("approved — draft seviyesinde bos", () => {
-    expect(permittedPaymentActions("approved", "draft")).toEqual([]);
-  });
-  it("paid — her seviyede bos", () => {
-    expect(permittedPaymentActions("paid", "admin")).toEqual([]);
-  });
-  it("seviye undefined ise bilinmezlik = izin var (spec §2.5.3) — draft'ta submit gorunur", () => {
-    expect(permittedPaymentActions("draft", undefined)).toEqual(["submit"]);
+const NONE: PaymentActionGates = { canSubmit: false, canApprove: false, canUnapprove: false };
+const SUBMIT: PaymentActionGates = { ...NONE, canSubmit: true };
+const APPROVE: PaymentActionGates = { ...NONE, canApprove: true };
+const UNAPPROVE: PaymentActionGates = { ...NONE, canUnapprove: true };
+const ALL: PaymentActionGates = { canSubmit: true, canApprove: true, canUnapprove: true };
+
+describe("permittedPaymentActions · kapi kombinasyon tablosu", () => {
+  const table: Array<[PaymentLifecycleStatus, string, PaymentActionGates, PaymentActionKind[]]> = [
+    ["draft", "kapilar kapali", NONE, []],
+    ["draft", "yalniz canSubmit", SUBMIT, ["submit"]],
+    ["draft", "yalniz canApprove", APPROVE, []],
+    ["draft", "yalniz canUnapprove", UNAPPROVE, []],
+    ["draft", "hepsi acik", ALL, ["submit"]],
+    ["pending_approval", "kapilar kapali", NONE, []],
+    ["pending_approval", "yalniz canSubmit", SUBMIT, []],
+    ["pending_approval", "yalniz canApprove", APPROVE, ["reject", "approve"]],
+    ["pending_approval", "yalniz canUnapprove", UNAPPROVE, []],
+    ["pending_approval", "hepsi acik", ALL, ["reject", "approve"]],
+    ["approved", "kapilar kapali", NONE, []],
+    ["approved", "yalniz canSubmit", SUBMIT, []],
+    ["approved", "yalniz canApprove (unapprove YOK)", APPROVE, ["markPaid"]],
+    ["approved", "yalniz canUnapprove", UNAPPROVE, ["unapprove"]],
+    ["approved", "hepsi acik", ALL, ["unapprove", "markPaid"]],
+    ["paid", "kapilar kapali", NONE, []],
+    ["paid", "hepsi acik", ALL, []],
+  ];
+
+  it.each(table)("%s · %s", (status, _label, gates, expected) => {
+    expect(permittedPaymentActions(status, gates)).toEqual(expected);
   });
 });

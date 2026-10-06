@@ -14,7 +14,6 @@ import { StatusMark } from "@/components/earned-value/reports/kit/StatusMark";
 import { WeatherStrip } from "@/components/earned-value/reports/kit/WeatherStrip";
 import type { ReportScreenProps } from "@/components/earned-value/reports/kit/report-screen";
 import { Button } from "@/components/ui";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EV_DAILY_APPROVE } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useApproveDailyReport, useDailyReport } from "@/lib/api/hooks/useEvReports";
@@ -526,7 +525,6 @@ function LoadedDailyReport({
   refetch,
   isRefetching,
 }: LoadedProps) {
-  const permission = useModulePermission("earned_value");
   // IZN-F2.x · Günü Onayla = planlama.gunluk_rapor/santiye.gunluk_ilerleme_raporu Onaylar (VEYA).
   const canApproveDay = useButtonGate({ pages: EV_DAILY_APPROVE, need: "approve" });
   const approve = useApproveDailyReport(siteId);
@@ -537,7 +535,6 @@ function LoadedDailyReport({
   const [showArchiveDetail, setShowArchiveDetail] = useState(report.status !== "approved");
 
   const gate = approveGate({
-    level: permission.level,
     canApprove: canApproveDay,
     siteCompleted,
     status: report.status,

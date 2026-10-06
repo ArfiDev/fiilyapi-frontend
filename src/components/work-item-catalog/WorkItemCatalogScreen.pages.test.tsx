@@ -41,7 +41,7 @@ describe("WorkItemCatalogScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
     renderScreen();
     await screen.findByText("Beton döküm");
     expect(screen.queryByRole("button", ADD)).toBeNull();
-    expect(screen.getByText(/^Salt okunur/)).toBeInTheDocument();
+    expect(screen.getByText("Görüntüleyici · yalnız okuma")).toBeInTheDocument();
   });
 
   it("sözleşme/teklif sayfalarında yalnız none → AccessDenied, katalog ucu çağrılmaz", async () => {

@@ -20,7 +20,7 @@ import {
 
 describe("approveGate — GİR onay düğmesi (S10, S12)", () => {
   it("APPROVE izni yoksa düğme görünmez", () => {
-    expect(approveGate({ level: "view", siteCompleted: false, status: "draft", draftDiaryDates: [] })).toEqual({
+    expect(approveGate({ canApprove: false, siteCompleted: false, status: "draft", draftDiaryDates: [] })).toEqual({
       visible: false,
       disabled: false,
       reason: null,
@@ -28,31 +28,31 @@ describe("approveGate — GİR onay düğmesi (S10, S12)", () => {
   });
 
   it("tamamlanmış şantiyede düğme görünmez (izin olsa bile)", () => {
-    expect(approveGate({ level: "admin", siteCompleted: true, status: "draft", draftDiaryDates: [] }).visible).toBe(false);
+    expect(approveGate({ canApprove: true, siteCompleted: true, status: "draft", draftDiaryDates: [] }).visible).toBe(false);
   });
 
   it("rapor zaten onaylıysa düğme görünmez", () => {
-    expect(approveGate({ level: "approve", siteCompleted: false, status: "approved", draftDiaryDates: [] }).visible).toBe(false);
+    expect(approveGate({ canApprove: true, siteCompleted: false, status: "approved", draftDiaryDates: [] }).visible).toBe(false);
   });
 
   it("rapor üretilemediyse (not_generated) düğme görünmez", () => {
-    expect(approveGate({ level: "admin", siteCompleted: false, status: "not_generated", draftDiaryDates: [] }).visible).toBe(false);
+    expect(approveGate({ canApprove: true, siteCompleted: false, status: "not_generated", draftDiaryDates: [] }).visible).toBe(false);
   });
 
   it("S10: taslak günlük VARKEN düğme görünür ama PASİF, neden verilir", () => {
-    const gate = approveGate({ level: "approve", siteCompleted: false, status: "draft", draftDiaryDates: ["2026-09-21"] });
+    const gate = approveGate({ canApprove: true, siteCompleted: false, status: "draft", draftDiaryDates: ["2026-09-21"] });
     expect(gate.visible).toBe(true);
     expect(gate.disabled).toBe(true);
     expect(gate.reason).not.toBeNull();
   });
 
   it("S12: taslak günlük YOKKEN — bugün olmasa da — düğme etkin", () => {
-    const gate = approveGate({ level: "approve", siteCompleted: false, status: "draft", draftDiaryDates: [] });
+    const gate = approveGate({ canApprove: true, siteCompleted: false, status: "draft", draftDiaryDates: [] });
     expect(gate).toEqual({ visible: true, disabled: false, reason: null });
   });
 
-  it("admin de en az approve sayılır (hasAtLeast artan sıra)", () => {
-    expect(approveGate({ level: "admin", siteCompleted: false, status: "draft", draftDiaryDates: [] }).visible).toBe(true);
+  it("Onaylar kapısı açık + taslak günlük yok → düğme görünür", () => {
+    expect(approveGate({ canApprove: true, siteCompleted: false, status: "draft", draftDiaryDates: [] }).visible).toBe(true);
   });
 });
 

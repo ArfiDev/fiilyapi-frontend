@@ -17,7 +17,6 @@ import {
 } from "@/lib/api/hooks/useProgressPaymentMutations";
 import { PROGRESS_PAYMENT_QUERY_KEY, type ProgressPaymentDetail } from "@/lib/api/hooks/useProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EMPLOYER_PAYMENT_APPROVE, EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -47,11 +46,9 @@ const REJECT_REASON_MAX_LENGTH = 500;
  * içindir — tabloda olmayan her geçiş 409'dur.
  */
 export function ProgressPaymentStatusActions({ detail }: ProgressPaymentStatusActionsProps) {
-  const { level } = useModulePermission("progress_payments");
   // IZN-F3.2b · kapılar bu hakedişin projesindeki rolden okunur (yeni istek yok: `detail.project_id`).
   const projectId = detail.project_id;
   // IZN-F2.x · Gönder = hakediş sayfaları Düzenler; Onayla/Reddet/Ödendi = hakediş Onaylar; Onayı Geri Al = yalnız SA.
-  // Grant yoksa bugünkü seviye eşikleri (`permittedPaymentActions` varsayılanı).
   const canSubmit = useButtonGate({ pages: EMPLOYER_PAYMENT_EDIT, need: "edit", projectId });
   const canApprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "approve", projectId });
   const canUnapprove = useButtonGate({ pages: EMPLOYER_PAYMENT_APPROVE, need: "sa", projectId });
@@ -157,7 +154,7 @@ export function ProgressPaymentStatusActions({ detail }: ProgressPaymentStatusAc
   // Görünürlük kapısı `shared/status-actions.ts`ten (F-TH T1 paylaşım kararı —
   // taşeron tarafı AYNI durum→aksiyon eşlemesini kullanır). Güvenlik sınırı
   // HER ZAMAN backend'dedir; bu yalnız çalışmayacak butonu göstermemek içindir.
-  const actions = permittedPaymentActions(detail.status, level, { canSubmit, canApprove, canUnapprove });
+  const actions = permittedPaymentActions(detail.status, { canSubmit, canApprove, canUnapprove });
 
   return (
     <div className="pp-detail__actions" data-testid="pp-detail-actions">

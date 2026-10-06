@@ -28,18 +28,14 @@ describe("revisionMode (B1-5 durum makinesi)", () => {
   });
 });
 
-describe("budgetAccess (B1-8: view okur · draft düzenler · approve dondurur/siler)", () => {
+describe("budgetAccess (B1-8: kapılar sayfa izninden gelir, olduğu gibi taşınır)", () => {
   it.each([
-    ["view", false, false],
-    ["draft", true, false],
-    ["approve", true, true],
-    ["full", true, true],
-  ] as const)("%s → draft=%s approve=%s", (level, canDraft, canApprove) => {
-    expect(budgetAccess(level)).toEqual({ canDraft, canApprove });
-  });
-
-  it("seviye bilinmiyorsa (oturum yükleniyor) bilinmezlik kuralı: açık", () => {
-    expect(budgetAccess(undefined)).toEqual({ canDraft: true, canApprove: true });
+    [false, false],
+    [true, false],
+    [true, true],
+    [false, true],
+  ] as const)("draft=%s approve=%s", (canDraft, canApprove) => {
+    expect(budgetAccess({ canDraft, canApprove, canDeleteDraft: false })).toEqual({ canDraft, canApprove, canDeleteDraft: false });
   });
 });
 
@@ -47,42 +43,47 @@ describe("screenState", () => {
   const revisions = [DRAFT, ACTIVE_REV_1, ARCHIVED_REV_0];
 
   it("taslak + draft: düzenler ama dondur/sil YOK", () => {
-    const s = screenState(budgetView(), { canDraft: true, canApprove: false }, revisions);
+    const s = screenState(budgetView(), { canDraft: true, canApprove: false, canDeleteDraft: false }, revisions);
     expect(s).toMatchObject({ mode: "draft", editable: true, canFreeze: false, canDeleteDraft: false, isViewer: false });
   });
 
-  it("taslak + approve: dondur ve sil açık", () => {
-    const s = screenState(budgetView(), { canDraft: true, canApprove: true }, revisions);
+  it("taslak + approve (SA değil): dondur açık, taslak SİL KAPALI (yalnız SA siler)", () => {
+    const s = screenState(budgetView(), { canDraft: true, canApprove: true, canDeleteDraft: false }, revisions);
+    expect(s).toMatchObject({ editable: true, canFreeze: true, canDeleteDraft: false });
+  });
+
+  it("taslak + SA: dondur ve sil açık", () => {
+    const s = screenState(budgetView(), { canDraft: true, canApprove: true, canDeleteDraft: true }, revisions);
     expect(s).toMatchObject({ editable: true, canFreeze: true, canDeleteDraft: true });
   });
 
   it("taslak + view: görüntüleyici, salt okunur", () => {
-    const s = screenState(budgetView(), { canDraft: false, canApprove: false }, revisions);
+    const s = screenState(budgetView(), { canDraft: false, canApprove: false, canDeleteDraft: false }, revisions);
     expect(s).toMatchObject({ editable: false, isViewer: true, canFreeze: false });
   });
 
   it("aktif, taslak yok, draft yetkisi → 'Taslak aç (Rev 2)'", () => {
-    const s = screenState(ACTIVE_VIEW, { canDraft: true, canApprove: false }, [ACTIVE_REV_1, ARCHIVED_REV_0]);
+    const s = screenState(ACTIVE_VIEW, { canDraft: true, canApprove: false, canDeleteDraft: false }, [ACTIVE_REV_1, ARCHIVED_REV_0]);
     expect(s).toMatchObject({ mode: "active", editable: false, canOpenDraft: true, nextDraftNumber: 2, draft: null });
   });
 
   it("aktif görüntülenirken taslak VARSA taslak açılamaz, taslağa dönülür", () => {
-    const s = screenState(ACTIVE_VIEW, { canDraft: true, canApprove: true }, revisions);
+    const s = screenState(ACTIVE_VIEW, { canDraft: true, canApprove: true, canDeleteDraft: false }, revisions);
     expect(s.canOpenDraft).toBe(false);
     expect(s.draft?.id).toBe("rev-2");
   });
 
   it("revizyon yok: ilk yazma Rev 0'ı doğurur — draft yetkisiyle düzenlenebilir", () => {
-    expect(screenState(NONE_VIEW, { canDraft: true, canApprove: false }, [])).toMatchObject({
+    expect(screenState(NONE_VIEW, { canDraft: true, canApprove: false, canDeleteDraft: false }, [])).toMatchObject({
       mode: "none",
       editable: true,
       canOpenDraft: false,
     });
-    expect(screenState(NONE_VIEW, { canDraft: false, canApprove: false }, []).editable).toBe(false);
+    expect(screenState(NONE_VIEW, { canDraft: false, canApprove: false, canDeleteDraft: false }, []).editable).toBe(false);
   });
 
   it("backend `editable:false` her zaman kazanır", () => {
-    const s = screenState(budgetView({ editable: false }), { canDraft: true, canApprove: true }, revisions);
+    const s = screenState(budgetView({ editable: false }), { canDraft: true, canApprove: true, canDeleteDraft: false }, revisions);
     expect(s.editable).toBe(false);
   });
 });
@@ -139,7 +140,7 @@ describe("screenState — tamamlanmış şantiye (B1-12 · PLN-F1.6.2)", () => {
   const revisions = [DRAFT, ACTIVE_REV_1, ARCHIVED_REV_0];
 
   it("taslak + approve + backend editable:true OLSA BİLE salt okunur; dondur/sil kapalı, eylemler gizli", () => {
-    const s = screenState(budgetView({ editable: true }), { canDraft: true, canApprove: true }, revisions, true);
+    const s = screenState(budgetView({ editable: true }), { canDraft: true, canApprove: true, canDeleteDraft: false }, revisions, true);
     expect(s).toMatchObject({
       editable: false,
       canFreeze: false,
@@ -151,20 +152,20 @@ describe("screenState — tamamlanmış şantiye (B1-12 · PLN-F1.6.2)", () => {
   });
 
   it("aktif, taslak yok: 'Taslak aç' KAPALI", () => {
-    const s = screenState(ACTIVE_VIEW, { canDraft: true, canApprove: true }, [ACTIVE_REV_1], true);
+    const s = screenState(ACTIVE_VIEW, { canDraft: true, canApprove: true, canDeleteDraft: false }, [ACTIVE_REV_1], true);
     expect(s.canOpenDraft).toBe(false);
   });
 
   it("revizyon yok: ilk yazma da yok (Rev 0 doğmaz)", () => {
-    expect(screenState(NONE_VIEW, { canDraft: true, canApprove: true }, [], true).editable).toBe(false);
+    expect(screenState(NONE_VIEW, { canDraft: true, canApprove: true, canDeleteDraft: false }, [], true).editable).toBe(false);
   });
 
   it("varsayılan: tamamlanmamış şantiye davranışı değişmez; görüntüleyici eylemleri gizler", () => {
-    expect(screenState(budgetView(), { canDraft: true, canApprove: true }, revisions)).toMatchObject({
+    expect(screenState(budgetView(), { canDraft: true, canApprove: true, canDeleteDraft: false }, revisions)).toMatchObject({
       editable: true,
       siteCompleted: false,
       hideActions: false,
     });
-    expect(screenState(budgetView(), { canDraft: false, canApprove: false }, revisions).hideActions).toBe(true);
+    expect(screenState(budgetView(), { canDraft: false, canApprove: false, canDeleteDraft: false }, revisions).hideActions).toBe(true);
   });
 });

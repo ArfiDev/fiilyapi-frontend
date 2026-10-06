@@ -15,7 +15,7 @@ import { ConvertBoard } from "./ConvertBoard";
 import { ConvertStateCard } from "./ConvertStateCard";
 import "./offer-convert.css";
 
-/** SO-42: dönüştürme `projects:admin` + `contracts:full` + disiplin kısıtsız ister (seviye BİLİNMİYORSA açık — sunucu 403'ü korur). */
+/** SO-42 · IZN-F6b: dönüştürme = teklif.teklif_hazirlama Onaylar + disiplin kısıtsız (backend `convert_router` aynı sayfa kapısı). */
 const NOT_FOUND_STATUS = 404;
 /** Backend `convert_service.NOT_WON` — AYNEN. */
 const NOT_WON_TEXT = "Yalnız son revizyonu kazanılmış (won) olan teklif projeye dönüştürülebilir";
@@ -27,7 +27,7 @@ interface ConvertScreenProps {
 /** TKL-F5.3 · `/teklif-hazirlama/{id}/donustur` — Teklif → Proje "Dönüştür" (kapsayıcı). ÇEKİRDEK ekran. */
 export function ConvertScreen({ offerId }: ConvertScreenProps) {
   const scope = useDisciplineScope();
-  // IZN-F2.x · Dönüştür = teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (grant yoksa bugünkü `projects ≥ admin` ∧ `contracts ≥ full`).
+  // IZN-F2.x · Dönüştür = teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (grant yoksa KAPALI — IZN-F6a).
   const canConvert = useButtonGate({
     pages: OFFER_CONVERT_APPROVE,
     need: "approve",

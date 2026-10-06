@@ -60,7 +60,7 @@ describe("OffersScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
     renderScreen();
     await screen.findByText("TKL-2026-0013");
     expect(screen.queryByRole("link", { name: NEW_OFFER })).toBeNull();
-    expect(screen.getByText(/^Salt okunur/)).toBeInTheDocument();
+    expect(screen.getByText("Görüntüleyici · yalnız okuma")).toBeInTheDocument();
   });
 
   it("sözleşme/teklif sayfalarında yalnız none → AccessDenied (modül full olsa bile), uç çağrılmaz", async () => {

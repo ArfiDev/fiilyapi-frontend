@@ -110,11 +110,12 @@ describe("decideGate · fail-closed ve eşikler (IZN-F6a: modül-izni fallback'i
       expect(decideGate(withoutGrant, need)).toBe(false);
       expect(decideGate(loading, need)).toBe(false);
     }
+    expect(loading).toMatchObject({ canView: false, canEdit: false, canApprove: false });
   });
 
   it("IZN-F5c · model DEVREDEYKEN kümede hücre yoksa KAPALI (fail-closed)", () => {
     const cellless = decidePagePermission(me({ "ik.personel": pageGrant("edit", true) }), [PUANTAJ]);
-    expect(cellless).toMatchObject({ hasGrant: false, isModelActive: true });
+    expect(cellless).toMatchObject({ hasGrant: false });
     for (const need of ["view", "edit", "approve", "sa"] as const) {
       expect(decideGate(cellless, need)).toBe(false);
     }
@@ -193,7 +194,7 @@ describe("decidePagePermission · proje bağlamı (IZN-F3.2)", () => {
   it("IZN-F5c · proje rolünün haritasında anahtar yoksa (model devrede) KAPALI", () => {
     const me = projectMe({ role_pages: { site_chief: { pages: {} } } });
     const permission = decidePagePermission(me, [HAKEDIS], PROJECT_A);
-    expect(permission).toMatchObject({ hasGrant: false, isModelActive: true });
+    expect(permission).toMatchObject({ hasGrant: false });
     expect(decideGate(permission, "edit")).toBe(false);
     expect(decideGate(permission, "edit")).toBe(false);
   });
