@@ -60,30 +60,42 @@ export const PROJECTS_VIEW = keys(["genel.projeler", "genel.proje_takvimi", "pro
 export const TREASURY_VIEW = keys(["mali.hazine", "mali.cek_odeme"]);
 
 // ── Düzenler (E) kapıları ─────────────────────────────────────────────────────────────
-export const ACCOUNTING_EDIT = keys(["mali.yevmiye", "mali.hesap_plani", "mali.donem_kapanisi"]);
+/** IZN-F5b · madde 4 — muhasebe yazmaları sayfa başına. */
+export const CHART_OF_ACCOUNTS_EDIT = keys(["mali.hesap_plani"]);
+export const JOURNAL_EDIT = keys(["mali.yevmiye"]);
+export const PERIOD_CLOSE_EDIT = keys(["mali.donem_kapanisi"]);
 export const BOQ_EDIT = keys(["santiye.is_kalemleri", "santiye.bolum_dagilimi"]);
-export const CONTRACTS_EDIT = keys([
-  "teklif.teklif_hazirlama",
-  "teklif.sablonlar",
-  "teklif.sozlesmeler",
-  "teklif.taseron_firmalar",
-  "teklif.isveren_sozlesme",
-  "teklif.poz_dagilimi",
-  "teklif.taseron_sozlesme",
-  "teklif.is_kalemi_katalogu",
-  "proje.is_kalemleri",
-]);
+/** IZN-F5b · madde 7 — teklif/sözleşme/katalog yazmaları sayfa başına (9 küme). */
+export const OFFERS_EDIT = keys(["teklif.teklif_hazirlama"]);
+export const OFFER_TEMPLATES_EDIT = keys(["teklif.sablonlar"]);
+export const WORK_ITEM_CATALOG_EDIT = keys(["teklif.is_kalemi_katalogu"]);
+export const CONTRACT_DISTRIBUTION_EDIT = keys(["teklif.poz_dagilimi"]);
+/** ISV — işveren sözleşmesi grup/kalem yazmaları. */
+export const EMPLOYER_CONTRACT_EDIT = keys(["teklif.isveren_sozlesme", "proje.is_kalemleri"]);
+/** POST /subcontractors — taşeron sözleşme oluşturma formu içinden de firma eklenir. */
+export const SUBCONTRACTOR_CREATE_EDIT = keys(["teklif.taseron_firmalar", "teklif.sozlesmeler"]);
+/** PATCH /subcontractors/{id}. */
+export const SUBCONTRACTOR_FIRM_EDIT = keys(["teklif.taseron_firmalar"]);
+/** POST /projects/{id}/subcontractor-contracts — yeni sözleşme formu Sözleşmeler listesinden açılır. */
+export const SUBCONTRACTOR_CONTRACT_CREATE_EDIT = keys(["teklif.sozlesmeler", "teklif.taseron_sozlesme"]);
+/** PATCH /subcontractor-contracts/{id} + kalemler + load-from-employer. */
+export const SUBCONTRACTOR_CONTRACT_EDIT = keys(["teklif.taseron_sozlesme"]);
 export const DOCUMENTS_EDIT = keys(["mali.belge_arsivi", "proje.belgeler", "santiye.belgeler"]);
-/** Adam-saat bütçesi / oran / dağılım / ayar yazma kapısı (earned_value draft). */
-export const EV_BUDGET_EDIT = keys(["planlama.adam_saat_butcesi", "santiye.adam_saat_butcesi", "ayarlar.planlama"]);
-/** Birim oran kataloğu + disiplin yönetimi yazma kapısı (earned_value full). */
-export const EV_CATALOG_EDIT = keys(["planlama.birim_oran_katalogu", "planlama.disiplin_yonetimi"]);
-export const EQUIPMENT_EDIT = keys([
-  "saha.makine_ekipman",
-  "saha.makine_calisma",
-  "saha.makine_yakit",
-  "saha.makine_kira",
-]);
+/**
+ * IZN-F5b · madde 9 — EVB: adam-saat bütçesi / oran / dağılım / gün dağıtımı yazma kapısı. `ayarlar.planlama`
+ * artık YALNIZ ayar ucunu açar (`EV_SETTINGS_EDIT`).
+ */
+export const EV_BUDGET_EDIT = keys(["planlama.adam_saat_butcesi", "santiye.adam_saat_butcesi"]);
+/** PUT /sites/{site_id}/earned-value/settings. */
+export const EV_SETTINGS_EDIT = keys(["ayarlar.planlama"]);
+/** IZN-F5b · madde 10 — birim oran kataloğu ↔ disiplin yönetimi ayrı. */
+export const UNIT_RATE_CATALOG_EDIT = keys(["planlama.birim_oran_katalogu"]);
+export const DISCIPLINES_EDIT = keys(["planlama.disiplin_yonetimi"]);
+/** IZN-F5b · madde 11 — makine yazmaları sayfa başına. */
+export const EQUIPMENT_ASSET_EDIT = keys(["saha.makine_ekipman"]);
+export const EQUIPMENT_WORK_EDIT = keys(["saha.makine_calisma"]);
+export const EQUIPMENT_FUEL_EDIT = keys(["saha.makine_yakit"]);
+export const EQUIPMENT_RENTAL_EDIT = keys(["saha.makine_kira"]);
 export const INVENTORY_EDIT = keys(["stok.stok_depo", "santiye.stok"]);
 export const INVOICING_EDIT = keys(["mali.fatura"]);
 export const PAYROLL_EDIT = keys(["mali.bordro", "mali.sgk_bildirimi"]);
@@ -92,21 +104,16 @@ export const PERSONNEL_EDIT = keys(["ik.personel", "ik.izin_yonetimi", "ik.belge
 export const PURCHASE_REQUEST_EDIT = keys(["stok.satinalma_talepleri"]);
 /** Sipariş / tedarikçi / teklif karşılaştırma yazma kapısı (procurement full). */
 export const PROCUREMENT_EDIT = keys(["stok.siparisler", "stok.tedarikciler", "stok.teklif_karsilastirma"]);
-export const PROGRESS_PAYMENTS_EDIT = keys([
-  "mali.hakedis_isveren",
-  "mali.hakedis_taseron",
-  "proje.isveren_hakedis",
-  "proje.taseron_hakedis",
-  "santiye.hakedisler",
-]);
-/** Blok / ünite / toplu üretim / Excel / paylaşım yazma kapısı (projects full). */
-export const PROJECT_UNITS_EDIT = keys([
-  "mali.satis_blok",
-  "mali.satis_unite",
-  "mali.satis_toplu_uretim",
-  "mali.satis_excel",
-  "mali.satis_paylasim",
-]);
+/** IZN-F5b · madde 5 — HI: işveren hakedişi yazmaları (`santiye.hakedisler` YALNIZ işveren ailesinde). */
+export const EMPLOYER_PAYMENT_EDIT = keys(["mali.hakedis_isveren", "proje.isveren_hakedis", "santiye.hakedisler"]);
+/** IZN-F5b · madde 5 — HT: taşeron hakedişi yazmaları. */
+export const SUBCONTRACTOR_PAYMENT_EDIT = keys(["mali.hakedis_taseron", "proje.taseron_hakedis"]);
+/** IZN-F5b · madde 2 — satış alt sekmeleri sekme başına (projects full yerine). */
+export const SALES_BLOCK_EDIT = keys(["mali.satis_blok"]);
+export const SALES_UNIT_EDIT = keys(["mali.satis_unite"]);
+export const SALES_BULK_UNIT_EDIT = keys(["mali.satis_toplu_uretim"]);
+export const SALES_UNIT_IMPORT_EDIT = keys(["mali.satis_excel"]);
+export const SALES_LAND_SHARE_EDIT = keys(["mali.satis_paylasim"]);
 export const SALES_EDIT = keys(["mali.satis"]);
 export const COMPANY_EDIT = keys(["ayarlar.sirket_bilgileri"]);
 export const SITE_DIARY_EDIT = keys([
@@ -141,7 +148,8 @@ export const RENTAL_APPROVE = keys(["saha.makine_kira"]);
 export const QUOTE_ORDER_APPROVE = keys(["stok.teklif_karsilastirma"]);
 export const PURCHASE_REQUEST_APPROVE = keys(["stok.satinalma_talepleri"]);
 export const EMPLOYER_PAYMENT_APPROVE = keys(["mali.hakedis_isveren", "proje.isveren_hakedis", "santiye.hakedisler"]);
-export const SUBCONTRACTOR_PAYMENT_APPROVE = keys(["mali.hakedis_taseron", "proje.taseron_hakedis", "santiye.hakedisler"]);
+/** IZN-F5b · madde 6 — taşeron onayı yalnız HT (`santiye.hakedisler` işveren ailesine bağlandı). */
+export const SUBCONTRACTOR_PAYMENT_APPROVE = SUBCONTRACTOR_PAYMENT_EDIT;
 /** Günlük "Yeniden Aç" YALNIZ kök sayfada (73/88 ikizleri B3'e kadar işlevsiz). */
 export const DIARY_REOPEN_APPROVE = keys(["saha.gunluk_kayit"]);
 export const PERIOD_REOPEN_APPROVE = keys(["mali.donem_kapanisi"]);

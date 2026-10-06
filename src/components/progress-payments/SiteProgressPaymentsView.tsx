@@ -14,7 +14,7 @@ import {
 import { listTruncationMessage } from "@/lib/list-truncation";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { ProgressPaymentsListBody } from "./ProgressPaymentsList";
@@ -104,8 +104,8 @@ export function SiteProgressPaymentsView() {
   const summaryQuery = useProgressPaymentSummary(projectId);
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
   const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
-  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: PROGRESS_PAYMENTS_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
+  // IZN-F2.x · hakediş oluştur/düzenle = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
+  const canWrite = useButtonGate({ pages: EMPLOYER_PAYMENT_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
 
   if (isForbidden(paymentsQuery.error) || isForbidden(siteQuery.error)) return <AccessDenied />;
 

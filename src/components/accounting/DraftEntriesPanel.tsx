@@ -8,7 +8,7 @@ import type { JournalEntryResponse } from "@/lib/api/hooks/useJournalEntries";
 import { formatAmount, formatDateDots } from "@/lib/format";
 
 import { entryActions, journalStatusLabel, journalStatusVariant } from "./accounting-labels";
-import { ACCOUNTING_EDIT, JOURNAL_APPROVE } from "@/lib/auth/page-gates";
+import { JOURNAL_APPROVE, JOURNAL_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 interface DraftEntriesPanelProps {
@@ -60,7 +60,7 @@ export function DraftEntriesPanel({
 }: DraftEntriesPanelProps) {
   // IZN-F2.x · Kayıtlaştır = mali.yevmiye Onaylar; Sil = yalnız SA (`canWrite` Düzenle/Storno için E kararıdır).
   const canPostEntry = useButtonGate({ pages: JOURNAL_APPROVE, need: "approve", fallback: canWrite });
-  const canDeleteEntry = useButtonGate({ pages: ACCOUNTING_EDIT, need: "sa", fallback: canWrite });
+  const canDeleteEntry = useButtonGate({ pages: JOURNAL_EDIT, need: "sa", fallback: canWrite });
   const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   return (
     <section className="mu-panel" aria-label="Dönem Fişleri">

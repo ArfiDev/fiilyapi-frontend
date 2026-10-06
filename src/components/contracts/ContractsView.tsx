@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button/Button";
 import { useContracts } from "@/lib/api/hooks/useContracts";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { SUBCONTRACTOR_CONTRACT_CREATE_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { ContractsSummaryStrip } from "./ContractsSummaryStrip";
@@ -47,7 +47,7 @@ export function ContractsView() {
   // yetki izlenimi verirdi.
   const permission = useModulePermission("contracts");
   // IZN-F2.x · sözleşme/firma ekle = sözleşme sayfaları Düzenler (VEYA).
-  const canEditContracts = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEditContracts = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_CREATE_EDIT, need: "edit", fallback: permission.canWrite });
 
   if (isForbidden(contractsQuery.error)) return <AccessDenied />;
 

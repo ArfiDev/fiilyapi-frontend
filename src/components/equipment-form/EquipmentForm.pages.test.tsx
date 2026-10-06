@@ -69,4 +69,20 @@ describe("EquipmentForm · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () 
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });
+
+  it("yalnız KARDEŞ sayfalar (çalışma/yakıt/kira) Düzenler, ekipman Görür → AccessDenied (IZN-F5b-A madde 11)", () => {
+    session(
+      meFixture({
+        pages: {
+          [PAGE]: pageGrant("view"),
+          "saha.makine_calisma": pageGrant("edit"),
+          "saha.makine_yakit": pageGrant("edit"),
+          "saha.makine_kira": pageGrant("edit"),
+        },
+        permissions: { [MODULE]: "full" },
+      }),
+    );
+    renderView();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
+  });
 });

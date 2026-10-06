@@ -21,7 +21,7 @@ import { useProjectBlocks, type BlockResponse } from "@/lib/api/hooks/useProject
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROJECT_UNITS_EDIT } from "@/lib/auth/page-gates";
+import { SALES_LAND_SHARE_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -106,7 +106,7 @@ export function LandShareAllocationView() {
   const searchParams = useSearchParams();
   const permission = useModulePermission("projects");
   // IZN-F2.x · blok/ünite/toplu/Excel/paylaşım yazma kapısı = mali.satis_* Düzenler (VEYA).
-  const canEdit = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEdit = useButtonGate({ pages: SALES_LAND_SHARE_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [projectId, setProjectId] = useState("");
   const [blockId, setBlockId] = useState("");

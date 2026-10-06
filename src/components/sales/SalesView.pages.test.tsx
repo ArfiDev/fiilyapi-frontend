@@ -64,3 +64,42 @@ describe("SalesView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
     expect(screen.getByRole("heading", TITLE)).toBeInTheDocument();
   });
 });
+
+describe("SalesView · Blok/Ünite Ekle düğmeleri sekme başına yazma kapısı (IZN-F5b-A madde 2)", () => {
+  const BLOCK = { name: "+ Blok Ekle" };
+  const UNIT = { name: "+ Ünite Ekle" };
+  const VIEW = { "mali.satis": pageGrant("view") };
+
+  it("yalnız mali.satis_blok Düzenler → yalnız Blok Ekle", () => {
+    session(meFixture({ pages: { ...VIEW, "mali.satis_blok": pageGrant("edit") }, permissions: { projects: "none" } }));
+    render(<SalesView />);
+    expect(screen.getByRole("link", BLOCK)).toBeInTheDocument();
+    expect(screen.queryByRole("link", UNIT)).toBeNull();
+  });
+
+  it("yalnız mali.satis_unite Düzenler → yalnız Ünite Ekle", () => {
+    session(meFixture({ pages: { ...VIEW, "mali.satis_unite": pageGrant("edit") }, permissions: { projects: "none" } }));
+    render(<SalesView />);
+    expect(screen.getByRole("link", UNIT)).toBeInTheDocument();
+    expect(screen.queryByRole("link", BLOCK)).toBeNull();
+  });
+
+  it("blok/ünite Görür, kardeş sekmeler (toplu üretim/excel/paylaşım) Düzenler → ikisi de YOK", () => {
+    session(
+      meFixture({
+        pages: {
+          ...VIEW,
+          "mali.satis_blok": pageGrant("view"),
+          "mali.satis_unite": pageGrant("view"),
+          "mali.satis_toplu_uretim": pageGrant("edit"),
+          "mali.satis_excel": pageGrant("edit"),
+          "mali.satis_paylasim": pageGrant("edit"),
+        },
+        permissions: { projects: "full" },
+      }),
+    );
+    render(<SalesView />);
+    expect(screen.queryByRole("link", BLOCK)).toBeNull();
+    expect(screen.queryByRole("link", UNIT)).toBeNull();
+  });
+});

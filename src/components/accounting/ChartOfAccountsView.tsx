@@ -16,7 +16,7 @@ import {
 } from "@/lib/api/hooks/useChartOfAccounts";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { ACCOUNTING_EDIT, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { CHART_OF_ACCOUNTS_EDIT, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -59,8 +59,8 @@ export function ChartOfAccountsView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
   const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
   // IZN-F2.x · hesap ekle/düzenle = mali.hesap_plani/yevmiye/donem_kapanisi Düzenler (VEYA); hesap SİLME = yalnız SA.
-  const canEditAccounts = useButtonGate({ pages: ACCOUNTING_EDIT, need: "edit", fallback: permission.canWrite });
-  const canDeleteAccounts = useButtonGate({ pages: ACCOUNTING_EDIT, need: "sa", fallback: permission.canDelete });
+  const canEditAccounts = useButtonGate({ pages: CHART_OF_ACCOUNTS_EDIT, need: "edit", fallback: permission.canWrite });
+  const canDeleteAccounts = useButtonGate({ pages: CHART_OF_ACCOUNTS_EDIT, need: "sa", fallback: permission.canDelete });
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);

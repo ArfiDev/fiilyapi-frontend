@@ -72,11 +72,20 @@ describe("OffersScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
 
   it("Düzenler → yeni teklif bağlantısı var (modül view olsa bile)", async () => {
     perm.level = "view";
-    session(meFixture({ pages: { "teklif.sablonlar": pageGrant("edit") } }));
+    session(meFixture({ pages: { "teklif.teklif_hazirlama": pageGrant("edit") } }));
     renderScreen();
     await screen.findByText("TKL-2026-0013");
     expect(screen.getByRole("link", { name: NEW_OFFER })).toBeInTheDocument();
     expect(screen.queryByText(/^Salt okunur|^Görüntüleyici/)).toBeNull();
+  });
+
+  // IZN-F5b · madde 7 — OFFERS_EDIT yalnız teklif.teklif_hazirlama; kardeş sayfa (şablonlar) yazdırmaz.
+  it("yalnız teklif.sablonlar Düzenler → liste açılır ama yeni teklif bağlantısı YOK", async () => {
+    perm.level = "view";
+    session(meFixture({ pages: { "teklif.sablonlar": pageGrant("edit") } }));
+    renderScreen();
+    await screen.findByText("TKL-2026-0013");
+    expect(screen.queryByRole("link", { name: NEW_OFFER })).toBeNull();
   });
 
   it("pages boş → eski davranış (modül none → AccessDenied, full → liste)", async () => {

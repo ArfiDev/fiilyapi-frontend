@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import type { ChartAccountListResponse } from "@/lib/api/hooks/useChartOfAccounts";
 import { useChartOfAccounts } from "@/lib/api/hooks/useChartOfAccounts";
 import type {
@@ -1413,5 +1414,30 @@ describe("EXPORT-XLSX · Excel sorgusu = defter sorgusu", () => {
 
     // Assert
     expect(await screen.findByTestId("mu-export-error")).toHaveTextContent("Dönem kapalı.");
+  });
+});
+
+describe("IZN-F5b-A madde 4 · '+ Yevmiye Kaydı' = mali.yevmiye Düzenler (sekme başına kapı)", () => {
+  function setPages(pages: Parameters<typeof meFixture>[0]) {
+    vi.mocked(useSession).mockReturnValue({ me: meFixture(pages) } as ReturnType<typeof useSession>);
+  }
+
+  it("yalnız mali.yevmiye Düzenler → düğme AÇIK (accounting none olsa da)", () => {
+    setPages({ pages: { "mali.yevmiye": pageGrant("edit") }, permissions: { accounting: "none" } });
+    render(<AccountingView />);
+    expect(screen.getByTestId("mu-create-entry")).toBeEnabled();
+  });
+
+  it("yalnız KARDEŞ sayfalar (hesap planı + dönem kapanışı) Düzenler, yevmiye Görür → KAPALI", () => {
+    setPages({
+      pages: {
+        "mali.yevmiye": pageGrant("view"),
+        "mali.hesap_plani": pageGrant("edit"),
+        "mali.donem_kapanisi": pageGrant("edit"),
+      },
+      permissions: { accounting: "full" },
+    });
+    render(<AccountingView />);
+    expect(screen.getByTestId("mu-create-entry")).toBeDisabled();
   });
 });

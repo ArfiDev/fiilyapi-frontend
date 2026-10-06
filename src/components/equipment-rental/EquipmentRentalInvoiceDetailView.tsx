@@ -12,7 +12,7 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { EQUIPMENT_RENTAL_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useEquipmentRentalInvoice } from "@/lib/api/hooks/useEquipmentRentalInvoices";
 import {
@@ -64,9 +64,9 @@ export function EquipmentRentalInvoiceDetailView({
 }: EquipmentRentalInvoiceDetailViewProps) {
   const detailQuery = useEquipmentRentalInvoice(invoiceId);
   const { level: permissionLevel } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
-  // IZN-F2.x · başlık/satır düzenle = saha.makine_* Düzenler (VEYA).
+  // IZN-F5b · başlık/satır düzenle (PATCH rental-invoices, rental-invoice-lines) = saha.makine_kira Düzenler.
   const canWrite = useButtonGate({
-    pages: EQUIPMENT_EDIT,
+    pages: EQUIPMENT_RENTAL_EDIT,
     need: "edit",
     fallback: hasAtLeast(permissionLevel, RENTAL_WRITE_LEVEL),
   });

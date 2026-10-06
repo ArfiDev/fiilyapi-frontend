@@ -60,6 +60,15 @@ describe("WorkItemCatalogScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
     expect(screen.getByRole("button", ADD)).toBeInTheDocument();
   });
 
+  // IZN-F5b · madde 7 — WORK_ITEM_CATALOG_EDIT yalnız teklif.is_kalemi_katalogu; kardeş sayfa yazdırmaz.
+  it("yalnız teklif.sablonlar Düzenler → liste açılır ama '+ Kalem Ekle' YOK", async () => {
+    perm.level = "view";
+    session(meFixture({ pages: { "teklif.sablonlar": pageGrant("edit") } }));
+    renderScreen();
+    await screen.findByText("Beton döküm");
+    expect(screen.queryByRole("button", ADD)).toBeNull();
+  });
+
   it("pages boş → eski davranış (contracts none → AccessDenied, full → yazma var)", async () => {
     perm.level = "none";
     session(meFixture({ pages: {} }));

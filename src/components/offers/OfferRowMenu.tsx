@@ -9,7 +9,7 @@ import { useFileDownload } from "@/lib/use-file-download";
 
 import { rowMenuRules } from "./offer-list-model";
 import type { OfferListItem } from "./offer-types";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { OFFERS_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 interface OfferRowMenuProps {
@@ -29,7 +29,7 @@ export function OfferRowMenu({ item, canWrite, isOpen, isBusy, onToggle, onClose
   const rules = rowMenuRules(item, canWrite);
   // IZN-F2.x · taslak teklif silme = yalnız sistem yöneticisi (SIL-B1 `require_system_admin`; durum kuralı korunur).
   const canDeleteOffer =
-    useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: rules.canDelete }) && rowMenuRules(item, true).canDelete;
+    useButtonGate({ pages: OFFERS_EDIT, need: "sa", fallback: rules.canDelete }) && rowMenuRules(item, true).canDelete;
   const download = useFileDownload();
   // Başarıda menü kapanır (dosya tarayıcıya indi); hata menüde kalır (aşağıda).
   useEffect(() => {

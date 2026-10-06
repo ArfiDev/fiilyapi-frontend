@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import type {
   ChartAccountListResponse,
   ChartAccountResponse,
@@ -797,5 +798,30 @@ describe("EXPORT-XLSX · Excel sorgusu = ekran sorgusu", () => {
     expect(await screen.findByTestId("hp-export-error")).toHaveTextContent(
       "Hesap planı yetkiniz yok.",
     );
+  });
+});
+
+describe("IZN-F5b-A madde 4 · '+ Hesap Ekle' = mali.hesap_plani Düzenler (sekme başına kapı)", () => {
+  function setPages(pages: Parameters<typeof meFixture>[0]) {
+    vi.mocked(useSession).mockReturnValue({ me: meFixture(pages) } as unknown as ReturnType<typeof useSession>);
+  }
+
+  it("yalnız mali.hesap_plani Düzenler → düğme AÇIK (accounting none olsa da)", () => {
+    setPages({ pages: { "mali.hesap_plani": pageGrant("edit") }, permissions: { accounting: "none" } });
+    render(<ChartOfAccountsView />);
+    expect(screen.getByTestId("hp-create")).toBeEnabled();
+  });
+
+  it("yalnız KARDEŞ sayfalar (yevmiye + dönem kapanışı) Düzenler, hesap planı Görür → KAPALI", () => {
+    setPages({
+      pages: {
+        "mali.hesap_plani": pageGrant("view"),
+        "mali.yevmiye": pageGrant("edit"),
+        "mali.donem_kapanisi": pageGrant("edit"),
+      },
+      permissions: { accounting: "full" },
+    });
+    render(<ChartOfAccountsView />);
+    expect(screen.getByTestId("hp-create")).toBeDisabled();
   });
 });

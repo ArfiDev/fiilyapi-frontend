@@ -158,6 +158,24 @@ describe("EmployerContractDetailView · sayfa izni kapısı (IZN-F2.y)", () => {
     expect(screen.getByTestId(ADD_ITEM)).toBeInTheDocument();
   });
 
+  // IZN-F5b · madde 7 — EMPLOYER_CONTRACT_EDIT = (teklif.isveren_sozlesme, proje.is_kalemleri); kardeş sayfa yazdırmaz.
+  // (Hedef sayfaların hücresi VAR olmalı: hücresiz kapı eski karara düşer — burada Görür.)
+  it("teklif.taseron_sozlesme Düzenler, işveren sözleşmesi sayfaları Görür → yazma eylemleri YOK, hücreler salt-okunur", () => {
+    session(
+      meFixture({
+        pages: {
+          "teklif.isveren_sozlesme": pageGrant("view"),
+          "proje.is_kalemleri": pageGrant("view"),
+          "teklif.taseron_sozlesme": pageGrant("edit"),
+        },
+      }),
+    );
+    render(<EmployerContractDetailView projectId="p-1" />);
+    expect(screen.queryByTestId(ADD_ITEM)).toBeNull();
+    expect(screen.queryByTestId(ADD_ROW)).toBeNull();
+    expect(screen.getByLabelText(PRICE_CELL)).toBeDisabled();
+  });
+
   it("Görür → yazma eylemleri YOK, hücreler salt-okunur, poz listesi görünür", () => {
     session(meFixture({ pages: { "teklif.isveren_sozlesme": pageGrant("view", true) } }));
     render(<EmployerContractDetailView projectId="p-1" />);

@@ -46,6 +46,16 @@ describe("İşveren hakediş durum eylemleri · sayfa izni kapıları (IZN-F2.x)
     expect(button("Onaya Gönder")).toBeInTheDocument();
   });
 
+  it("IZN-F5b · Onaya Gönder = işveren ailesi: santiye.hakedisler Düzenler açar; taşeron hakediş Düzenler AÇMAZ", () => {
+    session(meFixture({ pages: { "santiye.hakedisler": pageGrant("edit") } }));
+    const { unmount } = employer("draft");
+    expect(button("Onaya Gönder")).toBeInTheDocument();
+    unmount();
+    session(meFixture({ pages: { "mali.hakedis_taseron": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    employer("draft");
+    expect(button("Onaya Gönder")).toBeNull();
+  });
+
   it("yalnız Görür → 'Onaya Gönder' YOK", () => {
     session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("view") }, permissions: { progress_payments: "full" } }));
     employer("draft");
@@ -108,6 +118,27 @@ describe("Taşeron hakediş durum eylemleri · sayfa izni kapıları (IZN-F2.x)"
     session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("view", true), "mali.hakedis_taseron": pageGrant("view") } }));
     subcontractor("pending_approval");
     expect(button("Onayla")).toBeNull();
+  });
+
+  it("IZN-F5b · Onaya Gönder = taşeron ailesi: mali.hakedis_taseron Düzenler açar; işveren ailesi (santiye.hakedisler dahil) AÇMAZ", () => {
+    session(meFixture({ pages: { "proje.taseron_hakedis": pageGrant("edit") } }));
+    const { unmount } = subcontractor("draft");
+    expect(button("Onaya Gönder")).toBeInTheDocument();
+    unmount();
+    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    const second = subcontractor("draft");
+    expect(button("Onaya Gönder")).toBeNull();
+    second.unmount();
+    session(meFixture({ pages: { "santiye.hakedisler": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    subcontractor("draft");
+    expect(button("Onaya Gönder")).toBeNull();
+  });
+
+  it("IZN-F5b · taşeron Onayla/Reddet: santiye.hakedisler Onaylar AÇMAZ (ortak sayfa yalnız işveren onayında)", () => {
+    session(meFixture({ pages: { "santiye.hakedisler": pageGrant("view", true) }, permissions: { progress_payments: "view" } }));
+    subcontractor("pending_approval");
+    expect(button("Onayla")).toBeNull();
+    expect(button("Reddet")).toBeNull();
   });
 
   it("Onayı Geri Al yalnız SA", () => {

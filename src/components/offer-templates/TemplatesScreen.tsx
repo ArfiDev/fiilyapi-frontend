@@ -18,7 +18,7 @@ import type { WorkItemRead } from "@/lib/api/models";
 import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
+import { CONTRACTS_VIEW, OFFER_TEMPLATES_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
@@ -64,7 +64,7 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
   const scope = useDisciplineScope();
   // IZN-F2.x · şablon işlemleri = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız.
   const canEditTemplates = useButtonGate({
-    pages: CONTRACTS_EDIT,
+    pages: OFFER_TEMPLATES_EDIT,
     need: "edit",
     fallback: hasAtLeast(level, WRITE_LEVEL),
   });

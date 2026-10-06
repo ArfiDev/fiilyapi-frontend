@@ -10,7 +10,7 @@ import { useSession } from "@/components/shell/SessionProvider";
 import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
 // IZN-F2.y — "+ Ekipman Ekle" ve kartlardaki "Düzenle" saha.makine_* Düzenler kapısından karar verir
-// (POST/PATCH /equipment = backend `equipment:full`). Görüntüleme DEĞİŞMEZ.
+// (POST/PATCH /equipment = backend saha.makine_ekipman Düzenler; IZN-F5b-A). Görüntüleme DEĞİŞMEZ.
 vi.mock("@/lib/api/hooks/useEquipment", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useEquipment")>()),
   useEquipment: vi.fn(),
@@ -71,15 +71,21 @@ describe("EquipmentView · sayfa izni kapısı (IZN-F2.y)", () => {
     expect(screen.getByTestId(EDIT_LINK)).toBeInTheDocument();
   });
 
-  it("ikiz sayfa saha.makine_yakit Düzenler (VEYA) → düğme var", () => {
+  it("yalnız KARDEŞ sayfalar (çalışma/yakıt/kira) Düzenler, ekipman Görür → düğme ve 'Düzenle' YOK (IZN-F5b-A)", () => {
     session(
       meFixture({
-        pages: { "saha.makine_ekipman": pageGrant("view"), "saha.makine_yakit": pageGrant("edit") },
+        pages: {
+          "saha.makine_ekipman": pageGrant("view"),
+          "saha.makine_calisma": pageGrant("edit"),
+          "saha.makine_yakit": pageGrant("edit"),
+          "saha.makine_kira": pageGrant("edit"),
+        },
         permissions: VIEW_MODULE,
       }),
     );
     render(<EquipmentView />);
-    expect(screen.getByRole("link", { name: ADD })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: ADD })).toBeNull();
+    expect(screen.queryByTestId(EDIT_LINK)).toBeNull();
   });
 
   it("saha.makine_ekipman Görür → '+ Ekipman Ekle' ve 'Düzenle' YOK, liste görünür", () => {

@@ -21,7 +21,7 @@ import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
+import { EQUIPMENT_ASSET_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 
@@ -70,16 +70,16 @@ export function EquipmentView() {
   // F-BLG T2b · "Belge Ekle" diyaloğu (`Form - Ekipman Belgesi.dc.html`).
   // Yazma yüzeyi `full` ister; izinsiz kullanıcıda tetikleyici BASILMAZ.
   const [documentTarget, setDocumentTarget] = useState<EquipmentResponse | null>(null);
-  // IZN-F2.x · ekipman belgesi ekle = saha.makine_* Düzenler (VEYA).
+  // IZN-F5b · ekipman belgesi ekle (POST /equipment/{id}/documents) = saha.makine_ekipman Düzenler.
   const canWrite = useButtonGate({
-    pages: EQUIPMENT_EDIT,
+    pages: EQUIPMENT_ASSET_EDIT,
     need: "edit",
     fallback: hasAtLeast(permission.level, "full"),
   });
 
-  // IZN-F2.y · "+ Ekipman Ekle" ve kartlardaki "Düzenle" = POST/PATCH /equipment = saha.makine_* Düzenler
-  // (VEYA). Bugün bu ikisi izin bakmadan basılıyor → sayfa izni hiç yoksa (fallback) görünür kalır.
-  const canEditEquipment = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: true });
+  // IZN-F5b · "+ Ekipman Ekle" ve kartlardaki "Düzenle" = POST/PATCH /equipment = saha.makine_ekipman Düzenler.
+  // Bugün bu ikisi izin bakmadan basılıyor → sayfa izni hiç yoksa (fallback) görünür kalır.
+  const canEditEquipment = useButtonGate({ pages: EQUIPMENT_ASSET_EDIT, need: "edit", fallback: true });
   const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   if (!canViewEquipment || isForbidden(equipmentQuery.error)) return <AccessDenied />;

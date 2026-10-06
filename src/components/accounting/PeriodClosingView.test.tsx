@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import type { AccountingPeriodListItem, AccountingPeriodResponse } from "@/lib/api/hooks/useAccountingPeriods";
 import { useAccountingPeriods } from "@/lib/api/hooks/useAccountingPeriods";
 import {
@@ -477,5 +478,30 @@ describe("GERİ-AÇ-HATA — 'Geri Aç' başarısızlığı ekrana ÇIKAR", () =
       "Dönem zaten kapalı.",
     );
     expect(screen.queryByTestId("dkap-action-error")).toBeNull();
+  });
+});
+
+describe("IZN-F5b-A madde 4 · 'Dönemi Kapat' = mali.donem_kapanisi Düzenler (sekme başına kapı)", () => {
+  function setPages(pages: Parameters<typeof meFixture>[0]) {
+    vi.mocked(useSession).mockReturnValue({ me: meFixture(pages) } as unknown as ReturnType<typeof useSession>);
+  }
+
+  it("yalnız mali.donem_kapanisi Düzenler → Ağustos kapatma düğmesi AÇIK (accounting none olsa da)", () => {
+    setPages({ pages: { "mali.donem_kapanisi": pageGrant("edit") }, permissions: { accounting: "none" } });
+    render(<PeriodClosingView />);
+    expect(screen.getByTestId("dkap-close-8")).toBeEnabled();
+  });
+
+  it("yalnız KARDEŞ sayfalar (yevmiye + hesap planı) Düzenler, dönem kapanışı Görür → KAPALI", () => {
+    setPages({
+      pages: {
+        "mali.donem_kapanisi": pageGrant("view"),
+        "mali.yevmiye": pageGrant("edit"),
+        "mali.hesap_plani": pageGrant("edit"),
+      },
+      permissions: { accounting: "full" },
+    });
+    render(<PeriodClosingView />);
+    expect(screen.getByTestId("dkap-close-8")).toBeDisabled();
   });
 });

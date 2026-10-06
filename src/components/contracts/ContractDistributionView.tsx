@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button/Button";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { CONTRACT_DISTRIBUTION_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useContractDistribution, useEmployerContract } from "@/lib/api/hooks/useContract";
 import { useSaveContractDistribution } from "@/lib/api/hooks/useContractMutations";
@@ -60,7 +60,7 @@ export interface ContractDistributionViewProps {
 export function ContractDistributionView({ projectId }: ContractDistributionViewProps) {
   const permission = useModulePermission("contracts");
   // IZN-F2.x · poz dağılımı kaydet = sözleşme sayfaları Düzenler (VEYA).
-  const canEditContracts = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEditContracts = useButtonGate({ pages: CONTRACT_DISTRIBUTION_EDIT, need: "edit", fallback: permission.canWrite });
   const distributionQuery = useContractDistribution(projectId);
   const contractQuery = useEmployerContract(projectId);
   const projectQuery = useProject(projectId);

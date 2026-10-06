@@ -22,7 +22,7 @@ import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT } from "@/lib/auth/page-gates";
+import { EQUIPMENT_ASSET_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import {
@@ -84,7 +84,7 @@ export function EquipmentForm(props: EquipmentFormProps) {
 
   const permission = useModulePermission("equipment");
   // IZN-F2.x · ekipman ekle/düzenle = saha.makine_* Düzenler (VEYA).
-  const canEdit = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
+  const canEdit = useButtonGate({ pages: EQUIPMENT_ASSET_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
   const createEquipment = useCreateEquipment();
   const updateEquipment = useUpdateEquipment(isEdit ? props.equipmentId : "");
   const detailQuery = useEquipmentDetail(isEdit ? props.equipmentId : "");

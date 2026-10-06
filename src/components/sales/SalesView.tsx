@@ -12,7 +12,7 @@ import { useSales } from "@/lib/api/hooks/useSales";
 import { useSalesSummary } from "@/lib/api/hooks/useSalesSummary";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROJECT_UNITS_EDIT, SALES_EDIT, SALES_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { SALES_BLOCK_EDIT, SALES_EDIT, SALES_UNIT_EDIT, SALES_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { BLOCK_FORM_HREF, UNIT_FORM_HREF } from "@/components/unit-shell/routes";
 
@@ -59,9 +59,11 @@ export function SalesView() {
   // kapıyı kullanıyor (`BlockCreateView`/`UnitCreateView`). Yalnız `sales`
   // yetkisi olan kullanıcı bu iki girişi GÖRMEZ; gördüğü an form 403 verirdi.
   const unitPermission = useModulePermission("projects");
-  // IZN-F2.x · satış kaydı = mali.satis Düzenler; blok/ünite girişi = mali.satis_* Düzenler (VEYA).
+  // IZN-F5b · satış kaydı = mali.satis Düzenler; "Blok Ekle" = mali.satis_blok, "Ünite Ekle" = mali.satis_unite
+  // Düzenler (her düğme KENDİ formunun yazma ucunun sayfasına bağlı).
   const canCreateSale = useButtonGate({ pages: SALES_EDIT, need: "edit", fallback: permission.canWrite });
-  const canCreateUnits = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: unitPermission.canWrite });
+  const canCreateBlock = useButtonGate({ pages: SALES_BLOCK_EDIT, need: "edit", fallback: unitPermission.canWrite });
+  const canCreateUnit = useButtonGate({ pages: SALES_UNIT_EDIT, need: "edit", fallback: unitPermission.canWrite });
   // IZN-F5-ön · görüntüleme kapısı = mali.satis Görür; grant yoksa `sales` modül izni.
   const canViewSales = useButtonGate({ pages: SALES_VIEW_PAGES, need: "view", fallback: permission.canView });
 
@@ -156,15 +158,15 @@ export function SalesView() {
               Kaydı` link-düğme). İkincil seçilmesinin nedeni hiyerarşidir —
               mockup bu şeritte TEK birincil eylem çizer, üç mavi düğme onu
               siler. Sıra iş akışıdır: blok → ünite → satış. */}
-          {canCreateUnits && (
-            <>
-              <Link href={formHref(BLOCK_FORM_HREF)} className="btn btn--secondary btn--md">
-                + Blok Ekle
-              </Link>
-              <Link href={formHref(UNIT_FORM_HREF)} className="btn btn--secondary btn--md">
-                + Ünite Ekle
-              </Link>
-            </>
+          {canCreateBlock && (
+            <Link href={formHref(BLOCK_FORM_HREF)} className="btn btn--secondary btn--md">
+              + Blok Ekle
+            </Link>
+          )}
+          {canCreateUnit && (
+            <Link href={formHref(UNIT_FORM_HREF)} className="btn btn--secondary btn--md">
+              + Ünite Ekle
+            </Link>
           )}
           {/* 25 · satış formu (spec K1) */}
           {canCreateSale && (
