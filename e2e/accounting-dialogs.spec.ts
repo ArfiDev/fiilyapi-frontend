@@ -7,6 +7,7 @@ import {
   openAccounting,
   openChartOfAccounts,
 } from "./accounting-helpers";
+import { withSystemAdmin } from "./with-system-admin";
 
 // F-MU1 T5 · Muhasebe DİYALOGLARININ fonksiyonel e2e'si (T4 yüzeyleri).
 //
@@ -199,6 +200,7 @@ test.describe("yevmiye fişi diyaloğu — yazma akışları (HAZİRAN adası)",
   });
 
   test("taslak SİLİNİR ve satır listeden düşer", async ({ page }) => {
+    await withSystemAdmin(page); // IZN-F6d: taslak silme `need: "sa"` — mock patron SA değil.
     await openMutationMonth(page);
 
     await expect(page.getByTestId("mu-draft-row-je-2606-mut-delete")).toBeVisible();

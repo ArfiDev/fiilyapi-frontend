@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import type { components } from "@/lib/api/schema";
+
 import { OFFERS_URL, SEED_NO, loginForOffers, openItemPicker, openOfferDetail, openOfferPrint } from "./offers-helpers";
 import {
   editItems,
@@ -11,7 +13,10 @@ import {
   walkToConfirm,
   createProject,
 } from "./offers-convert-helpers";
+import { withPageLevels } from "./mock-role-pages";
 import { prepareFrame } from "./visual-scroll";
+
+type PageGrant = components["schemas"]["PageGrant"];
 
 // TKL-F3.8 · Teklif Hazırlama görsel kadrajları (plan §1: TL/TY/TD mockup'ları + PDF onay kareleri).
 //
@@ -316,13 +321,21 @@ test("teklif detay donustur pasif gorsel", async ({ page }) => {
   const harness = await setUpConvert(page);
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
-    const me = (await response.json()) as { permissions?: Record<string, string> };
-    await route.fulfill({ response, json: { ...me, permissions: { ...me.permissions, projects: "full" } } });
+    const me = (await response.json()) as { permissions?: Record<string, string>; pages?: Record<string, PageGrant> };
+    // IZN-F6d: sayfa modeli devrede → dönüştürme kapısı `teklif.teklif_hazirlama` Onaylar'ıdır; onay yok.
+    await route.fulfill({
+      response,
+      json: {
+        ...me,
+        permissions: { ...me.permissions, projects: "full" },
+        pages: withPageLevels(me.pages, ["teklif.teklif_hazirlama"], "edit"),
+      },
+    });
   });
   await page.goto(`${OFFERS_URL}/${harness.offerId}`);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(SEED_NO.withHistory);
   await expect(page.getByRole("button", { name: "Projeye Dönüştür →" })).toBeDisabled();
-  await expect(page.getByText(/Projeye dönüştürme Projeler yönetici yetkisi ister/)).toBeVisible();
+  await expect(page.getByText(/Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir/)).toBeVisible();
   await expect(page.getByText("Revizyon yükleniyor")).toHaveCount(0);
   await page.mouse.move(0, 0);
 

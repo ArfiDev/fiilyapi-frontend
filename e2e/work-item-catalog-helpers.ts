@@ -1,6 +1,11 @@
 import { expect, type Page, type Route } from "@playwright/test";
 
+import type { components } from "@/lib/api/schema";
+
 import { VISUAL_VIEWPORT, login } from "./earned-value-helpers";
+import { MOCK_CONTRACTS_PAGE_KEYS, withPageLevels } from "./mock-role-pages";
+
+type PageGrant = components["schemas"]["PageGrant"];
 
 // TKL-F1.5 · İş Kalemi Kataloğu (`/planlama/is-kalemi-katalogu`) e2e + görsel ORTAK yardımcıları.
 //
@@ -152,13 +157,27 @@ export async function installFakeCatalogServer(page: Page): Promise<FakeCatalogS
 export async function withContractsLevel(page: Page, level: "none" | "view" | "draft" | "full" | "admin") {
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
-    const me = (await response.json()) as { permissions?: Record<string, string> };
+    const me = (await response.json()) as { permissions?: Record<string, string>; pages?: Record<string, PageGrant> };
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ...me, permissions: { ...me.permissions, contracts: level } }),
+      body: JSON.stringify({
+        ...me,
+        permissions: { ...me.permissions, contracts: level },
+        pages: contractsPagesForLevel(me.pages, level),
+      }),
     });
   });
+}
+
+/** IZN-F6d · sayfa modeli devrede: `contracts` seviyesi Teklif ve Sözleşmeler sayfa grant'ına çevrilir. */
+function contractsPagesForLevel(
+  pages: Record<string, PageGrant> | undefined,
+  level: "none" | "view" | "draft" | "full" | "admin",
+) {
+  if (level === "none") return withPageLevels(pages, MOCK_CONTRACTS_PAGE_KEYS, "none");
+  if (level === "view") return withPageLevels(pages, MOCK_CONTRACTS_PAGE_KEYS, "view");
+  return withPageLevels(pages, MOCK_CONTRACTS_PAGE_KEYS, "edit", level === "admin");
 }
 
 /** Saat çakılı (`login`) + görsel pencere; navigasyondan ÖNCE saat, SONRA oturum. */

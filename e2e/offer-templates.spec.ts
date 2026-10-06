@@ -1,6 +1,10 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
+import type { components } from "@/lib/api/schema";
+
 import { login } from "./earned-value-helpers";
+import { withSystemAdmin } from "./with-system-admin";
+import { MOCK_CONTRACTS_PAGE_KEYS, withPageLevels } from "./mock-role-pages";
 import { installFakeOffersServer, type FakeOffersServer } from "./offers-fake-server";
 
 // TKL-F4.8 · Teklif ŞABLONLARI fonksiyonel e2e (F4.5 ekran + F4.6 seçici + F4.7 başlangıçlar).
@@ -8,6 +12,8 @@ import { installFakeOffersServer, type FakeOffersServer } from "./offers-fake-se
 // 🔴 MOCK'A YAZMAZ: `/offers*` (şablon uçları dahil) `offers-fake-server.ts` ile sayfaya özel durumda yanıtlanır;
 // iddialar EKRANDAN ve gönderilen isteklerden yapılır (sahte sunucu durumuna test yazılmaz). `getByRole("alert")`
 // yok, sabit bekleme yok: her adım ekranda görünen sonuca `expect` ile beklenir.
+
+type PageGrant = components["schemas"]["PageGrant"];
 
 const TEMPLATES_URL = "/teklif-hazirlama/sablonlar";
 const DEFAULT_TEMPLATE = "Kaba İnşaat Standart";
@@ -168,6 +174,7 @@ test("içerik düzenle: + Grup → yeniden adlandır → katalogdan BELİRLİ gr
 });
 
 test("varsayılan yap: VARSAYILAN rozeti taşınır · Sil → ilk şablona geçilir", async ({ page }) => {
+  await withSystemAdmin(page); // IZN-F6d: "Sil" `need: "sa"` — mock patron SA değil.
   await setUp(page);
   await openTemplates(page);
   const badge = (name: string) => card(page, name).getByText("VARSAYILAN");
@@ -238,7 +245,13 @@ test("izin: yazamayan kullanıcı Şablonlar'ı düğmesiz görür", async ({ pa
   await page.route("**/api/auth/me", async (route) => {
     const response = await route.fetch();
     const me = (await response.json()) as Record<string, unknown>;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...me, permissions: { contracts: "view" } }) });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+        ...me,
+        permissions: { contracts: "view" },
+        // IZN-F6d: sayfa modeli devrede → Teklif ve Sözleşmeler grubu Görür.
+        pages: withPageLevels(me.pages as Record<string, PageGrant> | undefined, MOCK_CONTRACTS_PAGE_KEYS, "view"),
+      }),
+    });
   });
   await openTemplates(page);
   await expect(page.getByText("Görüntüleyici · yalnız okuma")).toBeVisible();

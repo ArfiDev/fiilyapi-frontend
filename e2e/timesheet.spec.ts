@@ -2,6 +2,14 @@ import { readFile } from "node:fs/promises";
 
 import { test, expect, type Page } from "@playwright/test";
 
+import type { components } from "@/lib/api/schema";
+
+import { withPageLevels } from "./mock-role-pages";
+
+type PageGrant = components["schemas"]["PageGrant"];
+/** IZN-F6d · puantaj sayfaları (kök + şantiye + bölüm ikizi). */
+const TIMESHEET_PAGE_KEYS = ["saha.puantaj", "santiye.puantaj", "bolum.puantaj"] as const;
+
 // PUAN-SAAT · Puantaj fonksiyonel e2e (görsel DEĞİL).
 // Kapsam: haftalık ızgaranın okunması, saat kutusu, kod popover'ı, Excel
 // indirme, "Önceki Haftayı Kopyala" ve — bu dilimin EN KRİTİK KANITI —
@@ -192,7 +200,12 @@ async function withTimesheetLevel(page: Page, level: string) {
       contentType: "application/json",
       // `personnel` bilerek verilmez: "Personel Ekle" girişi ayrı modülün
       // yetkisindedir ve bilinmezlik kuralıyla görünür kalır.
-      body: JSON.stringify({ ...me, permissions: { timesheet: level } }),
+      body: JSON.stringify({
+        ...me,
+        permissions: { timesheet: level },
+        // IZN-F6d: sayfa modeli devrede → eski modül düşürmesi tek başına etkisiz; aynı düzey sayfa grant'ına da yazılır.
+        pages: withPageLevels(me.pages as Record<string, PageGrant> | undefined, TIMESHEET_PAGE_KEYS, level === "none" ? "none" : "view"),
+      }),
     });
   });
 }

@@ -1,5 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 
+import type { components } from "@/lib/api/schema";
+
+import { MOCK_EV_PAGE_KEYS, withPageLevels } from "./mock-role-pages";
+
+type PageGrant = components["schemas"]["PageGrant"];
+
 // PLN-F1.7a · Planlama (EV) e2e'lerinin ORTAK yardımcıları — `Ayarlar -
 // Planlama` (AYP), `Birim Oran Kataloğu` (KAT) ve sonra yazılacak `Adam-Saat
 // Bütçesi` (BÜT) görsel spec'leri buradan beslenir.
@@ -63,9 +69,16 @@ export async function withEarnedValueLevel(page: Page, level: "view" | "draft" |
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ...me, permissions: { earned_value: level } }),
+      body: JSON.stringify({ ...me, permissions: { earned_value: level }, pages: evPagesForLevel(me.pages, level) }),
     });
   });
+}
+
+/** IZN-F6d · sayfa modeli devrede: `admin` = ana ME (tam matris); öteki seviyeler EV sayfalarını düşürür. */
+function evPagesForLevel(pages: unknown, level: "view" | "draft" | "full" | "admin") {
+  const base = pages as Record<string, PageGrant> | undefined;
+  if (level === "admin") return base;
+  return withPageLevels(base, MOCK_EV_PAGE_KEYS, level === "view" ? "view" : "edit");
 }
 
 /**

@@ -160,6 +160,51 @@ export const MOCK_PAGE_CATALOG: readonly PageResponse[] = CATALOG_ROWS.map(
   }),
 );
 
+/**
+ * IZN-F6d · mock oturum kullanıcısının (`ME.pages`) sayfa matrisi: 100 sayfanın HEPSİ `edit`, onay eylemi
+ * olanlarda `approve`. Bugünkü fiili izin ("her şey yazılabilir + onaylanabilir") ile eşdeğerdir; sistem
+ * yöneticisi DEĞİLDİR (`need: "sa"` kapıları kapalı kalır). Elle liste yok: katalogdan türetilir.
+ */
+export function mockFullAccessPages(): Record<string, PageGrant> {
+  const pages: Record<string, PageGrant> = {};
+  for (const page of MOCK_PAGE_CATALOG) {
+    pages[page.key] = { level: "edit", approve: page.has_approval };
+  }
+  return pages;
+}
+
+/**
+ * IZN-F6d · `ME.pages` üzerinde kadraja özel düzey ezmesi (paylaşılan mock'a YAZILMAZ; `page.route` içinde
+ * `/auth/me` yanıtına uygulanır). Eski `permissions` düşürmesi sayfa modeli devredeyken ETKİSİZ kaldığından
+ * görüntüleyici/formen kadrajları artık sayfa grant'ı ile kurulur. `approve` yalnız `"edit"` + `canApprove`.
+ */
+export function withPageLevels(
+  pages: Record<string, PageGrant> | undefined,
+  keys: readonly string[],
+  level: PageLevel,
+  canApprove = false,
+): Record<string, PageGrant> {
+  const next: Record<string, PageGrant> = { ...pages };
+  for (const key of keys) next[key] = { level, approve: level === "edit" && canApprove };
+  return next;
+}
+
+/** Katalogdan, verilen yüklemi sağlayan sayfa anahtarları. */
+export function catalogKeys(isMatch: (page: PageResponse) => boolean): string[] {
+  return MOCK_PAGE_CATALOG.filter(isMatch).map((page) => page.key);
+}
+
+/** Planlama (EV) sayfaları: `planlama.*` + şantiye içi EV ikizleri + `ayarlar.planlama`. */
+export const MOCK_EV_PAGE_KEYS: readonly string[] = catalogKeys(
+  (page) =>
+    page.group === "planlama" ||
+    page.key === "ayarlar.planlama" ||
+    /^santiye\.(adam_saat_butcesi|planlama_paneli|gunluk_ilerleme_raporu|haftalik_qurr)$/.test(page.key),
+);
+
+/** Teklif ve Sözleşmeler grubu (eski `contracts` modülü). */
+export const MOCK_CONTRACTS_PAGE_KEYS: readonly string[] = catalogKeys((page) => page.group === "teklif");
+
 /** Rol anahtarı → grup bazında düzey (yazılmayan grup "none"; Şantiye Şefi dışı roller yalnız Genel'i görür). */
 const LEVELS_BY_ROLE: Record<string, Partial<Record<PageGroup, PageLevel>>> = {
   site_chief: { genel: "view", saha: "edit", planlama: "view", stok: "view", proje_ici: "view" },
