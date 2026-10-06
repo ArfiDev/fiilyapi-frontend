@@ -60,10 +60,20 @@ beforeEach(() => {
 });
 
 describe("SubcontractorContractCreateView · sayfa kapıları (IZN-F5b)", () => {
-  it("teklif.sozlesmeler Düzenler → form açılır, '+ Yeni Taşeron Ekle' var", () => {
-    renderView(meFixture({ pages: { "teklif.sozlesmeler": pageGrant("edit") } }));
+  it("teklif.sozlesmeler + teklif.taseron_sozlesme Düzenler → form açılır, '+ Yeni Taşeron Ekle' var", () => {
+    renderView(
+      meFixture({ pages: { "teklif.sozlesmeler": pageGrant("edit"), "teklif.taseron_sozlesme": pageGrant("edit") } }),
+    );
     expect(screen.getByRole("combobox", { name: "Taşeron Firma" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: NEW_FIRM })).toBeInTheDocument();
+  });
+
+  it("KESİŞİM: yalnız teklif.sozlesmeler Düzenler (taşeron sözleşme Görür) → AccessDenied (sonraki yazmalar 403 olurdu)", () => {
+    renderView(
+      meFixture({ pages: { "teklif.sozlesmeler": pageGrant("edit"), "teklif.taseron_sozlesme": pageGrant("view") } }),
+    );
+    expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Taşeron Firma" })).toBeNull();
   });
 
   it("yalnız teklif.taseron_sozlesme Düzenler → form açılır ama firma ekleme seçeneği YOK", () => {

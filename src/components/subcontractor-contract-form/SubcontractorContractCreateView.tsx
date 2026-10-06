@@ -81,14 +81,18 @@ import "./subcontractor-contract-form.css";
 export function SubcontractorContractCreateView() {
   const router = useRouter();
   const { canWrite: moduleCanWrite, canDelete: moduleCanDelete } = useModulePermission("contracts");
-  // IZN-F5b · madde 7 — form girişi = POST subcontractor-contracts (sözleşmeler ∪ taşeron sözleşme sayfaları);
+  // IZN-F5b · madde 7 — form girişi = POST subcontractor-contracts (sözleşmeler ∪ taşeron sözleşme sayfaları) VE
+  // aynı akıştaki PATCH / load-from-employer / kalem yazmaları (yalnız taşeron sözleşme) → KESİŞİM (CEO kararı:
+  // yarım akışta 403 veren form gösterilmez);
   // "+ Yeni Taşeron Ekle" = POST /subcontractors (taşeron firmaları ∪ sözleşmeler); poz satırı silme = yalnız SA
   // (DELETE items → taşeron sözleşme sayfası kümesi).
-  const canWrite = useButtonGate({
+  const canCreateContract = useButtonGate({
     pages: SUBCONTRACTOR_CONTRACT_CREATE_EDIT,
     need: "edit",
     fallback: moduleCanWrite,
   });
+  const canEditContract = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = canCreateContract && canEditContract;
   const canAddSubcontractor = useButtonGate({
     pages: SUBCONTRACTOR_CREATE_EDIT,
     need: "edit",
