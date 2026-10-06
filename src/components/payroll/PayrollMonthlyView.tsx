@@ -12,7 +12,6 @@ import type {
   WorkerSource,
 } from "@/lib/api/hooks/usePayroll";
 import {
-  PAYROLL_PERMISSION_MODULE,
   usePayrollPeriod,
   usePayrollPeriods,
 } from "@/lib/api/hooks/usePayroll";
@@ -23,7 +22,6 @@ import {
 } from "@/lib/api/hooks/usePayrollMutations";
 import { downloadPayrollExport } from "@/lib/api/payroll-client";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PAYROLL_APPROVE, PAYROLL_EDIT, PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatDateLong, formatPeriod } from "@/lib/format";
@@ -104,13 +102,12 @@ import "./payroll.css";
  * `Suspense` sarmalayıcısı gerekmez (mali tablolar kanonu).
  */
 export function PayrollMonthlyView() {
-  const permission = useModulePermission(PAYROLL_PERMISSION_MODULE);
   // IZN-F2.x · dönem aç/hesapla/satır düzelt = mali.bordro/sgk_bildirimi Düzenler (VEYA); dönemi/satırı onayla,
   // Öde = mali.bordro Onaylar.
-  const canEditPayroll = useButtonGate({ pages: PAYROLL_EDIT, need: "edit", fallback: permission.canWrite });
-  const canApprovePayroll = useButtonGate({ pages: PAYROLL_APPROVE, need: "approve", fallback: permission.canWrite });
+  const canEditPayroll = useButtonGate({ pages: PAYROLL_EDIT, need: "edit" });
+  const canApprovePayroll = useButtonGate({ pages: PAYROLL_APPROVE, need: "approve" });
   // IZN-F5-ön · görüntüleme kapısı = bordro sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view", fallback: permission.canView });
+  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view" });
   const periodsQuery = usePayrollPeriods();
 
   // `null` = kullanıcı henüz seçim yapmadı ⇒ varsayılan (en yeni dönem).

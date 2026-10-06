@@ -7,8 +7,6 @@ import { navGroupHeadingFor } from "@/components/shell/nav-config";
 import { routes } from "@/lib/routes";
 import { Select } from "@/components/ui/select/Select";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERSONNEL_EDIT, TIMESHEET_EDIT, TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -38,19 +36,16 @@ export function GeneralTimesheetView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission("timesheet");
   // "Personel Ekle" girişi AYRI modülün (personnel) yetkisine bağlı: puantaj
   // yazabilen herkes personel kartı açamaz. İzinsizde HİÇ basılmaz.
-  const personnelPermission = useModulePermission("personnel");
   const canAddPersonnel = useButtonGate({
     pages: PERSONNEL_EDIT,
     need: "edit",
-    fallback: hasAtLeast(personnelPermission.level, "full"),
   });
   // IZN-F2.x · puantaj kaydet = saha/santiye.puantaj Düzenler; personel ekle = ik.* Düzenler.
-  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit" });
   // IZN-F5-ön · görüntüleme kapısı = puantaj sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewTimesheet = useButtonGate({ pages: TIMESHEET_VIEW_PAGES, need: "view", fallback: permission.canView });
+  const canViewTimesheet = useButtonGate({ pages: TIMESHEET_VIEW_PAGES, need: "view" });
 
   const week = parseIsoWeek(searchParams.get("iso_year"), searchParams.get("iso_week"));
   const siteOptions = useSiteOptions();

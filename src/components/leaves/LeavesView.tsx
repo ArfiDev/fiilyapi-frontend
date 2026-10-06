@@ -13,7 +13,6 @@ import {
   type LeaveRequestResponse,
 } from "@/lib/api/hooks/useLeaves";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { LEAVE_APPROVE, PERSONNEL_EDIT, PERSONNEL_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -70,11 +69,10 @@ export interface LeavesViewProps {
  * sunumsaldır (prop alır), kap bileşen budur.
  */
 export function LeavesView({ currentYear = new Date().getFullYear() }: LeavesViewProps = {}) {
-  const permission = useModulePermission("personnel");
-  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view", fallback: permission.canView });
+  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view" });
   // IZN-F2.x · bugün KAPISIZ düğmeler (fallback true): talep = ik.* Düzenler; Onayla/Reddet = ik.izin_yonetimi Onaylar.
-  const canRequestLeave = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit", fallback: true });
-  const canDecideLeave = useButtonGate({ pages: LEAVE_APPROVE, need: "approve", fallback: true });
+  const canRequestLeave = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit" });
+  const canDecideLeave = useButtonGate({ pages: LEAVE_APPROVE, need: "approve" });
   const [year, setYear] = useState(currentYear);
   const summaryQuery = useHrLeavesSummary(year);
   /**

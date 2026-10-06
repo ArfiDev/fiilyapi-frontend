@@ -19,7 +19,6 @@ import {
   type SubcontractorProgressPaymentDetail,
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { BackendError } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SUBCONTRACTOR_PAYMENT_EDIT, SUBCONTRACTOR_PAYMENT_APPROVE } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -52,9 +51,9 @@ export function SubcontractorProgressPaymentStatusActions({
   const projectId = detail.project_id;
   // IZN-F2.x · Gönder = hakediş sayfaları Düzenler; Onayla/Reddet/Ödendi = hakediş Onaylar; Onayı Geri Al = yalnız SA.
   // Grant yoksa bugünkü seviye eşikleri (`permittedPaymentActions` varsayılanı).
-  const canSubmit = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_EDIT, need: "edit", fallback: hasAtLeast(level, "draft"), projectId });
-  const canApprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "approve", fallback: hasAtLeast(level, "approve"), projectId });
-  const canUnapprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "sa", fallback: hasAtLeast(level, "admin"), projectId });
+  const canSubmit = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_EDIT, need: "edit", projectId });
+  const canApprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "approve", projectId });
+  const canUnapprove = useButtonGate({ pages: SUBCONTRACTOR_PAYMENT_APPROVE, need: "sa", projectId });
   const queryClient = useQueryClient();
 
   const submit = useSubmitSubcontractorProgressPayment();

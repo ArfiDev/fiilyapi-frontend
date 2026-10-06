@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { ACCOUNTING_PERMISSION_MODULE } from "@/components/accounting/accounting-labels";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button, Select } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { CashFlowStatementResponse } from "@/lib/api/hooks/useCashFlowStatement";
 import { useCashFlowStatement } from "@/lib/api/hooks/useCashFlowStatement";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -57,8 +55,7 @@ import "./financial-statements.css";
  * `Suspense` sarmalayıcısı GEREKMEZ (`muhasebe/page.tsx` kanonu).
  */
 export function CashFlowStatementView() {
-  const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
-  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view" });
 
   // 🔴 K10 — VARSAYILAN DÖNEM İSTEMCİNİN KARARIDIR: sunucu "bugün"ü hiç
   // okumaz. Yerel takvimden türer (`toISOString()` UTC'ye çevirir ve TR

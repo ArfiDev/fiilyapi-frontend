@@ -39,7 +39,7 @@ export function CompanyScreen() {
   const query = useCompany();
   const update = useUpdateCompany();
   // IZN-F2.x · şirket bilgisi kaydet = ayarlar.sirket_bilgileri Düzenler (bugün KAPISIZ → grant yoksa serbest).
-  const canSaveCompany = useButtonGate({ pages: COMPANY_EDIT, need: "edit", fallback: true });
+  const canSaveCompany = useButtonGate({ pages: COMPANY_EDIT, need: "edit" });
   const [form, setForm] = useState<CompanyUpdate>({});
   const [err, setErr] = useState<string | null>(null);
   // SEKME-F1.3b · dirty (tercih 2), taban `form`u dolduran AYNI efektte

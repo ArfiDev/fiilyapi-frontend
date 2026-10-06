@@ -7,7 +7,6 @@ import { Button } from "@/components/ui";
 import { BooksIcon } from "@/components/ui/icons";
 import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { DISCIPLINES_EDIT, UNIT_RATE_CATALOG_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -24,8 +23,6 @@ import "./catalog.css";
 import "./catalog-modals.css";
 
 /** B1-8: katalog + disiplin YAZMA = full; disiplin SİLME = admin (B1-9). */
-const WRITE_LEVEL = "full";
-const DELETE_LEVEL = "admin";
 /** KAT:437 — başarı bildiriminin ekranda kalma süresi. */
 const TOAST_MS = 2800;
 /** KAT:384-388 — dört satırlık tablo iskeleti. */
@@ -44,9 +41,9 @@ export function UnitRateCatalogScreen() {
   // IZN-F5b · iş tipi ekle/düzenle (POST/PATCH /earned-value/catalog) = planlama.birim_oran_katalogu Düzenler.
   // "Disiplinleri yönet" modalı AYRI uca (/earned-value/disciplines) yazar: ekle/düzenle = planlama.disiplin_yonetimi
   // Düzenler; SİLME = yalnız sistem yöneticisi.
-  const canWrite = useButtonGate({ pages: UNIT_RATE_CATALOG_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
-  const canWriteDisciplines = useButtonGate({ pages: DISCIPLINES_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
-  const canDelete = useButtonGate({ pages: DISCIPLINES_EDIT, need: "sa", fallback: hasAtLeast(level, DELETE_LEVEL) });
+  const canWrite = useButtonGate({ pages: UNIT_RATE_CATALOG_EDIT, need: "edit" });
+  const canWriteDisciplines = useButtonGate({ pages: DISCIPLINES_EDIT, need: "edit" });
+  const canDelete = useButtonGate({ pages: DISCIPLINES_EDIT, need: "sa" });
 
   const catalog = useEvCatalog();
   const disciplines = useEvDisciplines();

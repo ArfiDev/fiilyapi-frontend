@@ -11,7 +11,6 @@ import { useProjectUnits } from "@/lib/api/hooks/useProjectUnits";
 import { useSales } from "@/lib/api/hooks/useSales";
 import { useSalesSummary } from "@/lib/api/hooks/useSalesSummary";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SALES_BLOCK_EDIT, SALES_EDIT, SALES_UNIT_EDIT, SALES_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { BLOCK_FORM_HREF, UNIT_FORM_HREF } from "@/components/unit-shell/routes";
@@ -53,19 +52,17 @@ export function SalesView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission("sales");
   // 🔴 AYRI KAPI: blok/ünite uçlarının izin modülü `projects`tir (`sales`
   // DEĞİL) — `useProjectUnits.ts`in ölçtüğü ayrım, iki formun kendisi de aynı
   // kapıyı kullanıyor (`BlockCreateView`/`UnitCreateView`). Yalnız `sales`
   // yetkisi olan kullanıcı bu iki girişi GÖRMEZ; gördüğü an form 403 verirdi.
-  const unitPermission = useModulePermission("projects");
   // IZN-F5b · satış kaydı = mali.satis Düzenler; "Blok Ekle" = mali.satis_blok, "Ünite Ekle" = mali.satis_unite
   // Düzenler (her düğme KENDİ formunun yazma ucunun sayfasına bağlı).
-  const canCreateSale = useButtonGate({ pages: SALES_EDIT, need: "edit", fallback: permission.canWrite });
-  const canCreateBlock = useButtonGate({ pages: SALES_BLOCK_EDIT, need: "edit", fallback: unitPermission.canWrite });
-  const canCreateUnit = useButtonGate({ pages: SALES_UNIT_EDIT, need: "edit", fallback: unitPermission.canWrite });
+  const canCreateSale = useButtonGate({ pages: SALES_EDIT, need: "edit" });
+  const canCreateBlock = useButtonGate({ pages: SALES_BLOCK_EDIT, need: "edit" });
+  const canCreateUnit = useButtonGate({ pages: SALES_UNIT_EDIT, need: "edit" });
   // IZN-F5-ön · görüntüleme kapısı = mali.satis Görür; grant yoksa `sales` modül izni.
-  const canViewSales = useButtonGate({ pages: SALES_VIEW_PAGES, need: "view", fallback: permission.canView });
+  const canViewSales = useButtonGate({ pages: SALES_VIEW_PAGES, need: "view" });
 
   const projectsQuery = useProjects();
   const projects = projectsQuery.data?.items ?? [];

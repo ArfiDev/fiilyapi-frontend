@@ -7,7 +7,6 @@ import { useEvCodeTree, useEvDay } from "@/lib/api/hooks/useEvDay";
 import { useEvSettings } from "@/lib/api/hooks/useEvSettings";
 import type { EvSettingsRead } from "@/lib/api/models";
 import { BackendError } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EV_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { DEFAULT_PF_BANDS, type PfBandSettings } from "@/lib/earned-value";
@@ -31,8 +30,7 @@ const FORBIDDEN_STATUS = 403;
  *   - aksi hâlde kolonlar + KPI'lar + "Gün n · Hn" + Saat Dağıtımı özeti.
  */
 export function useDiaryDetailExtension(ctx: DiaryDetailContext | null): DiaryDetailExtension | undefined {
-  const evPermission = useModulePermission("earned_value");
-  const canViewEv = useButtonGate({ pages: EV_VIEW, need: "view", fallback: evPermission.canView });
+  const canViewEv = useButtonGate({ pages: EV_VIEW, need: "view" });
   const siteId = canViewEv ? (ctx?.siteId ?? "") : "";
   const day = ctx?.day ?? "";
   const dayQuery = useEvDay(siteId, day);

@@ -6,9 +6,7 @@ import { useCatalogDisciplines, useCatalogItems } from "@/lib/api/hooks/useCatal
 import { useConvertOffer } from "@/lib/api/hooks/useOfferMutations";
 import { useOffer, useOfferRevision, type OfferDetailRead } from "@/lib/api/hooks/useOffers";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { OFFER_CONVERT_APPROVE } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routeKeyOf, routes } from "@/lib/routes";
@@ -18,8 +16,6 @@ import { ConvertStateCard } from "./ConvertStateCard";
 import "./offer-convert.css";
 
 /** SO-42: dönüştürme `projects:admin` + `contracts:full` + disiplin kısıtsız ister (seviye BİLİNMİYORSA açık — sunucu 403'ü korur). */
-const PROJECTS_LEVEL = "admin";
-const CONTRACTS_LEVEL = "full";
 const NOT_FOUND_STATUS = 404;
 /** Backend `convert_service.NOT_WON` — AYNEN. */
 const NOT_WON_TEXT = "Yalnız son revizyonu kazanılmış (won) olan teklif projeye dönüştürülebilir";
@@ -30,14 +26,11 @@ interface ConvertScreenProps {
 
 /** TKL-F5.3 · `/teklif-hazirlama/{id}/donustur` — Teklif → Proje "Dönüştür" (kapsayıcı). ÇEKİRDEK ekran. */
 export function ConvertScreen({ offerId }: ConvertScreenProps) {
-  const contracts = useModulePermission("contracts");
-  const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
   // IZN-F2.x · Dönüştür = teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (grant yoksa bugünkü `projects ≥ admin` ∧ `contracts ≥ full`).
   const canConvert = useButtonGate({
     pages: OFFER_CONVERT_APPROVE,
     need: "approve",
-    fallback: hasAtLeast(projects.level, PROJECTS_LEVEL) && hasAtLeast(contracts.level, CONTRACTS_LEVEL),
   });
   const isAllowed = canConvert && !scope.isRestricted;
   if (!isAllowed) return <AccessDenied />;

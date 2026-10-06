@@ -59,8 +59,8 @@ export function DraftEntriesPanel({
   onReverse,
 }: DraftEntriesPanelProps) {
   // IZN-F2.x · Kayıtlaştır = mali.yevmiye Onaylar; Sil = yalnız SA (`canWrite` Düzenle/Storno için E kararıdır).
-  const canPostEntry = useButtonGate({ pages: JOURNAL_APPROVE, need: "approve", fallback: canWrite });
-  const canDeleteEntry = useButtonGate({ pages: JOURNAL_EDIT, need: "sa", fallback: canWrite });
+  const canPostEntry = useButtonGate({ pages: JOURNAL_APPROVE, need: "approve" });
+  const canDeleteEntry = useButtonGate({ pages: JOURNAL_EDIT, need: "sa" });
   const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   return (
     <section className="mu-panel" aria-label="Dönem Fişleri">

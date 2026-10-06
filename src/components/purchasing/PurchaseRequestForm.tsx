@@ -24,7 +24,6 @@ import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
 import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PURCHASE_REQUEST_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -66,7 +65,7 @@ import {
   validatePurchaseRequestForm,
   type PurchaseRequestFormErrors,
 } from "./purchase-request-validate";
-import { PURCHASING_LIST_MAX_LIMIT, PURCHASING_PERMISSION_MODULE } from "./purchasing-labels";
+import { PURCHASING_LIST_MAX_LIMIT } from "./purchasing-labels";
 // Sıra önemli: önce paylaşılan kabuk, sonra forma özgü bloklar.
 import "@/styles/form-shell.css";
 import "./purchase-request-form.css";
@@ -100,9 +99,8 @@ const PURCHASING_LIST_HREF = routes.purchasing.root();
  */
 export function PurchaseRequestForm() {
   const router = useRouter();
-  const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
   // IZN-F2.x · talep oluştur/düzenle/Onaya Gönder = stok.satinalma_talepleri Düzenler.
-  const canEdit = useButtonGate({ pages: PURCHASE_REQUEST_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEdit = useButtonGate({ pages: PURCHASE_REQUEST_EDIT, need: "edit" });
 
   const [values, setValues] = useState<PurchaseRequestFormValues>(() =>
     // Tarih `new Date()`ten TEK yerde türetilir (site-diary `isoDate` deseni:

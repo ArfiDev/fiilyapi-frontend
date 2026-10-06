@@ -16,7 +16,6 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_RENTAL_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import {
@@ -45,7 +44,6 @@ import { rentalSiteLabel } from "./rental-derive";
 import "./equipment-rental.css";
 import { routes } from "@/lib/routes";
 
-const EQUIPMENT_PERMISSION_MODULE = "equipment";
 
 /** Dönem seçicinin yıl aralığı — sunucu 2000-2200 kabul eder, ekran son beş yılı basar. */
 const PERIOD_YEAR_SPAN = 5;
@@ -75,10 +73,9 @@ export function EquipmentRentalInvoicesView() {
   const filters = parseRentalFilters(
     new URLSearchParams(searchParams.toString()),
   );
-  const { level, canWrite: moduleCanWrite } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
-  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: level !== "none" });
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view" });
   // IZN-F5b · kira hakedişi oluştur (POST rental-invoices) = saha.makine_kira Düzenler.
-  const canWrite = useButtonGate({ pages: EQUIPMENT_RENTAL_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = useButtonGate({ pages: EQUIPMENT_RENTAL_EDIT, need: "edit" });
 
   // TB3 sayfalama kanonu: `limit` AÇIKÇA gönderilir (sunucu varsayılanı 50).
   const invoicesQuery = useEquipmentRentalInvoices({

@@ -7,7 +7,6 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { usePersonnelDetail } from "@/lib/api/hooks/usePersonnelDetail";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERSONNEL_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -32,9 +31,8 @@ import { routes } from "@/lib/routes";
  */
 export function PersonnelDetailView() {
   const { id } = useParams<{ id: string }>();
-  const { canView: moduleCanView } = useModulePermission("personnel");
   // IZN-F5-ön · görüntüleme kapısı = ik.* sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canView = useButtonGate({ pages: PERSONNEL_VIEW, need: "view", fallback: moduleCanView });
+  const canView = useButtonGate({ pages: PERSONNEL_VIEW, need: "view" });
   const detailQuery = usePersonnelDetail(id);
   // Proje ADI sunucudan personel kaydıyla GELMEZ (yalnız `assigned_project_id`)
   // — başlık kartının alt başlığı için `PersonnelListView` ile AYNI desen.

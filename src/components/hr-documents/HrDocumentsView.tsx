@@ -8,7 +8,6 @@ import { Button } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useHrDocumentsSummary } from "@/lib/api/hooks/useHrDocuments";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERSONNEL_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -42,8 +41,7 @@ import "./hr-documents.css";
  * ayrı bir modül anahtarı yoktur.
  */
 export function HrDocumentsView() {
-  const permission = useModulePermission("personnel");
-  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view", fallback: permission.canView });
+  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view" });
   const summaryQuery = useHrDocumentsSummary();
 
   if (!canViewPersonnel || isForbidden(summaryQuery.error)) return <AccessDenied />;

@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import {
-  ACCOUNTING_PERMISSION_MODULE,
   shiftPeriod,
 } from "@/components/accounting/accounting-labels";
 import { AccessDenied } from "@/components/settings/AccessDenied";
@@ -12,7 +11,6 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import type { IncomeStatementResponse } from "@/lib/api/hooks/useIncomeStatement";
 import { useIncomeStatement } from "@/lib/api/hooks/useIncomeStatement";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
@@ -64,8 +62,7 @@ import "./financial-statements.css";
  * `Suspense` sarmalayıcısı GEREKMEZ (`muhasebe/page.tsx` kanonu).
  */
 export function FinancialStatementsHomeView() {
-  const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
-  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
+  const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view" });
 
   // 🔴 "Bugün" BİR KEZ okunur: her render'da `new Date()` çağırmak, gece
   // yarısını geçen bir oturumda `›` okunu sessizce açar/kapatır ve kareyi

@@ -10,7 +10,6 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { usePurchaseOrders } from "@/lib/api/hooks/usePurchaseOrders";
 import { usePurchasingSummary } from "@/lib/api/hooks/usePurchasingSummary";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatMonthName } from "@/lib/format";
@@ -31,7 +30,6 @@ import {
   PURCHASE_ORDER_STATUS_OPTIONS,
   PURCHASING_EYEBROW,
   PURCHASING_LIST_MAX_LIMIT,
-  PURCHASING_PERMISSION_MODULE,
   STATUS_PARAM,
 } from "./purchasing-labels";
 import "./purchasing.css";
@@ -56,12 +54,10 @@ export function PurchaseOrdersView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
   // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
   const canViewProcurement = useButtonGate({
     pages: PROCUREMENT_VIEW_PAGES,
     need: "view",
-    fallback: permission.canView,
   });
 
   // Teslimat renginin ve başlık altı ay adının TEK referansı. Bileşenler

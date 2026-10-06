@@ -15,7 +15,6 @@ import {
   type ProgressPaymentDetail,
 } from "@/lib/api/hooks/useProgressPayments";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
@@ -46,12 +45,10 @@ export function ProgressPaymentDetailView({ paymentId }: ProgressPaymentDetailVi
   // Özet sorgusu detay yüklenmeden ağa çıkmaz — hook'un `enabled` kapısı bos
   // id'yi zaten engelliyor (brief §Belirsizlik çözümü).
   const summaryQuery = useProgressPaymentSummary(detailQuery.data?.project_id ?? "");
-  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
   const canWrite = useButtonGate({
     pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
     projectId: detailQuery.data?.project_id,
   });
 

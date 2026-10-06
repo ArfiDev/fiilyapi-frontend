@@ -5,7 +5,6 @@ import { Button, Textarea } from "@/components/ui";
 import { SparkleIcon } from "@/components/ui/icons";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { useSession } from "@/components/shell/SessionProvider";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { AI_VIEW, PROJECTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useProjects, PROJECT_LIST_MAX_LIMIT } from "@/lib/api/hooks/useProjects";
@@ -58,7 +57,6 @@ import "./ai-panel.css";
  * (`symbol-subset-guard`); nokta bir CSS dairesidir, bir karakter değil.
  */
 
-const PERMISSION_MODULE = "ai";
 
 /** Mockup 340-346 — composer üstündeki dört öneri çipi. */
 const ONERI_CIPLERI: readonly string[] = [
@@ -186,10 +184,8 @@ export function acilanlariTurets(bloklar: readonly AiBlok[]): AiAcilanKayit[] {
 }
 
 export function AiPanel() {
-  const permission = useModulePermission(PERMISSION_MODULE);
-  const canViewAi = useButtonGate({ pages: AI_VIEW, need: "view", fallback: permission.canView });
-  const projePermission = useModulePermission("projects");
-  const canViewProjects = useButtonGate({ pages: PROJECTS_VIEW, need: "view", fallback: projePermission.canView });
+  const canViewAi = useButtonGate({ pages: AI_VIEW, need: "view" });
+  const canViewProjects = useButtonGate({ pages: PROJECTS_VIEW, need: "view" });
   const { me } = useSession();
   const [girdi, setGirdi] = useState("");
   const [turlar, setTurlar] = useState<Tur[]>([]);

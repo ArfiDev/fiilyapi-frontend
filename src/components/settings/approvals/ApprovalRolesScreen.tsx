@@ -16,8 +16,6 @@ import {
 import { checkApprovalThreshold } from "@/lib/api/approval-threshold";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { APPROVAL_ROLES_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
@@ -47,7 +45,6 @@ const CHAIN_ABOVE: readonly ApprovalRole[] = [...CHAIN_BELOW, "patron"];
 export function ApprovalRolesScreen() {
   const settingsQuery = useApprovalSettings();
 
-  const { level } = useModulePermission("approvals");
   // 🔴 Kapı `hasAtLeast(…, "admin")` ile kurulur, `canWrite` ile DEĞİL: eşiği
   // `approvals: admin` yazar, `full` seviyeli kullanıcı 403 alır. Bilinmezlik
   // kuralı (seviye yoksa `true`) kasıtlı korunur — yükü gelmemiş oturumda
@@ -56,7 +53,6 @@ export function ApprovalRolesScreen() {
   const canEditThreshold = useButtonGate({
     pages: APPROVAL_ROLES_EDIT,
     need: "edit",
-    fallback: hasAtLeast(level, "admin"),
   });
 
   const [thresholdDraft, setThresholdDraft] = useState<string | null>(null);

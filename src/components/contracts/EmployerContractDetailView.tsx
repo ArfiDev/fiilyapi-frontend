@@ -67,7 +67,7 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
   // IZN-F2.y · poz ekle/düzenle (POST/PATCH /projects/{id}/contract/items…) = sözleşme sayfaları
   // Düzenler (VEYA, backend `contracts:full`). Bugün kapı yok → sayfa izni hiç yoksa (fallback) açık.
   // Görüntüleme DEĞİŞMEZ.
-  const canWrite = useButtonGate({ pages: EMPLOYER_CONTRACT_EDIT, need: "edit", fallback: true });
+  const canWrite = useButtonGate({ pages: EMPLOYER_CONTRACT_EDIT, need: "edit" });
 
   const contractQuery = useEmployerContract(projectId);
   const projectQuery = useProject(projectId);

@@ -13,8 +13,6 @@ import {
   type SectionDistributionItem,
 } from "@/lib/api/hooks/useSectionDistribution";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { BOQ_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { distributeRemaining } from "@/lib/distribute-remaining";
@@ -73,12 +71,10 @@ export function SectionDistributionView({
   isSiteError = false,
   projectKey,
 }: SectionDistributionViewProps) {
-  const permission = useModulePermission("boq");
   // IZN-F2.x · bölüm dağılımı kaydet = santiye.is_kalemleri/bolum_dagilimi Düzenler (VEYA).
   const hasFullPermission = useButtonGate({
     pages: BOQ_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permission.level, "full"),
     projectId: projectKey,
   });
   const distributionQuery = useSectionDistribution(siteId);

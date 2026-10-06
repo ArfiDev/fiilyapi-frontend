@@ -19,8 +19,6 @@ import {
   useUpsertPayrollRate,
 } from "@/lib/api/hooks/usePayrollRates";
 import { usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { TAX_BRACKETS_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
@@ -86,7 +84,6 @@ export function PayrollRatesScreen() {
   const bracketsQuery = usePayrollTaxBrackets();
   const periodsQuery = usePayrollPeriods();
 
-  const { level } = useModulePermission("payroll");
   // 🔴 İKİ AYRI KAPI — ölçüldü, varsayılmadı: oran `full`, tarife `admin`.
   // Bilinmezlik kuralı (seviye yoksa `true`) korunur.
   // IZN-F5a · KOD kazanır: `PUT /payroll/rates/{year}/{source}` ve vergi dilimi = ayarlar.bordro_oranlari Düzenler
@@ -94,12 +91,10 @@ export function PayrollRatesScreen() {
   const canEditRates = useButtonGate({
     pages: TAX_BRACKETS_EDIT,
     need: "edit",
-    fallback: hasAtLeast(level, "full"),
   });
   const canEditBrackets = useButtonGate({
     pages: TAX_BRACKETS_EDIT,
     need: "edit",
-    fallback: hasAtLeast(level, "admin"),
   });
 
   const [yearOverride, setYearOverride] = useState<number | null>(null);

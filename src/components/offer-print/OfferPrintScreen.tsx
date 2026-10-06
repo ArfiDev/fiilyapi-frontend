@@ -10,7 +10,6 @@ import { useCompany } from "@/lib/api/hooks/useCompany";
 import { useOffer, useOfferRevision, type OfferDetailRead } from "@/lib/api/hooks/useOffers";
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
@@ -49,8 +48,7 @@ interface OfferPrintScreenProps {
  * (T13: PDF = yazdırma sayfasından türetilir; ÜS-F3-27 ayrı sayfa). ÇEKİRDEK ekran: kapı `contracts:view`.
  */
 export function OfferPrintScreen(props: OfferPrintScreenProps) {
-  const { level } = useModulePermission("contracts");
-  const canViewContracts = useButtonGate({ pages: CONTRACTS_VIEW, need: "view", fallback: level !== "none" });
+  const canViewContracts = useButtonGate({ pages: CONTRACTS_VIEW, need: "view" });
   if (!canViewContracts) return <AccessDenied />;
   return <OfferPrintContent {...props} />;
 }

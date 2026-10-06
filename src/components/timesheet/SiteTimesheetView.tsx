@@ -7,8 +7,6 @@ import { SiteDetailTabs } from "@/components/site-detail/SiteDetailTabs";
 import { Select } from "@/components/ui/select/Select";
 import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { useSite } from "@/lib/api/hooks/useSites";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERSONNEL_EDIT, TIMESHEET_EDIT, TIMESHEET_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
@@ -70,18 +68,15 @@ export function SiteTimesheetView() {
     siteId: string;
   }>();
 
-  const permission = useModulePermission("timesheet");
-  const personnelPermission = useModulePermission("personnel");
   const canAddPersonnel = useButtonGate({
     pages: PERSONNEL_EDIT,
     need: "edit",
-    fallback: hasAtLeast(personnelPermission.level, "full"),
     projectId: projectKey,
   });
   // IZN-F2.x · puantaj kaydet = saha/santiye.puantaj Düzenler; personel ekle = ik.* Düzenler.
-  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
+  const canEditTimesheet = useButtonGate({ pages: TIMESHEET_EDIT, need: "edit", projectId: projectKey });
   // IZN-F5-ön · görüntüleme kapısı = puantaj sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewTimesheet = useButtonGate({ pages: TIMESHEET_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
+  const canViewTimesheet = useButtonGate({ pages: TIMESHEET_VIEW_PAGES, need: "view", projectId: projectKey });
 
   const week = parseIsoWeek(searchParams.get("iso_year"), searchParams.get("iso_week"));
   const sectionParam = searchParams.get("section") ?? ALL_SECTIONS;

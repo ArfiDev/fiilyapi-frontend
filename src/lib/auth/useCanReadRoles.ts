@@ -9,7 +9,7 @@ import { useButtonGate } from "./usePagePermission";
  * model devredeyken anahtarlarda hücre yoksa istek ATILMAZ — IZN-F5c'den beri bu kural `decideGate` çekirdeğinde.
  */
 export function useCanReadRoles(): boolean {
-  const canViewRoles = useButtonGate({ pages: ROLES_VIEW_PAGES, need: "view", fallback: true });
-  const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: true });
+  const canViewRoles = useButtonGate({ pages: ROLES_VIEW_PAGES, need: "view" });
+  const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit" });
   return canViewRoles || canEditUsers;
 }

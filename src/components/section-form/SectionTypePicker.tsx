@@ -38,7 +38,7 @@ export function SectionTypePicker({ value, onChange, error }: SectionTypePickerP
   const types = useSectionTypes();
   const createType = useCreateSectionType();
   // IZN-F5c · POST /section-types = santiye.bolumler VEYA bolum.detay Düzenler. Form zaten kapılı; grant yoksa bugünkü (görünür) davranış.
-  const canCreateType = useButtonGate({ pages: SECTION_TYPE_CREATE_EDIT, need: "edit", fallback: true });
+  const canCreateType = useButtonGate({ pages: SECTION_TYPE_CREATE_EDIT, need: "edit" });
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState("");
   const [addError, setAddError] = useState<string | null>(null);

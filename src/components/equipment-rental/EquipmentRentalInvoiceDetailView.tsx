@@ -10,8 +10,6 @@ import { EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_RENTAL_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useEquipmentRentalInvoice } from "@/lib/api/hooks/useEquipmentRentalInvoices";
@@ -27,7 +25,7 @@ import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { RentalLinesTable } from "./RentalLinesTable";
 import { RentalSiteDistributionCard } from "./RentalSiteDistributionCard";
 import { RentalStatusActions } from "./RentalStatusActions";
-import { isRentalEditable, RENTAL_WRITE_LEVEL } from "./rental-actions";
+import { isRentalEditable } from "./rental-actions";
 import type { RentalEditableField } from "./rental-derive";
 import {
   RATE_PERIOD_LABEL,
@@ -38,7 +36,6 @@ import {
 import "./equipment-rental.css";
 import { routes } from "@/lib/routes";
 
-const EQUIPMENT_PERMISSION_MODULE = "equipment";
 const SUPPLIER_OPTIONS_LIMIT = 200;
 const PERIOD_YEAR_SPAN = 5;
 
@@ -63,12 +60,10 @@ export function EquipmentRentalInvoiceDetailView({
   invoiceId,
 }: EquipmentRentalInvoiceDetailViewProps) {
   const detailQuery = useEquipmentRentalInvoice(invoiceId);
-  const { level: permissionLevel } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
   // IZN-F5b · başlık/satır düzenle (PATCH rental-invoices, rental-invoice-lines) = saha.makine_kira Düzenler.
   const canWrite = useButtonGate({
     pages: EQUIPMENT_RENTAL_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permissionLevel, RENTAL_WRITE_LEVEL),
   });
   const suppliersQuery = useSuppliers({ limit: SUPPLIER_OPTIONS_LIMIT });
   const siteOptions = useSiteOptions();

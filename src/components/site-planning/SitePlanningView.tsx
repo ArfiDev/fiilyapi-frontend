@@ -12,7 +12,6 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { useSitePlan } from "@/lib/api/hooks/useSitePlan";
 import { useSiteSections } from "@/lib/api/hooks/useSiteSections";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SITE_DIARY_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -64,11 +63,10 @@ export function SitePlanningView() {
     siteId: string;
   }>();
 
-  const permission = useModulePermission("site_diary");
   // IZN-F2.x · plan kaydet = santiye.gunluk_planlama/günlük kayıt Düzenler (VEYA).
-  const canWritePlan = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", fallback: permission.canWrite, projectId: projectKey });
+  const canWritePlan = useButtonGate({ pages: SITE_DIARY_EDIT, need: "edit", projectId: projectKey });
   // IZN-F5-ön · görüntüleme kapısı = günlük kayıt sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
+  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", projectId: projectKey });
   const weekStart = resolveWeekStart(searchParams.get("week"));
   // 🔴 URL-3 — bu ekranin cozumleme kaynagi YOKTU (tek `useSite` cagirmayan
   // santiye ekraniydi). Slug'li adreste `useSitePlan`/`useSiteSections`/dort

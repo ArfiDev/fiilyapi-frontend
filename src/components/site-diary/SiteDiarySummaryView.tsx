@@ -11,7 +11,6 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { useSiteDiarySummary } from "@/lib/api/hooks/useSiteDiary";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EMPLOYER_PAYMENT_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatPeriod } from "@/lib/format";
@@ -51,17 +50,14 @@ export function SiteDiarySummaryView() {
     siteId: string;
   }>();
 
-  const permission = useModulePermission("site_diary");
-  const paymentsPermission = useModulePermission("progress_payments");
   // IZN-F2.x · Hakediş Oluştur = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
   const canCreatePayment = useButtonGate({
     pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
-    fallback: paymentsPermission.canWrite,
     projectId: projectKey,
   });
   // IZN-F5-ön · görüntüleme kapısı = günlük kayıt sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
+  const canViewDiary = useButtonGate({ pages: SITE_DIARY_VIEW_PAGES, need: "view", projectId: projectKey });
   const siteQuery = useSite(siteKey, { project: projectKey });
   // 🔴 SLUG -> KANONIK KIMLIK GECIS NOKTASI (bkz. `routes.ts` YOL/SORGU kurali).
   const siteId = siteQuery.data?.id ?? "";

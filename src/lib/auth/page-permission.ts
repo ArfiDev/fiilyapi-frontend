@@ -74,7 +74,8 @@ export interface PagePermission {
   hasGrant: boolean;
   /**
    * IZN-F5c · sayfa-izni modeli bu oturumda DEVREDE mi (`me.pages` ANA ROL haritası dolu). Devredeyken
-   * kümede hücre yokluğu "yetki yok" demektir (fail-closed); değilken (eski oturum/yükleniyor) fallback.
+   * kümede hücre yokluğu "yetki yok" demektir (fail-closed). IZN-F6a'dan beri kapı kararı için gerekmez (hücre yoksa
+   * her durumda KAPALI); yalnız modül kuralına bağlı kalan F6b çağrı yerleri (ör. teklif Dönüştür) okur.
    */
   isModelActive: boolean;
 }
@@ -100,14 +101,13 @@ export function decidePagePermission(
 }
 
 /**
- * Tek düğme kararı. Sistem yöneticisi her zaman geçer. Grant yoksa (`hasGrant === false`): sayfa modeli
- * devredeyse KAPALI (IZN-F5c, fail-closed — hücresiz rol modül iznine düşüp UI'da açık görünmesin),
- * değilse `fallback` (bugünkü modül-izni kararı; eski oturum/yükleniyor). Aksi halde yeni sayfa-izni kararı.
+ * Tek düğme kararı. Sistem yöneticisi her zaman geçer. Grant yoksa (oturum yükleniyor / me yok / kümede hücre yok)
+ * KAPALI (IZN-F6a — modül-izni fallback'i KALKTI, fail-closed). Aksi halde yeni sayfa-izni kararı.
  * `need: "sa"` yalnız sistem yöneticisini geçirir (grant varken).
  */
-export function decideGate(permission: PagePermission, need: GateNeed, fallback: boolean): boolean {
+export function decideGate(permission: PagePermission, need: GateNeed): boolean {
   if (permission.isSystemAdmin) return true;
-  if (!permission.hasGrant) return permission.isModelActive ? false : fallback;
+  if (!permission.hasGrant) return false;
   switch (need) {
     case "view":
       return permission.canView;

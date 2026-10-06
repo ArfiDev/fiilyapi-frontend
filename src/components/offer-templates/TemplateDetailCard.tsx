@@ -41,7 +41,7 @@ interface TemplateDetailCardProps {
 export function TemplateDetailCard(props: TemplateDetailCardProps) {
   const { detail, usageCount, defaults, canWrite, isBusy } = props;
   // IZN-F2.x · şablon silme = yalnız sistem yöneticisi (SIL-B1; blok zaten canWrite içinde; grant yoksa görünür).
-  const canDeleteTemplate = useButtonGate({ pages: OFFER_TEMPLATES_EDIT, need: "sa", fallback: true });
+  const canDeleteTemplate = useButtonGate({ pages: OFFER_TEMPLATES_EDIT, need: "sa" });
   return (
     <section className="otpl-detail" aria-label="Şablon ayrıntısı">
       <div className="otpl-detail__head">

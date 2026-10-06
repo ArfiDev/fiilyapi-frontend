@@ -11,9 +11,7 @@ import { usePersonnelDetail } from "@/lib/api/hooks/usePersonnelDetail";
 import { useSubcontractors } from "@/lib/api/hooks/useSubcontractors";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { isCategoryHidden } from "@/lib/auth/hidden-fields";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { useSession } from "@/components/shell/SessionProvider";
 import { PERSONNEL_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -115,9 +113,8 @@ export function PersonnelForm(props: PersonnelFormProps) {
   const searchParams = useSearchParams();
   const returnTo = safeReturnTo(searchParams.get(RETURN_PARAM));
 
-  const permission = useModulePermission("personnel");
   // IZN-F2.x · personel ekle/düzenle = ik.* Düzenler (VEYA).
-  const canEdit = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit", fallback: hasAtLeast(permission.level, "full") });
+  const canEdit = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit" });
   const createPersonnel = useCreatePersonnel();
   const updatePersonnel = useUpdatePersonnel(isEdit ? props.personnelId : "");
   const subcontractorsQuery = useSubcontractors();

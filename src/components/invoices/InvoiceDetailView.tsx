@@ -18,7 +18,6 @@ import { useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { INVOICE_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { INVOICE_APPROVE, INVOICING_EDIT, INVOICING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatCurrencyTight, formatDateDots } from "@/lib/format";
@@ -31,7 +30,6 @@ import { RentalMatchCard } from "./RentalMatchCard";
 import {
   DOCUMENT_TYPE_LABELS,
   INVOICE_PAYMENT_METHOD_LABELS,
-  INVOICE_PERMISSION_MODULE,
   INVOICES_URL,
   invoiceStatusLabel,
   invoiceStatusVariant,
@@ -91,12 +89,11 @@ function PartyBlock({
  * faturasında KOŞULLU beşinci kaynak (eşleştirme).
  */
 export function InvoiceDetailView({ invoiceId }: { invoiceId: string }) {
-  const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
   const isAmountHidden = useCategoryHidden(INVOICE_HIDDEN_CATEGORIES);
-  const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view", fallback: permission.canView });
-  const canEditInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
-  const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve", fallback: permission.canWrite });
-  const canDeletePayment = useButtonGate({ pages: INVOICING_EDIT, need: "sa", fallback: permission.canDelete });
+  const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view" });
+  const canEditInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit" });
+  const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve" });
+  const canDeletePayment = useButtonGate({ pages: INVOICING_EDIT, need: "sa" });
   const detailQuery = useInvoiceDetail(invoiceId);
   const companyQuery = useCompany();
   const actionMutation = useInvoiceAction();

@@ -7,7 +7,6 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Button } from "@/components/ui/button/Button";
 import { useContracts } from "@/lib/api/hooks/useContracts";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SUBCONTRACTOR_CONTRACT_CREATE_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -45,9 +44,8 @@ export function ContractsView() {
   // (SubcontractorContractCreateView) vardı. Backend yine de yazmayı
   // reddeder ama liste ekranında görünür/tıklanabilir bir buton yanlış bir
   // yetki izlenimi verirdi.
-  const permission = useModulePermission("contracts");
   // IZN-F2.x · sözleşme/firma ekle = sözleşme sayfaları Düzenler (VEYA).
-  const canEditContracts = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_CREATE_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEditContracts = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_CREATE_EDIT, need: "edit" });
 
   if (isForbidden(contractsQuery.error)) return <AccessDenied />;
 

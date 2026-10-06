@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -54,12 +53,10 @@ export function ProgressPaymentsView() {
   });
   // Yazma yüzeyi kapısı (spec §2.5): "Yeni Hakediş" yalnız `draft` ve üstü
   // seviyede görünür. Yetki zorlaması HER ZAMAN backend'dedir.
-  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
   const canWrite = useButtonGate({
     pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
     projectId: filters.projectId,
   });
 

@@ -7,7 +7,6 @@ import { Alert, Button } from "@/components/ui";
 import { ConfirmDialog } from "@/components/settings/ConfirmDialog";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { BackendError } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { RENTAL_APPROVE } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -23,7 +22,6 @@ import {
 
 import {
   RENTAL_ACTION_LABEL,
-  RENTAL_WRITE_LEVEL,
   permittedRentalActions,
   rentalForwardActionLabel,
 } from "./rental-actions";
@@ -66,7 +64,6 @@ export function RentalStatusActions({ detail }: RentalStatusActionsProps) {
   const canAct = useButtonGate({
     pages: RENTAL_APPROVE,
     need: "approve",
-    fallback: hasAtLeast(level, RENTAL_WRITE_LEVEL),
   });
   const queryClient = useQueryClient();
 

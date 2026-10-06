@@ -11,8 +11,6 @@ import {
   exceedsQuantityDigitLimits,
   QUANTITY_DIGIT_LIMIT_MESSAGE,
 } from "@/lib/contract-distribution-save";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { BOQ_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useBoq, type BoqItem } from "@/lib/api/hooks/useBoq";
@@ -165,12 +163,10 @@ function LiveCard({
   //    ama `PUT /boq/items/{id}/allocations` backend'de `boq` modülünün
   //    `full`+ eşiğini ister (router.py `_FULL` bağımlılığı). `sites:full +
   //    boq:view` kullanıcısı eskiden canAssign=true görüp 403 alıyordu.
-  const boqPermission = useModulePermission("boq");
   // IZN-F2.x · iş kalemi dağılımı/ataması = santiye.is_kalemleri/bolum_dagilimi Düzenler (VEYA).
   const canAssignBoq = useButtonGate({
     pages: BOQ_EDIT,
     need: "edit",
-    fallback: hasAtLeast(boqPermission.level, "full"),
     projectId: projectKey,
   });
 

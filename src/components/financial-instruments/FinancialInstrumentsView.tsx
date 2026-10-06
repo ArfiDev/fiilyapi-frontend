@@ -13,7 +13,6 @@ import {
   useFinancialInstrumentSummary,
 } from "@/lib/api/hooks/useFinancialInstruments";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { TREASURY_EDIT, TREASURY_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -22,7 +21,6 @@ import { InstrumentFormModal } from "./InstrumentFormModal";
 import { InstrumentSummaryCards } from "./InstrumentSummaryCards";
 import { InstrumentsTable } from "./InstrumentsTable";
 import {
-  FINANCIAL_INSTRUMENT_PERMISSION_MODULE,
   INSTRUMENT_TABS,
   instrumentSerialColumnLabel,
   instrumentTabFilter,
@@ -66,10 +64,9 @@ export function FinancialInstrumentsView() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const permission = useModulePermission(FINANCIAL_INSTRUMENT_PERMISSION_MODULE);
-  const canViewTreasury = useButtonGate({ pages: TREASURY_VIEW, need: "view", fallback: permission.canView });
+  const canViewTreasury = useButtonGate({ pages: TREASURY_VIEW, need: "view" });
   // IZN-F2.x · çek ekle = mali.hazine/mali.cek_odeme Düzenler (VEYA).
-  const canAddInstrument = useButtonGate({ pages: TREASURY_EDIT, need: "edit", fallback: permission.canWrite });
+  const canAddInstrument = useButtonGate({ pages: TREASURY_EDIT, need: "edit" });
 
   const tab = instrumentTabFromParam(searchParams.get(TAB_PARAM));
   const [isFormOpen, setFormOpen] = useState(false);

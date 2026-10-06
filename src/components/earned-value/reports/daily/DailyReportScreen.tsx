@@ -14,7 +14,6 @@ import { StatusMark } from "@/components/earned-value/reports/kit/StatusMark";
 import { WeatherStrip } from "@/components/earned-value/reports/kit/WeatherStrip";
 import type { ReportScreenProps } from "@/components/earned-value/reports/kit/report-screen";
 import { Button } from "@/components/ui";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EV_DAILY_APPROVE } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -529,7 +528,7 @@ function LoadedDailyReport({
 }: LoadedProps) {
   const permission = useModulePermission("earned_value");
   // IZN-F2.x · Günü Onayla = planlama.gunluk_rapor/santiye.gunluk_ilerleme_raporu Onaylar (VEYA).
-  const canApproveDay = useButtonGate({ pages: EV_DAILY_APPROVE, need: "approve", fallback: hasAtLeast(permission.level, "approve") });
+  const canApproveDay = useButtonGate({ pages: EV_DAILY_APPROVE, need: "approve" });
   const approve = useApproveDailyReport(siteId);
   const scope = useDisciplineScope();
   const eyebrow = reportEyebrow(companyName, projectName, siteName);

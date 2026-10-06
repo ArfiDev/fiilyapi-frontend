@@ -17,7 +17,6 @@ import {
 } from "@/lib/api/hooks/useSubcontractorProgressPayments";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SUBCONTRACTOR_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
@@ -63,12 +62,10 @@ export function SubcontractorProgressPaymentDetailView({
   // (T3) ile AYNI iki basamaklı okuma (sözleşme → şantiye).
   const contractQuery = useSubcontractorContract(detail?.contract_id ?? "");
   const siteQuery = useSite(contractQuery.data?.site_id ?? "");
-  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = taşeron hakediş ailesi Düzenler (IZN-F5b, HT).
   const canWrite = useButtonGate({
     pages: SUBCONTRACTOR_PAYMENT_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
     projectId: detail?.project_id,
   });
 

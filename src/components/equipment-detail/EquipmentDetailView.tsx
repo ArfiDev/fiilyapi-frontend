@@ -11,8 +11,6 @@ import { AccessDenied } from "@/components/settings/AccessDenied";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useEquipmentDetailScreen } from "@/lib/api/hooks/useEquipmentDetailScreen";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_ASSET_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
@@ -23,7 +21,6 @@ import "./equipment-detail.css";
 import { routes } from "@/lib/routes";
 
 /** İzin matrisi anahtarı — MK-1: 21. izin modülü `equipment` (M1 ile AYNI). */
-const EQUIPMENT_PERMISSION_MODULE = "equipment";
 
 /**
  * F-MKD · `/makine/{id}` — mockup `Makine - Ekipman Detay.dc.html` (kanonik).
@@ -40,13 +37,11 @@ const EQUIPMENT_PERMISSION_MODULE = "equipment";
  * çiğnenmeden, uydurma bir yer tutucu dönemle ağa çıkılmaz.
  */
 export function EquipmentDetailView({ equipmentId }: { equipmentId: string }) {
-  const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
-  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view" });
   // IZN-F5b · ekipman belgesi ekle (POST /equipment/{id}/documents) = saha.makine_ekipman Düzenler.
   const canWrite = useButtonGate({
     pages: EQUIPMENT_ASSET_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permission.level, "full"),
   });
   const detailQuery = useEquipmentDetailScreen(equipmentId);
   // Şantiye ADLARI ayrı bir kaynaktır (`EquipmentResponse` yalnız `site_id`

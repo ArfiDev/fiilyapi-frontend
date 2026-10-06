@@ -51,7 +51,7 @@ export function SubcontractorsView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // IZN-F5b · madde 7 — "+ Taşeron Ekle" = POST /subcontractors (taşeron firmaları ∪ sözleşmeler Düzenler).
   // Sayfa modeli yoksa bugünkü davranış (düğme görünür; sunucu karar verir).
-  const canAddSubcontractor = useButtonGate({ pages: SUBCONTRACTOR_CREATE_EDIT, need: "edit", fallback: true });
+  const canAddSubcontractor = useButtonGate({ pages: SUBCONTRACTOR_CREATE_EDIT, need: "edit" });
 
   const paymentItems = useMemo(
     () => paymentsQuery.data?.items ?? [],

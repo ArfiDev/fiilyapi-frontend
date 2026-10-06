@@ -18,9 +18,7 @@ import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { isLoaded } from "@/lib/api/query-state";
 import { isForbidden } from "@/lib/api/unwrap";
 import { COST_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EQUIPMENT_ASSET_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -40,7 +38,6 @@ import { navGroupHeadingFor } from "@/components/shell/nav-config";
 import { routes } from "@/lib/routes";
 
 /** İzin matrisi anahtarı — MK-1 backend spec: 21. izin modülü `equipment`. */
-const EQUIPMENT_PERMISSION_MODULE = "equipment";
 
 /**
  * M1 · `/makine` — mockup `Makine & Ekipman.dc.html` (kanonik). Yorumlardaki
@@ -57,8 +54,7 @@ const EQUIPMENT_PERMISSION_MODULE = "equipment";
  * Her biri kendi pending durumunu (`undefined` ⇒ "Yükleniyor…") taşır.
  */
 export function EquipmentView() {
-  const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
-  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
+  const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view" });
 
   // Kırpılma korkuluğu (TB3/F-TH dersi): sunucu varsayılanı 50'dir, tavan
   // AÇIKÇA gönderilir.
@@ -74,12 +70,11 @@ export function EquipmentView() {
   const canWrite = useButtonGate({
     pages: EQUIPMENT_ASSET_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permission.level, "full"),
   });
 
   // IZN-F5b · "+ Ekipman Ekle" ve kartlardaki "Düzenle" = POST/PATCH /equipment = saha.makine_ekipman Düzenler.
   // Bugün bu ikisi izin bakmadan basılıyor → sayfa izni hiç yoksa (fallback) görünür kalır.
-  const canEditEquipment = useButtonGate({ pages: EQUIPMENT_ASSET_EDIT, need: "edit", fallback: true });
+  const canEditEquipment = useButtonGate({ pages: EQUIPMENT_ASSET_EDIT, need: "edit" });
   const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);
 
   if (!canViewEquipment || isForbidden(equipmentQuery.error)) return <AccessDenied />;

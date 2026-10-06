@@ -58,7 +58,6 @@ export function OffersScreen() {
   const canViewOffers = useButtonGate({
     pages: CONTRACTS_VIEW,
     need: "view",
-    fallback: level !== "none",
   });
   if (!canViewOffers) return <AccessDenied />;
   return <OffersContent level={level} />;
@@ -70,7 +69,7 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
   // IZN-F2.x · teklif yaz = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; Dönüştür =
   // teklif.teklif_hazirlama Onaylar ∧ disiplin kısıtsız (sayfa modeli yoksa bugünkü `projects ≥ admin` kuralı;
   // model devredeyken hücresiz = kapalı, IZN-F5c).
-  const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit" });
   const canWrite = canEditOffers && !scope.isRestricted;
   const projects = useModulePermission("projects");
   const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);

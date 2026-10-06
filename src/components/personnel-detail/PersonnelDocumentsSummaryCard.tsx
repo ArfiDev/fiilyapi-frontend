@@ -50,7 +50,7 @@ export function PersonnelDocumentsSummaryCard({
   const documents = documentsQuery.data;
   const [isFormOpen, setFormOpen] = useState(false);
   // IZN-F2.x · "+ Ekle" bugün KAPISIZ (fallback true); belge ekle = ik.* Düzenler (VEYA).
-  const canAddDocument = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit", fallback: true });
+  const canAddDocument = useButtonGate({ pages: PERSONNEL_EDIT, need: "edit" });
 
   return (
     <section className="pd-card" data-testid="personnel-documents-card">

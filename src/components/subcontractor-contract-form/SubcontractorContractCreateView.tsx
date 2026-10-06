@@ -11,7 +11,6 @@ import { SubcontractorFormModal } from "@/components/subcontractors/Subcontracto
 import { contractTabHref } from "@/components/contracts/contract-tabs";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import {
   SUBCONTRACTOR_CONTRACT_CREATE_EDIT,
   SUBCONTRACTOR_CONTRACT_EDIT,
@@ -80,7 +79,6 @@ import "./subcontractor-contract-form.css";
  */
 export function SubcontractorContractCreateView() {
   const router = useRouter();
-  const { canWrite: moduleCanWrite, canDelete: moduleCanDelete } = useModulePermission("contracts");
   // IZN-F5b · madde 7 — form girişi = POST subcontractor-contracts (sözleşmeler ∪ taşeron sözleşme sayfaları) VE
   // aynı akıştaki PATCH / load-from-employer / kalem yazmaları (yalnız taşeron sözleşme) → KESİŞİM (CEO kararı:
   // yarım akışta 403 veren form gösterilmez);
@@ -89,16 +87,14 @@ export function SubcontractorContractCreateView() {
   const canCreateContract = useButtonGate({
     pages: SUBCONTRACTOR_CONTRACT_CREATE_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
   });
-  const canEditContract = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canEditContract = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "edit" });
   const canWrite = canCreateContract && canEditContract;
   const canAddSubcontractor = useButtonGate({
     pages: SUBCONTRACTOR_CREATE_EDIT,
     need: "edit",
-    fallback: moduleCanWrite,
   });
-  const canDelete = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "sa", fallback: moduleCanDelete });
+  const canDelete = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "sa" });
 
   const [values, setValues] = useState<SubcontractorContractFormValues>(
     emptySubcontractorContractFormValues,

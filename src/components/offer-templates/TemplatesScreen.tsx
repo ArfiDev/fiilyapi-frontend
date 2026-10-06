@@ -15,7 +15,7 @@ import { useDeleteOfferTemplate } from "@/lib/api/hooks/useOfferTemplateMutation
 import { useOfferTemplates, type OfferTemplateDetail } from "@/lib/api/hooks/useOfferTemplates";
 import { isForbidden } from "@/lib/api/unwrap";
 import type { WorkItemRead } from "@/lib/api/models";
-import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
+import { type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { CONTRACTS_VIEW, OFFER_TEMPLATES_EDIT } from "@/lib/auth/page-gates";
@@ -34,7 +34,6 @@ import "@/components/offers/offers.css";
 import "./offer-templates.css";
 
 /** T25: şablon YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
-const WRITE_LEVEL = "full";
 /** Başarı bildiriminin ekranda kalma süresi (TS:271, F3 emsali). */
 const TOAST_MS = 2800;
 
@@ -53,7 +52,6 @@ export function TemplatesScreen(props: TemplatesScreenProps) {
   const canViewTemplates = useButtonGate({
     pages: CONTRACTS_VIEW,
     need: "view",
-    fallback: level !== "none",
   });
   if (!canViewTemplates) return <AccessDenied />;
   return <TemplatesContent level={level} templateParam={props.templateParam} />;
@@ -66,7 +64,6 @@ function TemplatesContent({ level, templateParam }: { level: AccessLevel | undef
   const canEditTemplates = useButtonGate({
     pages: OFFER_TEMPLATES_EDIT,
     need: "edit",
-    fallback: hasAtLeast(level, WRITE_LEVEL),
   });
   const canWrite = canEditTemplates && !scope.isRestricted;
   const list = useOfferTemplates();

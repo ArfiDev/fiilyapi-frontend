@@ -13,7 +13,6 @@ import {
 } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { listTruncationMessage } from "@/lib/list-truncation";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
@@ -103,9 +102,8 @@ export function SiteProgressPaymentsView() {
   // düzeyinde KULLANILMAZ — özet 403 dönse bile liste görünür kalmalı).
   const summaryQuery = useProgressPaymentSummary(projectId);
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
-  const { canWrite: moduleCanWrite } = useModulePermission("progress_payments");
   // IZN-F2.x · hakediş oluştur/düzenle = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
-  const canWrite = useButtonGate({ pages: EMPLOYER_PAYMENT_EDIT, need: "edit", fallback: moduleCanWrite, projectId: projectKey });
+  const canWrite = useButtonGate({ pages: EMPLOYER_PAYMENT_EDIT, need: "edit", projectId: projectKey });
 
   if (isForbidden(paymentsQuery.error) || isForbidden(siteQuery.error)) return <AccessDenied />;
 

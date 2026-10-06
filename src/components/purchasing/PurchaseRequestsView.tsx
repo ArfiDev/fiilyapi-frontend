@@ -10,7 +10,6 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { usePurchaseRequests } from "@/lib/api/hooks/usePurchaseRequests";
 import { usePurchasingSummary } from "@/lib/api/hooks/usePurchasingSummary";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PURCHASE_REQUEST_EDIT, PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -22,7 +21,6 @@ import { PurchasingTabs, type PurchasingTab } from "./PurchasingTabs";
 import {
   NEW_PURCHASE_REQUEST_HREF,
   parsePurchaseRequestStatus,
-  PURCHASING_PERMISSION_MODULE,
   PROJECT_PARAM,
   PURCHASING_EYEBROW,
   PURCHASING_LIST_MAX_LIMIT,
@@ -52,14 +50,12 @@ export function PurchaseRequestsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
   // IZN-F2.x · talep oluştur = stok.satinalma_talepleri Düzenler.
-  const canCreateRequest = useButtonGate({ pages: PURCHASE_REQUEST_EDIT, need: "edit", fallback: permission.canWrite });
+  const canCreateRequest = useButtonGate({ pages: PURCHASE_REQUEST_EDIT, need: "edit" });
   // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
   const canViewProcurement = useButtonGate({
     pages: PROCUREMENT_VIEW_PAGES,
     need: "view",
-    fallback: permission.canView,
   });
 
   const status = parsePurchaseRequestStatus(searchParams.get(STATUS_PARAM));

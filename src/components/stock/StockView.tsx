@@ -9,8 +9,6 @@ import { STOCK_LIST_MAX_LIMIT } from "@/lib/api/hooks/useStockItems";
 import { useStockSummary } from "@/lib/api/hooks/useStockSummary";
 import { stockErrorMessage } from "@/lib/api/stock-error";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { INVENTORY_EDIT, INVENTORY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -52,15 +50,13 @@ export function StockView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission("inventory");
   // IZN-F2.x · kalem/depo/hareket yaz = stok.stok_depo/santiye.stok Düzenler (VEYA).
   const canWrite = useButtonGate({
     pages: INVENTORY_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permission.level, "full"),
   });
   // IZN-F5-ön · görüntüleme kapısı = stok sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewStock = useButtonGate({ pages: INVENTORY_VIEW_PAGES, need: "view", fallback: permission.canView });
+  const canViewStock = useButtonGate({ pages: INVENTORY_VIEW_PAGES, need: "view" });
 
   const status = parseStockStatus(searchParams.get(STATUS_PARAM));
   const category = parseStockCategory(searchParams.get(CATEGORY_PARAM));

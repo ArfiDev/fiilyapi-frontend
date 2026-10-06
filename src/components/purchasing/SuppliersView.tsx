@@ -7,7 +7,6 @@ import { Button } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PROCUREMENT_EDIT, PROCUREMENT_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -21,7 +20,6 @@ import { SupplierModal } from "./SupplierModal";
 import {
   PURCHASING_EYEBROW,
   PURCHASING_LIST_MAX_LIMIT,
-  PURCHASING_PERMISSION_MODULE,
 } from "./purchasing-labels";
 import "./purchasing.css";
 
@@ -35,14 +33,12 @@ import "./purchasing.css";
  * (`PurchasingTabs`), sidebar'a alt öğe EKLENMEZ (kabuk canon'u değişmez).
  */
 export function SuppliersView() {
-  const permission = useModulePermission(PURCHASING_PERMISSION_MODULE);
   // IZN-F2.x · tedarikçi ekle/düzenle = stok.tedarikciler Düzenler (VEYA siparişler/teklif karşılaştırma).
-  const canEditSuppliers = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEditSuppliers = useButtonGate({ pages: PROCUREMENT_EDIT, need: "edit" });
   // IZN-F5-ön · görüntüleme kapısı = stok.* satınalma sayfaları Görür (VEYA); grant yoksa modül izni.
   const canViewProcurement = useButtonGate({
     pages: PROCUREMENT_VIEW_PAGES,
     need: "view",
-    fallback: permission.canView,
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const isCostHidden = useCategoryHidden(COST_HIDDEN_CATEGORIES);

@@ -11,7 +11,6 @@ import { useEvSettings } from "@/lib/api/hooks/useEvSettings";
 import { useSite } from "@/lib/api/hooks/useSites";
 import type { EvAllocationSave, EvCodeNode, EvDayView } from "@/lib/api/models";
 import { BackendError } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EV_BUDGET_EDIT, EV_UNLOCK_APPROVE, SITE_DIARY_EDIT, EV_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -51,28 +50,23 @@ export function useDiaryProgressExtension(
   const canViewEv = useButtonGate({
     pages: EV_VIEW,
     need: "view",
-    fallback: evPermission.canView,
     projectId: projectKey,
   });
-  const diaryPermission = useModulePermission("site_diary");
   // IZN-F2.x · saat dağıtımı yazma = bütçe Düzenler; Gün Kilidi Aç = bütçe/günlük rapor Onaylar;
   // günlük yazma = günlük kayıt Düzenler. Grant yoksa bugünkü seviye kararı.
   const canWriteAllocation = useButtonGate({
     pages: EV_BUDGET_EDIT,
     need: "edit",
-    fallback: hasAtLeast(evPermission.level, "draft"),
     projectId: projectKey,
   });
   const canUnlockDay = useButtonGate({
     pages: EV_UNLOCK_APPROVE,
     need: "approve",
-    fallback: hasAtLeast(evPermission.level, "approve"),
     projectId: projectKey,
   });
   const diaryCanWrite = useButtonGate({
     pages: SITE_DIARY_EDIT,
     need: "edit",
-    fallback: diaryPermission.canWrite,
     projectId: projectKey,
   });
   const siteId = canViewEv ? (ctx?.siteId ?? "") : "";

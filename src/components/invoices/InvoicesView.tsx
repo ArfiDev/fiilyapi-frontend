@@ -10,7 +10,6 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { INVOICE_LIST_MAX_LIMIT, useInvoices, useInvoiceSummary } from "@/lib/api/hooks/useInvoices";
 import { useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { INVOICE_APPROVE, INVOICING_EDIT, INVOICING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatMonthName } from "@/lib/format";
@@ -21,7 +20,6 @@ import { InvoiceKpiStrip } from "./InvoiceKpiStrip";
 import { OutgoingInvoicesTable } from "./OutgoingInvoicesTable";
 import {
   INVOICE_CREATE_URL,
-  INVOICE_PERMISSION_MODULE,
   monthRangeOf,
   OUTGOING_STATUS_FILTERS,
   REASONS,
@@ -57,11 +55,10 @@ export function InvoicesView() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const permission = useModulePermission(INVOICE_PERMISSION_MODULE);
-  const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view", fallback: permission.canView });
+  const canViewInvoicing = useButtonGate({ pages: INVOICING_VIEW, need: "view" });
   // IZN-F2.x · Yeni Fatura = mali.fatura Düzenler; gelen faturada Onayla = mali.fatura Onaylar.
-  const canCreateInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit", fallback: permission.canWrite });
-  const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve", fallback: permission.canWrite });
+  const canCreateInvoice = useButtonGate({ pages: INVOICING_EDIT, need: "edit" });
+  const canApproveInvoice = useButtonGate({ pages: INVOICE_APPROVE, need: "approve" });
 
   // 📅 Dönem penceresinin TEK referansı; mount başına bir kez üretilir
   // (`PurchaseOrdersView` deseni) — bileşenler `new Date()` çağırmaz, testler

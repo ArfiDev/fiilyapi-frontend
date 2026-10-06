@@ -35,8 +35,6 @@ export function useProjectPageVisibility(projectId?: string | null): (pageKey: P
 export interface ButtonGateInput {
   pages: PageKey | readonly PageKey[];
   need: GateNeed;
-  /** Grant yokken (eski mock/hücresiz rol/yükleniyor) kullanılacak BUGÜNKÜ karar. */
-  fallback: boolean;
   /**
    * IZN-F3.2 · Proje içi ekranda o projenin kimliği (UUID ya da adres anahtarı). Verilirse ve kişi o
    * projenin ekibindeyse kapı PROJE ROLÜNÜN sayfa izinlerinden okunur; yoksa ana rol.
@@ -45,9 +43,9 @@ export interface ButtonGateInput {
 }
 
 /**
- * Ekran başına izin yardımcısı yazmak yerine TEK yardımcı: sayfa izni varsa onu, yoksa
- * `fallback`'i (bugünkü `useModulePermission` kararı) döndürür; sistem yöneticisi her zaman true.
+ * Ekran başına izin yardımcısı yazmak yerine TEK yardımcı: yalnız sayfa izinlerinden karar verir; sistem yöneticisi
+ * her zaman true. IZN-F6a · modül izni fallback'i KALKTI: hücre yoksa ya da oturum yükleniyorsa KAPALI.
  */
-export function useButtonGate({ pages, need, fallback, projectId }: ButtonGateInput): boolean {
-  return decideGate(usePagePermission(pages, projectId), need, fallback);
+export function useButtonGate({ pages, need, projectId }: ButtonGateInput): boolean {
+  return decideGate(usePagePermission(pages, projectId), need);
 }

@@ -59,7 +59,7 @@ export function UsersScreen() {
   const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
   const usersQuery = useUsers({ limit: PAGE_SIZE, offset, q: debouncedSearch });
   // IZN-F2.x · ekle/düzenle (rol, proje ekibi, disiplin dahil) = ayarlar.kullanicilar Düzenler; grant yoksa görünür.
-  const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: true });
+  const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit" });
 
   const [modal, setModal] = useState<ModalState>(null);
 

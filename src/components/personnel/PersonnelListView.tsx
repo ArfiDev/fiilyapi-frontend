@@ -9,8 +9,6 @@ import { Button } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { downloadPersonnelExport } from "@/lib/api/personnel-export-client";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast } from "@/lib/auth/permissions";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PERSONNEL_EDIT, PERSONNEL_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -68,15 +66,13 @@ export function PersonnelListView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const permission = useModulePermission("personnel");
   // IZN-F2.x · personel ekle = ik.* Düzenler (VEYA).
   const canWrite = useButtonGate({
     pages: PERSONNEL_EDIT,
     need: "edit",
-    fallback: hasAtLeast(permission.level, "full"),
   });
   // IZN-F5-ön · görüntüleme kapısı = ik.* sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view", fallback: permission.canView });
+  const canViewPersonnel = useButtonGate({ pages: PERSONNEL_VIEW, need: "view" });
 
   const query = searchParams.get(QUERY_PARAM) ?? "";
   const projectId = searchParams.get(PROJECT_PARAM) ?? undefined;

@@ -20,7 +20,7 @@ function userCountLabel(role: RoleResponse): string {
 /** Sol rol listesi: kilitli Sistem Yöneticisi kutusu · mevcut roller · ayraç · "Yeni" rozetli 6 rol · "+ Yeni rol". */
 export function RoleList({ roles, selectedId, onSelect, onCreate }: RoleListProps) {
   // IZN-F2.x · + Yeni rol = ayarlar.rol_yonetimi Düzenler (bugün KAPISIZ → grant yoksa görünür).
-  const canCreateRole = useButtonGate({ pages: ROLES_EDIT, need: "edit", fallback: true });
+  const canCreateRole = useButtonGate({ pages: ROLES_EDIT, need: "edit" });
   const locked = roles.filter((role) => role.is_locked);
   const regular = roles.filter((role) => !role.is_locked && !NEW_ROLE_KEYS.has(role.key));
   const added = roles.filter((role) => !role.is_locked && NEW_ROLE_KEYS.has(role.key));

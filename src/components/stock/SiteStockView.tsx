@@ -12,7 +12,6 @@ import { STOCK_LIST_MAX_LIMIT } from "@/lib/api/hooks/useStockItems";
 import { resolutionAwareError } from "@/lib/api/route-key-resolution";
 import { stockErrorMessage } from "@/lib/api/stock-error";
 import { isForbidden } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { INVENTORY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { cx } from "@/lib/cx";
@@ -54,9 +53,8 @@ export function SiteStockView() {
     siteId: string;
   }>();
 
-  const permission = useModulePermission("inventory");
   // IZN-F5-ön · görüntüleme kapısı = stok sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewStock = useButtonGate({ pages: INVENTORY_VIEW_PAGES, need: "view", fallback: permission.canView, projectId: projectKey });
+  const canViewStock = useButtonGate({ pages: INVENTORY_VIEW_PAGES, need: "view", projectId: projectKey });
 
   // Başlık için — drill kabuğu aynı anahtarı zaten çektiğinden ikinci bir ağ
   // isteği oluşmaz (React Query önbelleği; `belgeler`/`puantaj` deseni).

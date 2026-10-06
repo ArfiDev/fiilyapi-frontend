@@ -11,11 +11,10 @@ import { backendErrorMessage } from "@/lib/api/error-message";
 import { downloadPayrollPeriodsExport } from "@/lib/api/payroll-client";
 import { useCompany } from "@/lib/api/hooks/useCompany";
 import type { PayrollPeriodListRow } from "@/lib/api/hooks/usePayroll";
-import { PAYROLL_PERMISSION_MODULE, usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
+import { usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import { isForbidden } from "@/lib/api/unwrap";
 import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatDateDots, formatPeriod } from "@/lib/format";
@@ -81,9 +80,8 @@ import "./payroll-history.css";
  * `Suspense` sarmalayıcısı gerekmez (mali tablolar kanonu).
  */
 export function PayrollHistoryView() {
-  const permission = useModulePermission(PAYROLL_PERMISSION_MODULE);
   // IZN-F5-ön · görüntüleme kapısı = bordro sayfaları Görür (VEYA); grant yoksa modül izni.
-  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view", fallback: permission.canView });
+  const canViewPayroll = useButtonGate({ pages: PAYROLL_VIEW_PAGES, need: "view" });
   const periodsQuery = usePayrollPeriods();
   const companyQuery = useCompany();
 
