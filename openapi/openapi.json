@@ -10727,7 +10727,6 @@
         "description": "📋 Kiralama Bilgileri kartının TEK türevi: MD:82 `Kümülatif Ödenen`.\n\nKartın öteki yedi alanı SAKLANIR ve `EquipmentResponse`ta durur.\n\n🔴 Tutarı hesaplanamayan satır UYDURMA `0` ile toplama GİRMEZ ama SESSİZ de\nKALMAZ (MK-1 `summarize` / MK-2 `our_total_unknown_count` kanonu): atlanır\nve ADETÇE bildirilir. Toplamın kendisi `None` yapılmadı — tek bedelsiz satır\nyüzünden bütün kartı gizlemek kullanıcıyı ekranın tamamından ederdi.",
         "properties": {
           "cumulative_paid": {
-            "title": "Cumulative Paid",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -10736,7 +10735,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Cumulative Paid"
           },
           "cumulative_paid_unknown_count": {
             "title": "Cumulative Paid Unknown Count",
@@ -11228,7 +11228,6 @@
             "type": "integer"
           },
           "monthly_cost": {
-            "title": "Monthly Cost",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -11237,7 +11236,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Monthly Cost"
           },
           "monthly_cost_unknown_count": {
             "title": "Monthly Cost Unknown Count",
@@ -12577,7 +12577,6 @@
         "description": "Kayıt künyesi. `amount` **KOLON DEĞİLDİR** — `Equipment FuelLog.amount`\nözelliğinden (`cost.fuel_amount`) TÜRETİLİR ve `from_attributes` bunu bir\nkolon gibi okur; ikinci bir çarpım burada YAZILMAZ.",
         "properties": {
           "amount": {
-            "title": "Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -12586,7 +12585,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Amount"
           },
           "created_at": {
             "format": "date-time",
@@ -12649,7 +12649,6 @@
             "title": "Site Id"
           },
           "unit_price": {
-            "title": "Unit Price",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -12658,7 +12657,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Unit Price"
           }
         },
         "required": [
@@ -12806,7 +12806,6 @@
             "type": "array"
           },
           "total_amount": {
-            "title": "Total Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -12815,7 +12814,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Amount"
           },
           "total_liters": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -12856,7 +12856,6 @@
             "title": "Actual"
           },
           "amount": {
-            "title": "Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -12865,7 +12864,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Amount"
           },
           "consumption_status": {
             "anyOf": [
@@ -29044,7 +29044,6 @@
             "type": "string"
           },
           "total_amount": {
-            "title": "Total Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -29053,7 +29052,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Amount"
           }
         },
         "required": [
@@ -29195,7 +29195,6 @@
             "type": "string"
           },
           "total_cost": {
-            "title": "Total Cost",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -29204,10 +29203,10 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Cost"
           },
           "unit_price": {
-            "title": "Unit Price",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -29216,7 +29215,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Unit Price"
           },
           "warranty_note": {
             "anyOf": [
@@ -29405,7 +29405,6 @@
             "type": "string"
           },
           "unit_price": {
-            "title": "Unit Price",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -29414,7 +29413,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Unit Price"
           },
           "warranty_note": {
             "anyOf": [
@@ -29998,7 +29998,6 @@
             "type": "string"
           },
           "estimated_total": {
-            "title": "Estimated Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -30007,7 +30006,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Estimated Total"
           },
           "id": {
             "format": "uuid",
@@ -30215,7 +30215,6 @@
             "type": "string"
           },
           "estimated_total": {
-            "title": "Estimated Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -30224,7 +30223,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Estimated Total"
           },
           "id": {
             "format": "uuid",
@@ -30525,7 +30525,6 @@
             "type": "integer"
           },
           "orders_this_month_total": {
-            "title": "Orders This Month Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -30534,7 +30533,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Orders This Month Total"
           },
           "pending_approval_requests": {
             "title": "Pending Approval Requests",
@@ -32268,7 +32268,6 @@
         "description": "M5 tfoot'u — 🔴 K3'ün ÜÇ AYRI toplamı + K1'in KDV zinciri.\n\nÜç toplam tek alana indirgenselerdi çift ödeme güvencesi hesapta kaybolurdu:\n`our_total` YALNIZ `rented` satırlardan gelir, `owned_total` ve\n`excluded_breakdown_amount` hiçbir ödenecek toplamın kaynağı DEĞİLDİR.\n\n`*_unknown_count` bedeli bilinmediği için toplama GİRMEYEN satırların\nadedidir (MK-1 `summarize` kanonu): sessizce atlanan satır kullanıcıya eksik\nbir parayı TAM gösterirdi.",
         "properties": {
           "excluded_breakdown_amount": {
-            "title": "Excluded Breakdown Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -32277,7 +32276,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Excluded Breakdown Amount"
           },
           "excluded_breakdown_unknown_count": {
             "title": "Excluded Breakdown Unknown Count",
@@ -32296,7 +32296,6 @@
             "title": "Invoice Amount"
           },
           "our_total": {
-            "title": "Our Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -32305,14 +32304,14 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Our Total"
           },
           "our_total_unknown_count": {
             "title": "Our Total Unknown Count",
             "type": "integer"
           },
           "owned_total": {
-            "title": "Owned Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -32321,7 +32320,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Owned Total"
           },
           "owned_total_unknown_count": {
             "title": "Owned Total Unknown Count",
@@ -32498,7 +32498,6 @@
         "description": "M5:177-193 proje bazlı maliyet dağılımının BİR kovası.\n\n`site_id`/`site_name` `null` ise kova \"Atanmamış\"tır — uydurma bir proje adı\nBASILMAZ. Kovaya YALNIZ `rented` satırlar girer (`rental._site_distribution`\ngerekçesi): M5'in kartı da yalnız ödenecek toplama giren satırları basar.",
         "properties": {
           "amount": {
-            "title": "Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -32507,7 +32506,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Amount"
           },
           "equipments": {
             "items": {
@@ -34811,7 +34811,6 @@
         "description": "Bölüm malzeme şeridi. **YER TUTUCU YOKTUR** — dördü de gerçek sayıdır.\n\n`lines_without_price`, `total_value`in EKSİKLİĞİNİ dürüstçe bildirir: fiyatsız\nsatır varken tutar \"eksik\" demektir ve ekran bunu söyleyebilmelidir\n(`SiteStockKpis.items_without_price` emsali).",
         "properties": {
           "issued_value": {
-            "title": "Issued Value",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -34820,7 +34819,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Issued Value"
           },
           "item_count": {
             "title": "Item Count",
@@ -34831,7 +34831,6 @@
             "type": "integer"
           },
           "total_value": {
-            "title": "Total Value",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -34840,7 +34839,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Value"
           }
         },
         "required": [
@@ -34956,7 +34956,6 @@
             "type": "string"
           },
           "total_value": {
-            "title": "Total Value",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -34965,7 +34964,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Value"
           },
           "unit": {
             "title": "Unit",
@@ -36975,7 +36975,6 @@
             "type": "array"
           },
           "lines_total": {
-            "title": "Lines Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -36984,7 +36983,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Lines Total"
           },
           "lock_report_date": {
             "anyOf": [
@@ -37284,7 +37284,6 @@
             "type": "string"
           },
           "lines_total": {
-            "title": "Lines Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -37293,7 +37292,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Lines Total"
           },
           "project_id": {
             "format": "uuid",
@@ -37681,7 +37681,6 @@
             "title": "Leaf Cumulative Quantity"
           },
           "line_amount": {
-            "title": "Line Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -37690,7 +37689,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Line Amount"
           },
           "overrun_reason": {
             "anyOf": [
@@ -37761,7 +37761,6 @@
             "type": "string"
           },
           "unit_price": {
-            "title": "Unit Price",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -37770,7 +37769,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Unit Price"
           }
         },
         "required": [
@@ -37830,7 +37830,6 @@
             "type": "array"
           },
           "lines_total": {
-            "title": "Lines Total",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -37839,7 +37838,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Lines Total"
           },
           "lock_report_date": {
             "anyOf": [
@@ -37943,7 +37943,6 @@
             "title": "Leaf Cumulative Quantity"
           },
           "line_amount": {
-            "title": "Line Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -37952,7 +37951,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Line Amount"
           },
           "overrun_reason": {
             "anyOf": [
@@ -38023,7 +38023,6 @@
             "type": "string"
           },
           "unit_price": {
-            "title": "Unit Price",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -38032,7 +38031,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Unit Price"
           }
         },
         "required": [
@@ -38080,7 +38080,6 @@
             "type": "string"
           },
           "total_amount": {
-            "title": "Total Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -38089,7 +38088,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Amount"
           },
           "year": {
             "anyOf": [
@@ -38118,7 +38118,6 @@
         "description": "Hakediş Özeti tablosunun bir SATIRI (mockup `Şantiye - Hakediş Özeti` L127).\n\nSütun eşlemesi mockup'tan okunur, tahmin EDİLMEZ:\nL131 \"İş Kalemi\" → `code`/`description` · L132 \"Sözleşme\" → `boq_quantity` ×\n`unit_price` = `boq_amount` (GK L226 \"Sözleşme: 1.200 m³ · Birim fiyat:\n₺1.850\") · L133 \"Bu Ay\" → `quantity`/`amount` · L134 \"%\" → `completion_ratio`.",
         "properties": {
           "amount": {
-            "title": "Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -38127,10 +38126,10 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Amount"
           },
           "boq_amount": {
-            "title": "Boq Amount",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -38139,7 +38138,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Boq Amount"
           },
           "boq_item_id": {
             "format": "uuid",
@@ -38219,7 +38219,6 @@
             "type": "string"
           },
           "unit_price": {
-            "title": "Unit Price",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -38228,7 +38227,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Unit Price"
           }
         },
         "required": [
@@ -39430,7 +39430,6 @@
             "type": "integer"
           },
           "total_value": {
-            "title": "Total Value",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -39439,7 +39438,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Value"
           }
         },
         "required": [
@@ -40596,7 +40596,6 @@
             "type": "integer"
           },
           "total_value": {
-            "title": "Total Value",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -40605,7 +40604,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Total Value"
           }
         },
         "required": [
@@ -43615,7 +43615,6 @@
             "type": "integer"
           },
           "orders_total_this_year": {
-            "title": "Orders Total This Year",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -43624,7 +43623,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Orders Total This Year"
           },
           "payment_terms": {
             "$ref": "#/components/schemas/PaymentTerms"
@@ -50781,7 +50781,6 @@
             "type": "string"
           },
           "cost": {
-            "title": "Cost",
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -50790,7 +50789,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Cost"
           },
           "hours": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
