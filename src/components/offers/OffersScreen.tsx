@@ -10,9 +10,7 @@ import { useCreateOfferRevision, useDeleteOffer } from "@/lib/api/hooks/useOffer
 import { useOffers, type OfferListResponse } from "@/lib/api/hooks/useOffers";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
-import { hasAtLeast, type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { OFFERS_EDIT, OFFER_CONVERT_APPROVE, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
@@ -21,10 +19,6 @@ import { routes } from "@/lib/routes";
 import { OffersListView, type OffersBodyState } from "./OffersListView";
 import type { OfferConversionFilter, OfferListItem, OfferStatus } from "./offer-types";
 
-/** T25: teklif YAZMA = `contracts:full` + disiplin kısıtsız; okuma `contracts:view`. */
-const WRITE_LEVEL = "full";
-/** TKL-F5.5 · SO-42: dönüştürme `projects:admin` ister. */
-const PROJECTS_ADMIN_LEVEL = "admin";
 const SEARCH_DEBOUNCE_MS = 300;
 /** Backend `limit` tavanı (1..200) — liste kırpılırsa Σ basılmaz. */
 const OFFERS_LIST_LIMIT = 200;
@@ -33,13 +27,14 @@ const TOAST_MS = 2800;
 
 /** F1 ÜS-10 şeridi, teklif için uyarlandı (TKL-F3 §2.3). */
 export function readOnlyMessage(
-  level: AccessLevel | undefined,
+  /** IZN-F6b · sayfa izni: sözleşme/teklif sayfaları Görür. */
+  canView: boolean,
+  /** IZN-F6b · sayfa izni: yazma kararı (Düzenler). */
+  canEdit: boolean,
   isRestricted: boolean,
-  /** IZN-F5-ön · yazma kararı (sayfa izni ya da eski düşüş); verilmezse bugünkü seviye eşiği. */
-  canEdit: boolean = hasAtLeast(level, WRITE_LEVEL),
 ): string {
   if (!canEdit) {
-    return level === "view"
+    return canView
       ? "Görüntüleyici · yalnız okuma"
       : "Salt okunur · teklifleri yalnız Sözleşmeler tam yetkisi değiştirir";
   }
@@ -53,17 +48,16 @@ export function readOnlyMessage(
  * 403 (SO-19 kısıtlı kullanıcı / izin yarışı) da AccessDenied. Para gizleme backend'dedir.
  */
 export function OffersScreen() {
-  const { level } = useModulePermission("contracts");
   // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
   const canViewOffers = useButtonGate({
     pages: CONTRACTS_VIEW,
     need: "view",
   });
   if (!canViewOffers) return <AccessDenied />;
-  return <OffersContent level={level} />;
+  return <OffersContent />;
 }
 
-function OffersContent({ level }: { level: AccessLevel | undefined }) {
+function OffersContent() {
   const router = useRouter();
   const scope = useDisciplineScope();
   // IZN-F2.x · teklif yaz = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; Dönüştür =
@@ -71,12 +65,9 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
   // model devredeyken hücresiz = kapalı, IZN-F5c).
   const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit" });
   const canWrite = canEditOffers && !scope.isRestricted;
-  const projects = useModulePermission("projects");
   const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
-  const canConvert =
-    convertPermission.isSystemAdmin || convertPermission.isModelActive
-      ? convertPermission.canApprove && !scope.isRestricted
-      : canWrite && hasAtLeast(projects.level, PROJECTS_ADMIN_LEVEL);
+  const canConvert = convertPermission.canApprove && !scope.isRestricted;
+  const canViewOffers = usePagePermission(CONTRACTS_VIEW).canView;
 
   const [status, setStatus] = useState<OfferStatus | null>(null);
   const [conversion, setConversion] = useState<OfferConversionFilter | null>(null);
@@ -182,7 +173,7 @@ function OffersContent({ level }: { level: AccessLevel | undefined }) {
         onClear={clearFilters}
         employers={employerOptions}
         canWrite={canWrite}
-        readOnlyText={canWrite ? "" : readOnlyMessage(level, scope.isRestricted, canEditOffers)}
+        readOnlyText={canWrite ? "" : readOnlyMessage(canViewOffers, canEditOffers, scope.isRestricted)}
         now={new Date()}
         busyOfferId={busyOfferId}
         onNewRevision={handleNewRevision}

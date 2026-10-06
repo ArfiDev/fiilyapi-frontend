@@ -183,15 +183,15 @@ describe("reasonKind — backend gerekçe KODU → çip türü (EV-BORC-2 kapand
 });
 
 describe("resolveAllocationAccess — rol (K17) + kilit + tamamlanmış şantiye", () => {
-  it("draft+ düzenler; view (formen) salt okur ve formen bandı görür", () => {
-    expect(resolveAllocationAccess({ evLevel: "draft", diaryCanWrite: true, isLocked: false, isSiteCompleted: false })).toEqual({
+  it("dağıtım yazma kapısı açıksa düzenler; kapalıysa (formen) salt okur ve formen bandı görür", () => {
+    expect(resolveAllocationAccess({ canWriteAllocation: true, canUnlockDay: false, diaryCanWrite: true, isLocked: false, isSiteCompleted: false })).toEqual({
       canEdit: true,
       readOnlyText: null,
       isForeman: false,
       showForemanBand: false,
       canUnlock: false,
     });
-    expect(resolveAllocationAccess({ evLevel: "view", diaryCanWrite: true, isLocked: false, isSiteCompleted: false })).toMatchObject({
+    expect(resolveAllocationAccess({ canWriteAllocation: false, canUnlockDay: false, diaryCanWrite: true, isLocked: false, isSiteCompleted: false })).toMatchObject({
       canEdit: false,
       readOnlyText: "Saat Dağıtımı mühendis tarafından yapılır",
       isForeman: true,
@@ -200,7 +200,7 @@ describe("resolveAllocationAccess — rol (K17) + kilit + tamamlanmış şantiye
   });
 
   it("kilitli gün: yetkili bile düzenleyemez; approve kilidi açabilir", () => {
-    expect(resolveAllocationAccess({ evLevel: "approve", diaryCanWrite: true, isLocked: true, isSiteCompleted: false })).toMatchObject({
+    expect(resolveAllocationAccess({ canWriteAllocation: true, canUnlockDay: true, diaryCanWrite: true, isLocked: true, isSiteCompleted: false })).toMatchObject({
       canEdit: false,
       readOnlyText: "gün kilitli",
       canUnlock: true,
@@ -208,7 +208,7 @@ describe("resolveAllocationAccess — rol (K17) + kilit + tamamlanmış şantiye
   });
 
   it("tamamlanmış şantiye: salt okunur, kilit açılamaz", () => {
-    expect(resolveAllocationAccess({ evLevel: "admin", diaryCanWrite: true, isLocked: false, isSiteCompleted: true })).toMatchObject({
+    expect(resolveAllocationAccess({ canWriteAllocation: true, canUnlockDay: true, diaryCanWrite: true, isLocked: false, isSiteCompleted: true })).toMatchObject({
       canEdit: false,
       readOnlyText: "şantiye tamamlandı",
       canUnlock: false,

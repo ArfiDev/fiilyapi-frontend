@@ -26,7 +26,7 @@ function renderBar(convert: OfferConvertVerdict | undefined) {
   );
 }
 
-const ALLOWED = { status: "won", conversionState: "won_not_converted", canWrite: true, canAdminProjects: true, isLatest: true } as const;
+const ALLOWED = { status: "won", conversionState: "won_not_converted", canConvert: true, isLatest: true } as const;
 
 describe("OfferActionBar · Projeye Dönüştür (TKL-F5.5, ÜS-F5-2)", () => {
   it("etkin → düğme görünümlü BAĞLANTI, Dönüştür ekranına gider", () => {
@@ -37,12 +37,12 @@ describe("OfferActionBar · Projeye Dönüştür (TKL-F5.5, ÜS-F5-2)", () => {
     );
   });
 
-  it("yetkisiz → PASİF düğme + GÖRÜNÜR gerekçe (yalnız title değil); bağlantı YOK", () => {
-    renderBar(offerConvertGate({ ...ALLOWED, canAdminProjects: false }));
+  it("Onaylar yok → PASİF düğme + GÖRÜNÜR gerekçe (yalnız title değil); bağlantı YOK", () => {
+    renderBar(offerConvertGate({ ...ALLOWED, canConvert: false }));
     expect(screen.queryByRole("link", { name: "Projeye Dönüştür →" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Projeye Dönüştür →" })).toBeDisabled();
     expect(
-      screen.getByText("Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)"),
+      screen.getByText("Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir"),
     ).toBeVisible();
   });
 

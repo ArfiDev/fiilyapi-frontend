@@ -39,7 +39,7 @@ function treeQuery(nodes: EvCodeNode[] = codeTree()): UseQueryResult<EvCodeNode[
 const coreSubmit = vi.fn();
 const READY: DiaryCoreActions = { submit: coreSubmit, canSubmit: true, isSaving: false };
 
-const ENGINEER: AccessInput = { evLevel: "draft", diaryCanWrite: true, isLocked: false, isSiteCompleted: false };
+const ENGINEER: AccessInput = { canWriteAllocation: true, canUnlockDay: false, diaryCanWrite: true, isLocked: false, isSiteCompleted: false };
 
 function Harness({ view, access = ENGINEER, actions = READY }: { view: EvDayView; access?: AccessInput; actions?: DiaryCoreActions }) {
   const api = useAllocationDraft(SITE_ID, view);
@@ -206,7 +206,7 @@ describe("araç çubuğu eylemleri", () => {
 
 describe("salt okunur hâller (K17 · kilit · tamamlanmış şantiye)", () => {
   it("kilitli gün: hücreler, araçlar ve gerekçe KAPALI; 'Salt okunur · gün kilitli'", () => {
-    render(<Harness view={dayView({ lock: { locked: true, report_date: "2026-09-25", approved_at: null, approved_by: null, unlock: null } })} access={{ ...ENGINEER, evLevel: "approve", isLocked: true }} />);
+    render(<Harness view={dayView({ lock: { locked: true, report_date: "2026-09-25", approved_at: null, approved_by: null, unlock: null } })} access={{ ...ENGINEER, canUnlockDay: true, isLocked: true }} />);
     expect(screen.getByText("Salt okunur · gün kilitli")).toBeInTheDocument();
     expect(cell("Mehmet Demir", "Kalıp · Kat 6–10")).toBeDisabled();
     expect(screen.getByRole("button", { name: "+ İş kodu ekle" })).toBeDisabled();
@@ -216,7 +216,7 @@ describe("salt okunur hâller (K17 · kilit · tamamlanmış şantiye)", () => {
   });
 
   it("formen (earned_value view): soluk blok, düzenleme yok (bant `topBanner`da, S3)", () => {
-    render(<Harness view={dayView()} access={{ ...ENGINEER, evLevel: "view" }} />);
+    render(<Harness view={dayView()} access={{ ...ENGINEER, canWriteAllocation: false }} />);
     expect(screen.queryByText("Formen görünümü.")).not.toBeInTheDocument();
     expect(screen.getByText("Salt okunur · Saat Dağıtımı mühendis tarafından yapılır")).toBeInTheDocument();
     expect(cell("Mehmet Demir", "Kalıp · Kat 6–10")).toBeDisabled();

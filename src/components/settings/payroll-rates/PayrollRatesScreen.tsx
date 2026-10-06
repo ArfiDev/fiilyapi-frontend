@@ -84,15 +84,9 @@ export function PayrollRatesScreen() {
   const bracketsQuery = usePayrollTaxBrackets();
   const periodsQuery = usePayrollPeriods();
 
-  // 🔴 İKİ AYRI KAPI — ölçüldü, varsayılmadı: oran `full`, tarife `admin`.
-  // Bilinmezlik kuralı (seviye yoksa `true`) korunur.
-  // IZN-F5a · KOD kazanır: `PUT /payroll/rates/{year}/{source}` ve vergi dilimi = ayarlar.bordro_oranlari Düzenler
-  // (mali.bordro / mali.sgk_bildirimi Düzenler bu uca artık 403). Sayfa yoksa eski `payroll:full` eşiği.
-  const canEditRates = useButtonGate({
-    pages: TAX_BRACKETS_EDIT,
-    need: "edit",
-  });
-  const canEditBrackets = useButtonGate({
+  // IZN-F6b · oran VE tarife yazma TEK kapı: ayarlar.bordro_oranlari Düzenler (`PUT /payroll/rates/{year}/{source}` ile
+  // vergi dilimi aynı sayfa kümesi; mali.bordro / mali.sgk_bildirimi Düzenler bu uca 403).
+  const canEdit = useButtonGate({
     pages: TAX_BRACKETS_EDIT,
     need: "edit",
   });
@@ -155,8 +149,7 @@ export function PayrollRatesScreen() {
     Object.keys(bracketDrafts).some((k) => k.startsWith(`${year}:`));
   const isEmptyYear = !yearHasAnyRate && !yearHasAnyBracket && !yearHasDraft;
 
-  const ratesReadOnly = !canEditRates || locked;
-  const bracketsReadOnly = !canEditBrackets || locked;
+  const isReadOnly = !canEdit || locked;
 
   /** Kopyalanacak kaynak: seçili yıldan ÖNCEKİ, verisi olan en yakın yıl. */
   const copySource = yearOptions.find((option) => option < year && dataYears.includes(option));
@@ -297,7 +290,7 @@ export function PayrollRatesScreen() {
             doldurur, kaydetme ise 409/403'e takılır — kaydedilemeyecek bir
             formu dolduran düğme "sessizce çalışmayan düğme"dir. Alttaki iki
             kopyalama düğmesi BAŞKA (kilitsiz) bir yılı hedefler, onlar kalır. */}
-        {copySource !== undefined && !ratesReadOnly && (
+        {copySource !== undefined && !isReadOnly && (
           <Button
             variant="secondary"
             data-testid="bro-copy"
@@ -311,7 +304,7 @@ export function PayrollRatesScreen() {
         <Button variant="secondary" onClick={discard} data-testid="bro-discard">
           Vazgeç
         </Button>
-        {canEditRates && !locked && (
+        {canEdit && !locked && (
           <Button onClick={saveRates} disabled={upsertRate.isPending} data-testid="bro-save-rates">
             Oranları Kaydet
           </Button>
@@ -326,7 +319,7 @@ export function PayrollRatesScreen() {
           {rateLockedReason(year)}
         </p>
       )}
-      {!locked && !canEditRates && (
+      {!locked && !canEdit && (
         <p className="bro-band bro-band--locked" data-testid="bro-no-permission">
           <LockIcon {...inlineSymbolProps} />
           Oranları değiştirmek için Bordro modülünde “tam” yetki gerekir; ekran salt-okunurdur.
@@ -422,7 +415,7 @@ export function PayrollRatesScreen() {
             </span>
             <Toggle
               checked={draft.isActive}
-              disabled={ratesReadOnly}
+              disabled={isReadOnly}
               data-testid="bro-active-toggle"
               label={draft.isActive ? "Aktif" : "Pasif"}
               onChange={(e) =>
@@ -472,7 +465,7 @@ export function PayrollRatesScreen() {
                     employeeField="sgk_employee_pct"
                     employerField="sgk_employer_pct"
                     draft={draft}
-                    readOnly={ratesReadOnly}
+                    readOnly={isReadOnly}
                     onChange={patchDraft}
                   />
                   <PairRow
@@ -481,7 +474,7 @@ export function PayrollRatesScreen() {
                     employeeField="unemployment_employee_pct"
                     employerField="unemployment_employer_pct"
                     draft={draft}
-                    readOnly={ratesReadOnly}
+                    readOnly={isReadOnly}
                     onChange={patchDraft}
                   />
                   {/* 🔴 TEK ORAN — işçi/işveren ÇİFTİ DEĞİLDİR (`short_work_pct`). */}
@@ -490,7 +483,7 @@ export function PayrollRatesScreen() {
                     note="Tek oran — işçi/işveren ayrımı yok"
                     field="short_work_pct"
                     draft={draft}
-                    readOnly={ratesReadOnly}
+                    readOnly={isReadOnly}
                     onChange={patchDraft}
                   />
                   {/* 🔴 Not mockup'takinin TERSİdir; gerekçe `INCOME_TAX_NULL_HINT`te. */}
@@ -501,7 +494,7 @@ export function PayrollRatesScreen() {
                     placeholder="Boş = dilimli tarife"
                     emptyDisplay="Dilimli tarife"
                     draft={draft}
-                    readOnly={ratesReadOnly}
+                    readOnly={isReadOnly}
                     onChange={patchDraft}
                   />
                   <tr>
@@ -510,7 +503,7 @@ export function PayrollRatesScreen() {
                       <RateInput
                         label="Damga vergisi işçi payı"
                         value={draft.stamp_tax_pct}
-                        readOnly={ratesReadOnly}
+                        readOnly={isReadOnly}
                         onChange={(v) => patchDraft("stamp_tax_pct", v)}
                       />
                     </td>
@@ -551,7 +544,7 @@ export function PayrollRatesScreen() {
                 ))}
               </span>
               <span className="bro-card__note">Kümülatif matrah üzerinden</span>
-              {!bracketsReadOnly && (
+              {!isReadOnly && (
                 <span className="bro-card__actions">
                   <Button
                     variant="ghost"
@@ -579,13 +572,6 @@ export function PayrollRatesScreen() {
             <p className="bro-card__warning bro-card__warning--block" data-testid="bro-full-set-warning">
               {BRACKETS_FULL_SET_WARNING}
             </p>
-            {!canEditBrackets && !locked && (
-              <p className="bro-band bro-band--locked" data-testid="bro-bracket-permission">
-                <LockIcon {...inlineSymbolProps} />
-                Gelir vergisi tarifesini değiştirmek için Bordro modülünde “yönetici” yetkisi
-                gerekir — oran yetkisi (“tam”) bunun için YETMEZ.
-              </p>
-            )}
             {bracketError && (
               <p className="settings-note settings-note--error" data-testid="bro-bracket-error">
                 {bracketError}
@@ -643,7 +629,7 @@ export function PayrollRatesScreen() {
                               inputMode="decimal"
                               aria-label={`${index + 1}. dilim üst sınırı`}
                               value={row.upperBound}
-                              readOnly={bracketsReadOnly}
+                              readOnly={isReadOnly}
                               onChange={(e) =>
                                 setBracketDrafts({
                                   ...bracketDrafts,
@@ -662,7 +648,7 @@ export function PayrollRatesScreen() {
                             inputMode="decimal"
                             aria-label={`${index + 1}. dilim oranı`}
                             value={row.ratePct}
-                            readOnly={bracketsReadOnly}
+                            readOnly={isReadOnly}
                             onChange={(e) =>
                               setBracketDrafts({
                                 ...bracketDrafts,
@@ -677,7 +663,7 @@ export function PayrollRatesScreen() {
                           {index === 0 ? "İlk dilim" : isLast ? "Son dilim" : "—"}
                         </td>
                         <td className="bro-td--remove">
-                          {!bracketsReadOnly && (
+                          {!isReadOnly && (
                             <button
                               type="button"
                               className="bro-remove"

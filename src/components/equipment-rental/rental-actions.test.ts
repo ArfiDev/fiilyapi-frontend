@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 
-import type { AccessLevel } from "@/lib/auth/permissions";
 import {
   RENTAL_ACTION_LABEL,
   RENTAL_FORWARD_ACTION_LABEL,
@@ -18,52 +17,29 @@ const ALL_STATUSES: readonly RentalInvoiceStatus[] = [
 ];
 
 /**
- * 🔴 EMSALDEN SAPMA — `progress-payments/shared/status-actions.ts` `approve`/
- * `admin` esiklerini kullanir; KIRADA HEPSI `full`tur
- * (`rental_router.py:54-55`: `_FULL = require_permission(…, AccessLevel.full)`
- * ve tum yazma uclari `dependencies=[_FULL]`). Emsal kopyalansaydi `approve`
- * seviyeli kullanici 403 veren dugmeleri gorurdu.
+ * 🔴 EMSALDEN SAPMA — `progress-payments/shared/status-actions.ts` ayri kapilar
+ * kullanir; KIRADA TEK kapi vardir (`canAct` = saha.makine_kira Onaylar,
+ * `rental_router.py:54-55`: tum yazma uclari `dependencies=[_FULL]`).
  */
 describe("permittedRentalActions · durum tablosunun birebir yansimasi", () => {
   it("draft: yalniz ileri adim (approve); pay/reject YOK", () => {
-    expect(permittedRentalActions("draft", "full")).toEqual(["approve"]);
+    expect(permittedRentalActions("draft", true)).toEqual(["approve"]);
   });
 
   it("pending_verification: yalniz ileri adim (approve); pay/reject YOK", () => {
-    expect(permittedRentalActions("pending_verification", "full")).toEqual(["approve"]);
+    expect(permittedRentalActions("pending_verification", true)).toEqual(["approve"]);
   });
 
   it("approved: reject + pay (approve YOK — odeme kendi ucundadir)", () => {
-    expect(permittedRentalActions("approved", "full")).toEqual(["reject", "pay"]);
+    expect(permittedRentalActions("approved", true)).toEqual(["reject", "pay"]);
   });
 
   it("paid: UC DURUM — hicbir aksiyon yok", () => {
-    expect(permittedRentalActions("paid", "full")).toEqual([]);
+    expect(permittedRentalActions("paid", true)).toEqual([]);
   });
 
-  it.each(ALL_STATUSES)("%s durumunda `view` seviyesi HIC aksiyon vermez", (status) => {
-    expect(permittedRentalActions(status, "view")).toEqual([]);
-  });
-
-  /* 🔴 SAPMA BEKCISI: emsal esik (`approve`) kopyalanirsa bu blok kirmizi olur. */
-  it.each(ALL_STATUSES)("%s durumunda `approve` seviyesi HIC aksiyon vermez (esik `full`)", (status) => {
-    expect(permittedRentalActions(status, "approve")).toEqual([]);
-  });
-
-  it.each(ALL_STATUSES)("%s durumunda `draft` seviyesi HIC aksiyon vermez", (status) => {
-    expect(permittedRentalActions(status, "draft")).toEqual([]);
-  });
-
-  it("`admin` seviyesi `full`un ustundedir — aksiyonlari gorur", () => {
-    expect(permittedRentalActions("approved", "admin")).toEqual(["reject", "pay"]);
-  });
-
-  it("seviye BILINMIYORSA gizleme yapilmaz (permissions.ts bilinmezlik kurali)", () => {
-    expect(permittedRentalActions("draft", undefined)).toEqual(["approve"]);
-  });
-
-  it("`none` seviyesi HIC aksiyon vermez", () => {
-    expect(permittedRentalActions("draft", "none" satisfies AccessLevel)).toEqual([]);
+  it.each(ALL_STATUSES)("%s durumunda kapi KAPALI iken HIC aksiyon yok", (status) => {
+    expect(permittedRentalActions(status, false)).toEqual([]);
   });
 });
 
@@ -89,7 +65,7 @@ describe("rentalForwardActionLabel · ileri adim etiketi", () => {
   it("ileri adim etiketi olan her durum `approve` aksiyonunu da verir (tutarlilik)", () => {
     for (const status of ALL_STATUSES) {
       const hasLabel = rentalForwardActionLabel(status) !== null;
-      const hasAction = permittedRentalActions(status, "full").includes("approve");
+      const hasAction = permittedRentalActions(status, true).includes("approve");
       expect(hasAction, `${status}: etiket=${hasLabel} aksiyon=${hasAction}`).toBe(hasLabel);
     }
   });
@@ -120,7 +96,7 @@ describe("isRentalEditable · EDIT_LOCKED_STATUSES yansimasi", () => {
   it("kilitli her durumda satir/baslik duzenleme aksiyonu da olmaz", () => {
     for (const status of ALL_STATUSES) {
       if (isRentalEditable(status)) continue;
-      expect(permittedRentalActions(status, "full")).not.toContain("approve");
+      expect(permittedRentalActions(status, true)).not.toContain("approve");
     }
   });
 });

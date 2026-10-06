@@ -450,7 +450,7 @@ describe("↺ gerçekleşeni standart yap (KAT:153-173)", () => {
 });
 
 describe("salt okunur (B1-8: full altı — KAT:392-398)", () => {
-  it("draft: ekle / ↺ gizli, şerit görünür, form salt okunur açılır ve Kaydet yok", async () => {
+  it("Görür var Düzenler yok: ekle / ↺ gizli, şerit görünür, form salt okunur açılır ve Kaydet yok", async () => {
     const user = userEvent.setup();
     permissionLevel = "draft";
     mockGets({ disciplines: [KAB], catalog: [BETON, KALIP_WITH_ACTUAL] });
@@ -459,7 +459,7 @@ describe("salt okunur (B1-8: full altı — KAT:392-398)", () => {
 
     expect(screen.queryByRole("button", { name: "+ Yeni iş tipi" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gerçekleşeni standart yap" })).not.toBeInTheDocument();
-    expect(screen.getByRole("note")).toHaveTextContent(/yalnız tam yetki/);
+    expect(screen.getByRole("note")).toHaveTextContent("Görüntüleyici · yalnız okuma");
     expect(screen.getByRole("button", { name: "Disiplinler" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Beton döküm" }));

@@ -55,7 +55,6 @@ vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 
 const STRIP_VIEW = "Görüntüleyici · yalnız okuma";
-const STRIP_BELOW_FULL = "Salt okunur · kataloğu yalnız Sözleşmeler tam yetkisi değiştirir";
 const STRIP_RESTRICTED = "Salt okunur · disiplin kısıtlı kullanıcı kataloğu değiştiremez";
 
 beforeEach(() => {
@@ -100,13 +99,13 @@ describe("erişim (T25: contracts:view okur, full + kısıtsız yazar)", () => {
     expect(screen.getByText(STRIP_VIEW)).toBeInTheDocument();
   });
 
-  it("draft (canWrite=true olsa bile) → yazma yok: yazma eşiği 'full'dur", async () => {
+  it("draft seviyesi sayfa modelinde Görür-Düzenler-yok → yazma yok, şerit ÜS-10 metni", async () => {
     perm.level = "draft";
     renderScreen();
     await screen.findByText("Beton döküm");
     expect(screen.queryByRole("button", { name: "+ Kalem Ekle" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /düzenle/i })).not.toBeInTheDocument();
-    expect(screen.getByText(STRIP_BELOW_FULL)).toBeInTheDocument();
+    expect(screen.getByText(STRIP_VIEW)).toBeInTheDocument();
   });
 
   it("full ama disiplin kısıtlı → salt okunur + kısıtlı metni", async () => {

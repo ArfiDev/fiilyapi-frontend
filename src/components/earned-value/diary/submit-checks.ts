@@ -12,8 +12,6 @@
  * yalnız gösterilir. Tanınmayan kod kaybolmaz: kendi metniyle ayrı uyarı çipi olur.
  */
 import type { EvSubmitCheck } from "@/lib/api/models";
-import type { AccessLevel } from "@/lib/auth/permissions";
-import { hasAtLeast } from "@/lib/auth/permissions";
 
 import { formatHours, type Centi } from "./hours";
 
@@ -134,13 +132,12 @@ export function buildSubmitState(input: SubmitInput): SubmitState {
 }
 
 export interface AccessInput {
-  evLevel: AccessLevel | undefined;
   /**
-   * IZN-F2.x · sayfa izni kararları (`useButtonGate`): verilirse `evLevel` eşiklerinin YERİNE geçer.
+   * IZN-F6b · sayfa izni kararları (`useButtonGate`) — ZORUNLU.
    * Dağıtımı yazma = adam-saat bütçesi Düzenler; Kilidi aç = bütçe/günlük rapor Onaylar.
    */
-  canWriteAllocation?: boolean;
-  canUnlockDay?: boolean;
+  canWriteAllocation: boolean;
+  canUnlockDay: boolean;
   diaryCanWrite: boolean;
   isLocked: boolean;
   isSiteCompleted: boolean;
@@ -158,12 +155,12 @@ export interface AllocationAccess {
 }
 
 /**
- * K17: dağıtımı düzenleme = `earned_value` draft+; altı (formen) salt okur.
+ * K17: dağıtımı düzenleme = bütçe sayfası Düzenler; altı (formen) salt okur.
  * Kilitli gün ve tamamlanmış şantiye (backend 409, F1.6.2 deseni) herkese
- * salt okunur. Bilinmeyen seviye `hasAtLeast` kuralıyla yetkili sayılır.
+ * salt okunur.
  */
 export function resolveAllocationAccess(input: AccessInput): AllocationAccess {
-  const isForeman = !(input.canWriteAllocation ?? hasAtLeast(input.evLevel, "draft"));
+  const isForeman = !input.canWriteAllocation;
   const readOnlyText = input.isLocked
     ? "gün kilitli"
     : input.isSiteCompleted
@@ -176,6 +173,6 @@ export function resolveAllocationAccess(input: AccessInput): AllocationAccess {
     readOnlyText,
     isForeman,
     showForemanBand: isForeman && input.diaryCanWrite && !input.isLocked,
-    canUnlock: (input.canUnlockDay ?? hasAtLeast(input.evLevel, "approve")) && !input.isSiteCompleted,
+    canUnlock: input.canUnlockDay && !input.isSiteCompleted,
   };
 }

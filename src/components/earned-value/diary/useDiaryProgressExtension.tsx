@@ -11,7 +11,6 @@ import { useEvSettings } from "@/lib/api/hooks/useEvSettings";
 import { useSite } from "@/lib/api/hooks/useSites";
 import type { EvAllocationSave, EvCodeNode, EvDayView } from "@/lib/api/models";
 import { BackendError } from "@/lib/api/unwrap";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { EV_BUDGET_EDIT, EV_UNLOCK_APPROVE, SITE_DIARY_EDIT, EV_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { bandsFromSettings, type PfBandSettings } from "@/lib/earned-value";
@@ -46,14 +45,13 @@ export function useDiaryProgressExtension(
   ctx: DiaryExtensionContext | null,
   projectKey?: string,
 ): DiaryExtension | undefined {
-  const evPermission = useModulePermission("earned_value");
   const canViewEv = useButtonGate({
     pages: EV_VIEW,
     need: "view",
     projectId: projectKey,
   });
   // IZN-F2.x · saat dağıtımı yazma = bütçe Düzenler; Gün Kilidi Aç = bütçe/günlük rapor Onaylar;
-  // günlük yazma = günlük kayıt Düzenler. Grant yoksa bugünkü seviye kararı.
+  // günlük yazma = günlük kayıt Düzenler.
   const canWriteAllocation = useButtonGate({
     pages: EV_BUDGET_EDIT,
     need: "edit",
@@ -100,7 +98,6 @@ export function useDiaryProgressExtension(
     draftApi,
     saveAllocation: saveAllocation.mutateAsync,
     itemFacts: buildItemFacts(budget.data),
-    evLevel: evPermission.level,
     diaryCanWrite,
     canWriteAllocation,
     canUnlockDay,
@@ -120,7 +117,6 @@ interface BuildInput {
   draftApi: AllocationDraftApi;
   saveAllocation: (body: EvAllocationSave) => Promise<unknown>;
   itemFacts: ItemFacts;
-  evLevel: ReturnType<typeof useModulePermission>["level"];
   diaryCanWrite: boolean;
   canWriteAllocation: boolean;
   canUnlockDay: boolean;
@@ -134,7 +130,6 @@ function buildExtension(input: BuildInput): DiaryExtension {
   const { view, draftApi } = input;
   const isLocked = view.lock.locked;
   const access = resolveAllocationAccess({
-    evLevel: input.evLevel,
     canWriteAllocation: input.canWriteAllocation,
     canUnlockDay: input.canUnlockDay,
     diaryCanWrite: input.diaryCanWrite,

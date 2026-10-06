@@ -12,6 +12,7 @@ import { OfferDetailScreen } from "./OfferDetailScreen";
 // TKL-F5.5 · giriş noktaları: Projeye Dönüştür (şerit), "Proje: … →" + kilit bandı (başlık), kazanıldı toast bağlantısı.
 
 const perm = vi.hoisted(() => ({ levels: { contracts: "full", projects: "admin" } as Record<string, string | undefined> }));
+const sessionOverride = vi.hoisted(() => ({ me: undefined as unknown })); // IZN-F6b · SA / özel oturum
 const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
@@ -26,7 +27,7 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
   const { offersSessionMe } = await import("./offers-session.testkit");
-  return { ...actual, useSession: () => ({ ...actual.SESSION_CONTEXT_DEFAULT, me: offersSessionMe(perm.levels), isLoading: false }) };
+  return { ...actual, useSession: () => ({ ...actual.SESSION_CONTEXT_DEFAULT, me: sessionOverride.me !== undefined ? sessionOverride.me : offersSessionMe(perm.levels), isLoading: false }) };
 });
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
@@ -82,6 +83,7 @@ const LOCK_BAND = "Teklif projeye dönüştürüldü · salt okunur arşiv";
 beforeEach(() => {
   vi.clearAllMocks();
   perm.levels = { contracts: "full", projects: "admin" };
+  sessionOverride.me = undefined;
   scope.value = { isRestricted: false, names: [] };
   backend = wonBackend();
   mockBackend();
@@ -103,6 +105,24 @@ describe("kazanıldı · dönüştürülmedi (ÜS-F5-2/3)", () => {
     expect(screen.queryByRole("link", { name: CONVERT_LABEL })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: CONVERT_LABEL })).toBeDisabled();
     // IZN-F6a · sayfa modeli devrede → gerekçe Onaylar sayfa izni metnidir.
+    expect(screen.getByText("Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir")).toBeVisible();
+  });
+
+  it("sistem yöneticisi (hücre yok) → Onaylar bayrağı olmadan da AÇIK", async () => {
+    const { meFixture } = await import("@/lib/auth/page-grants.testkit");
+    sessionOverride.me = meFixture({ pages: {}, isSystemAdmin: true });
+    renderScreen();
+    await loaded();
+    expect(screen.getByRole("link", { name: CONVERT_LABEL })).toBeInTheDocument();
+  });
+
+  it("Onaylar yok + projects:admin modül seviyesi olsa bile KAPALI (modül dalı yok)", async () => {
+    const { meFixture, fullAccessPages, pageGrant } = await import("@/lib/auth/page-grants.testkit");
+    sessionOverride.me = meFixture({ pages: { ...fullAccessPages(), "teklif.teklif_hazirlama": pageGrant("edit", false) } });
+    renderScreen();
+    await loaded();
+    expect(screen.queryByRole("link", { name: CONVERT_LABEL })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: CONVERT_LABEL })).toBeDisabled();
     expect(screen.getByText("Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir")).toBeVisible();
   });
 
@@ -151,7 +171,7 @@ describe("eski revizyon görünümü (T41)", () => {
     renderScreen("0");
     await loaded();
     expect(screen.queryByRole("button", { name: CONVERT_LABEL })).toBeNull();
-    expect(screen.queryByText("Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)")).toBeNull();
+    expect(screen.queryByText("Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir")).toBeNull();
   });
 });
 

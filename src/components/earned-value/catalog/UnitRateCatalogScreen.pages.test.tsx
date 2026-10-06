@@ -53,4 +53,18 @@ describe("UnitRateCatalogScreen · yazma kapısı UNIT_RATE_CATALOG_EDIT (IZN-F5
     renderScreen();
     expect(await screen.findByRole("button", { name: "Disiplinleri yönet" })).toBeInTheDocument();
   });
+
+  it("Görür var Düzenler yok → 'Görüntüleyici · yalnız okuma' şeridi", async () => {
+    session(meFixture({ pages: { "planlama.birim_oran_katalogu": pageGrant("view") } }));
+    renderScreen();
+    await screen.findByRole("button", { name: "Beton döküm" });
+    expect(screen.getByRole("note")).toHaveTextContent("Görüntüleyici · yalnız okuma");
+  });
+
+  it("Görür de yok (hücre none) → genel 'Salt okunur' şeridi", async () => {
+    session(meFixture({ pages: { "planlama.birim_oran_katalogu": pageGrant("none") } }));
+    renderScreen();
+    await screen.findByRole("button", { name: "Beton döküm" });
+    expect(screen.getByRole("note")).toHaveTextContent("Salt okunur · kataloğu yalnız tam yetki (full) değiştirir");
+  });
 });

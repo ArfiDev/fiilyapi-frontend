@@ -11,11 +11,9 @@ import { cx } from "@/lib/cx";
 import { useCatalogDisciplines, useCatalogItems } from "@/lib/api/hooks/useCatalogItems";
 import { isForbidden } from "@/lib/api/unwrap";
 import type { WorkDisciplineRead, WorkItemRead } from "@/lib/api/models";
-import { type AccessLevel } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { CONTRACTS_VIEW, WORK_ITEM_CATALOG_EDIT } from "@/lib/auth/page-gates";
-import { useButtonGate } from "@/lib/auth/usePagePermission";
+import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { useFileDownload } from "@/lib/use-file-download";
 
 import { WorkItemDisciplineChips } from "./WorkItemDisciplineChips";
@@ -37,9 +35,9 @@ const EXCEL_SOON_TITLE = "Yakında · Excel desteği sonraki sürümde açılaca
 const NO_ITEMS: readonly WorkItemRead[] = [];
 
 /** ÜS-10 — şerit metni; yazma yetkisi yoksa nedene göre. */
-function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean, canEdit: boolean): string {
+function readOnlyMessage(canView: boolean, canEdit: boolean, isRestricted: boolean): string {
   if (!canEdit) {
-    return level === "view"
+    return canView
       ? "Görüntüleyici · yalnız okuma"
       : "Salt okunur · kataloğu yalnız Sözleşmeler tam yetkisi değiştirir";
   }
@@ -53,18 +51,18 @@ function readOnlyMessage(level: AccessLevel | undefined, isRestricted: boolean, 
  * `contracts:none` → erişim yok (403 dalı da); frontend yalnız yansıtır.
  */
 export function WorkItemCatalogScreen() {
-  const { level } = useModulePermission("contracts");
   // IZN-F5-ön · görüntüleme kapısı = sözleşme/teklif sayfaları Görür (VEYA); grant yoksa `contracts:none`.
   const canViewCatalog = useButtonGate({ pages: CONTRACTS_VIEW, need: "view" });
   if (!canViewCatalog) return <AccessDenied />;
-  return <WorkItemCatalogContent level={level} />;
+  return <WorkItemCatalogContent />;
 }
 
-function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
+function WorkItemCatalogContent() {
   const scope = useDisciplineScope();
   // IZN-F2.x · katalog kalemi ekle/düzenle = teklif.is_kalemi_katalogu/sözleşme sayfaları Düzenler (VEYA) ∧ kısıtsız.
   const canEditCatalog = useButtonGate({ pages: WORK_ITEM_CATALOG_EDIT, need: "edit" });
   const canWrite = canEditCatalog && !scope.isRestricted;
+  const canViewCatalog = usePagePermission(CONTRACTS_VIEW).canView;
 
   const exportDownload = useFileDownload();
   const catalog = useCatalogItems();
@@ -133,7 +131,7 @@ function WorkItemCatalogContent({ level }: { level: AccessLevel | undefined }) {
     void disciplineQuery.refetch();
   }
 
-  const readOnlyText = canWrite ? "" : readOnlyMessage(level, scope.isRestricted, canEditCatalog);
+  const readOnlyText = canWrite ? "" : readOnlyMessage(canViewCatalog, canEditCatalog, scope.isRestricted);
 
   return (
     <div className="wik">
