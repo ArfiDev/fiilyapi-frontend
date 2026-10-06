@@ -8,9 +8,9 @@ import { useSelectQuoteAndOrder } from "@/lib/api/hooks/useQuoteMutations";
 import { downloadQuoteComparisonExport } from "@/lib/api/purchase-quote-client";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import type { PurchaseRequestResponse } from "@/lib/api/hooks/usePurchaseRequests";
 import type { PurchaseQuoteCard, PurchaseQuoteListResponse } from "@/lib/api/hooks/useQuotes";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/usePurchaseRequests", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/usePurchaseRequests")>()),
@@ -159,7 +159,7 @@ function confirmButton(): HTMLElement {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { procurement: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(usePurchaseRequest).mockReturnValue(
@@ -355,7 +355,7 @@ describe("QuoteComparisonView — 'Sipariş Ver' (select-and-order)", () => {
 
   it("yazma yetkisi yoksa seçim ve teklif girişi kapalıdır", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { procurement: "view" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<QuoteComparisonView requestId={REQUEST_ID} />);

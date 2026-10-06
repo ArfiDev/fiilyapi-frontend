@@ -6,12 +6,12 @@ import { usePurchaseRequests } from "@/lib/api/hooks/usePurchaseRequests";
 import { usePurchasingSummary } from "@/lib/api/hooks/usePurchasingSummary";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import type {
   PurchaseRequestListResponse,
   PurchaseRequestListRow,
 } from "@/lib/api/hooks/usePurchaseRequests";
 import type { PurchasingSummaryResponse } from "@/lib/api/hooks/usePurchasingSummary";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/usePurchaseRequests", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/usePurchaseRequests")>()),
@@ -90,7 +90,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { procurement: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(usePurchaseRequests).mockReturnValue(queryStub(list()));
@@ -116,7 +116,7 @@ describe("PurchaseRequestsView — SAT başlık ve aksiyonlar", () => {
 
   it("yazma yetkisi yoksa oluşturma bağlantısı basılmaz", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { procurement: "view" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<PurchaseRequestsView />);
@@ -125,7 +125,7 @@ describe("PurchaseRequestsView — SAT başlık ve aksiyonlar", () => {
 
   it("izin 'none' ise erişim reddedilir", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { procurement: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<PurchaseRequestsView />);

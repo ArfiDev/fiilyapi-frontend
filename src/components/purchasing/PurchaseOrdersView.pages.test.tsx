@@ -60,13 +60,9 @@ describe("PurchaseOrdersView · sayfa izni görüntüleme kapısı (IZN-F5-ön)"
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
-  it("pages boş → eski davranış (procurement none → AccessDenied, view → açık)", () => {
-    session(meFixture({ pages: {}, permissions: { procurement: "none" } }));
-    const { unmount } = render(<PurchaseOrdersView />);
-    expect(screen.getByText(DENIED)).toBeInTheDocument();
-    unmount();
-    session(meFixture({ pages: {}, permissions: { procurement: "view" } }));
+  it("pages boş → fail-closed: procurement full olsa bile AccessDenied (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { procurement: "full" } }));
     render(<PurchaseOrdersView />);
-    expect(screen.queryByText(DENIED)).toBeNull();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

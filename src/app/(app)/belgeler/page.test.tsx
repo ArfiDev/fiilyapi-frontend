@@ -6,7 +6,7 @@ import { useSession } from "@/components/shell/SessionProvider";
 import { useDocumentFolders } from "@/lib/api/hooks/useDocumentFolders";
 import { useDocuments } from "@/lib/api/hooks/useDocuments";
 import { useProjects } from "@/lib/api/hooks/useProjects";
-import type { MeResponse } from "@/lib/auth/types";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // F-BC T4 · `/belgeler` gerçek rota eklenince [...slug] catch-all bu segment
 // için devre dışı kalır — bu test sayfanın ComingSoon YERİNE gerçek E12
@@ -33,7 +33,7 @@ function queryStub(data: unknown): { data: unknown; isLoading: boolean; isError:
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { documents: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   });
   vi.mocked(useProjects).mockReturnValue(

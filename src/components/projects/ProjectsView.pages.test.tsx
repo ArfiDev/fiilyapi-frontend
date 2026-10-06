@@ -99,14 +99,8 @@ describe("ProjectsView · sayfa izni kapısı (IZN-F2.x)", () => {
     expect(screen.queryByRole("link", { name: NEW_PROJECT })).toBeNull();
   });
 
-  it("pages boş → eski davranış: modül izni yazabiliyorsa bağlantı var", () => {
+  it("pages boş → fail-closed: modül izni full olsa bile bağlantı yok (IZN-F6a)", () => {
     session(meFixture({ pages: {}, permissions: { projects: "full" } }));
-    renderView();
-    expect(screen.getByRole("link", { name: NEW_PROJECT })).toBeInTheDocument();
-  });
-
-  it("pages boş + modül izni view → eski davranış: devre-dışı", () => {
-    session(meFixture({ pages: {}, permissions: { projects: "view" } }));
     renderView();
     expect(screen.queryByRole("link", { name: NEW_PROJECT })).toBeNull();
   });

@@ -125,6 +125,18 @@ export function fullAccessPages(): Partial<Record<PageKey, PageGrant>> {
   return Object.fromEntries(ALL_PAGE_KEYS.map((key) => [key, pageGrant("edit", true)]));
 }
 
+/**
+ * IZN-F6a.3 · bir sayfa kümesine (ör. `page-gates.ts` sabitleri) aynı izni veren harita. Birleştirmek için yay:
+ * `{ ...pagesFor(ACCOUNTING_VIEW, "view"), ...pagesFor(JOURNAL_EDIT, "edit") }`.
+ */
+export function pagesFor(
+  keys: readonly PageKey[],
+  level: PageGrant["level"],
+  approve = false,
+): Partial<Record<PageKey, PageGrant>> {
+  return Object.fromEntries(keys.map((key) => [key, pageGrant(level, approve)]));
+}
+
 export interface MeFixtureOptions {
   pages?: Partial<Record<PageKey, PageGrant>>;
   isSystemAdmin?: boolean;

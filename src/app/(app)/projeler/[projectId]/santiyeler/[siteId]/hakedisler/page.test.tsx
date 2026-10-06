@@ -12,6 +12,7 @@ import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
 import type { SiteDetail } from "@/lib/api/hooks/useSites";
+import { ALL_PAGE_KEYS, fullAccessPages, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProgressPayments", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useProgressPayments")>()),
@@ -54,10 +55,11 @@ const PAYMENT_ITEM = {
   net_total: "2000000.00",
 };
 
+/** IZN-F6a · eski modül düzeyi → sayfa izni: draft/full = tam erişim, view = her sayfada Görür, none = her sayfada Yok. */
 function mockPermission(level?: string) {
   const base = { id: "u1", email: "a@b.c", full_name: "A", role_key: "admin", status: "active" };
   vi.mocked(useSession).mockReturnValue({
-    me: (level === undefined ? base : { ...base, permissions: { progress_payments: level } }) as unknown as MeResponse,
+    me: (level === undefined ? base : { ...base, pages: level === "view" ? pagesFor(ALL_PAGE_KEYS, "view") : level === "none" ? pagesFor(ALL_PAGE_KEYS, "none") : fullAccessPages() }) as unknown as MeResponse,
     isLoading: false,
   });
 }

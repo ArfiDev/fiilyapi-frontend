@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import StokPage from "./page";
 import { useSession } from "@/components/shell/SessionProvider";
 import { useStockSummary } from "@/lib/api/hooks/useStockSummary";
-import type { MeResponse } from "@/lib/auth/types";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // F-ST T2 · `/stok` gerçek rota eklenince [...slug] catch-all bu segment için
 // devre dışı kalır — bu test sayfanın ComingSoon YERİNE gerçek E3 katalogunu
@@ -31,7 +31,7 @@ beforeEach(() => {
   vi.mocked(useSession).mockReturnValue({
     // Sunucunun stok izin anahtarı `inventory`dir (`inventory/service.py` ·
     // `PERMISSION_MODULE`); `stock` diye bir modül backend'de YOK.
-    me: { permissions: { inventory: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useStockSummary).mockReturnValue({

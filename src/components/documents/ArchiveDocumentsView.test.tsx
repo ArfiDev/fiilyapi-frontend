@@ -10,6 +10,7 @@ import { useProjects } from "@/lib/api/hooks/useProjects";
 import { downloadDocument } from "@/lib/api/documents-client";
 import { BackendError } from "@/lib/api/unwrap";
 import type { MeResponse } from "@/lib/auth/types";
+import { ALL_PAGE_KEYS, fullAccessPages, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 // F-BC T4 · E12 genel arşiv ekranı (`/belgeler`).
 //
@@ -43,9 +44,15 @@ const BASE_ME = {
   status: "active",
 } as unknown as MeResponse;
 
+/** IZN-F6a · eski modül düzeyi → sayfa izni (full = tam erişim, view = her sayfada Görür, none = her sayfada Yok). */
+function levelPages(level: string) {
+  if (level === "full") return fullAccessPages();
+  return pagesFor(ALL_PAGE_KEYS, level === "view" ? "view" : "none");
+}
+
 function mockSession(level: string) {
   vi.mocked(useSession).mockReturnValue({
-    me: { ...BASE_ME, permissions: { documents: level } } as MeResponse,
+    me: { ...BASE_ME, pages: levelPages(level) } as MeResponse,
     isLoading: false,
   });
 }

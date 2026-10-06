@@ -9,7 +9,7 @@ import { useStockItems } from "@/lib/api/hooks/useStockItems";
 import { useCreateStockEntry } from "@/lib/api/hooks/useStockMutations";
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { useWarehouses } from "@/lib/api/hooks/useWarehouses";
-import { useModulePermission } from "@/lib/auth/useModulePermission";
+import { fullAccessPages, meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { BackendError } from "@/lib/api/unwrap";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
@@ -32,7 +32,20 @@ vi.mock("@/lib/api/hooks/useUserOptions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useUserOptions")>()),
   useUserOptions: vi.fn(),
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({ useModulePermission: vi.fn() }));
+// IZN-F6a · kapı YALNIZ oturum `pages`inden okunur (`useModulePermission` bu ekranda artık çağrılmaz); her testte
+// `sessionPages` ile kurulur (varsayılan = tam erişim, beforeEach).
+let sessionPages: ReturnType<typeof fullAccessPages> = fullAccessPages();
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  return {
+    ...actual,
+    useSession: () => ({
+      ...actual.SESSION_CONTEXT_DEFAULT,
+      me: meFixture({ pages: sessionPages }),
+      isLoading: false,
+    }),
+  };
+});
 // 🔴 STOK-BOLUM — atıf seçeneklerinin iki kaynağı.
 vi.mock("@/lib/api/hooks/useSiteSections", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useSiteSections")>()),
@@ -88,7 +101,7 @@ function stub(value: unknown): any {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(useModulePermission).mockReturnValue(stub({ canView: true, canWrite: true }));
+  sessionPages = fullAccessPages();
   vi.mocked(useSite).mockReturnValue(
     stub({ data: { id: SITE_ID, name: "A-Blok Şantiyesi" }, isLoading: false, isError: false }),
   );
@@ -566,21 +579,33 @@ describe("StockEntryForm — hata basımı (ST §4b kanonu)", () => {
 
 describe("StockEntryForm — yetki", () => {
   it("yazma izni olmayan kullanıcı formu görmez", () => {
-    vi.mocked(useModulePermission).mockReturnValue(stub({ canView: true, canWrite: false }));
+    sessionPages = { "stok.stok_depo": pageGrant("view"), "santiye.stok": pageGrant("view") };
     render(<StockEntryForm />);
 
     expect(screen.queryByTestId("stok-giris-body")).toBeNull();
   });
 
-  // 🔴 Bu dosya `useModulePermission`ı TAMAMEN taklit ettiği için kapının
-  // AÇILIP KAPANDIĞINI görür ama DOĞRU MODÜLE bakıp bakmadığını göremez —
-  // yanlış anahtar bilinmezlik kuralına düşer ve kapı hiç kapanmaz. Sunucunun
-  // anahtarı `inventory`dir (`backend/app/modules/inventory/service.py` ·
-  // `PERMISSION_MODULE`), `stock` diye bir modül backend'de YOK.
-  it("izin kapısı sunucunun modül anahtarını (`inventory`) sorar", () => {
+  // 🔴 Kapı DOĞRU SAYFALARA bakmalı: stok girişi = `stok.stok_depo` VEYA `santiye.stok` Düzenler (INVENTORY_EDIT).
+  // Yanlış anahtara bağlı bir kapı bu üç testten biriyle ayrışır.
+  it("yalnız `stok.stok_depo` Düzenler iken form açılır (VEYA kapısı)", () => {
+    sessionPages = { "stok.stok_depo": pageGrant("edit"), "santiye.stok": pageGrant("view") };
     render(<StockEntryForm />);
 
-    expect(vi.mocked(useModulePermission)).toHaveBeenCalledWith("inventory");
+    expect(screen.getByTestId("stok-giris-body")).toBeInTheDocument();
+  });
+
+  it("yalnız `santiye.stok` Düzenler iken form açılır (VEYA kapısı)", () => {
+    sessionPages = { "stok.stok_depo": pageGrant("view"), "santiye.stok": pageGrant("edit") };
+    render(<StockEntryForm />);
+
+    expect(screen.getByTestId("stok-giris-body")).toBeInTheDocument();
+  });
+
+  it("stok sayfalarında grant yokken (başka sayfa Düzenler olsa da) form görünmez", () => {
+    sessionPages = { "mali.satis": pageGrant("edit") };
+    render(<StockEntryForm />);
+
+    expect(screen.queryByTestId("stok-giris-body")).toBeNull();
   });
 });
 

@@ -8,7 +8,8 @@ import { useSession } from "@/components/shell/SessionProvider";
 import { usePersonnel } from "@/lib/api/hooks/usePersonnel";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useTimesheetWeek, type TimesheetWeek } from "@/lib/api/hooks/useTimesheet";
-import type { MeResponse } from "@/lib/auth/types";
+import { TIMESHEET_EDIT, TIMESHEET_VIEW_PAGES, PERSONNEL_EDIT } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 // PUAN-SAAT · `/puantaj` gerçek rota: [...slug] catch-all bu segment için
 // devre dışı kalır — bu test sayfanın ComingSoon YERİNE gerçek E5 haftalık
@@ -80,14 +81,20 @@ const WEEK: TimesheetWeek = {
   month_weeks: [],
 } as TimesheetWeek;
 
-function mockSession(level: string, personnelLevel?: string) {
+/**
+ * IZN-F6a · eski modül düzeyi → sayfa izni. `level` = puantaj sayfaları (full = Düzenler, view = Görür, none = Yok);
+ * `personnelLevel` = personel sayfaları (verilmezse personel sayfasında grant YOK → kapalı).
+ */
+function mockSession(level: "full" | "view" | "none", personnelLevel?: "full" | "view" | "none") {
+  const grantLevel = { full: "edit", view: "view", none: "none" } as const;
   vi.mocked(useSession).mockReturnValue({
-    me: {
-      permissions: {
-        timesheet: level,
-        ...(personnelLevel !== undefined ? { personnel: personnelLevel } : {}),
+    me: meFixture({
+      pages: {
+        ...pagesFor(TIMESHEET_VIEW_PAGES, grantLevel[level]),
+        ...pagesFor(TIMESHEET_EDIT, grantLevel[level]),
+        ...(personnelLevel !== undefined ? pagesFor(PERSONNEL_EDIT, grantLevel[personnelLevel]) : {}),
       },
-    } as unknown as MeResponse,
+    }),
     isLoading: false,
   });
 }
@@ -205,10 +212,10 @@ describe("PuantajPage · Personel Ekle girisi", () => {
     expect(screen.queryByRole("link", { name: "Personel Ekle" })).not.toBeInTheDocument();
   });
 
-  it("izin bilinmiyorsa gorunur kalir (bilinmezlik kurali)", () => {
+  it("personel sayfasinda grant yoksa HIC basilmaz (IZN-F6a: bilinmezlik kurali kalkti, fail-closed)", () => {
     mockSession("full");
     renderPage();
-    expect(screen.getAllByRole("link", { name: "Personel Ekle" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "Personel Ekle" })).not.toBeInTheDocument();
   });
 
   it("hic personel yoksa izgarada bos-durum + ekleme yonlendirmesi basilir", () => {

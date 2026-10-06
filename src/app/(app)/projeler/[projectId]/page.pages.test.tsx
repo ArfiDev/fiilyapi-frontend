@@ -73,9 +73,9 @@ describe("ProjectDetailPage · '+ Şantiye Ekle' sayfa kapısı (IZN-F5c)", () =
     expect(screen.queryAllByRole("link", ADD)).toHaveLength(0);
   });
 
-  it("pages boş (eski oturum) → bugünkü davranış: iki bağlantı da var", () => {
+  it("pages boş (eski oturum) → fail-closed: bağlantı yok (IZN-F6a)", () => {
     session(meFixture({ pages: {} }));
     render(<ProjectDetailPage />);
-    expect(screen.getAllByRole("link", ADD)).toHaveLength(2);
+    expect(screen.queryAllByRole("link", ADD)).toHaveLength(0);
   });
 });

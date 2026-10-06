@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { ProjectsView } from "./ProjectsView";
 import { useProjects } from "@/lib/api/hooks/useProjects";
 import { BackendError } from "@/lib/api/unwrap";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useProjects")>()),
@@ -28,6 +29,20 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
     canDelete: permissionLevel === "full",
   }),
 }));
+
+// IZN-F6a · kapılar artık yalnız sayfa izinlerinden okunur: `permissionLevel` aynı niyeti oturum `pages`ine de taşır
+// (full = tam erişim, diğerleri = her sayfada yalnız Görür). `useModulePermission` mock'u kapı DIŞI okumalar içindir.
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  return {
+    ...actual,
+    useSession: () => ({
+      ...actual.SESSION_CONTEXT_DEFAULT,
+      me: permissionLevel === "full" ? meFixture() : meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
+      isLoading: false,
+    }),
+  };
+});
 
 const CONTRACTING_PLACEHOLDERS = {
   spent: { available: false, value: null, pending_module: "project_costs" },

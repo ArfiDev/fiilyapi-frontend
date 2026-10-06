@@ -13,6 +13,7 @@ import { buildTimesheetView } from "@/components/timesheet/derive";
 import { useSiteDiaryEntries, SITE_DIARY_LIST_MAX_LIMIT } from "@/lib/api/hooks/useSiteDiary";
 import type { SiteDiaryEntryListItem, SiteDiaryEntryListResponse } from "@/lib/api/hooks/useSiteDiary";
 import { SECTION_NAV_PATHNAME, sectionNav } from "./section-nav.testkit";
+import { ALL_PAGE_KEYS, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 // F-BLMSEK · Bölüm Detay › "Günlük Kayıt" sekmesinin EKRAN BAĞLANTISI.
 // AYRI dosyadır: `SectionDetailView.test.tsx` 767 satırla 800 tavanına yakın.
@@ -86,7 +87,7 @@ function mockAll(items: SiteDiaryEntryListItem[]) {
       full_name: "A",
       role_key: "admin",
       status: "active",
-      permissions: { sites: "view" },
+      pages: pagesFor(ALL_PAGE_KEYS, "view"),
     },
     isLoading: false,
   } as never);

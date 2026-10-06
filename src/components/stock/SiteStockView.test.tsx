@@ -6,8 +6,8 @@ import { useSession } from "@/components/shell/SessionProvider";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { useSiteStock } from "@/lib/api/hooks/useSiteStock";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import type { SiteStockResponse, SiteStockRow } from "@/lib/api/hooks/useSiteStock";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useSiteStock", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useSiteStock")>()),
@@ -84,7 +84,7 @@ beforeEach(() => {
   setSearchParams("");
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { inventory: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   // 🔴 URL-3 — santiye yaniti artik ekranin KANONIK KIMLIK kaynagidir:
@@ -274,7 +274,7 @@ describe("SiteStockView — pending yüzeyler ve aksiyonlar", () => {
 describe("SiteStockView — yetki ve hata yolları", () => {
   it("izinsiz kullanıcı erişim reddi görür", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { inventory: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<SiteStockView />);

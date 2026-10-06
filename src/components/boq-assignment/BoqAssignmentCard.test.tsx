@@ -12,7 +12,7 @@ import {
 import type { BoqGroup } from "@/lib/api/hooks/useBoq";
 import { BackendError } from "@/lib/api/unwrap";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useBoq", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useBoq")>()),
@@ -25,10 +25,18 @@ vi.mock("@/lib/api/hooks/useBoqAllocations", async (importOriginal) => ({
 }));
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
-/** `boq` modülü için tekil izin seviyesi kurar — `undefined` bilinmezlik dalına düşer (varsayılan). */
-function setBoqPermission(level: string | undefined) {
+/**
+ * IZN-F6a · BOQ düzenleme sayfaları için tekil izin seviyesi kurar: full = tam erişim, view = her sayfada Görür;
+ * `undefined` = oturum yok (grant yok → KAPALI).
+ */
+function setBoqPermission(level: "full" | "view" | undefined) {
   vi.mocked(useSession).mockReturnValue({
-    me: level === undefined ? null : ({ permissions: { boq: level } } as unknown as MeResponse),
+    me:
+      level === undefined
+        ? null
+        : level === "full"
+          ? meFixture()
+          : meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "view") }),
     isLoading: false,
   } as unknown as ReturnType<typeof useSession>);
 }
@@ -100,7 +108,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mutateAsync.mockResolvedValue({});
   mockQueries();
-  setBoqPermission(undefined);
+  setBoqPermission("full");
 });
 
 function renderEdit() {

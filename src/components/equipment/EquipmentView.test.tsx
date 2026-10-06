@@ -9,9 +9,9 @@ import { usePersonnel } from "@/lib/api/hooks/usePersonnel";
 import type { PersonnelListItem, PersonnelListResponse } from "@/lib/api/hooks/usePersonnel";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
 import type { EquipmentListResponse, EquipmentResponse } from "@/lib/api/hooks/useEquipment";
 import type { EquipmentSummaryResponse } from "@/lib/api/hooks/useEquipmentSummary";
+import { ALL_PAGE_KEYS, meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useEquipment", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useEquipment")>()),
@@ -100,7 +100,7 @@ function queryStub<T>(
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { equipment: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useEquipment).mockReturnValue(queryStub(equipmentList()));
@@ -156,7 +156,7 @@ describe("EquipmentView — M1 başlık, sekme, KPI ve kart ızgarası", () => {
 
   it("izinsiz kullanıcı erişim reddi görür", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { equipment: "none" } } as unknown as MeResponse,
+      me: meFixture({ pages: pagesFor(ALL_PAGE_KEYS, "none") }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<EquipmentView />);

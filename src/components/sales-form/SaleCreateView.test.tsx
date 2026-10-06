@@ -13,8 +13,8 @@ import {
 } from "@/lib/api/hooks/useSaleMutations";
 import { useUserOptions } from "@/lib/api/hooks/useUserOptions";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useProjectUnits", () => ({ useProjectUnits: vi.fn() }));
@@ -70,7 +70,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { sales: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useProjects).mockReturnValue(queryStub({ items: [{ id: "p-2", name: "Villa B" }] }));

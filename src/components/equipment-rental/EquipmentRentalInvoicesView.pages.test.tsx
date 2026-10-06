@@ -53,15 +53,10 @@ describe("EquipmentRentalInvoicesView · sayfa izni görüntüleme kapısı (IZN
     expect(screen.getByTestId(MARKER)).toBeInTheDocument();
   });
 
-  it("pages boş → bugünkü davranış: modül none reddedilir, view açılır", () => {
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "none" } }));
-    const { unmount } = renderView();
-    expect(screen.getByTestId(MARKER)).toBeInTheDocument();
-    unmount();
-
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "view" } }));
+  it("pages boş → fail-closed: modül full olsa bile işaret var (IZN-F6a)", () => {
+    session(meFixture({ pages: {}, permissions: { [MODULE]: "full" } }));
     renderView();
-    expect(screen.queryByTestId(MARKER)).toBeNull();
+    expect(screen.getByTestId(MARKER)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da işaret yok", () => {

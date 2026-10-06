@@ -6,12 +6,12 @@ import { usePurchaseOrders } from "@/lib/api/hooks/usePurchaseOrders";
 import { usePurchasingSummary } from "@/lib/api/hooks/usePurchasingSummary";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import type {
   PurchaseOrderListResponse,
   PurchaseOrderResponse,
 } from "@/lib/api/hooks/usePurchaseOrders";
 import type { PurchasingSummaryResponse } from "@/lib/api/hooks/usePurchasingSummary";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/usePurchaseOrders", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/usePurchaseOrders")>()),
@@ -83,7 +83,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { procurement: "full" } } as unknown as MeResponse,
+    me: meFixture(),
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(usePurchaseOrders).mockReturnValue(queryStub(list()));

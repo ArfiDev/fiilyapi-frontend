@@ -18,7 +18,7 @@ import { BackendError } from "@/lib/api/unwrap";
 import type { SectionDetailResponse } from "@/lib/api/hooks/useSection";
 import type { SiteDetail } from "@/lib/api/hooks/useSites";
 import { sectionNav } from "./section-nav.testkit";
-import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
+import { ALL_PAGE_KEYS, fullAccessPages, meFixture, pageGrant, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useSection", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useSection")>()),
@@ -60,11 +60,16 @@ vi.mock("next/navigation", async () =>
 );
 beforeEach(() => sectionNav.reset());
 
-/** `level` verilmezse alanı taşımayan eski oturum (bilinmezlik dalı, §2.5.3). */
+/**
+ * IZN-F6a · eski modül düzeyi → sayfa izni: full = tam erişim, view = her sayfada Görür, none = her sayfada Yok.
+ * `level` verilmezse sayfa izni taşımayan oturum (grant yok → kapılar KAPALI).
+ */
 function mockPermission(level?: string) {
   const base = { id: "u1", email: "a@b.c", full_name: "A", role_key: "admin", status: "active" };
   vi.mocked(useSession).mockReturnValue({
-    me: (level === undefined ? base : { ...base, permissions: { sites: level } }) as never,
+    me: (level === undefined
+      ? base
+      : { ...base, pages: level === "full" ? fullAccessPages() : pagesFor(ALL_PAGE_KEYS, level === "view" ? "view" : "none") }) as never,
     isLoading: false,
   });
 }
