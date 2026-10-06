@@ -45,7 +45,7 @@ beforeEach(() => {
 describe("SiteDiaryDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("bolum.gunluk_kayit_detay Görür → açılır (site_diary none olsa bile)", () => {
     session(
-      meFixture({ pages: { "bolum.gunluk_kayit_detay": pageGrant("view") }, permissions: { site_diary: "none" } }),
+      meFixture({ pages: { "bolum.gunluk_kayit_detay": pageGrant("view") } }),
     );
     render(<SiteDiaryDetailView />);
     expect(screen.queryByText(FORBIDDEN)).toBeNull();
@@ -53,7 +53,7 @@ describe("SiteDiaryDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)
 
   it("günlük kayıt sayfalarında yalnız none → yetki yok (site_diary full olsa bile)", () => {
     session(
-      meFixture({ pages: { "bolum.gunluk_kayit_detay": pageGrant("none") }, permissions: { site_diary: "full" } }),
+      meFixture({ pages: { "bolum.gunluk_kayit_detay": pageGrant("none") } }),
     );
     render(<SiteDiaryDetailView />);
     expect(screen.getByText(FORBIDDEN)).toBeInTheDocument();
@@ -72,11 +72,11 @@ describe("SiteDiaryDetailView · sayfa izni görüntüleme kapısı (IZN-F5-ön)
   });
 
   it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { site_diary: "none" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = render(<SiteDiaryDetailView />);
     expect(screen.getByText(FORBIDDEN)).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: {}, permissions: { site_diary: "view" } }));
+    session(meFixture({ pages: {} }));
     render(<SiteDiaryDetailView />);
     expect(screen.getByText(FORBIDDEN)).toBeInTheDocument();
   });

@@ -51,7 +51,7 @@ const HINT = "Bu bilgi rolünüz için gizli";
 
 function setHidden(hidden: readonly ("maas_kisisel" | "tum_tutarlar" | "banka_kasa")[]) {
   vi.mocked(useSession).mockReturnValue({
-    me: { ...meFixture({ hiddenFields: hidden }), permissions: { payroll: "full" } },
+    me: meFixture({ hiddenFields: hidden }),
     isLoading: false,
   } as unknown as ReturnType<typeof useSession>);
 }

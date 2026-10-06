@@ -1002,6 +1002,8 @@ describe("BFF /api/backend/[...path]", () => {
         health: "altyapi saglik ucu — urun ekrani cagirmaz",
         blocks: "/blocks/{id} — bugun cagiran ekran yok; cagrilirsa `cagrilan ⊆ izinli` bekcisi yakalar",
         units: "/units/* — bugun cagiran ekran yok; cagrilirsa `cagrilan ⊆ izinli` bekcisi yakalar",
+        // IZN-F6c · eski modül izni kataloğu; FE tüketicisi yok, backend B6b'de kalkıyor (kalkınca bu satırı sil).
+        modules: "/modules — eski modül izni kataloğu (IZN-B6b'de sökülüyor); FE cagirmaz",
       };
       const contract = JSON.parse(
         readFileSync(resolve(process.cwd(), "openapi/openapi.json"), "utf8"),

@@ -19,9 +19,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/sozlesmeler",
   useSearchParams: () => new URLSearchParams("type=subcontractor"),
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: "view", canView: true, canWrite: false, canDelete: false }),
-}));
 
 const NEW_LINK = { name: "+ Yeni Sözleşme" } as const;
 

@@ -31,9 +31,6 @@ vi.mock("@/lib/api/catalog-export-client", () => ({ downloadCatalogExport }));
 vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() },
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: perm.level, canView: perm.level !== "none", canWrite: true, canDelete: true }),
-}));
 // IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.level` (modül niyeti) oturum sayfa iznine çevrilir —
 // none = sayfalar None; view/draft = Görür (yazma eşiği 'full'); full ve bilinmeyen = Düzenler.
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {

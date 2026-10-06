@@ -16,14 +16,8 @@ const sessionOverride = vi.hoisted(() => ({ me: undefined as unknown })); // IZN
 const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as string[] } }));
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: (moduleKey: string) => {
-    const level = perm.levels[moduleKey];
-    return { level, canView: level !== "none", canWrite: true, canDelete: true };
-  },
-}));
 // IZN-F6a · kapılar yalnız sayfa izninden karar verir: modül niyeti (`perm`) oturum sayfa iznine çevrilir
-// (offers-session.testkit). `useModulePermission` mock'u kapı DIŞI mantık (şerit metni vb.) için kalır.
+// (offers-session.testkit).
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
   const { offersSessionMe } = await import("./offers-session.testkit");
@@ -98,16 +92,6 @@ describe("kazanıldı · dönüştürülmedi (ÜS-F5-2/3)", () => {
     expect(screen.queryByRole("link", { name: /^Proje:/ })).not.toBeInTheDocument();
   });
 
-  it("projects:full (admin değil) → PASİF düğme + görünür gerekçe; bağlantı yok", async () => {
-    perm.levels.projects = "full";
-    renderScreen();
-    await loaded();
-    expect(screen.queryByRole("link", { name: CONVERT_LABEL })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: CONVERT_LABEL })).toBeDisabled();
-    // IZN-F6a · sayfa modeli devrede → gerekçe Onaylar sayfa izni metnidir.
-    expect(screen.getByText("Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir")).toBeVisible();
-  });
-
   it("sistem yöneticisi (hücre yok) → Onaylar bayrağı olmadan da AÇIK", async () => {
     const { meFixture } = await import("@/lib/auth/page-grants.testkit");
     sessionOverride.me = meFixture({ pages: {}, isSystemAdmin: true });
@@ -116,7 +100,7 @@ describe("kazanıldı · dönüştürülmedi (ÜS-F5-2/3)", () => {
     expect(screen.getByRole("link", { name: CONVERT_LABEL })).toBeInTheDocument();
   });
 
-  it("Onaylar yok + projects:admin modül seviyesi olsa bile KAPALI (modül dalı yok)", async () => {
+  it("Teklif Hazırlama Düzenler ama Onaylar yok → PASİF düğme + görünür gerekçe; bağlantı yok", async () => {
     const { meFixture, fullAccessPages, pageGrant } = await import("@/lib/auth/page-grants.testkit");
     sessionOverride.me = meFixture({ pages: { ...fullAccessPages(), "teklif.teklif_hazirlama": pageGrant("edit", false) } });
     renderScreen();
@@ -131,7 +115,7 @@ describe("kazanıldı · dönüştürülmedi (ÜS-F5-2/3)", () => {
     renderScreen();
     await loaded();
     expect(screen.getByRole("button", { name: CONVERT_LABEL })).toBeDisabled();
-    expect(screen.getAllByText("Teklifleri yalnız Sözleşmeler tam yetkisi değiştirir").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Teklif Hazırlama sayfasında Düzenler yetkisi gerekir").length).toBeGreaterThan(0);
   });
 
   it("kazanılmamış teklifte (gönderildi) düğme HİÇ görünmez", async () => {

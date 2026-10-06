@@ -75,7 +75,7 @@ export function DisciplineListPanel({
       </div>
       <div className="ev-cat-modal__body">
         {!canWrite && (
-          <ReadOnlyStrip>Salt okunur · disiplin listesini yalnız tam yetki (full) değiştirir</ReadOnlyStrip>
+          <ReadOnlyStrip>Salt okunur · Disiplin Yönetimi sayfasında Düzenler yetkisi gerekir</ReadOnlyStrip>
         )}
         {toast && (
           <div className="ev-cat-toast ev-cat-toast--inline" role="status">
@@ -118,7 +118,7 @@ export function DisciplineListPanel({
         )}
         <div className="ev-cat-dlist__foot">
           <span>Kullanan = bu disipline bağlı iş tipi · bütçesinde BOQ grubu bu disipline eşlenmiş şantiye</span>
-          <span>{canWrite ? "Sil yalnız kullanılmayan disiplinde açıktır" : "Değişiklik için tam yetki gerekir"}</span>
+          <span>{canWrite ? "Sil yalnız kullanılmayan disiplinde açıktır" : "Değişiklik için Disiplin Yönetimi sayfasında Düzenler yetkisi gerekir"}</span>
         </div>
       </div>
     </>

@@ -14,12 +14,6 @@ const scope = vi.hoisted(() => ({ value: { isRestricted: false, names: [] as str
 const nav = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn() } }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: (moduleKey: string) => {
-    const level = perm.levels[moduleKey];
-    return { level, canView: level !== "none", canWrite: true, canDelete: true };
-  },
-}));
 // IZN-F6a · kapı yalnız sayfa izninden karar verir: contracts modül niyeti → sözleşme/teklif sayfaları (none = hiçbiri).
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();

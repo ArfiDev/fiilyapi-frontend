@@ -51,13 +51,13 @@ describe("İşveren hakediş durum eylemleri · sayfa izni kapıları (IZN-F2.x)
     const { unmount } = employer("draft");
     expect(button("Onaya Gönder")).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: { "mali.hakedis_taseron": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    session(meFixture({ pages: { "mali.hakedis_taseron": pageGrant("edit") } }));
     employer("draft");
     expect(button("Onaya Gönder")).toBeNull();
   });
 
   it("yalnız Görür → 'Onaya Gönder' YOK", () => {
-    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("view") }, permissions: { progress_payments: "full" } }));
+    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("view") } }));
     employer("draft");
     expect(button("Onaya Gönder")).toBeNull();
   });
@@ -98,12 +98,12 @@ describe("İşveren hakediş durum eylemleri · sayfa izni kapıları (IZN-F2.x)
   });
 
   it("pages boş → fail-closed: modül izni approve/admin olsa bile Ödendi İşaretle ve Onayı Geri Al YOK (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { progress_payments: "approve" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = employer("approved");
     expect(button("Ödendi İşaretle")).toBeNull();
     expect(button("Onayı Geri Al")).toBeNull();
     unmount();
-    session(meFixture({ pages: {}, permissions: { progress_payments: "admin" } }));
+    session(meFixture({ pages: {} }));
     employer("approved");
     expect(button("Ödendi İşaretle")).toBeNull();
     expect(button("Onayı Geri Al")).toBeNull();
@@ -126,17 +126,17 @@ describe("Taşeron hakediş durum eylemleri · sayfa izni kapıları (IZN-F2.x)"
     const { unmount } = subcontractor("draft");
     expect(button("Onaya Gönder")).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("edit") } }));
     const second = subcontractor("draft");
     expect(button("Onaya Gönder")).toBeNull();
     second.unmount();
-    session(meFixture({ pages: { "santiye.hakedisler": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    session(meFixture({ pages: { "santiye.hakedisler": pageGrant("edit") } }));
     subcontractor("draft");
     expect(button("Onaya Gönder")).toBeNull();
   });
 
   it("IZN-F5b · taşeron Onayla/Reddet: santiye.hakedisler Onaylar AÇMAZ (ortak sayfa yalnız işveren onayında)", () => {
-    session(meFixture({ pages: { "santiye.hakedisler": pageGrant("view", true) }, permissions: { progress_payments: "view" } }));
+    session(meFixture({ pages: { "santiye.hakedisler": pageGrant("view", true) } }));
     subcontractor("pending_approval");
     expect(button("Onayla")).toBeNull();
     expect(button("Reddet")).toBeNull();

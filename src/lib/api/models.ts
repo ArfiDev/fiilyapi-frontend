@@ -17,7 +17,6 @@ export type PageGrant = DeepScale<components["schemas"]["PageGrant"]>;
 export type PageLevel = components["schemas"]["PageLevel"];
 export type PageKey = components["schemas"]["PageKey"];
 export type HiddenCategory = components["schemas"]["HiddenCategory"];
-export type ModuleResponse = DeepScale<components["schemas"]["ModuleResponse"]>;
 export type ModuleGroup = DeepScale<components["schemas"]["ModuleGroup"]>;
 export type ProjectResponse = WithPlainProgressPct<DeepScale<components["schemas"]["ProjectListItem"]>>;
 // IZN-F3.2 · Kullanıcı erişimi (ana rol + proje ekibi, `/users/{id}/access`). Eski `project-access` ve
@@ -30,7 +29,6 @@ export type DisciplineRef = DeepScale<components["schemas"]["DisciplineRef"]>;
 export type PermissionCell = DeepScale<components["schemas"]["PermissionCell"]>;
 export type PermissionUpdate = DeepScale<components["schemas"]["PermissionUpdate"]>;
 export type PasswordReset = DeepScale<components["schemas"]["PasswordReset"]>;
-export type AccessLevel = components["schemas"]["AccessLevel"];
 export type Scope = components["schemas"]["Scope"];
 export type CompanyRead = DeepScale<components["schemas"]["CompanyRead"]>;
 export type CompanyUpdate = DeepScale<components["schemas"]["CompanyUpdate"]>;

@@ -27,17 +27,11 @@ const TOAST_MS = 2800;
 
 /** F1 ÜS-10 şeridi, teklif için uyarlandı (TKL-F3 §2.3). */
 export function readOnlyMessage(
-  /** IZN-F6b · sayfa izni: sözleşme/teklif sayfaları Görür. */
-  canView: boolean,
-  /** IZN-F6b · sayfa izni: yazma kararı (Düzenler). */
+  /** Sayfa izni: yazma kararı (Düzenler). Görür kapısı dış bileşende (AccessDenied) geçilmiş olur. */
   canEdit: boolean,
   isRestricted: boolean,
 ): string {
-  if (!canEdit) {
-    return canView
-      ? "Görüntüleyici · yalnız okuma"
-      : "Salt okunur · teklifleri yalnız Sözleşmeler tam yetkisi değiştirir";
-  }
+  if (!canEdit) return "Görüntüleyici · yalnız okuma";
   if (isRestricted) return "Salt okunur · disiplin kısıtlı kullanıcı teklif değiştiremez";
   return "";
 }
@@ -67,7 +61,6 @@ function OffersContent() {
   const canWrite = canEditOffers && !scope.isRestricted;
   const convertPermission = usePagePermission(OFFER_CONVERT_APPROVE);
   const canConvert = convertPermission.canApprove && !scope.isRestricted;
-  const canViewOffers = usePagePermission(CONTRACTS_VIEW).canView;
 
   const [status, setStatus] = useState<OfferStatus | null>(null);
   const [conversion, setConversion] = useState<OfferConversionFilter | null>(null);
@@ -173,7 +166,7 @@ function OffersContent() {
         onClear={clearFilters}
         employers={employerOptions}
         canWrite={canWrite}
-        readOnlyText={canWrite ? "" : readOnlyMessage(canViewOffers, canEditOffers, scope.isRestricted)}
+        readOnlyText={canWrite ? "" : readOnlyMessage(canEditOffers, scope.isRestricted)}
         now={new Date()}
         busyOfferId={busyOfferId}
         onNewRevision={handleNewRevision}

@@ -3,7 +3,6 @@ import { screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { backendClient } from "@/lib/api/client";
-import type { AccessLevel } from "@/lib/auth/permissions";
 
 import { BETON, DEMIR, DUV, ELK_SITE_ONLY, INC, KAB, SIVA, fail, mockGets, ok, renderScreen } from "./catalog-test-utils";
 import { evMe } from "../ev-session.testkit";
@@ -12,15 +11,7 @@ vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
 }));
 
-let permissionLevel: AccessLevel | undefined = "admin";
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({
-    level: permissionLevel,
-    canView: true,
-    canWrite: true,
-    canDelete: true,
-  }),
-}));
+let permissionLevel: string | undefined = "admin";
 // IZN-F6a.3 · kapılar oturum sayfa izinlerinden okunur; eski seviye niyeti `permissionLevel`den türetilir
 // (draft = salt okunur: katalog/disiplin yazma eşiği full).
 vi.mock("@/components/shell/SessionProvider", () => ({
@@ -116,12 +107,12 @@ describe("liste modalı (M6 · Disiplin Yönetimi:147-221)", () => {
     permissionLevel = "draft";
     const dialog = await openManager("Disiplinler");
     expect(within(dialog).getByRole("note")).toHaveTextContent(
-      "Salt okunur · disiplin listesini yalnız tam yetki (full) değiştirir",
+      "Salt okunur · Disiplin Yönetimi sayfasında Düzenler yetkisi gerekir",
     );
     expect(within(dialog).queryByRole("button", { name: "+ Yeni disiplin" })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Düzenle" })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Sil" })).not.toBeInTheDocument();
-    expect(within(dialog).getByText("Değişiklik için tam yetki gerekir")).toBeInTheDocument();
+    expect(within(dialog).getByText("Değişiklik için Disiplin Yönetimi sayfasında Düzenler yetkisi gerekir")).toBeInTheDocument();
   });
 
   it("disiplin listesi hatası: 'Disiplinler yüklenemedi'", async () => {

@@ -178,7 +178,7 @@ export const REOPEN_DISABLED_REASON = "Geri açma yetkisi yalnızca Sistem Yöne
 export const NO_RECORD_CLOSE_REASON = "Kaydı olmayan dönem zaten açıktır, kapatmaya gerek yok";
 
 /** DK:44 — yazma yetkisi yoksa (K1: `full` altı). */
-export const WRITE_DISABLED_REASON = "Muhasebe modülünde dönem kapatma yetkiniz yok.";
+export const WRITE_DISABLED_REASON = "Dönem kapatmak için Dönem Kapanışı sayfasında Düzenler yetkisi gerekir.";
 
 /**
  * "Dönemi Kapat" düğmesinin durumu — `undefined` ⇒ aktif, string ⇒ devre-dışı

@@ -34,7 +34,7 @@ function no(reason: string): OfferActionVerdict {
 
 /** Metinler SABAH ONAYI ekidir (plan §4.2 yalnız taslak satırının gerekçelerini verir). */
 export const OFFER_ACTION_REASONS = {
-  readOnlyUser: "Teklifleri yalnız Sözleşmeler tam yetkisi değiştirir",
+  readOnlyUser: "Teklif Hazırlama sayfasında Düzenler yetkisi gerekir",
   oldRevision: "Eski revizyon salt okunur; güncel revizyona dönün",
   nothingToSave: "Kaydedilecek değişiklik yok",
   saveFirst: "Önce taslağı kaydedin",

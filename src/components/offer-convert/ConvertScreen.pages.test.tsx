@@ -19,8 +19,6 @@ vi.mock("next/navigation", () => ({
 
 const DENIED = "Bu alana yetkiniz yok";
 const PAGE = "teklif.teklif_hazirlama";
-const ADMIN = { projects: "admin", contracts: "full" };
-const NONE = { projects: "none", contracts: "none" };
 
 function session(me: ReturnType<typeof meFixture>) {
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
@@ -44,31 +42,31 @@ describe("ConvertScreen · sayfa izni Onaylar kapısı (IZN-F5-ön)", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("teklif.teklif_hazirlama Onaylar → ekran açılır (modül izinleri none olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("view", true) }, permissions: NONE }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("view", true) } }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
   it("teklif.teklif_hazirlama Düzenler (Onaylar YOK) → AccessDenied (modüller admin/full olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("edit") }, permissions: ADMIN }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("edit") } }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
   it("pages boş → ekran KAPALI (projects:admin ∧ contracts:full olsa da)", () => {
-    session(meFixture({ pages: {}, permissions: { projects: "full", contracts: "full" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
 
-    session(meFixture({ pages: {}, permissions: ADMIN }));
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: Onaylar yokken de ekran açılır", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("view") }, isSystemAdmin: true, permissions: NONE }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("view") }, isSystemAdmin: true }));
     renderView();
     expect(screen.queryByText(DENIED)).toBeNull();
   });

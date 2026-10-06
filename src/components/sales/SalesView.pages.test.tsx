@@ -42,20 +42,20 @@ beforeEach(() => {
 
 describe("SalesView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("mali.satis Görür → ekran açılır (sales none olsa bile)", () => {
-    session(meFixture({ pages: { "mali.satis": pageGrant("view") }, permissions: { sales: "none" } }));
+    session(meFixture({ pages: { "mali.satis": pageGrant("view") } }));
     render(<SalesView />);
     expect(screen.getByRole("heading", TITLE)).toBeInTheDocument();
   });
 
   it("mali.satis none → AccessDenied (sales full olsa bile)", () => {
-    session(meFixture({ pages: { "mali.satis": pageGrant("none") }, permissions: { sales: "full" } }));
+    session(meFixture({ pages: { "mali.satis": pageGrant("none") } }));
     render(<SalesView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     expect(screen.queryByRole("heading", TITLE)).toBeNull();
   });
 
   it("pages boş → fail-closed: sales full olsa bile AccessDenied (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { sales: "full" } }));
+    session(meFixture({ pages: {} }));
     render(<SalesView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
@@ -67,14 +67,14 @@ describe("SalesView · Blok/Ünite Ekle düğmeleri sekme başına yazma kapıs�
   const VIEW = { "mali.satis": pageGrant("view") };
 
   it("yalnız mali.satis_blok Düzenler → yalnız Blok Ekle", () => {
-    session(meFixture({ pages: { ...VIEW, "mali.satis_blok": pageGrant("edit") }, permissions: { projects: "none" } }));
+    session(meFixture({ pages: { ...VIEW, "mali.satis_blok": pageGrant("edit") } }));
     render(<SalesView />);
     expect(screen.getByRole("link", BLOCK)).toBeInTheDocument();
     expect(screen.queryByRole("link", UNIT)).toBeNull();
   });
 
   it("yalnız mali.satis_unite Düzenler → yalnız Ünite Ekle", () => {
-    session(meFixture({ pages: { ...VIEW, "mali.satis_unite": pageGrant("edit") }, permissions: { projects: "none" } }));
+    session(meFixture({ pages: { ...VIEW, "mali.satis_unite": pageGrant("edit") } }));
     render(<SalesView />);
     expect(screen.getByRole("link", UNIT)).toBeInTheDocument();
     expect(screen.queryByRole("link", BLOCK)).toBeNull();
@@ -91,7 +91,6 @@ describe("SalesView · Blok/Ünite Ekle düğmeleri sekme başına yazma kapıs�
           "mali.satis_excel": pageGrant("edit"),
           "mali.satis_paylasim": pageGrant("edit"),
         },
-        permissions: { projects: "full" },
       }),
     );
     render(<SalesView />);

@@ -25,9 +25,8 @@ import {
 } from "@/lib/api/hooks/useUnitImport";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
-import { meFixture } from "@/lib/auth/page-grants.testkit";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
@@ -215,9 +214,9 @@ describe("UnitImportView — TAM SAYFA kabuğu (EI 31-56)", () => {
     expect(screen.getByTestId("excel-form-iptal")).toHaveAttribute("href", "/satis");
   });
 
-  it("`projects` yetkisi yoksa AccessDenied basılır (`sales` DEĞİL)", () => {
+  it("Excel sayfasında (mali.satis_excel) Düzenler yoksa AccessDenied basılır (kardeş satış sayfaları Düzenler olsa da)", () => {
     vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { projects: "none", sales: "full" } } as unknown as MeResponse,
+      me: meFixture({ pages: { "mali.satis": pageGrant("edit"), "mali.satis_unite": pageGrant("edit"), "mali.satis_excel": pageGrant("view") } }),
       isLoading: false,
     } as ReturnType<typeof useSession>);
     render(<UnitImportView />);

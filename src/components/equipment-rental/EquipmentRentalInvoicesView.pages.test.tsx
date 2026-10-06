@@ -8,7 +8,7 @@ import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { EquipmentRentalInvoicesView } from "./EquipmentRentalInvoicesView";
 
 // IZN-F5-ön — Makine kira listesinin GÖRÜNTÜLEME kapısı (salt-okunur işareti `makine-kira-readonly`) saha.makine_* sayfalarından karar verir
-// (backend VIEW_GATE_PAGES). Grant yoksa bugünkü modül kararı (`personnel`) aynen kalır.
+// (backend VIEW_GATE_PAGES).
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/x",
@@ -18,7 +18,6 @@ vi.mock("next/navigation", () => ({
 
 const MARKER = "makine-kira-readonly";
 const PAGE = "saha.makine_kira";
-const MODULE = "equipment";
 
 function session(me: ReturnType<typeof meFixture>) {
   vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
@@ -41,26 +40,26 @@ describe("EquipmentRentalInvoicesView · sayfa izni görüntüleme kapısı (IZN
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("saha.makine_kira Görür → işaret yok (modül none olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("view") }, permissions: { [MODULE]: "none" } }));
+  it("saha.makine_kira Görür → işaret yok", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("view") } }));
     renderView();
     expect(screen.queryByTestId(MARKER)).toBeNull();
   });
 
-  it("saha.makine_kira none → işaret var (modül full olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, permissions: { [MODULE]: "full" } }));
+  it("saha.makine_kira none → işaret var", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("none") } }));
     renderView();
     expect(screen.getByTestId(MARKER)).toBeInTheDocument();
   });
 
-  it("pages boş → fail-closed: modül full olsa bile işaret var (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { [MODULE]: "full" } }));
+  it("pages boş → fail-closed: işaret var (IZN-F6a)", () => {
+    session(meFixture({ pages: {} }));
     renderView();
     expect(screen.getByTestId(MARKER)).toBeInTheDocument();
   });
 
   it("sistem yöneticisi: grant none olsa da işaret yok", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true, permissions: { [MODULE]: "none" } }));
+    session(meFixture({ pages: { [PAGE]: pageGrant("none") }, isSystemAdmin: true }));
     renderView();
     expect(screen.queryByTestId(MARKER)).toBeNull();
   });
@@ -74,8 +73,8 @@ describe("EquipmentRentalInvoicesView · '+ Yeni Kira Hakedişi' = saha.makine_k
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("yalnız saha.makine_kira Düzenler → düğme var (modül none olsa da)", () => {
-    session(meFixture({ pages: { [PAGE]: pageGrant("edit") }, permissions: { [MODULE]: "none" } }));
+  it("yalnız saha.makine_kira Düzenler → düğme var", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("edit") } }));
     renderView();
     expect(screen.getByTestId(CREATE)).toBeInTheDocument();
   });
@@ -89,7 +88,6 @@ describe("EquipmentRentalInvoicesView · '+ Yeni Kira Hakedişi' = saha.makine_k
           "saha.makine_calisma": pageGrant("edit"),
           "saha.makine_yakit": pageGrant("edit"),
         },
-        permissions: { [MODULE]: "full" },
       }),
     );
     renderView();

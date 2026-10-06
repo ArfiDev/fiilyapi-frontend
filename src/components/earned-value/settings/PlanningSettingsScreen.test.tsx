@@ -632,7 +632,7 @@ describe("PlanningSettingsScreen · salt okunur (B1-8 · F0-8)", () => {
     await waitForForm();
 
     expect(screen.getByRole("note")).toHaveTextContent(
-      "Salt okunur. Planlama ayarlarını değiştirmek için Planlama (earned_value) modülünde taslak yetkisi gerekir. Şantiye seçici açık kalır.",
+      "Salt okunur. Planlama ayarlarını değiştirmek için Planlama Ayarları sayfasında Düzenler yetkisi gerekir. Şantiye seçici açık kalır.",
     );
     expect(screen.getByRole("textbox", { name: "Günlük standart saat" })).toBeDisabled();
     expect(screen.getByRole("textbox", { name: "Günlük yeşil eşiği" })).toBeDisabled();
@@ -672,16 +672,16 @@ describe("PlanningSettingsScreen · yazma kapısı EV_SETTINGS_EDIT (IZN-F5b)", 
     vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as never);
   }
 
-  it("ayarlar.planlama Düzenler → alanlar yazılabilir (modül earned_value view olsa da)", async () => {
-    setPages(meFixture({ pages: { "ayarlar.planlama": pageGrant("edit") }, permissions: { earned_value: "view" } }));
+  it("ayarlar.planlama Düzenler → alanlar yazılabilir", async () => {
+    setPages(meFixture({ pages: { "ayarlar.planlama": pageGrant("edit") } }));
     stubBackend();
     renderScreen();
     await waitForForm();
     expect(screen.getByRole("textbox", { name: "Günlük standart saat" })).toBeEnabled();
   });
 
-  it("yalnız adam-saat bütçesi Düzenler (modül earned_value view) → ayar alanları salt okunur", async () => {
-    setPages(meFixture({ pages: { "planlama.adam_saat_butcesi": pageGrant("edit") }, permissions: { earned_value: "view" } }));
+  it("yalnız adam-saat bütçesi Düzenler → ayar alanları salt okunur", async () => {
+    setPages(meFixture({ pages: { "planlama.adam_saat_butcesi": pageGrant("edit") } }));
     stubBackend();
     renderScreen();
     await waitForForm();

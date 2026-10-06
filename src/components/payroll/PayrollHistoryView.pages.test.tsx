@@ -38,23 +38,23 @@ beforeEach(() => {
 
 describe("PayrollHistoryView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("mali.bordro_gecmis Görür → açılır (modül none olsa bile)", () => {
-    session(meFixture({ pages: { "mali.bordro_gecmis": pageGrant("view") }, permissions: { payroll: "none" } }));
+    session(meFixture({ pages: { "mali.bordro_gecmis": pageGrant("view") } }));
     render(<PayrollHistoryView />);
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
   it("bordro sayfalarının hepsi none → AccessDenied (modül full olsa bile)", () => {
-    session(meFixture({ pages: { "mali.bordro_gecmis": pageGrant("none") }, permissions: { payroll: "full" } }));
+    session(meFixture({ pages: { "mali.bordro_gecmis": pageGrant("none") } }));
     render(<PayrollHistoryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("pages boş → fail-closed: modül izni view olsa bile reddedilir (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { payroll: "none" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = render(<PayrollHistoryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: {}, permissions: { payroll: "view" } }));
+    session(meFixture({ pages: {} }));
     render(<PayrollHistoryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

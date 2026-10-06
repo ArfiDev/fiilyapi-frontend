@@ -140,8 +140,6 @@ export function pagesFor(
 export interface MeFixtureOptions {
   pages?: Partial<Record<PageKey, PageGrant>>;
   isSystemAdmin?: boolean;
-  /** Eski modül izinleri (geri uyum düşüşü için). */
-  permissions?: Record<string, string>;
   /** IZN-F3.2 · `true` = kişi her projeyi ana rolüyle görür. */
   allProjects?: boolean;
   /** IZN-F3.2 · proje ekibi satırları (proje UUID'si → o projedeki rol ANAHTARI). */
@@ -154,11 +152,10 @@ export interface MeFixtureOptions {
   roleHiddenFields?: Record<string, readonly HiddenCategory[]>;
 }
 
-/** `useSession().me` için kısmi yük; `pages`/`permissions` ikisi de verilmezse TAM ERİŞİM sayfa matrisi (IZN-F6a). */
+/** `useSession().me` için kısmi yük; `pages` verilmezse TAM ERİŞİM sayfa matrisi (IZN-F6a). Eski `permissions` alanı (IZN-F6c) yok. */
 export function meFixture({
   pages,
   isSystemAdmin = false,
-  permissions,
   allProjects,
   projects,
   rolePages,
@@ -173,12 +170,9 @@ export function meFixture({
     role_key: "procurement",
     status: "active",
     is_system_admin: isSystemAdmin,
-    // IZN-F6a · ne `pages` ne `permissions` verilmediyse TAM ERİŞİM (sayfa modeli devrede); yalnız `permissions`
-    // verilen eski niyetli fikstürler (ör. "view → salt okunur") BİLEREK sayfasız kalır → kapılar kapalı,
-    // sahte-yeşil üretmez (sayfa düzeyine taşınmaları gerekir).
-    ...(pages !== undefined ? { pages } : permissions === undefined ? { pages: fullAccessPages() } : {}),
+    // IZN-F6a · `pages` verilmediyse TAM ERİŞİM (sayfa modeli devrede); "yetkisiz" niyetli testler `pages`'i açıkça yazar.
+    ...(pages !== undefined ? { pages } : { pages: fullAccessPages() }),
     ...(hiddenFields === undefined ? {} : { hidden_fields: hiddenFields }),
-    ...(permissions === undefined ? {} : { permissions }),
     ...(allProjects === undefined ? {} : { all_projects: allProjects }),
     ...(projects === undefined ? {} : { projects: projects.map((project) => ({ ...project, discipline_ids: [] })) }),
     ...(rolePages === undefined

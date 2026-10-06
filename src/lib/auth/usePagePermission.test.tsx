@@ -38,8 +38,10 @@ describe("usePagePermission", () => {
 describe("useButtonGate", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("IZN-F6a · pages alanı olmayan eski oturum → modül izni full olsa da KAPALI (fallback yok)", () => {
-    session(meFixture({ permissions: { invoicing: "full" } }));
+  it("IZN-F6a · pages alanı olmayan eski oturum → KAPALI (modül izni düşüşü yok)", () => {
+    // pages ALANI HİÇ olmayan (eski) oturum yükü — testkit artık varsayılan olarak pages verir.
+    const legacy = Object.fromEntries(Object.entries(meFixture()).filter(([key]) => key !== "pages"));
+    session(legacy as ReturnType<typeof meFixture>);
     const { result } = renderHook(() => useButtonGate({ pages: "mali.fatura", need: "edit" }));
     expect(result.current).toBe(false);
   });

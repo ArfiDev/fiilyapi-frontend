@@ -30,7 +30,6 @@ export const HIDDEN_CATEGORIES: readonly HiddenCategoryInfo[] = [
 ];
 
 /** Backend gizli alan maskesini henüz uygulamıyorsa kutucukların altında gösterilen tek satırlık not. */
-export const HIDDEN_FIELDS_INACTIVE_NOTE = "Gizleme bir sonraki güncellemede devreye girer";
 
 /**
  * "Yeni" rozeti taşıyan 6 rol (IZN-B2 migration `c5e9a3b7d1f4`). FE sabit listesi:

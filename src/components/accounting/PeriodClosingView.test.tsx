@@ -492,7 +492,7 @@ describe("IZN-F5b-A madde 4 · 'Dönemi Kapat' = mali.donem_kapanisi Düzenler (
   }
 
   it("yalnız mali.donem_kapanisi Düzenler → Ağustos kapatma düğmesi AÇIK (accounting none olsa da)", () => {
-    setPages({ pages: { "mali.donem_kapanisi": pageGrant("edit") }, permissions: { accounting: "none" } });
+    setPages({ pages: { "mali.donem_kapanisi": pageGrant("edit") } });
     render(<PeriodClosingView />);
     expect(screen.getByTestId("dkap-close-8")).toBeEnabled();
   });
@@ -504,7 +504,6 @@ describe("IZN-F5b-A madde 4 · 'Dönemi Kapat' = mali.donem_kapanisi Düzenler (
         "mali.yevmiye": pageGrant("edit"),
         "mali.hesap_plani": pageGrant("edit"),
       },
-      permissions: { accounting: "full" },
     });
     render(<PeriodClosingView />);
     expect(screen.getByTestId("dkap-close-8")).toBeDisabled();

@@ -53,20 +53,20 @@ describe("SiteDocumentsView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
     } as unknown as ReturnType<typeof useDocumentFolders>);
   });
 
-  it("santiye.belgeler Görür → ekran açılır (modül documents:none olsa da)", () => {
-    session(meFixture({ pages: { "santiye.belgeler": pageGrant("view") }, permissions: { documents: "none" } }));
+  it("santiye.belgeler Görür → ekran açılır", () => {
+    session(meFixture({ pages: { "santiye.belgeler": pageGrant("view") } }));
     render(<SiteDocumentsView />);
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
-  it("belge sayfalarında yalnız none → AccessDenied (modül full olsa da)", () => {
-    session(meFixture({ pages: { "santiye.belgeler": pageGrant("none") }, permissions: { documents: "full" } }));
+  it("belge sayfalarında yalnız none → AccessDenied", () => {
+    session(meFixture({ pages: { "santiye.belgeler": pageGrant("none") } }));
     render(<SiteDocumentsView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("pages boş → fail-closed: documents full olsa bile AccessDenied (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { documents: "full" } }));
+    session(meFixture({ pages: {} }));
     render(<SiteDocumentsView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
@@ -77,7 +77,6 @@ describe("SiteDocumentsView · sayfa izni görüntüleme kapısı (IZN-F5-ön)",
         pages: { "santiye.belgeler": pageGrant("view") },
         projects: [{ project_id: "p-1", role_key: "viewer" }],
         rolePages: { viewer: { "santiye.belgeler": pageGrant("none") } },
-        permissions: { documents: "full" },
       }),
     );
     render(<SiteDocumentsView />);

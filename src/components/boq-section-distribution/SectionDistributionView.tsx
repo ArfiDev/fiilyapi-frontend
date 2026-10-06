@@ -63,7 +63,7 @@ export interface SectionDistributionViewProps {
 }
 
 const NO_FULL_PERMISSION_REASON =
-  "İş kalemleri modülünde tam yetkiniz yok — dağılım salt okunur.";
+  "Bölüm Dağılımı sayfasında Düzenler yetkisi gerekir — dağılım salt okunur.";
 
 export function SectionDistributionView({
   siteId,

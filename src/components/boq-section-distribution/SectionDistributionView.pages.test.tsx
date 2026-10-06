@@ -38,8 +38,8 @@ function firstShareInputs(): HTMLInputElement[] {
 beforeEach(() => vi.clearAllMocks());
 
 describe("SectionDistributionView · sayfa izni kapısı (IZN-F2.x)", () => {
-  it("santiye.bolum_dagilimi Düzenler → hücreler yazılabilir (modül izni view olsa bile)", () => {
-    session(meFixture({ pages: { "santiye.bolum_dagilimi": pageGrant("edit") }, permissions: { boq: "view" } }));
+  it("santiye.bolum_dagilimi Düzenler → hücreler yazılabilir", () => {
+    session(meFixture({ pages: { "santiye.bolum_dagilimi": pageGrant("edit") } }));
     renderView();
     expect(firstShareInputs().some((input) => !input.disabled)).toBe(true);
   });
@@ -50,8 +50,8 @@ describe("SectionDistributionView · sayfa izni kapısı (IZN-F2.x)", () => {
     expect(firstShareInputs().some((input) => !input.disabled)).toBe(true);
   });
 
-  it("yalnız Görür → tüm hücreler kilitli ve Kaydet pasif (modül izni full olsa bile)", () => {
-    session(meFixture({ pages: { "santiye.bolum_dagilimi": pageGrant("view") }, permissions: { boq: "full" } }));
+  it("yalnız Görür → tüm hücreler kilitli ve Kaydet pasif", () => {
+    session(meFixture({ pages: { "santiye.bolum_dagilimi": pageGrant("view") } }));
     renderView();
     expect(firstShareInputs().every((input) => input.disabled)).toBe(true);
     expect(screen.getByTestId("bdg-save")).toBeDisabled();
@@ -64,7 +64,7 @@ describe("SectionDistributionView · sayfa izni kapısı (IZN-F2.x)", () => {
   });
 
   it("pages boş → fail-closed: boq full olsa bile yazamaz (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { boq: "full" } }));
+    session(meFixture({ pages: {} }));
     renderView();
     expect(firstShareInputs().every((input) => input.disabled)).toBe(true);
   });

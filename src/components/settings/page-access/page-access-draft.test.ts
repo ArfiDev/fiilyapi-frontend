@@ -5,7 +5,6 @@ import {
   changedPageKeys,
   countChanges,
   draftFromResponse,
-  isHiddenFieldsEffective,
   toUpdateBody,
   withApprove,
   withGroupLevel,
@@ -116,10 +115,3 @@ describe("toUpdateBody", () => {
   });
 });
 
-describe("isHiddenFieldsEffective", () => {
-  it("alan yoksa ya da true değilse etkin DEĞİLDİR", () => {
-    expect(isHiddenFieldsEffective({})).toBe(false);
-    expect(isHiddenFieldsEffective({ hidden_fields_effective: false })).toBe(false);
-    expect(isHiddenFieldsEffective({ hidden_fields_effective: true })).toBe(true);
-  });
-});

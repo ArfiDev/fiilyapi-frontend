@@ -26,9 +26,6 @@ vi.mock("@/lib/api/hooks/useProjects", async (importOriginal) => ({
   useProject: vi.fn(),
 }));
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: "view", canView: true, canWrite: false, canDelete: false }),
-}));
 
 const DISTRIBUTION = {
   sites: [{ id: "s-1", name: "A-Blok" }],

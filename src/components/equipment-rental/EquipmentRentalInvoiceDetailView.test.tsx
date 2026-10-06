@@ -14,7 +14,6 @@ import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSession } from "@/components/shell/SessionProvider";
 import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
-import type { MeResponse } from "@/lib/auth/types";
 
 /*
  * F-KIRA FINAL REVIEW BEKÇİSİ — YÜKLEME/HATA DALLARININ SIRASI.
@@ -87,7 +86,7 @@ function detailQuery(overrides: Partial<DetailQuery>): DetailQuery {
 beforeEach(() => {
   vi.clearAllMocks();
   mockSession.mockReturnValue({
-    me: { permissions: { equipment: "full" } } as unknown as MeResponse,
+    me: meFixture(),
   } as unknown as ReturnType<typeof useSession>);
   mockSuppliers.mockReturnValue({
     data: { items: [], total: 0, limit: 200, offset: 0 },
@@ -155,19 +154,6 @@ const DETAIL_FIXTURE = {
     vat_rate: "20.00",
   },
 } as unknown as RentalInvoiceDetailResponse;
-
-describe("EquipmentRentalInvoiceDetailView · izin eşiği backend ile eşleşir (kayıt 92)", () => {
-  it("`equipment` seviyesi `approve` iken form SALT-OKUNUR (backend yalnız `full` ister)", () => {
-    mockSession.mockReturnValue({
-      me: { permissions: { equipment: "approve" } } as unknown as MeResponse,
-    } as unknown as ReturnType<typeof useSession>);
-    mockDetail.mockReturnValue(detailQuery({ isSuccess: true, data: DETAIL_FIXTURE }));
-
-    renderView();
-
-    expect(screen.getByTestId("makine-kira-supplier")).toBeDisabled();
-  });
-});
 
 describe("EquipmentRentalInvoiceDetailView · Şantiye alanı DÜZENLENEBİLİR bir alandır, süzgeç değil (kayıt 94)", () => {
   it("boş seçenek 'Tüm Şantiyeler' DEĞİL, depoya özdeş 'Atanmamış' metnini taşır", () => {
@@ -267,8 +253,8 @@ describe("IZN-F5b-A madde 11 · kira hakedişi başlık/satır düzenleme = saha
     mockDetail.mockReturnValue(detailQuery({ isSuccess: true, data: DETAIL_FIXTURE }));
   }
 
-  it("yalnız saha.makine_kira Düzenler → form DÜZENLENEBİLİR (modül none olsa da)", () => {
-    setPages({ pages: { "saha.makine_kira": pageGrant("edit") }, permissions: { equipment: "none" } });
+  it("yalnız saha.makine_kira Düzenler → form DÜZENLENEBİLİR", () => {
+    setPages({ pages: { "saha.makine_kira": pageGrant("edit") } });
     renderView();
     expect(screen.getByTestId("makine-kira-supplier")).toBeEnabled();
   });
@@ -281,7 +267,6 @@ describe("IZN-F5b-A madde 11 · kira hakedişi başlık/satır düzenleme = saha
         "saha.makine_calisma": pageGrant("edit"),
         "saha.makine_yakit": pageGrant("edit"),
       },
-      permissions: { equipment: "full" },
     });
     renderView();
     expect(screen.getByTestId("makine-kira-supplier")).toBeDisabled();

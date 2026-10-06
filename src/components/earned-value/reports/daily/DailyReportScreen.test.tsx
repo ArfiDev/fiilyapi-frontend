@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BackendError } from "@/lib/api/unwrap";
 import type { useApproveDailyReport, useDailyReport } from "@/lib/api/hooks/useEvReports";
-import type { AccessLevel } from "@/lib/auth/permissions";
 import type { ReportScreenProps } from "@/components/earned-value/reports/kit/report-screen";
 
 import {
@@ -17,13 +16,7 @@ vi.mock("@/lib/api/hooks/useEvReports", () => ({
   useDailyReport: vi.fn(),
   useApproveDailyReport: vi.fn(),
 }));
-
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: vi.fn(),
-}));
-
-// IZN-F6a.3 · Onayla kapısı oturum sayfa izninden okunur; eski seviye niyeti `sessionLevel` ile (useModulePermission
-// taklidiyle TUTARLI) kurulur.
+// IZN-F6a.3 · Onayla kapısı oturum sayfa izninden okunur; seviye niyeti `sessionLevel` ile kurulur.
 let sessionLevel = "approve";
 vi.mock("@/components/shell/SessionProvider", () => ({
   useSession: () => ({ me: evMe(sessionLevel), isLoading: false }),
@@ -69,10 +62,6 @@ function queryStub(over: Partial<ReturnType<typeof useDailyReport>> = {}) {
   } as unknown as ReturnType<typeof useDailyReport>;
 }
 
-function permissionStub(level: AccessLevel) {
-  return { level, canView: true, canWrite: true, canDelete: false };
-}
-
 function approveStub(over: Partial<ReturnType<typeof useApproveDailyReport>> = {}) {
   return {
     mutateAsync: vi.fn().mockResolvedValue({ report: DAILY_REPORT_FIXTURE_DRAFT, missing_diary_dates: [] }),
@@ -82,7 +71,6 @@ function approveStub(over: Partial<ReturnType<typeof useApproveDailyReport>> = {
 }
 
 import { useApproveDailyReport as useApproveMocked, useDailyReport as useDailyReportMocked } from "@/lib/api/hooks/useEvReports";
-import { useModulePermission as usePermissionMocked } from "@/lib/auth/useModulePermission";
 import { evMe } from "../../ev-session.testkit";
 
 /** S10 dışı testler için: taslak günlük YOK — Onayla düğmesi etkin. */
@@ -92,7 +80,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams("tarih=2026-09-24");
   sessionLevel = "approve";
-  vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("approve"));
   vi.mocked(useApproveMocked).mockReturnValue(approveStub());
 });
 
@@ -226,7 +213,6 @@ describe("DailyReportScreen — GİR (S10, S11, S12, S30)", () => {
 
   it("APPROVE izni YOKKEN Onayla düğmesi hiç basılmaz", () => {
     sessionLevel = "view";
-    vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("view"));
     vi.mocked(useDailyReportMocked).mockReturnValue(queryStub({ data: DRAFT_NO_MISSING_DIARY }));
     render(<DailyReportScreen {...baseProps()} />);
     expect(screen.queryByRole("button", { name: "Onayla ve kilitle" })).not.toBeInTheDocument();

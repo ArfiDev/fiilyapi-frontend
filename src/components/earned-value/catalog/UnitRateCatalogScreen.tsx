@@ -119,7 +119,7 @@ export function UnitRateCatalogScreen() {
         <ReadOnlyStrip>
           {isViewOnly
             ? "Görüntüleyici · yalnız okuma"
-            : "Salt okunur · kataloğu yalnız tam yetki (full) değiştirir"}
+            : "Salt okunur · Birim Oran Kataloğu sayfasında Düzenler yetkisi gerekir"}
         </ReadOnlyStrip>
       )}
 

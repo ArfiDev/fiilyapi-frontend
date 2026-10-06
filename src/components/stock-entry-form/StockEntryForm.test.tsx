@@ -32,7 +32,7 @@ vi.mock("@/lib/api/hooks/useUserOptions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/hooks/useUserOptions")>()),
   useUserOptions: vi.fn(),
 }));
-// IZN-F6a · kapı YALNIZ oturum `pages`inden okunur (`useModulePermission` bu ekranda artık çağrılmaz); her testte
+// IZN-F6a · kapı YALNIZ oturum `pages`inden okunur; her testte
 // `sessionPages` ile kurulur (varsayılan = tam erişim, beforeEach).
 let sessionPages: ReturnType<typeof fullAccessPages> = fullAccessPages();
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {

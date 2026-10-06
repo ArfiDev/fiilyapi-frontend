@@ -65,7 +65,7 @@ describe("Adım 4 · sayfa izni kapıları (IZN-F2.x)", () => {
   });
 
   it("pages boş (eski oturum, earned_value approve) → fail-closed: Dondur ve Taslağı sil YOK (IZN-F6a)", async () => {
-    setupWith(meFixture({ pages: {}, permissions: { earned_value: "approve" } }));
+    setupWith(meFixture({ pages: {} }));
     await screen.findByText("Adım 4 · Baseline'ı dondur");
     expect(screen.queryByRole("button", { name: FREEZE })).toBeNull();
     expect(screen.queryByRole("button", { name: DELETE_DRAFT })).toBeNull();
@@ -95,8 +95,8 @@ describe("Adım 4 · bütçe yazma kapısı EV_BUDGET_EDIT (IZN-F5b)", () => {
     expect(within(blockers).getByRole("button", OPEN_DRAFT)).toBeInTheDocument();
   });
 
-  it("yalnız ayarlar.planlama Düzenler (modül earned_value view) → Taslak aç GÖRÜNMEZ", async () => {
-    setupActive(meFixture({ pages: { "ayarlar.planlama": pageGrant("edit") }, permissions: { earned_value: "view" } }));
+  it("yalnız ayarlar.planlama Düzenler → Taslak aç GÖRÜNMEZ", async () => {
+    setupActive(meFixture({ pages: { "ayarlar.planlama": pageGrant("edit") } }));
     const blockers = await screen.findByRole("region", { name: "Dondurma engelleri" });
     expect(within(blockers).queryByRole("button", OPEN_DRAFT)).toBeNull();
   });

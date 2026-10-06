@@ -38,7 +38,7 @@ beforeEach(() => {
 
 describe("TreasuryView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("mali.hazine Görür → açılır (treasury none olsa bile)", () => {
-    session(meFixture({ pages: { "mali.hazine": pageGrant("view") }, permissions: { treasury: "none" } }));
+    session(meFixture({ pages: { "mali.hazine": pageGrant("view") } }));
     render(<TreasuryView />);
     expect(screen.getByRole("heading", TITLE)).toBeInTheDocument();
   });
@@ -50,18 +50,18 @@ describe("TreasuryView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () =
   });
 
   it("hazine sayfalarında yalnız none → AccessDenied (treasury full olsa bile)", () => {
-    session(meFixture({ pages: { "mali.hazine": pageGrant("none") }, permissions: { treasury: "full" } }));
+    session(meFixture({ pages: { "mali.hazine": pageGrant("none") } }));
     render(<TreasuryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
   it("pages boş → ekran KAPALI (modül izni karar vermez)", () => {
-    session(meFixture({ pages: {}, permissions: { treasury: "none" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = render(<TreasuryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
-    session(meFixture({ pages: {}, permissions: { treasury: "view" } }));
+    session(meFixture({ pages: {} }));
     render(<TreasuryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

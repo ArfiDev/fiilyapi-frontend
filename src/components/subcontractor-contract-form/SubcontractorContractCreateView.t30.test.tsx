@@ -16,9 +16,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/sozlesmeler/taseron/yeni",
   useSearchParams: () => new URLSearchParams(),
 }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: vi.fn(() => ({ level: "full", canView: true, canWrite: true, canDelete: true })),
-}));
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSites", () => ({ useSites: vi.fn() }));
 vi.mock("@/lib/api/hooks/useSubcontractors", () => ({ useSubcontractors: vi.fn() }));

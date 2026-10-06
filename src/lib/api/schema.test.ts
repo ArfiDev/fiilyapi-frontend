@@ -99,13 +99,6 @@ describe("BOQ tip üretimi (Ekran 13 kapısı)", () => {
     expect(itemPatch.code).toBe("01.002");
   });
 
-  it("AccessLevel tipi üretilmiş", () => {
-    type AccessLevel = components["schemas"]["AccessLevel"];
-    // F12 izin altyapısı bu birlik tipine dayanır (spec §2.5).
-    const write: AccessLevel = "full";
-    const read: AccessLevel = "view";
-    expect([write, read]).toEqual(["full", "view"]);
-  });
 });
 
 // Şantiye Ekle formu · Task T0 — sözleşme senkronu KAPISI (plan T0, spec §3, §3.2).

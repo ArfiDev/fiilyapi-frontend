@@ -60,7 +60,7 @@ describe("satış formları · sekme başına yazma kapısı (IZN-F5b-A madde 2)
 
   describe.each(SCREENS)("$name", ({ View, page }) => {
     it("yalnız kendi sayfası Düzenler → ekran açılır (modül none olsa da)", () => {
-      session(meFixture({ pages: { [page]: pageGrant("edit") }, permissions: { projects: "none" } }));
+      session(meFixture({ pages: { [page]: pageGrant("edit") } }));
       renderView(View);
       expect(screen.queryByText(DENIED)).toBeNull();
     });
@@ -71,7 +71,7 @@ describe("satış formları · sekme başına yazma kapısı (IZN-F5b-A madde 2)
         [page, pageGrant("view")],
         ...siblings.map((key) => [key, pageGrant("edit")] as const),
       ]);
-      session(meFixture({ pages, permissions: { projects: "full" } }));
+      session(meFixture({ pages }));
       renderView(View);
       expect(screen.getByText(DENIED)).toBeInTheDocument();
     });

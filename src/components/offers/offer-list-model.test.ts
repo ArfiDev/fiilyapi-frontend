@@ -80,7 +80,7 @@ describe("rowMenuRules (⋯ menüsü)", () => {
       "Taslak revizyon düzenlenebilir; yeni revizyon gönderilen ya da kaybedilen teklife açılır",
     );
     expect(rowMenuRules(OFFER_SENT, false)).toMatchObject({
-      newRevision: { enabled: false, reason: "Teklifleri yalnız Sözleşmeler tam yetkisi değiştirir" },
+      newRevision: { enabled: false, reason: "Teklif Hazırlama sayfasında Düzenler yetkisi gerekir" },
       canDelete: false,
     });
     expect(rowMenuRules(OFFER_SENT, true).newRevision.reason).toBeNull();

@@ -812,7 +812,7 @@ describe("IZN-F5b-A madde 4 · '+ Hesap Ekle' = mali.hesap_plani Düzenler (sekm
   }
 
   it("yalnız mali.hesap_plani Düzenler → düğme AÇIK (accounting none olsa da)", () => {
-    setPages({ pages: { "mali.hesap_plani": pageGrant("edit") }, permissions: { accounting: "none" } });
+    setPages({ pages: { "mali.hesap_plani": pageGrant("edit") } });
     render(<ChartOfAccountsView />);
     expect(screen.getByTestId("hp-create")).toBeEnabled();
   });
@@ -824,7 +824,6 @@ describe("IZN-F5b-A madde 4 · '+ Hesap Ekle' = mali.hesap_plani Düzenler (sekm
         "mali.yevmiye": pageGrant("edit"),
         "mali.donem_kapanisi": pageGrant("edit"),
       },
-      permissions: { accounting: "full" },
     });
     render(<ChartOfAccountsView />);
     expect(screen.getByTestId("hp-create")).toBeDisabled();

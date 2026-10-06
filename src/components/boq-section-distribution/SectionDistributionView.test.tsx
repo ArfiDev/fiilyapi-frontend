@@ -24,17 +24,9 @@ vi.mock("@/lib/api/hooks/useSectionDistribution", async (importOriginal) => ({
 }));
 
 let permissionLevel: string | undefined = "full";
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({
-    level: permissionLevel,
-    canView: true,
-    canWrite: permissionLevel !== "read" && permissionLevel !== "view",
-    canDelete: permissionLevel === "full",
-  }),
-}));
 
 // IZN-F6a · kapılar artık yalnız sayfa izinlerinden okunur: `permissionLevel` aynı niyeti oturum `pages`ine de taşır
-// (full = tam erişim, diğerleri = her sayfada yalnız Görür). `useModulePermission` mock'u kapı DIŞI okumalar içindir.
+// (full = tam erişim, diğerleri = her sayfada yalnız Görür).
 vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
   return {
@@ -351,7 +343,7 @@ describe("Bölüm dağılımı — yazma kapıları", () => {
       expect(button).toBeDisabled();
     }
     expect(screen.getByTestId("bdg-write-reason")).toHaveTextContent(
-      "İş kalemleri modülünde tam yetkiniz yok — dağılım salt okunur.",
+      "Bölüm Dağılımı sayfasında Düzenler yetkisi gerekir — dağılım salt okunur.",
     );
   });
 

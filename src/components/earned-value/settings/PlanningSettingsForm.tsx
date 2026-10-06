@@ -37,7 +37,7 @@ const SAVED_TOAST_MS = 2600;
 /** Ek:489 — salt okunur şeridinin iki metni (F0-8 tamamlanmış · B1-8 yetki). */
 const READ_ONLY_COMPLETED = "Tamamlanmış şantiye · ayarlar salt okunur. Şantiye seçici açık kalır.";
 const READ_ONLY_PERMISSION =
-  "Planlama ayarlarını değiştirmek için Planlama (earned_value) modülünde taslak yetkisi gerekir. Şantiye seçici açık kalır.";
+  "Planlama ayarlarını değiştirmek için Planlama Ayarları sayfasında Düzenler yetkisi gerekir. Şantiye seçici açık kalır.";
 
 export interface PlanningSettingsFormProps {
   site: EvSiteOption;

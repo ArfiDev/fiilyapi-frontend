@@ -13,7 +13,6 @@ import {
 } from "./convert-screen.testkit";
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn(), POST: vi.fn() } }));
-vi.mock("@/lib/auth/useModulePermission", async () => import("./convert-permission.testkit").then((m) => m.modulePermissionMock));
 vi.mock("@/lib/auth/useDisciplineScope", async () => import("./convert-permission.testkit").then((m) => m.disciplineScopeMock));
 
 const FIXED_NOW = new Date("2026-10-02T09:00:00Z");

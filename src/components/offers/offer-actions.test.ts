@@ -66,7 +66,7 @@ describe("🔴 F4.2 eylem kapısı — miktarsız kalem ekseni (ÜS-F4-17, SO-21
   it("sayaç 0 / yok → kapı DEĞİŞMEZ; yetkisiz ve eski revizyonda mevcut gerekçe korunur", () => {
     expect(offerActionGate({ status: "draft", isLatest: true, isDirty: false, canWrite: true, unquantifiedCount: 0 }).send.enabled).toBe(true);
     const readOnly = offerActionGate({ status: "draft", isLatest: true, isDirty: false, canWrite: false, unquantifiedCount: 3 });
-    expect(readOnly.send).toEqual({ enabled: false, reason: "Teklifleri yalnız Sözleşmeler tam yetkisi değiştirir" });
+    expect(readOnly.send).toEqual({ enabled: false, reason: "Teklif Hazırlama sayfasında Düzenler yetkisi gerekir" });
   });
 
   it("gerekçe görünür listede (düğme altında) basılır", () => {

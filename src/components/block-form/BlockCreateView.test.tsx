@@ -10,7 +10,6 @@ import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateBlock } from "@/lib/api/hooks/useUnitMutations";
 import { useSession } from "@/components/shell/SessionProvider";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 vi.mock("@/lib/api/hooks/useProjects", () => ({ useProjects: vi.fn() }));
@@ -82,15 +81,6 @@ describe("BlockCreateView — TAM SAYFA kabuğu (BE 30-56)", () => {
     for (const title of ["Blok Bilgileri", "Yapı Bilgileri", "Ek Bilgiler"]) {
       expect(screen.getByRole("heading", { name: new RegExp(title), level: 2 })).toBeInTheDocument();
     }
-  });
-
-  it("`projects` yetkisi yoksa AccessDenied basılır (`sales` DEĞİL)", () => {
-    vi.mocked(useSession).mockReturnValue({
-      me: { permissions: { projects: "none", sales: "full" } } as unknown as MeResponse,
-      isLoading: false,
-    } as ReturnType<typeof useSession>);
-    render(<BlockCreateView />);
-    expect(screen.queryByTestId("blok-form-govde")).not.toBeInTheDocument();
   });
 });
 

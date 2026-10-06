@@ -219,8 +219,8 @@ describe("LeavesView · sayfa izni kapıları (IZN-F2.x)", () => {
     expect(screen.getByTestId("iz-new-request")).toBeInTheDocument();
   });
 
-  it("pages boş → fail-closed: modül izni full olsa bile erişim reddi, talep/karar düğmesi YOK (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { personnel: "full" } }));
+  it("pages boş → fail-closed: erişim reddi, talep/karar düğmesi YOK (IZN-F6a)", () => {
+    session(meFixture({ pages: {} }));
     render(<LeavesView currentYear={2026} />);
     expect(screen.getByText("Bu alana yetkiniz yok")).toBeInTheDocument();
     expect(screen.queryByTestId("iz-new-request")).toBeNull();

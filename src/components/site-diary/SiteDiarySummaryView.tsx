@@ -148,7 +148,7 @@ export function SiteDiarySummaryView() {
             <span
               className="diary-summary__cta diary-summary__cta--disabled"
               aria-disabled="true"
-              title="Hakediş modülünde yazma yetkiniz yok"
+              title="İşveren hakediş sayfalarında Düzenler yetkisi gerekir"
             >
               Hakediş Oluştur →
             </span>

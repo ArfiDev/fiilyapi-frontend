@@ -6,7 +6,7 @@ import { useEquipmentRentalInvoices } from "@/lib/api/hooks/useEquipmentRentalIn
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSession } from "@/components/shell/SessionProvider";
-import type { MeResponse } from "@/lib/auth/types";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 /*
  * KÖR BEKÇİ · "makine-kira-loaded-sites" İŞARETİ HATA HÂLİNDE DE TAKILIYORDU.
@@ -52,7 +52,7 @@ const mockSession = vi.mocked(useSession);
 beforeEach(() => {
   vi.clearAllMocks();
   mockSession.mockReturnValue({
-    me: { permissions: { equipment: "full" } } as unknown as MeResponse,
+    me: meFixture(),
   } as unknown as ReturnType<typeof useSession>);
   mockInvoices.mockReturnValue({
     data: { items: [], total: 0, limit: 200, offset: 0 },

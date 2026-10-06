@@ -58,7 +58,7 @@ beforeEach(() => {
 
 describe("StockView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("stok.stok_depo Görür → açılır (inventory none olsa bile)", () => {
-    session(meFixture({ pages: { "stok.stok_depo": pageGrant("view") }, permissions: { inventory: "none" } }));
+    session(meFixture({ pages: { "stok.stok_depo": pageGrant("view") } }));
     render(<StockView />);
     expect(screen.queryByText(DENIED)).toBeNull();
     expect(screen.getAllByText(TITLE_RE).length).toBeGreaterThan(0);
@@ -71,13 +71,13 @@ describe("StockView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   });
 
   it("stok sayfalarında yalnız none → AccessDenied (inventory full olsa bile)", () => {
-    session(meFixture({ pages: { "stok.stok_depo": pageGrant("none") }, permissions: { inventory: "full" } }));
+    session(meFixture({ pages: { "stok.stok_depo": pageGrant("none") } }));
     render(<StockView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
   it("pages boş → fail-closed: inventory full olsa bile AccessDenied (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { inventory: "full" } }));
+    session(meFixture({ pages: {} }));
     render(<StockView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

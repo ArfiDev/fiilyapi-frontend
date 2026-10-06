@@ -43,13 +43,13 @@ beforeEach(() => {
 
 describe("PurchaseOrdersView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () => {
   it("stok.siparisler Görür → açılır (modül none olsa bile)", () => {
-    session(meFixture({ pages: { "stok.siparisler": pageGrant("view") }, permissions: { procurement: "none" } }));
+    session(meFixture({ pages: { "stok.siparisler": pageGrant("view") } }));
     render(<PurchaseOrdersView />);
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 
   it("satınalma sayfalarında yalnız none → AccessDenied (modül full olsa bile)", () => {
-    session(meFixture({ pages: { "stok.siparisler": pageGrant("none") }, permissions: { procurement: "full" } }));
+    session(meFixture({ pages: { "stok.siparisler": pageGrant("none") } }));
     render(<PurchaseOrdersView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
@@ -61,7 +61,7 @@ describe("PurchaseOrdersView · sayfa izni görüntüleme kapısı (IZN-F5-ön)"
   });
 
   it("pages boş → fail-closed: procurement full olsa bile AccessDenied (IZN-F6a)", () => {
-    session(meFixture({ pages: {}, permissions: { procurement: "full" } }));
+    session(meFixture({ pages: {} }));
     render(<PurchaseOrdersView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });

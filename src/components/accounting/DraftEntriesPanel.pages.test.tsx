@@ -78,7 +78,7 @@ describe("DraftEntriesPanel · sayfa izni kapıları (IZN-F2.x)", () => {
 
   // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
   it("pages boş → KAPALI: canWrite ne derse desin Kayıtlaştır/Sil kapalı", () => {
-    session(meFixture({ pages: {}, permissions: { accounting: "full" } }));
+    session(meFixture({ pages: {} }));
     const { unmount } = renderPanel(true);
     expect(screen.getByTestId("mu-draft-post-d1")).toBeDisabled();
     expect(screen.getByTestId("mu-draft-delete-d1")).toBeDisabled();

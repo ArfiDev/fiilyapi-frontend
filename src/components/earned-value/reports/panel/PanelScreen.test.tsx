@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BackendError } from "@/lib/api/unwrap";
 import type { usePanel } from "@/lib/api/hooks/useEvReports";
-import type { AccessLevel } from "@/lib/auth/permissions";
 import type { ReportScreenProps } from "@/components/earned-value/reports/kit/report-screen";
 
 import { panelReportFixture } from "./panel-fixtures";
@@ -14,12 +13,7 @@ vi.mock("@/lib/api/hooks/useEvReports", async (importOriginal) => ({
   usePanel: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: vi.fn(),
-}));
-
-// IZN-F6a.3 · "Dağıt →" yazma kapısı oturum sayfa izninden okunur; eski seviye niyeti `sessionLevel` ile
-// (useModulePermission taklidiyle TUTARLI) kurulur.
+// IZN-F6a.3 · "Dağıt →" yazma kapısı oturum sayfa izninden okunur; seviye niyeti `sessionLevel` ile kurulur.
 let sessionLevel = "full";
 vi.mock("@/components/shell/SessionProvider", () => ({
   useSession: () => ({ me: evMe(sessionLevel), isLoading: false }),
@@ -66,19 +60,13 @@ function queryStub(over: Partial<ReturnType<typeof usePanel>> = {}) {
   } as unknown as ReturnType<typeof usePanel>;
 }
 
-function permissionStub(level: AccessLevel, canWrite = true) {
-  return { level, canView: true, canWrite, canDelete: false };
-}
-
 import { usePanel as usePanelMocked } from "@/lib/api/hooks/useEvReports";
-import { useModulePermission as usePermissionMocked } from "@/lib/auth/useModulePermission";
 import { evMe } from "../../ev-session.testkit";
 
 beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
   sessionLevel = "full";
-  vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("full") as never);
 });
 
 describe("PanelScreen · başlık", () => {
@@ -281,7 +269,6 @@ describe("PanelScreen · salt okunur (tamamlanmış şantiye)", () => {
 
   it("yazma izni YOK → 'Dağıt →' basılmaz (siteCompleted olmasa bile)", () => {
     sessionLevel = "view";
-    vi.mocked(usePermissionMocked).mockReturnValue(permissionStub("view", false) as never);
     vi.mocked(usePanelMocked).mockReturnValue(queryStub({ data: panelReportFixture() }));
     render(<PanelScreen {...baseProps({ siteCompleted: false })} />);
     expect(screen.queryByRole("link", { name: "Dağıt →" })).toBeNull();

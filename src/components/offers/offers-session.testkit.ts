@@ -2,9 +2,8 @@ import { CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { fullAccessPages, meFixture, pageGrant, pagesFor } from "@/lib/auth/page-grants.testkit";
 
 /**
- * IZN-F6a · teklif ekranı testleri: modül düzeyi niyet (`contracts` / `projects` seviyesi) → oturum sayfa izni.
- * Kapılar ve şerit metni YALNIZ `me.pages`'ten karar verir (IZN-F6b); testlerdeki `useModulePermission` mock'ları artık
- * okunmuyor (F6c'de temizlenecek).
+ * IZN-F6a · teklif ekranı testleri: kısa niyet parametreleri → oturum sayfa izni. Kapılar ve şerit metni YALNIZ
+ * `me.pages`'ten karar verir; `contracts`/`projects` yalnız bu yardımcının girdisidir (ürün koduna modül seviyesi gitmez).
  *
  * - contracts none/view → sözleşme/teklif sayfaları None/Görür (yazma yok);
  * - contracts full (ya da bilinmeyen) → Düzenler; Dönüştür Onaylar'ı ⇔ projects admin;

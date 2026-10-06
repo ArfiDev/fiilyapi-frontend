@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { backendClient } from "@/lib/api/client";
-import type { AccessLevel } from "@/lib/auth/permissions";
 
 import { DisciplineManagementScreen } from "./DisciplineManagementScreen";
 import { BETON, DUV, INC, KAB, mockGets, ok } from "./catalog-test-utils";
@@ -14,10 +13,7 @@ vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
 }));
 
-let permissionLevel: AccessLevel | undefined = "admin";
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: () => ({ level: permissionLevel, canView: true, canWrite: true, canDelete: true }),
-}));
+let permissionLevel: string | undefined = "admin";
 // IZN-F6a.3 · kapılar oturum sayfa izinlerinden okunur; eski seviye niyeti `permissionLevel`den türetilir
 // (draft = salt okunur: katalog/disiplin yazma eşiği full).
 vi.mock("@/components/shell/SessionProvider", () => ({
@@ -88,6 +84,6 @@ describe("NAV-F2 · Disiplin Yönetimi sayfası (M6 liste gövdesi sayfada)", ()
     await screen.findByText("Kaba İnşaat");
     expect(screen.queryByRole("button", { name: "+ Yeni disiplin" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Düzenle" })).not.toBeInTheDocument();
-    expect(screen.getByText("Salt okunur · disiplin listesini yalnız tam yetki (full) değiştirir")).toBeInTheDocument();
+    expect(screen.getByText("Salt okunur · Disiplin Yönetimi sayfasında Düzenler yetkisi gerekir")).toBeInTheDocument();
   });
 });

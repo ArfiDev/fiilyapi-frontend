@@ -97,7 +97,7 @@ export interface RowMenuRules {
   canDelete: boolean;
 }
 
-export const NO_WRITE_REASON = "Teklifleri yalnız Sözleşmeler tam yetkisi değiştirir";
+export const NO_WRITE_REASON = "Teklif Hazırlama sayfasında Düzenler yetkisi gerekir";
 const NEW_REVISION_REASONS: Readonly<Partial<Record<OfferStatus, string>>> = {
   draft: "Taslak revizyon düzenlenebilir; yeni revizyon gönderilen ya da kaybedilen teklife açılır",
   won: "Kazanılan teklife revizyon açılmaz",

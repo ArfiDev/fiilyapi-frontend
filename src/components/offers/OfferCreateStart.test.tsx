@@ -16,12 +16,6 @@ const perm = vi.hoisted(() => ({ levels: { contracts: "full", projects: "admin" 
 const nav = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn(), POST: vi.fn() } }));
-vi.mock("@/lib/auth/useModulePermission", () => ({
-  useModulePermission: (moduleKey: string) => {
-    const level = perm.levels[moduleKey];
-    return { level, canView: level !== "none", canWrite: true, canDelete: true };
-  },
-}));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => ({ isRestricted: false, names: [] }) }));
 // IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.levels` (modül niyeti) sayfa izne çevrilir —
 // contracts → teklif.teklif_hazirlama (full = Düzenler), projects → genel.projeler (admin = Düzenler).

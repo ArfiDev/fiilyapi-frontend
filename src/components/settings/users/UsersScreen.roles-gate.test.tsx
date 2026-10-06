@@ -42,7 +42,7 @@ afterEach(() => {
 
 describe("UsersScreen · rol hücresi role_name/role_key'den (IZN-F5a.2)", () => {
   it("yalnız ayarlar.kullanicilar Görür → rol adı görünür, GET /roles ATILMAZ, ekran çökmez", async () => {
-    session.me = meFixture({ pages: { "ayarlar.kullanicilar": pageGrant("view") }, permissions: { users: "view" } });
+    session.me = meFixture({ pages: { "ayarlar.kullanicilar": pageGrant("view") } });
     const backend = install();
     renderScreen();
     const row = (await screen.findByRole("cell", { name: /Ahmet Yılmaz/ })).closest("tr") as HTMLElement;

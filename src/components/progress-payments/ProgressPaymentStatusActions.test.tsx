@@ -12,8 +12,7 @@ import { levelPages } from "@/lib/auth/legacy-level.testkit";
 import { meFixture } from "@/lib/auth/page-grants.testkit";
 
 // Kaynak oturum yüküdür (spec §2.5.2) — hook kendi isteğini ATMAZ, bu yüzden
-// sağlayıcı yerine `useSession` taklit edilir (useModulePermission.test.tsx
-// ile aynı desen).
+// sağlayıcı yerine `useSession` taklit edilir.
 vi.mock("@/components/shell/SessionProvider", () => ({ useSession: vi.fn() }));
 
 /** `undefined` = alanı taşımayan eski oturum → bilinmezlik dalı (level undefined). */
