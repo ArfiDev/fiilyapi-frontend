@@ -36,3 +36,12 @@ export const SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES: readonly HiddenCategory[] 
   "maliyet_kar",
   "tum_tutarlar",
 ];
+
+/**
+ * IZN-F4c.2 — bordro tutarları (dönem/özet/SGK özeti/satır) ve personel ücreti: `maas_kisisel` + `tum_tutarlar`.
+ * Sözleşme `IZN-B4c-SOZLESME.md` §2: bordro TUTAR alanları maas_kisisel gizliyken `null` döner.
+ */
+export const PAYROLL_HIDDEN_CATEGORIES: readonly HiddenCategory[] = ["maas_kisisel", "tum_tutarlar"];
+
+/** Personel kimlik/iletişim alanları (tc_no, iban, sgk_no, phone, email, address, acil durum, doğum tarihi): yalnız `maas_kisisel`. */
+export const PERSONNEL_PII_HIDDEN_CATEGORIES: readonly HiddenCategory[] = ["maas_kisisel"];

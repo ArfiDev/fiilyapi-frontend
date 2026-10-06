@@ -60,3 +60,55 @@ test("personel detay gorsel", async ({ page }) => {
   await prepareFrame(page);
   await expect(page).toHaveScreenshot("personel-detay.png", { fullPage: true });
 });
+
+// IZN-F4c.2 · personel detay — rol için GİZLİ kimlik/iletişim/ücret (maas_kisisel)
+// ---------------------------------------------------------------------------
+// `/auth/me.hidden_fields = ["maas_kisisel"]` ve `GET /personnel/per-1` yanıtındaki dokuz maskeli alan `null`
+// (IZN-B4c-SOZLESME §2: tc_no · iban · sgk_no · phone · email · address · emergency_contact_phone ·
+// birth_date · wage_amount). YALNIZ bu testte (`page.route`); paylaşılan mock backend'e YAZILMAZ.
+// Beklenen: ücret/SGK/IBAN/iletişim "—", her birinin yanında kilit.
+const MASKED_PERSONNEL_FIELDS = [
+  "tc_no",
+  "iban",
+  "sgk_no",
+  "phone",
+  "email",
+  "address",
+  "emergency_contact_phone",
+  "birth_date",
+  "wage_amount",
+] as const;
+
+test("personel detay kisisel gizli gorsel", async ({ page }) => {
+  await page.route("**/api/auth/me", async (route) => {
+    const response = await route.fetch();
+    const me = (await response.json()) as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...me, hidden_fields: ["maas_kisisel"] }),
+    });
+  });
+  await page.route("**/api/backend/personnel/per-1", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as Record<string, unknown>;
+    const masked = { ...body, ...Object.fromEntries(MASKED_PERSONNEL_FIELDS.map((field) => [field, null])) };
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(masked) });
+  });
+  await login(page);
+  await page.goto(PERSONNEL_DETAIL_URL);
+
+  const header = page.getByTestId("personnel-header-card");
+  await expect(header).toBeVisible();
+  await expect(header.getByRole("heading", { level: 1, name: "Mehmet Kılıç" })).toBeVisible();
+  await expect(header.getByText("Kule A")).toBeVisible();
+  // 3 iletişim + ücret + SGK + IBAN = 6 kilit; hiçbir ₺ tutarı / IBAN öneki kadrajda KALMAZ.
+  await expect(header.getByTestId("hidden-mark")).toHaveCount(6);
+  await expect(header).not.toContainText(/TR\d{2}/);
+  await expect(header).not.toContainText("₺");
+  await expect(page.getByTestId("personnel-timesheet-summary-card")).toBeVisible();
+  await expect(page.getByTestId("personnel-documents-card")).toBeVisible();
+
+  await prepareFrame(page);
+  await expect(page).toHaveScreenshot("personel-detay-kisisel-gizli.png", { fullPage: true });
+});

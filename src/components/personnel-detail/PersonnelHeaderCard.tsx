@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { PAYROLL_HIDDEN_CATEGORIES, PERSONNEL_PII_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { initials } from "@/lib/shell/initials";
 import type { PersonnelDetailResponse } from "@/lib/api/hooks/usePersonnelDetail";
 
@@ -43,11 +46,23 @@ function PendingStrip({ label, reason }: { label: string; reason: string }) {
 }
 
 /** Gerçek şerit hücresi — SGK No/İşe Giriş/Meslek/IBAN (57-61). */
-function StripField({ label, value }: { label: string; value: string }) {
+function StripField({
+  label,
+  value,
+  mark,
+}: {
+  label: string;
+  value: string;
+  /** IZN-F4c.2 — değer maskeliyse (`null`) yanına kilit. */
+  mark?: React.ReactNode;
+}) {
   return (
     <div>
       <div className="pd-hero__strip-label">{label}</div>
-      <div className="pd-hero__strip-value">{value}</div>
+      <div className="pd-hero__strip-value">
+        {value}
+        {mark}
+      </div>
     </div>
   );
 }
@@ -72,6 +87,9 @@ export function PersonnelHeaderCard({
   projectNames,
 }: PersonnelHeaderCardProps) {
   const statusKey = personnel.is_active ? "active" : "inactive";
+  // 🔴 IZN-F4c.2 — maas_kisisel gizliyken sunucu kimlik/iletişim/ücret alanlarını `null` döner ("—" + kilit).
+  const isPiiHidden = useCategoryHidden(PERSONNEL_PII_HIDDEN_CATEGORIES);
+  const isWageHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
 
   // 38 — mockup "Meslek · Şantiye"; ŞEF KARARI: "Şantiye" yuvası proje adına
   // eşlenir (bölüm adı için ayrı bir ad ucu YOK, o alan bu kartta HİÇ
@@ -117,9 +135,15 @@ export function PersonnelHeaderCard({
           </div>
           {/* 39-43 — telefon/e-posta/"şehir" GERÇEK; boş değer sade "—". */}
           <div className="pd-hero__contact" data-testid="personnel-header-contact">
-            <span className="pd-hero__contact-item">📞 {personnel.phone ?? PENDING_VALUE}</span>
-            <span className="pd-hero__contact-item">✉️ {personnel.email ?? PENDING_VALUE}</span>
-            <span className="pd-hero__contact-item">📍 {personnel.address ?? PENDING_VALUE}</span>
+            <span className="pd-hero__contact-item">📞 {personnel.phone ?? PENDING_VALUE}
+              <MaskedMark isHidden={isPiiHidden} values={[personnel.phone]} />
+            </span>
+            <span className="pd-hero__contact-item">✉️ {personnel.email ?? PENDING_VALUE}
+              <MaskedMark isHidden={isPiiHidden} values={[personnel.email]} />
+            </span>
+            <span className="pd-hero__contact-item">📍 {personnel.address ?? PENDING_VALUE}
+              <MaskedMark isHidden={isPiiHidden} values={[personnel.address]} />
+            </span>
           </div>
         </div>
 
@@ -128,7 +152,10 @@ export function PersonnelHeaderCard({
               (T2'nin `formatWageCell` deseniyle AYNI). */}
           <div className="pd-hero__stat pd-hero__stat--blue">
             <div className="pd-hero__stat-label">Günlük Ücret</div>
-            <div className="pd-hero__stat-value">{formatWageCell(personnel)}</div>
+            <div className="pd-hero__stat-value">
+              {formatWageCell(personnel)}
+              <MaskedMark isHidden={isWageHidden} values={[personnel.wage_amount]} />
+            </div>
           </div>
           {/* 50-54 — "Bu Ay Net" pending: bordro/net maaş ucu YOK (İK-3). */}
           <div className="pd-hero__stat pd-hero__stat--green">
@@ -145,11 +172,19 @@ export function PersonnelHeaderCard({
 
       {/* 56-62 — alt şerit: SGK/İşe Giriş/Meslek GERÇEK · Vergi No pending · IBAN maskeli-GERÇEK */}
       <div className="pd-hero__strip">
-        <StripField label="SGK No" value={personnel.sgk_no ?? PENDING_VALUE} />
+        <StripField
+          label="SGK No"
+          value={personnel.sgk_no ?? PENDING_VALUE}
+          mark={<MaskedMark isHidden={isPiiHidden} values={[personnel.sgk_no]} />}
+        />
         <StripField label="İşe Giriş" value={formatHireDate(personnel.hire_date)} />
         <StripField label="Meslek" value={personnel.trade ?? "—"} />
         <PendingStrip label="Vergi No" reason={TAX_NO_PENDING_REASON} />
-        <StripField label="IBAN" value={maskIban(personnel.iban)} />
+        <StripField
+          label="IBAN"
+          value={maskIban(personnel.iban)}
+          mark={<MaskedMark isHidden={isPiiHidden} values={[personnel.iban]} />}
+        />
       </div>
 
       {/* 21-24 — mockup'ın fixed üst şeridindeki aksiyonlar; PD kendi üst

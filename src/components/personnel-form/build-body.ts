@@ -30,7 +30,20 @@ export function submittableValues(
  * PATCH'te ATLANABİLİR alanlar: mockup'ta boş seçeneği OLMAYAN, bu yüzden
  * ekranda hep dolu görünen ve sunucuda `null` olabilen seçiciler.
  */
-export type OmittablePersonnelField = "wage_type" | "payment_method";
+export type OmittablePersonnelField =
+  | "wage_type"
+  | "payment_method"
+  // 🔴 IZN-F4c.2 — maskeli (maas_kisisel gizli, sunucudan `null`) alanlar PATCH gövdesine KONMAZ:
+  // dolu gizli alan 403 verir ve `null` yazmak sunucudaki gerçek değeri SİLERDİ.
+  | "tc_no"
+  | "birth_date"
+  | "phone"
+  | "email"
+  | "address"
+  | "emergency_contact_phone"
+  | "iban"
+  | "sgk_no"
+  | "wage_amount";
 
 /** Boş/boşluk dizesi `null`a düşer — sunucuya "" yazmak veri değil gürültüdür. */
 function textOrNull(value: string): string | null {
@@ -148,9 +161,15 @@ export function buildPersonnelUpdateBody(
     values.source === "subcontractor" ? values.subcontractorId.trim() : "";
   const omitted = options.omitFields ?? [];
   const isOmitted = (field: OmittablePersonnelField) => omitted.includes(field);
+  // Maskeli alanlar gövdeden ÇIKARILIR (yeni nesne; girdi mutasyona uğramaz).
+  const fields = Object.fromEntries(
+    Object.entries(commonFields(values)).filter(
+      ([key]) => !omitted.includes(key as OmittablePersonnelField),
+    ),
+  ) as Partial<ReturnType<typeof commonFields>>;
 
   return {
-    ...commonFields(values),
+    ...fields,
     subcontractor_id: subcontractorId || null,
     ...(isOmitted("wage_type")
       ? {}

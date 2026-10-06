@@ -4,12 +4,15 @@ import { useState } from "react";
 
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { Alert, Badge, Button } from "@/components/ui";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { PayrollPeriodListRow } from "@/lib/api/hooks/usePayroll";
 import { PAYROLL_PERMISSION_MODULE, usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import type { PayrollSgkSummaryResponse } from "@/lib/api/hooks/usePayrollSgk";
 import { usePayrollSgkSummary, useSubmitPayrollSgk } from "@/lib/api/hooks/usePayrollSgk";
 import { isForbidden } from "@/lib/api/unwrap";
+import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
 import { SGK_APPROVE, PAYROLL_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
@@ -429,6 +432,7 @@ interface SgkKpiStripProps {
 
 /** SGK:54-59 — DÖRT kartlık özet şeridi (`repeat(4,1fr)`, 12px boşluk). */
 function SgkKpiStrip({ summary }: SgkKpiStripProps) {
+  const isHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
   return (
     <div className="bors-kpis" data-testid="bordro-sgk-kpis">
       {/* SGK:55 — sayı, para DEĞİL. */}
@@ -443,6 +447,7 @@ function SgkKpiStrip({ summary }: SgkKpiStripProps) {
       <KpiCard
         label={SGK_KPI_BASE_LABEL}
         value={formatCurrencyTight(summary.sgk_base_total)}
+        mark={<MaskedMark isHidden={isHidden} values={[summary.sgk_base_total]} />}
         tone="plain"
         testId="bordro-sgk-kpi-base"
       />
@@ -450,6 +455,7 @@ function SgkKpiStrip({ summary }: SgkKpiStripProps) {
       <KpiCard
         label={SGK_KPI_PREMIUM_LABEL}
         value={formatCurrencyTight(summary.sgk_premium_total)}
+        mark={<MaskedMark isHidden={isHidden} values={[summary.sgk_premium_total]} />}
         hint={SGK_KPI_PREMIUM_HINT}
         tone="premium"
         testId="bordro-sgk-kpi-premium"
@@ -458,6 +464,7 @@ function SgkKpiStrip({ summary }: SgkKpiStripProps) {
       <KpiCard
         label={SGK_KPI_UNEMPLOYMENT_LABEL}
         value={formatCurrencyTight(summary.unemployment_total)}
+        mark={<MaskedMark isHidden={isHidden} values={[summary.unemployment_total]} />}
         tone="plain"
         testId="bordro-sgk-kpi-unemployment"
       />
@@ -470,11 +477,14 @@ function KpiCard({
   value,
   hint,
   tone,
+  mark,
   testId,
 }: {
   label: string;
   value: string;
   hint?: string;
+  /** IZN-F4c.2 — değerin yanına maske kilidi (yalnız maskeli değer + kategori gizliyken içerik basar). */
+  mark?: React.ReactNode;
   tone: "plain" | "count" | "premium";
   testId: string;
 }) {
@@ -483,6 +493,7 @@ function KpiCard({
       <h2 className="bors-kpi__label">{label}</h2>
       <p className="bors-kpi__value" data-testid={`${testId}-value`}>
         {value}
+        {mark}
       </p>
       {hint !== undefined && <p className="bors-kpi__hint">{hint}</p>}
     </article>

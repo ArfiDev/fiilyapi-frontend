@@ -3,9 +3,13 @@
 import { useRef, useState } from "react";
 
 import { Badge, Input } from "@/components/ui";
+import { HiddenMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import type { PayrollLineResponse } from "@/lib/api/hooks/usePayroll";
 import { useUpdatePayrollLineSplit } from "@/lib/api/hooks/usePayrollMutations";
+import { HIDDEN_FIELD_HINT } from "@/lib/auth/hidden-fields";
+import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { formatAmount, formatDays } from "@/lib/format";
 import { useSyncedFieldState } from "@/lib/hooks/useSyncedFieldState";
 import { initials } from "@/lib/shell/initials";
@@ -69,8 +73,14 @@ export function PayrollLineRow({ line, canWrite }: PayrollLineRowProps) {
   );
   const [rowError, setRowError] = useState<string | null>(null);
 
-  const editable = isLineSplitEditable(line) && canWrite;
-  const disabledReason = lineSplitDisabledReason(line);
+  // 🔴 IZN-F4c.2 — maas_kisisel gizliyken sunucu tutarları `null` döner. Maskeli satırda bölüşüm DÜZENLENMEZ:
+  // `bank_amount`/`cash_amount` gövdeye ASLA konmaz (dolu gizli alan = 403) ve "net hesaplanmadı" yalanı basılmaz.
+  const isCategoryHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
+  const isMasked =
+    isCategoryHidden &&
+    (line.net_amount === null || line.bank_amount === null || line.cash_amount === null);
+  const editable = isLineSplitEditable(line) && canWrite && !isMasked;
+  const disabledReason = isMasked ? HIDDEN_FIELD_HINT : lineSplitDisabledReason(line);
   // SEKME-F1.3-FIX O6 · ham metin eşitliği DEĞİL, ondalık NORMALİZASYONLU
   // karşılaştırma (`isAmountFieldDirty`) — sunucu "26538.00" gönderdiğinde
   // kullanıcı biçimi farklı ama SAYISAL OLARAK AYNI "26538" yazınca satır
@@ -167,6 +177,7 @@ export function PayrollLineRow({ line, canWrite }: PayrollLineRowProps) {
           value={bank}
           disabled={!editable || isPending}
           title={disabledReason}
+          placeholder={isMasked ? EMPTY_VALUE : undefined}
           aria-label={`${line.personnel_name} — ${COL_BANK}`}
           onChange={(event) => setBank(event.target.value)}
           data-testid={`${testId}-bank`}
@@ -181,6 +192,7 @@ export function PayrollLineRow({ line, canWrite }: PayrollLineRowProps) {
           value={cash}
           disabled={!editable || isPending}
           title={disabledReason}
+          placeholder={isMasked ? EMPTY_VALUE : undefined}
           aria-label={`${line.personnel_name} — ${COL_CASH}`}
           onChange={(event) => setCash(event.target.value)}
           data-testid={`${testId}-cash`}
@@ -197,11 +209,12 @@ export function PayrollLineRow({ line, canWrite }: PayrollLineRowProps) {
         </Badge>
         {/* 🔴 Devre dışı bırakma gerekçesi SATIRDAN türer ve GÖRÜNÜRDÜR —
             `title`da saklanmaz (K11 kanonu). */}
-        {disabledReason !== undefined && (
+        {disabledReason !== undefined && !isMasked && (
           <span className="bor-row__reason" data-testid={`${testId}-reason`}>
             {disabledReason}
           </span>
         )}
+        {isMasked && <HiddenMark withText />}
         {rowError !== null && (
           <span className="bor-row__error" data-testid={`${testId}-error`}>
             {rowError}

@@ -25,8 +25,11 @@ export interface SgkAmountRow {
   /** React anahtarı + `data-testid` eki. */
   key: string;
   label: string;
-  /** Decimal metin, OLDUĞU GİBİ — biçimleme sunum katmanının işi. */
-  amount: string;
+  /**
+   * Decimal metin, OLDUĞU GİBİ — biçimleme sunum katmanının işi.
+   * 🔴 IZN-F4c.2: `null` = maskeli (maas_kisisel gizli); "—" basılır, 0 SAYILMAZ.
+   */
+  amount: string | null;
 }
 
 /**

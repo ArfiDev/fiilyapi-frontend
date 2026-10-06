@@ -86,10 +86,14 @@ export interface HistoryTotals {
   periodCount: number;
   /** BG:109 "Ort. 45" — ortalama çalışan sayısı (tam sayıya yuvarlanır). */
   personnelAverage: number;
-  grossTotal: string;
-  sgkEmployerTotal: string;
-  netTotal: string;
-  costTotal: string;
+  /**
+   * 🔴 IZN-F4c.2 — sütunda tek bir `null` (maskeli satır) varsa toplam `null`: eksik toplam
+   * ASLA basılmaz ve `null` 0 SAYILMAZ (ekran "—" + kilit basar). Boş liste 0'dır (gerçek sıfır).
+   */
+  grossTotal: string | null;
+  sgkEmployerTotal: string | null;
+  netTotal: string | null;
+  costTotal: string | null;
   /** Ayrıştırılamayan para alanı sayısı — `>0` ise toplamlar EKSİKTİR. */
   unparsedCount: number;
 }
@@ -103,15 +107,19 @@ export interface HistoryTotals {
 export function historyTotals(rows: readonly PayrollPeriodListRow[]): HistoryTotals {
   let unparsedCount = 0;
 
-  const sum = (pick: (row: PayrollPeriodListRow) => string): bigint =>
-    rows.reduce((acc, row) => {
-      const parsed = parseKurus(pick(row));
+  const sum = (pick: (row: PayrollPeriodListRow) => string | null): string | null => {
+    // Maskeli (`null`) satır varsa sütun toplamı bilinemez — 0 sayılmaz, okunamayanlar da sayılmaz.
+    if (rows.some((row) => pick(row) === null)) return null;
+    const total = rows.reduce((acc, row) => {
+      const parsed = parseKurus(pick(row) as string);
       if (parsed === null) {
         unparsedCount += 1;
         return acc;
       }
       return acc + parsed;
     }, 0n);
+    return kurusToDecimalString(total);
+  };
 
   const grossTotal = sum((row) => row.gross_total);
   const sgkEmployerTotal = sum((row) => row.sgk_employer_total);
@@ -123,10 +131,10 @@ export function historyTotals(rows: readonly PayrollPeriodListRow[]): HistoryTot
   return {
     periodCount: rows.length,
     personnelAverage: rows.length === 0 ? 0 : Math.round(personnelSum / rows.length),
-    grossTotal: kurusToDecimalString(grossTotal),
-    sgkEmployerTotal: kurusToDecimalString(sgkEmployerTotal),
-    netTotal: kurusToDecimalString(netTotal),
-    costTotal: kurusToDecimalString(costTotal),
+    grossTotal,
+    sgkEmployerTotal,
+    netTotal,
+    costTotal,
     unparsedCount,
   };
 }

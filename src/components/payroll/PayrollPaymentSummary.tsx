@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui";
 import { BankIcon, WalletIcon } from "@/components/ui/icons";
+import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
+import { PAYROLL_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
+import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import type { PayrollSummaryResponse } from "@/lib/api/hooks/usePayroll";
 import { formatCurrency } from "@/lib/format";
 
@@ -32,6 +35,7 @@ interface PayrollPaymentSummaryProps {
  * tutarını basar.
  */
 export function PayrollPaymentSummary({ summary }: PayrollPaymentSummaryProps) {
+  const isHidden = useCategoryHidden(PAYROLL_HIDDEN_CATEGORIES);
   return (
     <div className="bor-payboxes" data-testid="bordro-payboxes">
       <PaymentBox
@@ -39,6 +43,7 @@ export function PayrollPaymentSummary({ summary }: PayrollPaymentSummaryProps) {
         icon={<BankIcon className="bor-paybox__icon" aria-hidden="true" />}
         label={BANK_BOX_LABEL}
         amount={formatCurrency(summary.bank_total)}
+        mark={<MaskedMark isHidden={isHidden} values={[summary.bank_total]} />}
         hint={`${summary.bank_personnel_count} ${KPI_PERSON_UNIT}`}
         actionLabel={EFT_LABEL}
         disabledReason={EFT_DISABLED_REASON}
@@ -49,6 +54,7 @@ export function PayrollPaymentSummary({ summary }: PayrollPaymentSummaryProps) {
         icon={<WalletIcon className="bor-paybox__icon" aria-hidden="true" />}
         label={CASH_BOX_LABEL}
         amount={formatCurrency(summary.cash_total)}
+        mark={<MaskedMark isHidden={isHidden} values={[summary.cash_total]} />}
         hint={`${summary.cash_personnel_count} ${KPI_PERSON_UNIT}`}
         actionLabel={RECEIPT_LABEL}
         disabledReason={RECEIPT_DISABLED_REASON}
@@ -63,6 +69,8 @@ interface PaymentBoxProps {
   icon: React.ReactNode;
   label: string;
   amount: string;
+  /** IZN-F4c.2 — tutarın yanına maske kilidi. */
+  mark?: React.ReactNode;
   hint: string;
   actionLabel: string;
   /** 🔴 Gerekçe ÖĞENİN alanıdır; bileşen metni kendi yazmaz. */
@@ -75,6 +83,7 @@ function PaymentBox({
   icon,
   label,
   amount,
+  mark,
   hint,
   actionLabel,
   disabledReason,
@@ -85,7 +94,10 @@ function PaymentBox({
       {icon}
       <div className="bor-paybox__body">
         <h2 className="bor-paybox__label">{label}</h2>
-        <p className="bor-paybox__value">{amount}</p>
+        <p className="bor-paybox__value">
+          {amount}
+          {mark}
+        </p>
         <p className="bor-paybox__hint">{hint}</p>
       </div>
       <div className="bor-paybox__action">

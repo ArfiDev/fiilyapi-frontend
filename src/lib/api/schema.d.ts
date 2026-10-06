@@ -17184,7 +17184,7 @@ export interface components {
          */
         PayrollPeriodListRow: {
             /** Gross Total */
-            gross_total: string;
+            gross_total: string | null;
             /**
              * Id
              * Format: uuid
@@ -17193,7 +17193,7 @@ export interface components {
             /** Month */
             month: number;
             /** Net Total */
-            net_total: string;
+            net_total: string | null;
             /** Paid At */
             paid_at: string | null;
             /** Payment Due Date */
@@ -17201,10 +17201,10 @@ export interface components {
             /** Personnel Count */
             personnel_count: number;
             /** Sgk Employer Total */
-            sgk_employer_total: string;
+            sgk_employer_total: string | null;
             status: components["schemas"]["PayrollPeriodStatus"];
             /** Total Cost */
-            total_cost: string;
+            total_cost: string | null;
             /** Year */
             year: number;
         };
@@ -17234,7 +17234,7 @@ export interface components {
              * Paid Net Total
              * @description Ödenen satırların net toplamı
              */
-            paid_net_total: string;
+            paid_net_total: string | null;
             period_status: components["schemas"]["PayrollPeriodStatus"];
             /**
              * Skipped Excluded
@@ -17416,11 +17416,11 @@ export interface components {
              * Employee Deduction Total
              * @description SGK 73 — toplam işçi kesintisi
              */
-            employee_deduction_total: string;
+            employee_deduction_total: string | null;
             /** Employer Burden Total */
-            employer_burden_total: string;
+            employer_burden_total: string | null;
             /** Income Tax Total */
-            income_tax_total: string;
+            income_tax_total: string | null;
             /** Month */
             month: number;
             /**
@@ -17432,35 +17432,35 @@ export interface components {
              * Sgk Base Total
              * @description SGK 56 — SGK matrahı
              */
-            sgk_base_total: string;
+            sgk_base_total: string | null;
             /** Sgk Employee Total */
-            sgk_employee_total: string;
+            sgk_employee_total: string | null;
             /** Sgk Employer Total */
-            sgk_employer_total: string;
+            sgk_employer_total: string | null;
             /** Sgk Payable Total */
-            sgk_payable_total: string;
+            sgk_payable_total: string | null;
             /**
              * Sgk Premium Total
              * @description SGK 57 — SGK primi (işçi + işveren)
              */
-            sgk_premium_total: string;
+            sgk_premium_total: string | null;
             /** Sgk Submitted At */
             sgk_submitted_at: string | null;
             /** Short Work Total */
-            short_work_total: string;
+            short_work_total: string | null;
             /** Stamp Tax Total */
-            stamp_tax_total: string;
+            stamp_tax_total: string | null;
             /** Uncomputed Count */
             uncomputed_count: number;
             /** Unemployment Employee Total */
-            unemployment_employee_total: string;
+            unemployment_employee_total: string | null;
             /** Unemployment Employer Total */
-            unemployment_employer_total: string;
+            unemployment_employer_total: string | null;
             /**
              * Unemployment Total
              * @description SGK 58 — işsizlik sigortası (işçi + işveren)
              */
-            unemployment_total: string;
+            unemployment_total: string | null;
             /** Unknown Rate Count */
             unknown_rate_count: number;
             /** Unknown Tax Count */
@@ -17482,27 +17482,27 @@ export interface components {
             /** Bank Personnel Count */
             bank_personnel_count: number;
             /** Bank Total */
-            bank_total: string;
+            bank_total: string | null;
             /** Cash Pct */
             cash_pct: string | null;
             /** Cash Personnel Count */
             cash_personnel_count: number;
             /** Cash Total */
-            cash_total: string;
+            cash_total: string | null;
             /** Excluded Count */
             excluded_count: number;
             /** Gross Total */
-            gross_total: string;
+            gross_total: string | null;
             /** Line Count */
             line_count: number;
             /** Net Personnel Count */
             net_personnel_count: number;
             /** Net Total */
-            net_total: string;
+            net_total: string | null;
             /** Sgk Employer Total */
-            sgk_employer_total: string;
+            sgk_employer_total: string | null;
             /** Total Employer Cost */
-            total_employer_cost: string;
+            total_employer_cost: string | null;
             /** Uncomputed Count */
             uncomputed_count: number;
             /** Unknown Cost Count */
