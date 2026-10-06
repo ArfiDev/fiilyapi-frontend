@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/hooks/useUnitImport";
 import type { UnitImportUploadInput } from "@/lib/api/units-import-client";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROJECT_UNITS_EDIT } from "@/lib/auth/page-gates";
+import { SALES_UNIT_IMPORT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -107,7 +107,7 @@ export function UnitImportView() {
   const searchParams = useSearchParams();
   const permission = useModulePermission("projects");
   // IZN-F2.x · blok/ünite/toplu/Excel/paylaşım yazma kapısı = mali.satis_* Düzenler (VEYA).
-  const canEdit = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEdit = useButtonGate({ pages: SALES_UNIT_IMPORT_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [values, setValues] = useState<UnitImportFormValues>(() => emptyUnitImportFormValues());
   // SEKME-F1.6-Y1 — taban `StockEntryForm` deseniyle AYRI durum

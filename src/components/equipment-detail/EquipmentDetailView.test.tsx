@@ -4,6 +4,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 
 import { EquipmentDetailView } from "./EquipmentDetailView";
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { useEquipmentDetailScreen } from "@/lib/api/hooks/useEquipmentDetailScreen";
 import { useEquipmentDocuments } from "@/lib/api/hooks/useEquipmentDocuments";
 import { useEquipmentFuelSummary } from "@/lib/api/hooks/useEquipmentFuelSummary";
@@ -374,5 +375,31 @@ describe("EquipmentDetailView", () => {
     render(<EquipmentDetailView equipmentId="eq-1" />);
 
     expect(screen.getByTestId("makine-det-body-error")).toBeVisible();
+  });
+});
+
+describe("IZN-F5b-A madde 11 · '+ Belge Ekle' = saha.makine_ekipman Düzenler (sekme başına kapı)", () => {
+  function setPages(options: Parameters<typeof meFixture>[0]) {
+    vi.mocked(useSession).mockReturnValue({ me: meFixture(options), isLoading: false } as ReturnType<typeof useSession>);
+  }
+
+  it("yalnız saha.makine_ekipman Düzenler → '+ Belge Ekle' var (modül view olsa da)", () => {
+    setPages({ pages: { "saha.makine_ekipman": pageGrant("edit") }, permissions: { equipment: "view" } });
+    render(<EquipmentDetailView equipmentId="eq-1" />);
+    expect(screen.getByRole("button", { name: "+ Belge Ekle" })).toBeInTheDocument();
+  });
+
+  it("yalnız KARDEŞ sayfalar (çalışma/yakıt/kira) Düzenler, ekipman Görür → '+ Belge Ekle' YOK", () => {
+    setPages({
+      pages: {
+        "saha.makine_ekipman": pageGrant("view"),
+        "saha.makine_calisma": pageGrant("edit"),
+        "saha.makine_yakit": pageGrant("edit"),
+        "saha.makine_kira": pageGrant("edit"),
+      },
+      permissions: { equipment: "full" },
+    });
+    render(<EquipmentDetailView equipmentId="eq-1" />);
+    expect(screen.queryByRole("button", { name: "+ Belge Ekle" })).toBeNull();
   });
 });

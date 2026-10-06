@@ -13,6 +13,7 @@ import type { RentalInvoiceDetailResponse } from "@/lib/api/hooks/useEquipmentRe
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import type { MeResponse } from "@/lib/auth/types";
 
 /*
@@ -257,5 +258,32 @@ describe("EquipmentRentalInvoiceDetailView — kaydedilmemiş değişiklik kayd�
       </QueryClientProvider>,
     );
     expect(unsavedRegistry.hasUnsaved()).toBe(false);
+  });
+});
+
+describe("IZN-F5b-A madde 11 · kira hakedişi başlık/satır düzenleme = saha.makine_kira Düzenler (sekme başına kapı)", () => {
+  function setPages(options: Parameters<typeof meFixture>[0]) {
+    mockSession.mockReturnValue({ me: meFixture(options) } as unknown as ReturnType<typeof useSession>);
+    mockDetail.mockReturnValue(detailQuery({ isSuccess: true, data: DETAIL_FIXTURE }));
+  }
+
+  it("yalnız saha.makine_kira Düzenler → form DÜZENLENEBİLİR (modül none olsa da)", () => {
+    setPages({ pages: { "saha.makine_kira": pageGrant("edit") }, permissions: { equipment: "none" } });
+    renderView();
+    expect(screen.getByTestId("makine-kira-supplier")).toBeEnabled();
+  });
+
+  it("yalnız KARDEŞ sayfalar (ekipman/çalışma/yakıt) Düzenler, kira Görür → form SALT-OKUNUR", () => {
+    setPages({
+      pages: {
+        "saha.makine_kira": pageGrant("view"),
+        "saha.makine_ekipman": pageGrant("edit"),
+        "saha.makine_calisma": pageGrant("edit"),
+        "saha.makine_yakit": pageGrant("edit"),
+      },
+      permissions: { equipment: "full" },
+    });
+    renderView();
+    expect(screen.getByTestId("makine-kira-supplier")).toBeDisabled();
   });
 });

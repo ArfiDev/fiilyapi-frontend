@@ -11,6 +11,8 @@ import { useSubcontractorProgressPayments } from "@/lib/api/hooks/useSubcontract
 import { SUBCONTRACTOR_PAYMENT_LIST_MAX_LIMIT } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
 import { isForbidden } from "@/lib/api/unwrap";
+import { SUBCONTRACTOR_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { SubcontractorFormModal } from "./SubcontractorFormModal";
 import { SubcontractorsSummaryStrip } from "./SubcontractorsSummaryStrip";
@@ -47,6 +49,9 @@ export function SubcontractorsView() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // IZN-F5b · madde 7 — "+ Taşeron Ekle" = POST /subcontractors (taşeron firmaları ∪ sözleşmeler Düzenler).
+  // Sayfa modeli yoksa bugünkü davranış (düğme görünür; sunucu karar verir).
+  const canAddSubcontractor = useButtonGate({ pages: SUBCONTRACTOR_CREATE_EDIT, need: "edit", fallback: true });
 
   const paymentItems = useMemo(
     () => paymentsQuery.data?.items ?? [],
@@ -134,9 +139,11 @@ export function SubcontractorsView() {
             ))}
           </Select>
           {/* 19 · kabuktan sayfa başlığına inen "+ Taşeron Ekle". */}
-          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-            + Taşeron Ekle
-          </Button>
+          {canAddSubcontractor && (
+            <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+              + Taşeron Ekle
+            </Button>
+          )}
         </div>
       </div>
 

@@ -18,7 +18,7 @@ import type { EmployerItemUpdateBody } from "./employer-item-inline";
 import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { EMPLOYER_CONTRACT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { contractTabHref } from "./contract-tabs";
@@ -67,7 +67,7 @@ export function EmployerContractDetailView({ projectId }: EmployerContractDetail
   // IZN-F2.y · poz ekle/düzenle (POST/PATCH /projects/{id}/contract/items…) = sözleşme sayfaları
   // Düzenler (VEYA, backend `contracts:full`). Bugün kapı yok → sayfa izni hiç yoksa (fallback) açık.
   // Görüntüleme DEĞİŞMEZ.
-  const canWrite = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: true });
+  const canWrite = useButtonGate({ pages: EMPLOYER_CONTRACT_EDIT, need: "edit", fallback: true });
 
   const contractQuery = useEmployerContract(projectId);
   const projectQuery = useProject(projectId);

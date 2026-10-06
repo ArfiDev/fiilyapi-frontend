@@ -70,3 +70,34 @@ describe("EquipmentRentalInvoicesView · sayfa izni görüntüleme kapısı (IZN
     expect(screen.queryByTestId(MARKER)).toBeNull();
   });
 });
+
+describe("EquipmentRentalInvoicesView · '+ Yeni Kira Hakedişi' = saha.makine_kira Düzenler (IZN-F5b-A madde 11)", () => {
+  const CREATE = "makine-kira-create";
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("yalnız saha.makine_kira Düzenler → düğme var (modül none olsa da)", () => {
+    session(meFixture({ pages: { [PAGE]: pageGrant("edit") }, permissions: { [MODULE]: "none" } }));
+    renderView();
+    expect(screen.getByTestId(CREATE)).toBeInTheDocument();
+  });
+
+  it("yalnız KARDEŞ sayfalar (ekipman/çalışma/yakıt) Düzenler, kira Görür → düğme YOK", () => {
+    session(
+      meFixture({
+        pages: {
+          [PAGE]: pageGrant("view"),
+          "saha.makine_ekipman": pageGrant("edit"),
+          "saha.makine_calisma": pageGrant("edit"),
+          "saha.makine_yakit": pageGrant("edit"),
+        },
+        permissions: { [MODULE]: "full" },
+      }),
+    );
+    renderView();
+    expect(screen.queryByTestId(CREATE)).toBeNull();
+  });
+});

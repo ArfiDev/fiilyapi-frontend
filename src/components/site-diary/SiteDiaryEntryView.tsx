@@ -34,7 +34,7 @@ import { backendErrorMessage, submitBlockedReasons } from "@/lib/api/error-messa
 import { BackendError, isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { DIARY_REOPEN_APPROVE, PROGRESS_PAYMENTS_EDIT, SITE_DIARY_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { DIARY_REOPEN_APPROVE, EMPLOYER_PAYMENT_EDIT, SITE_DIARY_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 import { formatMonthName } from "@/lib/format";
@@ -224,9 +224,9 @@ export function DiaryEntryScreen({
   const employerPaymentsQuery = useProgressPayments({ project_id: projectId });
   const subcontractorPayments = useSiteSubcontractorPayments(projectId, siteId);
   const paymentsPermission = useModulePermission("progress_payments");
-  // IZN-F2.x · hakediş oluştur bağlantısı = hakediş sayfaları Düzenler (VEYA).
+  // IZN-F2.x · hakediş oluştur bağlantısı = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
   const canCreatePayment = useButtonGate({
-    pages: PROGRESS_PAYMENTS_EDIT,
+    pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
     fallback: paymentsPermission.canWrite,
     projectId: projectKey,

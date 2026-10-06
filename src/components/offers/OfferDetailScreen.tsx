@@ -13,7 +13,7 @@ import { parseCountInput } from "@/lib/decimal";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT, OFFER_CONVERT_APPROVE, PROJECT_CREATE_EDIT, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
+import { OFFERS_EDIT, OFFER_CONVERT_APPROVE, PROJECT_CREATE_EDIT, CONTRACTS_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate, usePagePermission } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 
@@ -68,7 +68,7 @@ function OfferDetailContent({ offerId, revParam, renderItems }: OfferDetailScree
   const { level } = useModulePermission("contracts");
   const projects = useModulePermission("projects");
   const scope = useDisciplineScope();
-  const canEditOffers = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canEditOffers = useButtonGate({ pages: OFFERS_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
   const canWrite = canEditOffers && !scope.isRestricted;
   const canAddEmployer = useButtonGate({
     pages: PROJECT_CREATE_EDIT,

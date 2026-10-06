@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EV_CATALOG_EDIT } from "@/lib/auth/page-gates";
+import { DISCIPLINES_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
 import type { EvDisciplineRead } from "@/lib/api/models";
@@ -27,9 +27,9 @@ type OpenModal = { kind: "form"; discipline: EvDisciplineRead | null } | { kind:
  */
 export function DisciplineManagementScreen() {
   const { level } = useModulePermission("earned_value");
-  // IZN-F2.x · disiplin ekle/düzenle = planlama.disiplin_yonetimi/birim_oran_katalogu Düzenler; SİLME = yalnız SA.
-  const canWrite = useButtonGate({ pages: EV_CATALOG_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
-  const canDelete = useButtonGate({ pages: EV_CATALOG_EDIT, need: "sa", fallback: hasAtLeast(level, DELETE_LEVEL) });
+  // IZN-F5b · disiplin ekle/düzenle (POST/PATCH /earned-value/disciplines) = planlama.disiplin_yonetimi Düzenler; SİLME = yalnız SA.
+  const canWrite = useButtonGate({ pages: DISCIPLINES_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canDelete = useButtonGate({ pages: DISCIPLINES_EDIT, need: "sa", fallback: hasAtLeast(level, DELETE_LEVEL) });
 
   const disciplines = useEvDisciplines();
   const [modal, setModal] = useState<OpenModal | null>(null);

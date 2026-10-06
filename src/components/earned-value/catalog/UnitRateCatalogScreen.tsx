@@ -9,7 +9,7 @@ import { RestrictedEmptyNotice } from "@/components/ui/restricted-empty-notice";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EV_CATALOG_EDIT } from "@/lib/auth/page-gates";
+import { DISCIPLINES_EDIT, UNIT_RATE_CATALOG_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useEvCatalog } from "@/lib/api/hooks/useEvCatalog";
 import { useEvDisciplines } from "@/lib/api/hooks/useEvDisciplines";
@@ -41,10 +41,12 @@ const SKELETON_ROWS = 4;
  */
 export function UnitRateCatalogScreen() {
   const { level } = useModulePermission("earned_value");
-  // IZN-F2.x · katalog + disiplin ekle/düzenle = planlama.birim_oran_katalogu/disiplin_yonetimi Düzenler;
-  // disiplin SİLME = yalnız sistem yöneticisi.
-  const canWrite = useButtonGate({ pages: EV_CATALOG_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
-  const canDelete = useButtonGate({ pages: EV_CATALOG_EDIT, need: "sa", fallback: hasAtLeast(level, DELETE_LEVEL) });
+  // IZN-F5b · iş tipi ekle/düzenle (POST/PATCH /earned-value/catalog) = planlama.birim_oran_katalogu Düzenler.
+  // "Disiplinleri yönet" modalı AYRI uca (/earned-value/disciplines) yazar: ekle/düzenle = planlama.disiplin_yonetimi
+  // Düzenler; SİLME = yalnız sistem yöneticisi.
+  const canWrite = useButtonGate({ pages: UNIT_RATE_CATALOG_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canWriteDisciplines = useButtonGate({ pages: DISCIPLINES_EDIT, need: "edit", fallback: hasAtLeast(level, WRITE_LEVEL) });
+  const canDelete = useButtonGate({ pages: DISCIPLINES_EDIT, need: "sa", fallback: hasAtLeast(level, DELETE_LEVEL) });
 
   const catalog = useEvCatalog();
   const disciplines = useEvDisciplines();
@@ -137,6 +139,7 @@ export function UnitRateCatalogScreen() {
           onlyBig={onlyBig}
           onOnlyBigChange={setOnlyBig}
           canWrite={canWrite}
+          canWriteDisciplines={canWriteDisciplines}
           onManageDisciplines={() => setIsManagerOpen(true)}
           onNewItem={openNew}
         />
@@ -170,7 +173,7 @@ export function UnitRateCatalogScreen() {
       )}
       {isManagerOpen && (
         <DisciplineManager
-          canWrite={canWrite}
+          canWrite={canWriteDisciplines}
           canDelete={canDelete}
           onClose={() => setIsManagerOpen(false)}
         />

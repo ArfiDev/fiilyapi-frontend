@@ -19,7 +19,7 @@ import { hasAtLeast } from "@/lib/auth/permissions";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useDisciplineScope } from "@/lib/auth/useDisciplineScope";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT, PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { OFFERS_EDIT, PROJECT_CREATE_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { routes } from "@/lib/routes";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
@@ -65,7 +65,7 @@ export function OfferCreateScreen({ initialTemplateId }: { initialTemplateId?: s
   // IZN-F2.x · teklif oluştur = sözleşme/teklif sayfaları Düzenler (VEYA) ∧ disiplin kısıtsız; işveren ekle =
   // genel.projeler Düzenler.
   const canEditOffers = useButtonGate({
-    pages: CONTRACTS_EDIT,
+    pages: OFFERS_EDIT,
     need: "edit",
     fallback: hasAtLeast(level, WRITE_LEVEL) && level !== "none",
   });

@@ -15,7 +15,7 @@ import { useSites } from "@/lib/api/hooks/useSites";
 import { useCreateUnit } from "@/lib/api/hooks/useUnitMutations";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROJECT_UNITS_EDIT } from "@/lib/auth/page-gates";
+import { SALES_UNIT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 
@@ -67,7 +67,7 @@ export function UnitCreateView() {
   const searchParams = useSearchParams();
   const permission = useModulePermission("projects");
   // IZN-F2.x · blok/ünite/toplu/Excel/paylaşım yazma kapısı = mali.satis_* Düzenler (VEYA).
-  const canEdit = useButtonGate({ pages: PROJECT_UNITS_EDIT, need: "edit", fallback: permission.canWrite });
+  const canEdit = useButtonGate({ pages: SALES_UNIT_EDIT, need: "edit", fallback: permission.canWrite });
 
   const [values, setValues] = useState<UnitFormValues>(() => emptyUnitFormValues());
   const [touched, setTouched] = useState<ReadonlySet<UnitFormField>>(

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { useSession } from "@/components/shell/SessionProvider";
 import type { EvSettingsRead, EvSettingsSave } from "@/lib/api/models";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import type { MeResponse } from "@/lib/auth/types";
 import { useEvSiteOptions, type EvSiteOption } from "@/lib/api/hooks/useEvSettings";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
@@ -661,5 +662,30 @@ describe("PlanningSettingsScreen · salt okunur (B1-8 · F0-8)", () => {
     await waitForForm();
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Günlük standart saat" })).toBeEnabled();
+  });
+});
+
+// IZN-F5b madde 9 · ayar yazma (PUT .../earned-value/settings) = YALNIZ ayarlar.planlama Düzenler (EV_SETTINGS_EDIT);
+// bütçe sayfaları (adam-saat bütçesi) ayar ekranını yazılabilir YAPMAZ.
+describe("PlanningSettingsScreen · yazma kapısı EV_SETTINGS_EDIT (IZN-F5b)", () => {
+  function setPages(me: ReturnType<typeof meFixture>) {
+    vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as never);
+  }
+
+  it("ayarlar.planlama Düzenler → alanlar yazılabilir (modül earned_value view olsa da)", async () => {
+    setPages(meFixture({ pages: { "ayarlar.planlama": pageGrant("edit") }, permissions: { earned_value: "view" } }));
+    stubBackend();
+    renderScreen();
+    await waitForForm();
+    expect(screen.getByRole("textbox", { name: "Günlük standart saat" })).toBeEnabled();
+  });
+
+  it("yalnız adam-saat bütçesi Düzenler (modül earned_value view) → ayar alanları salt okunur", async () => {
+    setPages(meFixture({ pages: { "planlama.adam_saat_butcesi": pageGrant("edit") }, permissions: { earned_value: "view" } }));
+    stubBackend();
+    renderScreen();
+    await waitForForm();
+    expect(screen.getByRole("textbox", { name: "Günlük standart saat" })).toBeDisabled();
+    expect(screen.queryByRole("region", { name: "Kaydetme çubuğu" })).not.toBeInTheDocument();
   });
 });

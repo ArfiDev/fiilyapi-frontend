@@ -13,7 +13,7 @@ import { TemplateRatesStat } from "./TemplateRatesStat";
 import type { RateDefaults } from "./template-rates";
 import type { TemplatePatch } from "./useTemplateContentEditor";
 import "./offer-templates.css";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import { OFFER_TEMPLATES_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 
 export const NAME_MAX_LENGTH = 80;
@@ -41,7 +41,7 @@ interface TemplateDetailCardProps {
 export function TemplateDetailCard(props: TemplateDetailCardProps) {
   const { detail, usageCount, defaults, canWrite, isBusy } = props;
   // IZN-F2.x · şablon silme = yalnız sistem yöneticisi (SIL-B1; blok zaten canWrite içinde; grant yoksa görünür).
-  const canDeleteTemplate = useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: true });
+  const canDeleteTemplate = useButtonGate({ pages: OFFER_TEMPLATES_EDIT, need: "sa", fallback: true });
   return (
     <section className="otpl-detail" aria-label="Şablon ayrıntısı">
       <div className="otpl-detail__head">

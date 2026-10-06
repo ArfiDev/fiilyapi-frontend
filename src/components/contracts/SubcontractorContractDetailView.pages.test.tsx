@@ -173,6 +173,17 @@ describe("SubcontractorContractDetailView · sayfa izni kapısı (IZN-F2.y)", ()
     expect(screen.getByLabelText(PRICE_CELL)).toBeEnabled();
   });
 
+  // IZN-F5b · madde 7 — SUBCONTRACTOR_CONTRACT_EDIT yalnız teklif.taseron_sozlesme; kardeş sayfa yazdırmaz.
+  // (Hedef sayfanın hücresi VAR olmalı: hücresiz kapı eski karara düşer — burada Görür.)
+  it("teklif.sozlesmeler Düzenler, taşeron sözleşme sayfası Görür → yazma eylemleri YOK, fiyat hücresi salt-okunur", () => {
+    renderView(
+      meFixture({ pages: { "teklif.taseron_sozlesme": pageGrant("view"), "teklif.sozlesmeler": pageGrant("edit") } }),
+    );
+    expect(screen.queryByTestId(ADD_ITEM)).toBeNull();
+    expect(screen.queryByTestId(SAVE_TERMS)).toBeNull();
+    expect(screen.getByLabelText(PRICE_CELL)).toBeDisabled();
+  });
+
   it("Görür → yazma eylemleri YOK, fiyat hücresi salt-okunur, poz listesi görünür", () => {
     renderView(meFixture({ pages: { "teklif.taseron_sozlesme": pageGrant("view", true) } }));
     expect(screen.queryByTestId(ADD_ITEM)).toBeNull();

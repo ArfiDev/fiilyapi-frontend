@@ -21,7 +21,7 @@ import { useProgressPayment } from "@/lib/api/hooks/useProgressPayments";
 import { useProject } from "@/lib/api/hooks/useProjects";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { EMPLOYER_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { PERIOD_MONTHS, formatPercent } from "@/lib/format";
 import { toDecimalString } from "@/lib/decimal";
@@ -84,9 +84,9 @@ export function ProgressPaymentForm(props: ProgressPaymentFormProps) {
   const detail = isEdit ? detailQuery.data : undefined;
 
   const resolvedProjectId = isEdit ? (detail?.project_id ?? "") : props.projectId;
-  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA); IZN-F3.2b · o projedeki rolden.
+  // IZN-F2.x · hakediş oluştur/düzenle = işveren hakediş ailesi Düzenler (IZN-F5b, HI); IZN-F3.2b · o projedeki rolden.
   const canWrite = useButtonGate({
-    pages: PROGRESS_PAYMENTS_EDIT,
+    pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
     fallback: moduleCanWrite,
     projectId: resolvedProjectId,

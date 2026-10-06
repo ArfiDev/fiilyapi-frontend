@@ -13,7 +13,7 @@ import { useEquipmentDetailScreen } from "@/lib/api/hooks/useEquipmentDetailScre
 import { isForbidden } from "@/lib/api/unwrap";
 import { hasAtLeast } from "@/lib/auth/permissions";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
+import { EQUIPMENT_ASSET_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useSiteOptions } from "@/lib/api/hooks/useSiteOptions";
 
@@ -42,9 +42,9 @@ const EQUIPMENT_PERMISSION_MODULE = "equipment";
 export function EquipmentDetailView({ equipmentId }: { equipmentId: string }) {
   const permission = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
   const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: permission.canView });
-  // IZN-F2.x · ekipman belgesi ekle = saha.makine_* Düzenler (VEYA).
+  // IZN-F5b · ekipman belgesi ekle (POST /equipment/{id}/documents) = saha.makine_ekipman Düzenler.
   const canWrite = useButtonGate({
-    pages: EQUIPMENT_EDIT,
+    pages: EQUIPMENT_ASSET_EDIT,
     need: "edit",
     fallback: hasAtLeast(permission.level, "full"),
   });

@@ -26,7 +26,7 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { SUBCONTRACTOR_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROGRESS_PAYMENTS_EDIT } from "@/lib/auth/page-gates";
+import { SUBCONTRACTOR_PAYMENT_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { pendingModuleLabel } from "@/lib/pending-modules";
 import { PERIOD_MONTHS, formatAmount, formatPercent } from "@/lib/format";
@@ -99,9 +99,9 @@ export function SubcontractorProgressPaymentForm(props: SubcontractorProgressPay
   const resolvedContractId = isEdit ? (detail?.contract_id ?? "") : props.contractId;
   const contractQuery = useSubcontractorContract(resolvedContractId);
   const contract = contractQuery.data;
-  // IZN-F2.x · hakediş oluştur/düzenle = hakediş sayfaları Düzenler (VEYA); IZN-F3.2b · o projedeki rolden.
+  // IZN-F2.x · hakediş oluştur/düzenle = taşeron hakediş ailesi Düzenler (IZN-F5b, HT); IZN-F3.2b · o projedeki rolden.
   const canWrite = useButtonGate({
-    pages: PROGRESS_PAYMENTS_EDIT,
+    pages: SUBCONTRACTOR_PAYMENT_EDIT,
     need: "edit",
     fallback: moduleCanWrite,
     projectId: contract?.project_id,

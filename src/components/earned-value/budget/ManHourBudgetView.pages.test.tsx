@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 
 import { backendClient } from "@/lib/api/client";
 import { useSession } from "@/components/shell/SessionProvider";
@@ -7,7 +7,7 @@ import { useSite } from "@/lib/api/hooks/useSites";
 import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 
 import { ManHourBudgetView } from "./ManHourBudgetView";
-import { budgetView } from "./budget-fixtures";
+import { ACTIVE_REV_1, budgetView } from "./budget-fixtures";
 import { defaultState, mockPermission, renderWithQuery, wireBackend } from "./budget-screen-harness";
 
 // IZN-F2.x · Adam-Saat Bütçesi düğme kapıları sayfa izninden gelir:
@@ -75,5 +75,29 @@ describe("Adım 4 · sayfa izni kapıları (IZN-F2.x)", () => {
     setupWith(meFixture({ pages: { "planlama.adam_saat_butcesi": pageGrant("edit", true) } }));
     await screen.findByRole("button", { name: FREEZE });
     expect(backendClient.DELETE).not.toHaveBeenCalled();
+  });
+});
+
+// IZN-F5b madde 9 · bütçe yazma (Taslak aç) = YALNIZ adam-saat bütçesi sayfaları Düzenler;
+// ayarlar.planlama (planlama ayarları ucu) artık bütçe yazma kapısını AÇMAZ.
+describe("Adım 4 · bütçe yazma kapısı EV_BUDGET_EDIT (IZN-F5b)", () => {
+  function setupActive(me: ReturnType<typeof meFixture>) {
+    wireBackend({ ...defaultState(), view: budgetView({ revision: ACTIVE_REV_1, editable: false }), revisions: [ACTIVE_REV_1] });
+    vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as ReturnType<typeof useSession>);
+    vi.mocked(useSite).mockReturnValue({ data: { id: SITE_ID, project: { id: "p-1" }, status: "active" } } as never);
+    return renderWithQuery(<ManHourBudgetView />);
+  }
+  const OPEN_DRAFT = { name: "Taslak aç (Rev 2)" };
+
+  it("planlama.adam_saat_butcesi Düzenler → Taslak aç görünür", async () => {
+    setupActive(meFixture({ pages: { "planlama.adam_saat_butcesi": pageGrant("edit") } }));
+    const blockers = await screen.findByRole("region", { name: "Dondurma engelleri" });
+    expect(within(blockers).getByRole("button", OPEN_DRAFT)).toBeInTheDocument();
+  });
+
+  it("yalnız ayarlar.planlama Düzenler (modül earned_value view) → Taslak aç GÖRÜNMEZ", async () => {
+    setupActive(meFixture({ pages: { "ayarlar.planlama": pageGrant("edit") }, permissions: { earned_value: "view" } }));
+    const blockers = await screen.findByRole("region", { name: "Dondurma engelleri" });
+    expect(within(blockers).queryByRole("button", OPEN_DRAFT)).toBeNull();
   });
 });

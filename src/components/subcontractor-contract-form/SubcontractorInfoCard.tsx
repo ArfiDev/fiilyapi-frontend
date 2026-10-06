@@ -32,6 +32,8 @@ export interface SubcontractorInfoCardProps {
   onChangeWorkCategory: (workCategory: string) => void;
   /** 76 son seçeneği — paylaşılan `SubcontractorFormModal`'ı açar. */
   onRequestNewSubcontractor: () => void;
+  /** POST /subcontractors kapısı; `false` ise "+ Yeni Taşeron Ekle" seçeneği basılmaz (varsayılan: açık). */
+  canAddSubcontractor?: boolean;
 }
 
 const EMPTY = "—";
@@ -47,6 +49,7 @@ export function SubcontractorInfoCard({
   onChangeSubcontractor,
   onChangeWorkCategory,
   onRequestNewSubcontractor,
+  canAddSubcontractor = true,
 }: SubcontractorInfoCardProps) {
   function handleSelect(value: string) {
     if (value === NEW_SUBCONTRACTOR_OPTION) {
@@ -78,7 +81,7 @@ export function SubcontractorInfoCard({
                   {subcontractor.name}
                 </option>
               ))}
-              <option value={NEW_SUBCONTRACTOR_OPTION}>+ Yeni Taşeron Ekle</option>
+              {canAddSubcontractor && <option value={NEW_SUBCONTRACTOR_OPTION}>+ Yeni Taşeron Ekle</option>}
             </Select>
           )}
         </Field>

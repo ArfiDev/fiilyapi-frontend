@@ -28,7 +28,7 @@ import { isForbidden } from "@/lib/api/unwrap";
 import { ACCOUNTING_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { ACCOUNTING_EDIT, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { JOURNAL_EDIT, ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatAmount, formatCurrency } from "@/lib/format";
 import { buildListTruncation, listTruncationMessage } from "@/lib/list-truncation";
@@ -79,8 +79,8 @@ export function AccountingView() {
   const permission = useModulePermission(ACCOUNTING_PERMISSION_MODULE);
   const isHidden = useCategoryHidden(ACCOUNTING_HIDDEN_CATEGORIES);
   const canViewAccounting = useButtonGate({ pages: ACCOUNTING_VIEW, need: "view", fallback: permission.canView });
-  // IZN-F2.x · fiş oluştur/düzenle/Ters Kayıt = mali.yevmiye/hesap_plani/donem_kapanisi Düzenler (VEYA).
-  const canEditAccounting = useButtonGate({ pages: ACCOUNTING_EDIT, need: "edit", fallback: permission.canWrite });
+  // IZN-F5b · fiş oluştur/düzenle/Ters Kayıt (POST/PATCH/PUT/reverse /journal-entries) = mali.yevmiye Düzenler.
+  const canEditAccounting = useButtonGate({ pages: JOURNAL_EDIT, need: "edit", fallback: permission.canWrite });
 
   // 📅 Dönem penceresinin TEK referansı; mount başına bir kez üretilir
   // (`InvoicesView` deseni) — alt bileşenler `new Date()` çağırmaz, testler

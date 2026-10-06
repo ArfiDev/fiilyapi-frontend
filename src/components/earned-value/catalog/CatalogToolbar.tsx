@@ -24,6 +24,8 @@ interface CatalogToolbarProps {
   onlyBig: boolean;
   onOnlyBigChange: (value: boolean) => void;
   canWrite: boolean;
+  /** Disiplin modalının yazma kapısı (ayrı uç/sayfa) — etiketi belirler. */
+  canWriteDisciplines: boolean;
   onManageDisciplines: () => void;
   onNewItem: () => void;
 }
@@ -40,6 +42,7 @@ export function CatalogToolbar({
   onlyBig,
   onOnlyBigChange,
   canWrite,
+  canWriteDisciplines,
   onManageDisciplines,
   onNewItem,
 }: CatalogToolbarProps) {
@@ -104,7 +107,7 @@ export function CatalogToolbar({
             <DisciplineSwatch key={d.id} color={d.color} />
           ))}
         </span>
-        {canWrite ? "Disiplinleri yönet" : "Disiplinler"}
+        {canWriteDisciplines ? "Disiplinleri yönet" : "Disiplinler"}
       </button>
 
       <button

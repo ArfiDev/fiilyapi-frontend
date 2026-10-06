@@ -12,7 +12,7 @@ import { useSiteDiarySummary } from "@/lib/api/hooks/useSiteDiary";
 import { useSiteSubcontractorPayments } from "@/lib/api/hooks/useSiteSubcontractorPayments";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { PROGRESS_PAYMENTS_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
+import { EMPLOYER_PAYMENT_EDIT, SITE_DIARY_VIEW_PAGES } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { formatPeriod } from "@/lib/format";
 
@@ -53,9 +53,9 @@ export function SiteDiarySummaryView() {
 
   const permission = useModulePermission("site_diary");
   const paymentsPermission = useModulePermission("progress_payments");
-  // IZN-F2.x · Hakediş Oluştur = hakediş sayfaları Düzenler (VEYA).
+  // IZN-F2.x · Hakediş Oluştur = işveren hakediş ailesi Düzenler (IZN-F5b, HI).
   const canCreatePayment = useButtonGate({
-    pages: PROGRESS_PAYMENTS_EDIT,
+    pages: EMPLOYER_PAYMENT_EDIT,
     need: "edit",
     fallback: paymentsPermission.canWrite,
     projectId: projectKey,

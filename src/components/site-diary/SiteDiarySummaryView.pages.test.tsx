@@ -74,3 +74,19 @@ describe("SiteDiarySummaryView · sayfa izni görüntüleme kapısı (IZN-F5-ön
     expect(screen.queryByText(DENIED)).toBeNull();
   });
 });
+
+describe("SiteDiarySummaryView · Hakediş Oluştur bağlantısı = işveren hakedişi ailesi (IZN-F5b)", () => {
+  const CTA = "Hakediş Oluştur →";
+  const isLink = () => screen.getByText(CTA).closest("a") !== null;
+
+  it("mali.hakedis_isveren Düzenler → gerçek bağlantı; taşeron hakediş Düzenler → devre dışı", () => {
+    session(meFixture({ pages: { "mali.hakedis_isveren": pageGrant("edit") } }));
+    const { unmount } = render(<SiteDiarySummaryView />);
+    expect(isLink()).toBe(true);
+    unmount();
+
+    session(meFixture({ pages: { "mali.hakedis_taseron": pageGrant("edit") }, permissions: { progress_payments: "view" } }));
+    render(<SiteDiarySummaryView />);
+    expect(isLink()).toBe(false);
+  });
+});

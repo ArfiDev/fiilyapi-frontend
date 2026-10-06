@@ -12,7 +12,11 @@ import { contractTabHref } from "@/components/contracts/contract-tabs";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { isForbidden } from "@/lib/api/unwrap";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { CONTRACTS_EDIT } from "@/lib/auth/page-gates";
+import {
+  SUBCONTRACTOR_CONTRACT_CREATE_EDIT,
+  SUBCONTRACTOR_CONTRACT_EDIT,
+  SUBCONTRACTOR_CREATE_EDIT,
+} from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
 import { useEmployerContract } from "@/lib/api/hooks/useContract";
@@ -77,9 +81,24 @@ import "./subcontractor-contract-form.css";
 export function SubcontractorContractCreateView() {
   const router = useRouter();
   const { canWrite: moduleCanWrite, canDelete: moduleCanDelete } = useModulePermission("contracts");
-  // IZN-F2.x · taşeron sözleşmesi yaz = sözleşme sayfaları Düzenler (VEYA); poz satırı silme = yalnız SA.
-  const canWrite = useButtonGate({ pages: CONTRACTS_EDIT, need: "edit", fallback: moduleCanWrite });
-  const canDelete = useButtonGate({ pages: CONTRACTS_EDIT, need: "sa", fallback: moduleCanDelete });
+  // IZN-F5b · madde 7 — form girişi = POST subcontractor-contracts (sözleşmeler ∪ taşeron sözleşme sayfaları) VE
+  // aynı akıştaki PATCH / load-from-employer / kalem yazmaları (yalnız taşeron sözleşme) → KESİŞİM (CEO kararı:
+  // yarım akışta 403 veren form gösterilmez);
+  // "+ Yeni Taşeron Ekle" = POST /subcontractors (taşeron firmaları ∪ sözleşmeler); poz satırı silme = yalnız SA
+  // (DELETE items → taşeron sözleşme sayfası kümesi).
+  const canCreateContract = useButtonGate({
+    pages: SUBCONTRACTOR_CONTRACT_CREATE_EDIT,
+    need: "edit",
+    fallback: moduleCanWrite,
+  });
+  const canEditContract = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "edit", fallback: moduleCanWrite });
+  const canWrite = canCreateContract && canEditContract;
+  const canAddSubcontractor = useButtonGate({
+    pages: SUBCONTRACTOR_CREATE_EDIT,
+    need: "edit",
+    fallback: moduleCanWrite,
+  });
+  const canDelete = useButtonGate({ pages: SUBCONTRACTOR_CONTRACT_EDIT, need: "sa", fallback: moduleCanDelete });
 
   const [values, setValues] = useState<SubcontractorContractFormValues>(
     emptySubcontractorContractFormValues,
@@ -376,6 +395,7 @@ export function SubcontractorContractCreateView() {
             onChangeSubcontractor={(id) => handleChange("subcontractorId", id)}
             onChangeWorkCategory={(category) => handleChange("workCategory", category)}
             onRequestNewSubcontractor={() => setIsModalOpen(true)}
+            canAddSubcontractor={canAddSubcontractor}
           />
 
           <ContractTermsCard

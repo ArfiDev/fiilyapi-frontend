@@ -17,7 +17,7 @@ import { MaskedMark } from "@/components/ui/hidden-mark/HiddenMark";
 import { EQUIPMENT_PAYMENT_HIDDEN_CATEGORIES } from "@/lib/auth/finance-hidden";
 import { useCategoryHidden } from "@/lib/auth/useCategoryHidden";
 import { useModulePermission } from "@/lib/auth/useModulePermission";
-import { EQUIPMENT_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
+import { EQUIPMENT_RENTAL_EDIT, EQUIPMENT_VIEW } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import {
   buildListTruncation,
@@ -77,8 +77,8 @@ export function EquipmentRentalInvoicesView() {
   );
   const { level, canWrite: moduleCanWrite } = useModulePermission(EQUIPMENT_PERMISSION_MODULE);
   const canViewEquipment = useButtonGate({ pages: EQUIPMENT_VIEW, need: "view", fallback: level !== "none" });
-  // IZN-F2.x · kira hakedişi oluştur = saha.makine_* Düzenler (VEYA).
-  const canWrite = useButtonGate({ pages: EQUIPMENT_EDIT, need: "edit", fallback: moduleCanWrite });
+  // IZN-F5b · kira hakedişi oluştur (POST rental-invoices) = saha.makine_kira Düzenler.
+  const canWrite = useButtonGate({ pages: EQUIPMENT_RENTAL_EDIT, need: "edit", fallback: moduleCanWrite });
 
   // TB3 sayfalama kanonu: `limit` AÇIKÇA gönderilir (sunucu varsayılanı 50).
   const invoicesQuery = useEquipmentRentalInvoices({
