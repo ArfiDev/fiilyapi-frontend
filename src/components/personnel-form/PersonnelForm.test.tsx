@@ -790,6 +790,38 @@ describe("PersonnelForm (edit) · dokunulmamış varsayılan seçiciler", () => 
   });
 });
 
+describe("PersonnelForm (edit) · atama PATCH'i (IZN-F5a.2)", () => {
+  it("yalnız telefon değişti → gövdede assigned_project_id anahtarı YOK", async () => {
+    const user = userEvent.setup();
+    render(<PersonnelForm mode="edit" personnelId="per-9" />);
+    await user.clear(screen.getByLabelText("Cep Telefonu"));
+    await user.type(screen.getByLabelText("Cep Telefonu"), "0532 999 88 77");
+    await user.click(submitButton("Kaydet"));
+
+    const body = updateMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(body).toMatchObject({ phone: "0532 999 88 77" });
+    expect("assigned_project_id" in body).toBe(false);
+  });
+
+  it("atama değişti → gövdede yeni değer var", async () => {
+    const user = userEvent.setup();
+    render(<PersonnelForm mode="edit" personnelId="per-9" />);
+    await user.selectOptions(screen.getByLabelText("Atandığı Proje"), "p-2");
+    await user.click(submitButton("Kaydet"));
+
+    expect(updateMutate.mock.calls[0][0]).toHaveProperty("assigned_project_id", "p-2");
+  });
+
+  it("atama kaldırıldı → assigned_project_id: null AÇIKÇA gider", async () => {
+    const user = userEvent.setup();
+    render(<PersonnelForm mode="edit" personnelId="per-9" />);
+    await user.selectOptions(screen.getByLabelText("Atandığı Proje"), "");
+    await user.click(submitButton("Kaydet"));
+
+    expect(updateMutate.mock.calls[0][0]).toHaveProperty("assigned_project_id", null);
+  });
+});
+
 describe("PersonnelForm (edit) · gönderim", () => {
   it("kaydet PATCH gövdesini üretir ve detay sayfasına döner", async () => {
     updateMutate.mockImplementation((_body, options) => options.onSuccess?.({}));
@@ -806,8 +838,9 @@ describe("PersonnelForm (edit) · gönderim", () => {
       subcontractor_id: "sub-1",
       is_active: true,
       tc_no: "12345678901",
-      assigned_project_id: "p-1",
     });
+    // 🔴 IZN-F5a.2 — atamaya dokunulmadı → anahtar YOK (görünmeyen atamada 404 olurdu).
+    expect("assigned_project_id" in updateMutate.mock.calls[0][0]).toBe(false);
     // Formdan seçilemeyen bölüm gövdeye GİRMEZ → sunucudaki değer korunur.
     expect("assigned_section_id" in updateMutate.mock.calls[0][0]).toBe(false);
     expect(push).toHaveBeenCalledWith("/personel/per-9");

@@ -93,8 +93,8 @@ export function PersonnelHeaderCard({
 
   // 38 — mockup "Meslek · Şantiye"; ŞEF KARARI: "Şantiye" yuvası proje adına
   // eşlenir (bölüm adı için ayrı bir ad ucu YOK, o alan bu kartta HİÇ
-  // basılmaz). `assigned_project_id` null ⇒ personel projeye atanmamış
-  // (gerçek boşluk, alt başlıkta yalnız meslek kalır).
+  // basılmaz). 🔴 IZN-F5a · `assigned_project_id` null ⇒ projesi YOK ya da görme yetkisi dışında (sunucu
+  // görünmeyen projeyi null döner; ikisi ayırt edilemez) → yuva "—" basar, "atanmamış" anlamı vermez.
   const projectId = personnel.assigned_project_id;
   const projectName = projectId === null ? null : projectNames?.[projectId];
   const isProjectPending = projectId !== null && projectName === undefined;
@@ -121,16 +121,16 @@ export function PersonnelHeaderCard({
           </div>
           <div className="pd-hero__subtitle">
             {personnel.trade ?? "—"}
-            {projectId !== null && (
-              <>
-                {" · "}
-                <span
-                  className={isProjectPending ? "pd-hero__subtitle-project--pending" : undefined}
-                  title={isProjectPending ? PROJECT_NAME_PENDING_REASON : undefined}
-                >
-                  {projectName ?? PENDING_VALUE}
-                </span>
-              </>
+            {" · "}
+            {projectId === null ? (
+              PENDING_VALUE
+            ) : (
+              <span
+                className={isProjectPending ? "pd-hero__subtitle-project--pending" : undefined}
+                title={isProjectPending ? PROJECT_NAME_PENDING_REASON : undefined}
+              >
+                {projectName ?? PENDING_VALUE}
+              </span>
             )}
           </div>
           {/* 39-43 — telefon/e-posta/"şehir" GERÇEK; boş değer sade "—". */}

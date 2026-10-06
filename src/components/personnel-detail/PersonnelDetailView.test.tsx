@@ -166,7 +166,7 @@ describe("PersonnelDetailView · başlık kartı (PD 29-63) — F-İK T3 GERÇEK
     expect(pending).toHaveAttribute("title");
   });
 
-  it("`assigned_project_id` null (atanmamış) ⇒ alt başlıkta yalnız meslek, proje yarısı BASILMAZ", () => {
+  it("`assigned_project_id` null (atanmamış YA DA görünmeyen proje — IZN-F5a) ⇒ proje yuvası \"—\"", () => {
     vi.mocked(usePersonnelDetail).mockReturnValue({
       data: { ...PERSON, assigned_project_id: null },
       isLoading: false,
@@ -177,7 +177,7 @@ describe("PersonnelDetailView · başlık kartı (PD 29-63) — F-İK T3 GERÇEK
     const subtitle = screen
       .getByTestId("personnel-header-card")
       .querySelector(".pd-hero__subtitle");
-    expect(subtitle?.textContent).toBe("Kalıpçı Usta");
+    expect(subtitle?.textContent).toBe("Kalıpçı Usta · —");
   });
 
   it("SGK No · İşe Giriş (dd.mm.yyyy) GERÇEK basılır", () => {

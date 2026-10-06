@@ -108,7 +108,7 @@ export const ARCHIVE_PICK_REASON =
  * opsiyonel), o yüzden dosya kaldırılırsa kayıt yine açılabilir.
  */
 export const NO_PROJECT_UPLOAD_REASON =
-  "Bu personelin atanmış projesi yok; dosya arşive yüklenemiyor (arşiv yüklemesi proje zorunlu tutuyor). Personele proje atayın ya da dosyayı kaldırıp belgeyi dosyasız kaydedin.";
+  "Personelin projesi yok ya da görme yetkiniz dışında; dosya arşive yüklenemiyor.";
 
 /** Belge tipi kataloğu boşsa/yüklenemezse basılan görünür gerekçe. */
 export const TYPE_CATALOG_ERROR_MESSAGE =

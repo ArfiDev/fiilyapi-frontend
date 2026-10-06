@@ -125,6 +125,8 @@ export const PROJECT_CREATE_EDIT = keys(["genel.projeler"]);
 export const TAX_BRACKETS_EDIT = keys(["ayarlar.bordro_oranlari"]);
 export const APPROVAL_ROLES_EDIT = keys(["ayarlar.onay_rolleri"]);
 export const ROLES_EDIT = keys(["ayarlar.rol_yonetimi"]);
+/** GET /roles, /modules, /roles/{id}/permissions|pages okuma kapısı (IZN-B5a): rol_yonetimi VEYA sayfa_izinleri Görür. */
+export const ROLES_VIEW_PAGES = keys(["ayarlar.rol_yonetimi", "ayarlar.sayfa_izinleri"]);
 export const PAGE_ACCESS_EDIT = keys(["ayarlar.sayfa_izinleri"]);
 
 // ── Onaylar (A) kapıları ──────────────────────────────────────────────────────────────

@@ -9,7 +9,6 @@ import { UserAvatar } from "@/components/settings/primitives/UserAvatar";
 import { RolePill } from "@/components/settings/primitives/RolePill";
 import { StatusBadge } from "@/components/settings/StatusBadge";
 import { useUsers, PAGE_SIZE } from "@/lib/api/hooks/useUsers";
-import { useRoles } from "@/lib/api/hooks/useRoles";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { UserAccessModal } from "./UserAccessModal";
 import { USERS_EDIT } from "@/lib/auth/page-gates";
@@ -17,7 +16,7 @@ import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { AccessDenied } from "@/components/settings/AccessDenied";
 import { isForbidden } from "@/lib/api/unwrap";
 import { cx } from "@/lib/cx";
-import type { RoleResponse, UserResponse } from "@/lib/api/models";
+import type { UserResponse } from "@/lib/api/models";
 import "@/components/settings/settings.css";
 import "./users-screen.css";
 import { routes } from "@/lib/routes";
@@ -36,10 +35,6 @@ const SETTINGS_TABS = [
 const SEARCH_DEBOUNCE_MS = 300;
 
 type ModalState = { type: "create" } | { type: "edit"; user: UserResponse } | null;
-
-function role(roles: RoleResponse[] | undefined, roleId: string): RoleResponse | undefined {
-  return roles?.find((r) => r.id === roleId);
-}
 
 function pageFromParams(v: string | null): number {
   const n = Number(v);
@@ -63,7 +58,6 @@ export function UsersScreen() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
   const usersQuery = useUsers({ limit: PAGE_SIZE, offset, q: debouncedSearch });
-  const rolesQuery = useRoles();
   // IZN-F2.x · ekle/düzenle (rol, proje ekibi, disiplin dahil) = ayarlar.kullanicilar Düzenler; grant yoksa görünür.
   const canEditUsers = useButtonGate({ pages: USERS_EDIT, need: "edit", fallback: true });
 
@@ -165,12 +159,11 @@ export function UsersScreen() {
           </thead>
           <tbody>
             {items.map((user) => {
-              const r = role(rolesQuery.data, user.role_id);
               return (
                 <tr key={user.id}>
                   <td>
                     <div className="users-cell-user">
-                      <UserAvatar roleKey={r?.key ?? ""} name={user.full_name} />
+                      <UserAvatar roleKey={user.role_key} name={user.full_name} />
                       <div>
                         <div className="users-cell-user__name">{user.full_name}</div>
                         <div className="users-cell-user__sub">{user.title}</div>
@@ -178,7 +171,7 @@ export function UsersScreen() {
                     </div>
                   </td>
                   <td>{user.email}</td>
-                  <td className="users-table__center">{r ? <RolePill roleKey={r.key} name={r.name} /> : "—"}</td>
+                  <td className="users-table__center">{user.role_name ? <RolePill roleKey={user.role_key} name={user.role_name} /> : "—"}</td>
                   <td>
                     <ProjectCountCell user={user} />
                   </td>

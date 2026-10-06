@@ -9120,8 +9120,11 @@ function mockUserMatchesQuery(state: MockState, user: MockUserRow, q: string | n
 /** `UserResponse`: kullanıcı satırı + `all_projects` + `project_count` (ekip satırı sayısı). */
 function mockUserOut(state: MockState, user: MockUserRow): components["schemas"]["UserResponse"] {
   const access = state.userAccess[user.id] ?? { all_projects: false, projects: [] };
+  const role = state.roles.find((candidate) => candidate.id === user.role_id);
   return {
     ...user,
+    role_name: role?.name ?? "",
+    role_key: role?.key ?? "",
     status: user.status as components["schemas"]["UserStatus"],
     all_projects: access.all_projects,
     project_count: access.projects.length,

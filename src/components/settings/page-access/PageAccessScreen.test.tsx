@@ -164,13 +164,13 @@ describe("PageAccessScreen · düzenleme", () => {
     stubFetch();
     const user = userEvent.setup();
     renderScreen();
-    await openGroup(user, "Genel");
+    await openGroup(user, "Saha");
 
-    const approve = screen.getByRole("checkbox", { name: "Onay Kutusu · Onaylar" });
+    const approve = screen.getByRole("checkbox", { name: "Günlük Kayıt · Onaylar" });
     expect(approve).toBeChecked();
     expect(approve).toBeEnabled();
 
-    await user.click(within(screen.getByRole("group", { name: "Onay Kutusu erişim düzeyi" })).getByRole("button", { name: "Görmez" }));
+    await user.click(within(screen.getByRole("group", { name: "Günlük Kayıt erişim düzeyi" })).getByRole("button", { name: "Görmez" }));
 
     expect(approve).toBeDisabled();
     expect(approve).not.toBeChecked();
@@ -182,10 +182,10 @@ describe("PageAccessScreen · düzenleme", () => {
     stubFetch();
     const user = userEvent.setup();
     renderScreen();
-    await openGroup(user, "Genel");
+    await openGroup(user, "Saha");
 
-    expect(screen.getByRole("checkbox", { name: "Onay Kutusu · Onaylar" })).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox", { name: "Gösterge Paneli · Onaylar" })).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "Günlük Kayıt · Onaylar" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Puantaj · Onaylar" })).toBeNull();
   });
 
   it("Vazgeç taslağı sunucu durumuna döndürür", async () => {
@@ -285,6 +285,7 @@ describe("PageAccessScreen · kilitli rol", () => {
     renderScreen();
     await screen.findByRole("heading", { name: "Sistem Yöneticisi" });
     await openGroup(user, "Genel");
+    await openGroup(user, "Saha");
 
     expect(screen.queryByRole("button", { name: "Kaydet" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Vazgeç" })).toBeNull();
@@ -293,7 +294,7 @@ describe("PageAccessScreen · kilitli rol", () => {
       expect(button).toBeDisabled();
     }
     expect(screen.getByRole("checkbox", { name: /Maliyet ve kâr/ })).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "Onay Kutusu · Onaylar" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Günlük Kayıt · Onaylar" })).toBeDisabled();
   });
 });
 

@@ -111,7 +111,8 @@ describe("IZN-F4c.2 · personel düzenleme formu — maskeli alanlar", () => {
     for (const field of MASKED_FIELDS) expect(field in body, field).toBe(false);
     // maskesiz alanlar eskisi gibi gider
     expect(body).toHaveProperty("emergency_contact_name");
-    expect(body).toHaveProperty("assigned_project_id", "p-1");
+    // IZN-F5a.2: atamaya dokunulmadı → anahtar yok
+    expect("assigned_project_id" in body).toBe(false);
   });
 
   it("maskeli IBAN gövdeye ASLA konmaz (null da DEĞİL: gerçek değeri silerdi)", async () => {
