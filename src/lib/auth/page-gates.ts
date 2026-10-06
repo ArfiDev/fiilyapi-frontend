@@ -122,7 +122,14 @@ export const SITE_DIARY_EDIT = keys([
   "santiye.gunluk_planlama",
   "bolum.gunluk_kayit_detay",
 ]);
-export const SITES_EDIT = keys(["santiye.bolumler", "bolum.detay"]);
+/** IZN-F5c — POST /projects/{id}/sites + PATCH /sites/{id}: proje.santiyeler Düzenler. */
+export const SITE_EDIT = keys(["proje.santiyeler"]);
+/** IZN-F5c — POST /sites/{id}/sections: santiye.bolumler Düzenler. */
+export const SECTION_CREATE_EDIT = keys(["santiye.bolumler"]);
+/** IZN-F5c — PATCH /sections/{id}: bolum.detay Düzenler. */
+export const SECTION_EDIT = keys(["bolum.detay"]);
+/** IZN-F5c — POST /section-types: santiye.bolumler VEYA bolum.detay Düzenler. */
+export const SECTION_TYPE_CREATE_EDIT = keys(["santiye.bolumler", "bolum.detay"]);
 export const TIMESHEET_EDIT = keys(["saha.puantaj", "santiye.puantaj"]);
 export const TREASURY_EDIT = keys(["mali.hazine", "mali.cek_odeme"]);
 export const USERS_EDIT = keys(["ayarlar.kullanicilar"]);
@@ -150,8 +157,11 @@ export const PURCHASE_REQUEST_APPROVE = keys(["stok.satinalma_talepleri"]);
 export const EMPLOYER_PAYMENT_APPROVE = keys(["mali.hakedis_isveren", "proje.isveren_hakedis", "santiye.hakedisler"]);
 /** IZN-F5b · madde 6 — taşeron onayı yalnız HT (`santiye.hakedisler` işveren ailesine bağlandı). */
 export const SUBCONTRACTOR_PAYMENT_APPROVE = SUBCONTRACTOR_PAYMENT_EDIT;
-/** Günlük "Yeniden Aç" YALNIZ kök sayfada (73/88 ikizleri B3'e kadar işlevsiz). */
-export const DIARY_REOPEN_APPROVE = keys(["saha.gunluk_kayit"]);
+/**
+ * Günlük "Yeniden Aç" = kök sayfa (12) + proje içi ikizleri (73 şantiye, 88 bölüm detay) Onaylar — backend
+ * `site_diary/router_transitions.py` `_ADMIN` (IZN-B3: rol proje başına; ekip rolünde ikizin Onaylar'ı yeter).
+ */
+export const DIARY_REOPEN_APPROVE = keys(["saha.gunluk_kayit", "santiye.gunluk_kayit", "bolum.gunluk_kayit_detay"]);
 export const PERIOD_REOPEN_APPROVE = keys(["mali.donem_kapanisi"]);
 /** Baseline Dondur (bütçe). */
 export const EV_FREEZE_APPROVE = keys(["planlama.adam_saat_butcesi", "santiye.adam_saat_butcesi"]);

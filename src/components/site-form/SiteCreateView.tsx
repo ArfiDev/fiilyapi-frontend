@@ -27,7 +27,7 @@ import {
 } from "./sections-validate";
 import { emptySiteFormValues, type SiteFormValues } from "./form-state";
 import { useUnsavedChanges } from "@/lib/workspace-tabs/useUnsavedChanges";
-import { SITES_EDIT } from "@/lib/auth/page-gates";
+import { SITE_EDIT } from "@/lib/auth/page-gates";
 import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { isUserListUnavailable } from "./user-picker";
 import {
@@ -112,7 +112,7 @@ export function SiteCreateView() {
   const projectQuery = useProject(projectKey);
   // IZN-F2.y · POST /projects/{id}/sites = santiye.bolumler / bolum.detay Düzenler (VEYA; backend
   // `sites:full`). Bugün kapı yok → sayfa izni hiç yoksa (fallback) form açık kalır.
-  const canCreate = useButtonGate({ pages: SITES_EDIT, need: "edit", fallback: true });
+  const canCreate = useButtonGate({ pages: SITE_EDIT, need: "edit", fallback: true });
   // SLUG -> KANONIK KIMLIK: `POST /projects/{project_id}/sites` UUID BEKLER.
   const projectId = projectQuery.data?.id ?? "";
   const createSite = useCreateSite(projectId);

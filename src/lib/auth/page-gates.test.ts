@@ -28,6 +28,10 @@ import {
   SALES_LAND_SHARE_EDIT,
   SALES_UNIT_EDIT,
   SALES_UNIT_IMPORT_EDIT,
+  SECTION_CREATE_EDIT,
+  SECTION_EDIT,
+  SECTION_TYPE_CREATE_EDIT,
+  SITE_EDIT,
   SUBCONTRACTOR_CONTRACT_CREATE_EDIT,
   SUBCONTRACTOR_CONTRACT_EDIT,
   SUBCONTRACTOR_CREATE_EDIT,
@@ -41,8 +45,8 @@ import {
 
 // Backend `test_izn_b2_sayfa_bayragi_bekcisi.py` sabitleriyle eşleşme bekçisi (düğme → eşik tablosu).
 describe("page-gates · backend kümeleriyle eşleşme", () => {
-  it("Günlük 'Yeniden Aç' YALNIZ kök saha.gunluk_kayit (73/88 ikizleri B3'e kadar işlevsiz)", () => {
-    expect([...DIARY_REOPEN_APPROVE]).toEqual(["saha.gunluk_kayit"]);
+  it("Günlük 'Yeniden Aç' = kök + proje içi ikizler Onaylar (backend site_diary/router_transitions.py `_ADMIN`)", () => {
+    expect([...DIARY_REOPEN_APPROVE]).toEqual(["saha.gunluk_kayit", "santiye.gunluk_kayit", "bolum.gunluk_kayit_detay"]);
   });
 
   it("Gün Kilidi Aç = bütçe + günlük rapor Onaylar sayfalarının birleşimi (4 sayfa)", () => {
@@ -97,6 +101,10 @@ describe("page-gates · IZN-B5b sayfa ayırma kümeleri", () => {
     ["madde 11 çalışma", EQUIPMENT_WORK_EDIT, ["saha.makine_calisma"]],
     ["madde 11 yakıt", EQUIPMENT_FUEL_EDIT, ["saha.makine_yakit"]],
     ["madde 11 kira", EQUIPMENT_RENTAL_EDIT, ["saha.makine_kira"]],
+    ["IZN-B5c şantiye (POST projects/{id}/sites, PATCH sites)", SITE_EDIT, ["proje.santiyeler"]],
+    ["IZN-B5c bölüm oluştur (POST sites/{id}/sections)", SECTION_CREATE_EDIT, ["santiye.bolumler"]],
+    ["IZN-B5c bölüm düzenle (PATCH sections/{id})", SECTION_EDIT, ["bolum.detay"]],
+    ["IZN-B5c bölüm tipi (POST section-types)", SECTION_TYPE_CREATE_EDIT, ["santiye.bolumler", "bolum.detay"]],
   ] as const)("%s", (_name, gate, expected) => {
     expect([...gate]).toEqual([...expected]);
   });

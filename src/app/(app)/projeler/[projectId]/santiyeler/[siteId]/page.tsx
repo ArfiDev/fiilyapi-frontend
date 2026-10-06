@@ -9,6 +9,8 @@ import { SiteDetailTabs } from "@/components/site-detail/SiteDetailTabs";
 import { SiteHeroBar } from "@/components/site-detail/SiteHeroBar";
 import { useSite } from "@/lib/api/hooks/useSites";
 import { isForbidden } from "@/lib/api/unwrap";
+import { SECTION_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import "@/components/site-detail/site-detail.css";
 import { routes } from "@/lib/routes";
 
@@ -33,6 +35,8 @@ export default function SiteDetailPage() {
   // cunku `sites.slug` PROJE ICINDE tekildir, kuresel DEGIL — kapsamsiz
   // cagride belirsizlik 404 olurdu (fail-closed).
   const siteQuery = useSite(siteKey, { project: projectKey });
+  // IZN-F5c · "+ Bölüm Ekle" (POST /sites/{id}/sections) = santiye.bolumler Düzenler; grant yoksa bugünkü (görünür) davranış.
+  const canCreateSection = useButtonGate({ pages: SECTION_CREATE_EDIT, need: "edit", fallback: true, projectId: projectKey });
 
   if (isForbidden(siteQuery.error)) return <AccessDenied />;
   if (siteQuery.isError) {
@@ -56,9 +60,11 @@ export default function SiteDetailPage() {
       {site.section_count === 0 ? (
         <div className="site-detail__empty">
           <p>Bu şantiyede henüz bölüm tanımlanmadı.</p>
-          <Link href={newSectionHref} className="site-detail__empty-action">
-            + Bölüm Ekle
-          </Link>
+          {canCreateSection && (
+            <Link href={newSectionHref} className="site-detail__empty-action">
+              + Bölüm Ekle
+            </Link>
+          )}
         </div>
       ) : (
         <>

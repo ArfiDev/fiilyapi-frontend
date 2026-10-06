@@ -5,6 +5,8 @@ import { useState } from "react";
 import { Button, Field, Input, Select } from "@/components/ui";
 import { backendErrorMessage } from "@/lib/api/error-message";
 import { useCreateSectionType, useSectionTypes } from "@/lib/api/hooks/useSectionTypes";
+import { SECTION_TYPE_CREATE_EDIT } from "@/lib/auth/page-gates";
+import { useButtonGate } from "@/lib/auth/usePagePermission";
 import { NEW_SECTION_TYPE_OPTION, SECTION_TYPE_NAME_MAX_LENGTH, SELECT_PLACEHOLDER } from "./constants";
 
 export interface SectionTypePickerProps {
@@ -35,6 +37,8 @@ const SAVED_TYPE_FALLBACK_LABEL = "Kayıtlı tip";
 export function SectionTypePicker({ value, onChange, error }: SectionTypePickerProps) {
   const types = useSectionTypes();
   const createType = useCreateSectionType();
+  // IZN-F5c · POST /section-types = santiye.bolumler VEYA bolum.detay Düzenler. Form zaten kapılı; grant yoksa bugünkü (görünür) davranış.
+  const canCreateType = useButtonGate({ pages: SECTION_TYPE_CREATE_EDIT, need: "edit", fallback: true });
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
@@ -111,7 +115,7 @@ export function SectionTypePicker({ value, onChange, error }: SectionTypePickerP
                 {item.name}
               </option>
             ))}
-            {!isUnavailable && <option value={NEW_SECTION_TYPE_OPTION}>+ Yeni tip ekle</option>}
+            {!isUnavailable && canCreateType && <option value={NEW_SECTION_TYPE_OPTION}>+ Yeni tip ekle</option>}
           </Select>
 
           {types.isError && (
