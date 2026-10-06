@@ -19,12 +19,18 @@ type SessionValue = {
   refresh?: () => Promise<void>;
 };
 
-const SessionContext = createContext<SessionValue>({
+/**
+ * Sağlayıcı DIŞINDA okunan varsayılan (me yok, yükleniyor). IZN-F6a · dışa açık: test kurulumu (`vitest.setup.ts`)
+ * sağlayıcısız render'ı bu NESNE KİMLİĞİYLE tanır; uygulama davranışı değişmez.
+ */
+export const SESSION_CONTEXT_DEFAULT: SessionValue = {
   me: null,
   isLoading: true,
   error: false,
   refresh: async () => {},
-});
+};
+
+const SessionContext = createContext<SessionValue>(SESSION_CONTEXT_DEFAULT);
 
 export function useSession(): SessionValue {
   return useContext(SessionContext);
