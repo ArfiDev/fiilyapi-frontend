@@ -27,6 +27,17 @@ vi.mock("@/lib/api/client", () => ({
   backendClient: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
 }));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
+// IZN-F6a · kalem/grup silme = `need: "sa"` (yalnız sistem yöneticisi): varsayılan oturum Düzenler ama SA DEĞİL; silme
+// testleri `session.isSystemAdmin = true` kurar.
+const session = vi.hoisted(() => ({ isSystemAdmin: false }));
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture } = await import("@/lib/auth/page-grants.testkit");
+  return {
+    ...actual,
+    useSession: () => ({ ...actual.SESSION_CONTEXT_DEFAULT, me: meFixture({ isSystemAdmin: session.isSystemAdmin }), isLoading: false }),
+  };
+});
 const tabs = vi.hoisted(() => ({ dispatch: vi.fn() }));
 vi.mock("@/lib/workspace-tabs/tabs-store", () => ({ workspaceTabsStore: { dispatch: tabs.dispatch } }));
 
@@ -124,6 +135,7 @@ async function typeAndBlur(input: HTMLElement, text: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   scope.value = { isRestricted: false, names: [] };
+  session.isSystemAdmin = false;
   revision = makeRevisionWithItems();
   mockBackend();
 });
@@ -427,7 +439,14 @@ describe("satır başına tek uçuş (plan §3.2)", () => {
 });
 
 describe("kalem / grup yazmaları", () => {
+  it("SA olmayan (Düzenler) kullanıcıda kalem silme düğmesi KAPALI; ekran görünür, düzenleme açık", async () => {
+    await renderCard();
+    expect(within(rowOf("it-2")).getByRole("button", { name: /kalemi sil/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "+ Grup" })).toBeEnabled();
+  });
+
   it("× onaysız DELETE (mockup birebir); farklı kalem kimliği", async () => {
+    session.isSystemAdmin = true; // IZN-F6a · silme = yalnız sistem yöneticisi
     await renderCard();
     await userEvent.click(within(rowOf("it-2")).getByRole("button", { name: /kalemi sil/ }));
     await waitFor(() => expect(calls("DELETE", ITEM_PATH)).toHaveLength(1));
@@ -533,6 +552,7 @@ describe("kalem / grup yazmaları", () => {
   });
 
   it("grup silme YALNIZ boş grupta: dolu grupta düğme yok; boşta DELETE", async () => {
+    session.isSystemAdmin = true; // IZN-F6a · silme = yalnız sistem yöneticisi
     await renderCard();
     expect(within(screen.getByTestId("oit-group-g-a")).queryByRole("button", { name: /grubunu sil/ })).not.toBeInTheDocument();
     await userEvent.click(within(screen.getByTestId("oit-group-g-b")).getByRole("button", { name: /grubunu sil/ }));
@@ -550,6 +570,7 @@ describe("TKL-F3.6.1 madde 5 — boş grup '×': önbelleğe DEĞİL taze veriye
     ]);
 
   it("🔴 önbellek 'boş' ama sunucuda artık kalem var → DELETE ATILMAZ (kaskad silme yok), mesaj + tablo tazelenir", async () => {
+    session.isSystemAdmin = true; // IZN-F6a · silme = yalnız sistem yöneticisi
     await renderCard();
     revision = withItemInB(); // başkası gruba kalem ekledi; ekran henüz bilmiyor
     await userEvent.click(within(screen.getByTestId("oit-group-g-b")).getByRole("button", { name: /grubunu sil/ }));
@@ -560,6 +581,7 @@ describe("TKL-F3.6.1 madde 5 — boş grup '×': önbelleğe DEĞİL taze veriye
   });
 
   it("🔴 DELETE 409 (backend metni) → metin AYNEN görünür ve revizyon tazelenir", async () => {
+    session.isSystemAdmin = true; // IZN-F6a · silme = yalnız sistem yöneticisi
     vi.mocked(backendClient.DELETE).mockResolvedValue(fail(409, GROUP_HAS_ITEMS));
     await renderCard();
     const before = calls("GET", REVISION_PATH).length;
@@ -570,6 +592,7 @@ describe("TKL-F3.6.1 madde 5 — boş grup '×': önbelleğe DEĞİL taze veriye
   });
 
   it("DELETE 404 (grup zaten silinmiş) → revizyon tazelenir", async () => {
+    session.isSystemAdmin = true; // IZN-F6a · silme = yalnız sistem yöneticisi
     vi.mocked(backendClient.DELETE).mockResolvedValue(fail(404, "Grup bulunamadı"));
     await renderCard();
     const before = calls("GET", REVISION_PATH).length;
@@ -604,6 +627,7 @@ describe("TKL-F3.6.1 madde 7 — 404 tazeler · 403 → AccessDenied (SO-19)", (
   });
 
   it("🔴 kalem DELETE 404 → revizyon yeniden okunur", async () => {
+    session.isSystemAdmin = true; // IZN-F6a · silme = yalnız sistem yöneticisi
     vi.mocked(backendClient.DELETE).mockResolvedValue(fail(404, "Kalem bulunamadı"));
     await renderCard();
     const before = calls("GET", REVISION_PATH).length;
@@ -620,6 +644,7 @@ describe("TKL-F3.6.1 madde 7 — 404 tazeler · 403 → AccessDenied (SO-19)", (
   });
 
   it("🔴 kalem DELETE 403 → AccessDenied", async () => {
+    session.isSystemAdmin = true; // IZN-F6a · silme = yalnız sistem yöneticisi
     vi.mocked(backendClient.DELETE).mockResolvedValue(fail(403, "Yetkiniz yok"));
     await renderCard();
     await userEvent.click(within(rowOf("it-2")).getByRole("button", { name: /kalemi sil/ }));

@@ -10,6 +10,11 @@ import {
 
 vi.mock("@/lib/api/client", () => ({ backendClient: { GET: vi.fn(), POST: vi.fn() } }));
 vi.mock("@/lib/auth/useModulePermission", async () => import("./convert-permission.testkit").then((m) => m.modulePermissionMock));
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { sessionMockFor } = await import("./convert-permission.testkit");
+  return { ...actual, useSession: () => ({ ...actual.SESSION_CONTEXT_DEFAULT, me: sessionMockFor(), isLoading: false }) };
+});
 vi.mock("@/lib/auth/useDisciplineScope", async () => import("./convert-permission.testkit").then((m) => m.disciplineScopeMock));
 
 const NOT_WON = "Yalnız son revizyonu kazanılmış (won) olan teklif projeye dönüştürülebilir";
@@ -57,10 +62,12 @@ describe("TKL-F5.3 · Dönüştür — erişim durumları (plan §1 'Erişim dur
     expect(screen.queryByLabelText("Proje adı")).not.toBeInTheDocument();
   });
 
-  it("seviye BİLİNMİYORSA (oturumda alan yok) ekran AÇIK (bilinmezlik kuralı; sunucu 403'ü korur)", async () => {
+  // IZN-F6a · bilinmezlik kuralı KALKTI: sayfa izni hiç yoksa ekran KAPALI (fail-closed).
+  it("sayfa izni YOK (oturumda hücre yok) → AccessDenied; AĞ İSTEĞİ de atılmaz", async () => {
     permissionState.levels = { contracts: undefined, projects: undefined };
     renderConvert();
-    expect(await screen.findByLabelText("Proje adı")).toBeInTheDocument();
+    expect(await screen.findByText("Bu alana yetkiniz yok")).toBeInTheDocument();
+    expect(backendClient.GET).not.toHaveBeenCalled();
   });
 
   it("teklif yok (404) → 'Teklif bulunamadı' + 'Tekliflere dön'", async () => {

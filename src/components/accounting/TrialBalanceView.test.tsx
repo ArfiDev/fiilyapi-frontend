@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type {
   TrialBalanceResponse,
   TrialBalanceRow,
@@ -12,7 +14,6 @@ import type {
 import { useTrialBalance } from "@/lib/api/hooks/useTrialBalance";
 import { errorResponse, stubExportDownload } from "@/lib/api/export-test-stub";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { TrialBalanceView } from "./TrialBalanceView";
 
@@ -120,9 +121,9 @@ function queryResult(partial: Record<string, unknown>) {
 }
 
 function setSession(level: string | undefined) {
-  vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { accounting: level } } as unknown as MeResponse,
-  } as unknown as ReturnType<typeof useSession>);
+  // IZN-F6a · modül düzeyi → sayfa izni (ACCOUNTING_VIEW kümesi); izin hiç yoksa kapı KAPALI (fail-closed).
+  const pages = level === undefined ? {} : pagesFor(ACCOUNTING_VIEW, level === "none" ? "none" : level === "view" ? "view" : "edit");
+  vi.mocked(useSession).mockReturnValue({ me: meFixture({ pages }) } as unknown as ReturnType<typeof useSession>);
 }
 
 beforeEach(() => {

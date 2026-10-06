@@ -88,7 +88,8 @@ describe("OffersScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
     expect(screen.queryByRole("link", { name: NEW_OFFER })).toBeNull();
   });
 
-  it("pages boş → eski davranış (modül none → AccessDenied, full → liste)", async () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → AccessDenied (modül none de full de karar vermez)", async () => {
     perm.level = "none";
     session(meFixture({ pages: {} }));
     const { unmount } = renderScreen();
@@ -96,7 +97,7 @@ describe("OffersScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
     unmount();
     perm.level = "full";
     renderScreen();
-    await screen.findByText("TKL-2026-0013");
-    expect(screen.getByRole("link", { name: NEW_OFFER })).toBeInTheDocument();
+    expect(await screen.findByText("Bu alana yetkiniz yok")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: NEW_OFFER })).toBeNull();
   });
 });

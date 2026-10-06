@@ -7,8 +7,8 @@ import { useEmployers } from "@/lib/api/hooks/useEmployers";
 import { useProgressPayments } from "@/lib/api/hooks/useProgressPayments";
 import { useCreateInvoice, useInvoiceAction } from "@/lib/api/hooks/useInvoiceMutations";
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture } from "@/lib/auth/page-grants.testkit";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
 
 // `useModulePermission` ağ isteği atmaz, kaynağı `useSession`'dır.
@@ -35,7 +35,7 @@ const actionMutate = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { invoicing: "full" } } as unknown as MeResponse,
+    me: meFixture(), // IZN-F6a · tam sayfa erişimi (mali.fatura Düzenler)
     isLoading: false,
   } as ReturnType<typeof useSession>);
   vi.mocked(useEmployers).mockReturnValue(queryStub({ items: [] }));

@@ -18,6 +18,27 @@ vi.mock("@/lib/api/client", () => ({
 vi.mock("@/lib/auth/useModulePermission", () => ({
   useModulePermission: () => ({ level: perm.level, canView: perm.level !== "none", canWrite: true, canDelete: true }),
 }));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.level` (modül niyeti) oturum sayfa iznine çevrilir —
+// none/view = sözleşme/teklif sayfaları None/Görür, full (ve bilinmeyen) = Düzenler+Onaylar (SA değil),
+// admin = sistem yöneticisi (Taslağı sil `need: "sa"`).
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture, pagesFor } = await import("@/lib/auth/page-grants.testkit");
+  const { CONTRACTS_VIEW } = await import("@/lib/auth/page-gates");
+  return {
+    ...actual,
+    useSession: () => {
+      const level = perm.level;
+      const me =
+        level === "admin"
+          ? meFixture({ isSystemAdmin: true })
+          : level === "none" || level === "view"
+            ? meFixture({ pages: pagesFor(CONTRACTS_VIEW, level) })
+            : meFixture();
+      return { ...actual.SESSION_CONTEXT_DEFAULT, me, isLoading: false };
+    },
+  };
+});
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace: vi.fn() }) }));
 
@@ -232,6 +253,7 @@ describe("satır işlemleri", () => {
   });
 
   it("Taslağı sil: onay metni 'numara tekrar kullanılmaz'; onaylayınca DELETE + bildirim", async () => {
+    perm.level = "admin"; // IZN-F6a · Taslağı sil = yalnız sistem yöneticisi
     const user = userEvent.setup();
     mockGets(makeResponse([OFFER_DRAFT]));
     vi.mocked(backendClient.DELETE).mockResolvedValue(ok(undefined, 204));
@@ -251,6 +273,7 @@ describe("satır işlemleri", () => {
   });
 
   it("Taslağı sil vazgeç → DELETE atılmaz", async () => {
+    perm.level = "admin"; // IZN-F6a · Taslağı sil = yalnız sistem yöneticisi
     const user = userEvent.setup();
     mockGets(makeResponse([OFFER_DRAFT]));
     renderScreen();

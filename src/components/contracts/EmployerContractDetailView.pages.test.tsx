@@ -185,12 +185,12 @@ describe("EmployerContractDetailView · sayfa izni kapısı (IZN-F2.y)", () => {
     expect(screen.getByLabelText("03.001 poz adı")).toHaveValue("Kat Döşemesi Betonu C25/30");
   });
 
-  it("pages boş → bugünkü davranış: eylemler var", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → KAPALI: eylemler yok", () => {
     session(meFixture({ pages: {} }));
     render(<EmployerContractDetailView projectId="p-1" />);
-    expect(screen.getByTestId(ADD_ITEM)).toBeInTheDocument();
-    expect(screen.getByTestId(ADD_ROW)).toBeInTheDocument();
-    expect(screen.getByLabelText(PRICE_CELL)).toBeEnabled();
+    expect(screen.queryByTestId(ADD_ITEM)).toBeNull();
+    expect(screen.queryByTestId(ADD_ROW)).toBeNull();
   });
 
   it("sistem yöneticisi: grant none olsa da eylemler var", () => {

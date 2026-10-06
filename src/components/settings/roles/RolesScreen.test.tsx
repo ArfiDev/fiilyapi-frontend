@@ -4,6 +4,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RolesScreen } from "./RolesScreen";
 
+// IZN-F6a · rol silme = `need: "sa"` (yalnız sistem yöneticisi): varsayılan oturum SA; SA olmayan test kapatır.
+const session = vi.hoisted(() => ({ isSystemAdmin: true }));
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture } = await import("@/lib/auth/page-grants.testkit");
+  return {
+    ...actual,
+    useSession: () => ({ ...actual.SESSION_CONTEXT_DEFAULT, me: meFixture({ isSystemAdmin: session.isSystemAdmin }), isLoading: false }),
+  };
+});
+
 function renderScreen() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -38,6 +49,7 @@ function stubFetch(handler: Handler = () => undefined, roleList: readonly object
 
 afterEach(() => {
   vi.restoreAllMocks();
+  session.isSystemAdmin = true;
 });
 
 describe("RolesScreen · Rol Yönetimi kartları", () => {
@@ -123,6 +135,14 @@ describe("RolesScreen · Rol Yönetimi kartları", () => {
     const [request] = fetchMock.mock.calls.find(([r]) => r.method === "POST" && r.url.includes("/roles/r2/copy"))!;
     expect(await request.clone().json()).toEqual({ name: "Şantiye Şefi 2", emoji: "👷", description: "Saha ekibi" });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("SA olmayan (Düzenler) kullanıcıda kartlar görünür ama HİÇBİR rolde Sil yok", async () => {
+    session.isSystemAdmin = false;
+    stubFetch();
+    renderScreen();
+    await screen.findByRole("article", { name: "Finans Müdürü" });
+    expect(screen.queryAllByRole("button", { name: "Sil" })).toHaveLength(0);
   });
 
   it("rol silme reddedilince modal açık kalır ve hata metni görünür", async () => {

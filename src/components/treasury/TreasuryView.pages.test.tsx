@@ -55,13 +55,14 @@ describe("TreasuryView · sayfa izni görüntüleme kapısı (IZN-F5-ön)", () =
     expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 
-  it("pages boş → eski davranış (treasury none → AccessDenied, view → açık)", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → ekran KAPALI (modül izni karar vermez)", () => {
     session(meFixture({ pages: {}, permissions: { treasury: "none" } }));
     const { unmount } = render(<TreasuryView />);
     expect(screen.getByText(DENIED)).toBeInTheDocument();
     unmount();
     session(meFixture({ pages: {}, permissions: { treasury: "view" } }));
     render(<TreasuryView />);
-    expect(screen.getByRole("heading", TITLE)).toBeInTheDocument();
+    expect(screen.getByText(DENIED)).toBeInTheDocument();
   });
 });

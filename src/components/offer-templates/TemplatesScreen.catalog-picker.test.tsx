@@ -23,6 +23,26 @@ vi.mock("@/lib/api/client", () => ({
 vi.mock("@/lib/auth/useModulePermission", () => ({
   useModulePermission: () => ({ level: perm.level, canView: perm.level !== "none", canWrite: true, canDelete: true }),
 }));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.level` (modül niyeti) oturum sayfa iznine çevrilir —
+// none/view = sözleşme/teklif sayfaları None/Görür, full = Düzenler (SA değil), admin = sistem yöneticisi (Sil `need: "sa"`).
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { meFixture, pagesFor } = await import("@/lib/auth/page-grants.testkit");
+  const { CONTRACTS_VIEW } = await import("@/lib/auth/page-gates");
+  return {
+    ...actual,
+    useSession: () => {
+      const level = perm.level;
+      const me =
+        level === "admin"
+          ? meFixture({ isSystemAdmin: true })
+          : level === "full"
+            ? meFixture()
+            : meFixture({ pages: pagesFor(CONTRACTS_VIEW, level === "view" ? "view" : "none") });
+      return { ...actual.SESSION_CONTEXT_DEFAULT, me, isLoading: false };
+    },
+  };
+});
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: nav.replace, push: vi.fn() }) }));
 

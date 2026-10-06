@@ -112,10 +112,11 @@ describe("PayrollRatesScreen · sayfa izni kapıları (IZN-F2.x / IZN-F5a)", () 
     expect(screen.queryByTestId(SAVE_RATES)).toBeNull();
   });
 
-  it("pages boş → eski davranış: payroll full oranı yazar, tarife için admin ister", () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → KAPALI: oran yazma da tarife de yok (modül full olsa da)", () => {
     session(meFixture({ pages: {}, permissions: { payroll: "full" } }));
     render(<PayrollRatesScreen />);
-    expect(screen.getByTestId(SAVE_RATES)).toBeInTheDocument();
+    expect(screen.queryByTestId(SAVE_RATES)).toBeNull();
     expect(screen.queryByRole("button", { name: SAVE_BRACKETS })).toBeNull();
   });
 

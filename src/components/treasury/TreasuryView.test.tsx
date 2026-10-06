@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { TREASURY_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type {
   BankAccountListResponse,
   BankAccountResponse,
@@ -13,7 +15,6 @@ import { useCashFlow } from "@/lib/api/hooks/useCashFlow";
 import type { UpcomingPaymentsResponse } from "@/lib/api/hooks/useUpcomingPayments";
 import { useUpcomingPayments } from "@/lib/api/hooks/useUpcomingPayments";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { TreasuryView } from "./TreasuryView";
 
@@ -80,9 +81,9 @@ function query<T>(overrides: Partial<UseQueryResult<T, Error>>): UseQueryResult<
 }
 
 function setSession(level: string | undefined = "full") {
-  vi.mocked(useSession).mockReturnValue({
-    me: { permissions: level === undefined ? {} : { treasury: level } } as unknown as MeResponse,
-  } as ReturnType<typeof useSession>);
+  // IZN-F6a · modül düzeyi → sayfa izni (mali.hazine + mali.cek_odeme); izin hiç yoksa kapı KAPALI.
+  const pages = level === undefined ? {} : pagesFor(TREASURY_VIEW, level === "none" ? "none" : level === "view" ? "view" : "edit");
+  vi.mocked(useSession).mockReturnValue({ me: meFixture({ pages }) } as ReturnType<typeof useSession>);
 }
 
 beforeEach(() => {

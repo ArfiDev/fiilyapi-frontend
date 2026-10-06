@@ -23,8 +23,18 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
   },
 }));
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => ({ isRestricted: false, names: [] }) }));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: `perm.levels` (modül niyeti) sayfa izne çevrilir —
+// contracts → teklif.teklif_hazirlama (full = Düzenler), projects → genel.projeler (admin = Düzenler).
 vi.mock("@/components/shell/SessionProvider", () => ({
-  useSession: () => ({ me: { full_name: "Ahmet Yılmaz" }, isLoading: false, error: false, refresh: vi.fn() }),
+  useSession: () => {
+    const offerLevel = perm.levels.contracts;
+    const projectLevel = perm.levels.projects;
+    const pages = {
+      "teklif.teklif_hazirlama": { level: offerLevel === "full" ? "edit" : (offerLevel ?? "none"), approve: false },
+      "genel.projeler": { level: projectLevel === "admin" ? "edit" : (projectLevel ?? "none"), approve: false },
+    };
+    return { me: { full_name: "Ahmet Yılmaz", pages }, isLoading: false, error: false, refresh: vi.fn() };
+  },
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
 

@@ -4,10 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { ACCOUNTING_VIEW } from "@/lib/auth/page-gates";
+import { meFixture, pagesFor } from "@/lib/auth/page-grants.testkit";
 import type { VatReturnResponse } from "@/lib/api/hooks/useVatReturn";
 import { useVatReturn } from "@/lib/api/hooks/useVatReturn";
 import { BackendError } from "@/lib/api/unwrap";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { VatReturnView } from "./VatReturnView";
 
@@ -62,10 +63,10 @@ function queryResult(partial: Record<string, unknown>) {
   } as unknown as UseQueryResult<VatReturnResponse, Error>;
 }
 
-function setSession(level: string) {
-  vi.mocked(useSession).mockReturnValue({
-    me: { permissions: { accounting: level } } as unknown as MeResponse,
-  } as unknown as ReturnType<typeof useSession>);
+function setSession(level: string | undefined) {
+  // IZN-F6a · modül düzeyi → sayfa izni (ACCOUNTING_VIEW kümesi); izin hiç yoksa kapı KAPALI (fail-closed).
+  const pages = level === undefined ? {} : pagesFor(ACCOUNTING_VIEW, level === "none" ? "none" : level === "view" ? "view" : "edit");
+  vi.mocked(useSession).mockReturnValue({ me: meFixture({ pages }) } as unknown as ReturnType<typeof useSession>);
 }
 
 beforeEach(() => {

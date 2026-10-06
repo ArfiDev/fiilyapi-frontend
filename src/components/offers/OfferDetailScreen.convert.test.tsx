@@ -21,6 +21,13 @@ vi.mock("@/lib/auth/useModulePermission", () => ({
     return { level, canView: level !== "none", canWrite: true, canDelete: true };
   },
 }));
+// IZN-F6a · kapılar yalnız sayfa izninden karar verir: modül niyeti (`perm`) oturum sayfa iznine çevrilir
+// (offers-session.testkit). `useModulePermission` mock'u kapı DIŞI mantık (şerit metni vb.) için kalır.
+vi.mock("@/components/shell/SessionProvider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/shell/SessionProvider")>();
+  const { offersSessionMe } = await import("./offers-session.testkit");
+  return { ...actual, useSession: () => ({ ...actual.SESSION_CONTEXT_DEFAULT, me: offersSessionMe(perm.levels), isLoading: false }) };
+});
 vi.mock("@/lib/auth/useDisciplineScope", () => ({ useDisciplineScope: () => scope.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 
@@ -95,7 +102,8 @@ describe("kazanıldı · dönüştürülmedi (ÜS-F5-2/3)", () => {
     await loaded();
     expect(screen.queryByRole("link", { name: CONVERT_LABEL })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: CONVERT_LABEL })).toBeDisabled();
-    expect(screen.getByText("Projeye dönüştürme Projeler yönetici yetkisi ister (bugün yalnız sistem yöneticisi)")).toBeVisible();
+    // IZN-F6a · sayfa modeli devrede → gerekçe Onaylar sayfa izni metnidir.
+    expect(screen.getByText("Projeye dönüştürme için Teklif Hazırlama sayfasında Onaylar yetkisi gerekir")).toBeVisible();
   });
 
   it("disiplin kısıtlı → PASİF + mevcut salt-okunur gerekçesi", async () => {

@@ -69,7 +69,8 @@ describe("WorkItemCatalogScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
     expect(screen.queryByRole("button", ADD)).toBeNull();
   });
 
-  it("pages boş → eski davranış (contracts none → AccessDenied, full → yazma var)", async () => {
+  // IZN-F6a · modül-izni düşüşü KALKTI: grant yoksa kapı KAPALI (fail-closed).
+  it("pages boş → AccessDenied (modül none de full de karar vermez)", async () => {
     perm.level = "none";
     session(meFixture({ pages: {} }));
     const { unmount } = renderScreen();
@@ -77,7 +78,7 @@ describe("WorkItemCatalogScreen · sayfa izni kapıları (IZN-F5-ön)", () => {
     unmount();
     perm.level = "full";
     renderScreen();
-    await screen.findByText("Beton döküm");
-    expect(screen.getByRole("button", ADD)).toBeInTheDocument();
+    expect(await screen.findByText(DENIED)).toBeInTheDocument();
+    expect(screen.queryByRole("button", ADD)).toBeNull();
   });
 });

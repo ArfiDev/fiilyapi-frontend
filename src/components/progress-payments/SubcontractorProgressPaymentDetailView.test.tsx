@@ -31,14 +31,6 @@ vi.mock("next/navigation", async (importOriginal) => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-const BASE_ME = {
-  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  email: "ayse@ornek.com",
-  full_name: "Ayşe Yılmaz",
-  title: null,
-  role_key: "procurement",
-  status: "active",
-} as unknown as MeResponse;
 
 function mockSession(permissions?: Record<string, string>) {
   // IZN-F6a.3 · eski modül seviyesi niyeti sayfa izni olarak kurulur (`undefined` = tam yetkili oturum, SA).

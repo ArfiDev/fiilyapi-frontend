@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@/components/shell/SessionProvider";
+import { meFixture, pageGrant } from "@/lib/auth/page-grants.testkit";
 import { usePayrollPeriods } from "@/lib/api/hooks/usePayroll";
 import {
   usePayrollRates,
@@ -10,7 +11,6 @@ import {
   useReplacePayrollTaxBrackets,
   useUpsertPayrollRate,
 } from "@/lib/api/hooks/usePayrollRates";
-import type { MeResponse } from "@/lib/auth/types";
 
 import { PayrollRatesScreen } from "./PayrollRatesScreen";
 import { unsavedRegistry } from "@/lib/workspace-tabs/unsaved-registry";
@@ -64,16 +64,13 @@ const BRACKETS = [
 ];
 
 function mockSession(payrollLevel: string | undefined) {
-  const me = {
-    id: "me",
-    email: "me@fiil.com",
-    full_name: "Deneme",
-    title: "",
-    role_key: "patron",
-    status: "active",
-    ...(payrollLevel === undefined ? {} : { permissions: { payroll: payrollLevel } }),
-  } as unknown as MeResponse;
-  vi.mocked(useSession).mockReturnValue({ me, isLoading: false } as never);
+  // IZN-F6a · modül düzeyi → sayfa izni: `ayarlar.bordro_oranlari` (oran ve tarife kapıları AYNI sayfaya bağlı).
+  // admin/full = Düzenler, view = Görür, bilinmeyen = hücre YOK (fail-closed).
+  const pages =
+    payrollLevel === undefined
+      ? {}
+      : { "ayarlar.bordro_oranlari": pageGrant(payrollLevel === "view" ? "view" : "edit") };
+  vi.mocked(useSession).mockReturnValue({ me: meFixture({ pages }), isLoading: false } as never);
 }
 
 function period(year: number, status: string) {
@@ -219,13 +216,15 @@ describe("yıl kilidi — 409'un ÖN kapısı", () => {
   });
 });
 
-describe("İKİ AYRI YETKİ KAPISI (oran `full`, tarife `admin`)", () => {
-  it("`full` seviyede oran kaydedilir ama TARİFE kaydedilemez", () => {
+// IZN-F5a/F6a · oran (PUT /payroll/rates) ve tarife (vergi dilimi) TEK sayfa kapısında: ayarlar.bordro_oranlari
+// Düzenler. Eski modül ayrımı (oran `full`, tarife `admin`) sayfa modelinde YOK — ikisi birlikte açılır/kapanır.
+describe("TEK SAYFA KAPISI (ayarlar.bordro_oranlari: oran + tarife)", () => {
+  it("Düzenler (eski `full` niyeti): oran VE tarife kaydedilir; 'yönetici gerekir' bandı basılmaz", () => {
     mockSession("full");
     render(<PayrollRatesScreen />);
     expect(screen.getByTestId("bro-save-rates")).toBeInTheDocument();
-    expect(screen.queryByTestId("bro-save-brackets")).toBeNull();
-    expect(screen.getByTestId("bro-bracket-permission").textContent).toMatch(/yönetici/);
+    expect(screen.getByTestId("bro-save-brackets")).toBeInTheDocument();
+    expect(screen.queryByTestId("bro-bracket-permission")).toBeNull();
   });
   it("`view` seviyede ikisi de kapalıdır", () => {
     mockSession("view");
@@ -233,8 +232,15 @@ describe("İKİ AYRI YETKİ KAPISI (oran `full`, tarife `admin`)", () => {
     expect(screen.queryByTestId("bro-save-rates")).toBeNull();
     expect(screen.getByTestId("bro-no-permission")).toBeInTheDocument();
   });
-  it("seviye BİLİNMİYORSA ikisi de açıktır (bilinmezlik kuralı)", () => {
+  // IZN-F6a · bilinmezlik kuralı KALKTI: sayfa izni hiç yoksa ikisi de KAPALI (fail-closed).
+  it("sayfa izni YOKSA ikisi de kapalıdır (fail-closed)", () => {
     mockSession(undefined);
+    render(<PayrollRatesScreen />);
+    expect(screen.queryByTestId("bro-save-rates")).toBeNull();
+    expect(screen.queryByTestId("bro-save-brackets")).toBeNull();
+  });
+  it("Düzenler sayfa izninde ikisi de açıktır", () => {
+    mockSession("admin");
     render(<PayrollRatesScreen />);
     expect(screen.getByTestId("bro-save-rates")).toBeInTheDocument();
     expect(screen.getByTestId("bro-save-brackets")).toBeInTheDocument();
