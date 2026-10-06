@@ -104,10 +104,20 @@ describe("decideGate · geri uyum düşüşü ve eşikler", () => {
     decidePagePermission(me({ [PUANTAJ]: pageGrant(level, approve) }), [PUANTAJ]);
   const withoutGrant = decidePagePermission(me({}), [PUANTAJ]);
 
-  it("grant yoksa her eşikte fallback döner (true da false da)", () => {
+  it("sayfa modeli YOKKEN (me.pages boş: eski oturum/yükleniyor) her eşikte fallback döner", () => {
     for (const need of ["view", "edit", "approve", "sa"] as const) {
       expect(decideGate(withoutGrant, need, true)).toBe(true);
       expect(decideGate(withoutGrant, need, false)).toBe(false);
+    }
+    const loading = decidePagePermission(null, [PUANTAJ]);
+    expect(decideGate(loading, "edit", true)).toBe(true);
+  });
+
+  it("IZN-F5c · model DEVREDEYKEN kümede hücre yoksa KAPALI (fail-closed), fallback true olsa da", () => {
+    const cellless = decidePagePermission(me({ "ik.personel": pageGrant("edit", true) }), [PUANTAJ]);
+    expect(cellless).toMatchObject({ hasGrant: false, isModelActive: true });
+    for (const need of ["view", "edit", "approve", "sa"] as const) {
+      expect(decideGate(cellless, need, true)).toBe(false);
     }
   });
 
@@ -181,11 +191,11 @@ describe("decidePagePermission · proje bağlamı (IZN-F3.2)", () => {
     expect(decidePagePermission(me, [HAKEDIS], PROJECT_A)).toMatchObject({ canView: false, canEdit: false, hasGrant: true });
   });
 
-  it("proje rolünün haritasında anahtar yoksa hasGrant false → çağıran FALLBACK'e düşer (geri uyum)", () => {
+  it("IZN-F5c · proje rolünün haritasında anahtar yoksa (model devrede) KAPALI — fallback yok sayılır", () => {
     const me = projectMe({ role_pages: { site_chief: { pages: {} } } });
     const permission = decidePagePermission(me, [HAKEDIS], PROJECT_A);
-    expect(permission.hasGrant).toBe(false);
-    expect(decideGate(permission, "edit", true)).toBe(true);
+    expect(permission).toMatchObject({ hasGrant: false, isModelActive: true });
+    expect(decideGate(permission, "edit", true)).toBe(false);
     expect(decideGate(permission, "edit", false)).toBe(false);
   });
 

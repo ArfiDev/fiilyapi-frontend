@@ -104,12 +104,12 @@ describe("usePagePermission / useButtonGate · proje bağlamı", () => {
     expect(gate("99999999-9999-9999-9999-999999999999")).toBe(false);
   });
 
-  it("proje rolünün haritasında anahtar yoksa geri uyum: fallback", () => {
+  it("IZN-F5c · proje rolünün haritasında anahtar yoksa (model devrede) KAPALI — fallback true yok sayılır", () => {
     session(meFixture({ ...member, rolePages: { site_chief: {} } }));
     const allowed = renderHook(() =>
       useButtonGate({ pages: "proje.isveren_hakedis", need: "edit", fallback: true, projectId: PROJECT }),
     );
-    expect(allowed.result.current).toBe(true);
+    expect(allowed.result.current).toBe(false);
   });
 
   it("adres anahtarı slug iken kimlik önbellekten çözülür (projeler detayı önbelleği)", () => {

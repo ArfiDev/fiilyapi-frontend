@@ -72,6 +72,11 @@ export interface PagePermission {
    * Anahtar verilmediyse (`[]`) "devrede mi" sorusu `me.pages`'in boş olup olmadığına bakar.
    */
   hasGrant: boolean;
+  /**
+   * IZN-F5c · sayfa-izni modeli bu oturumda DEVREDE mi (`me.pages` ANA ROL haritası dolu). Devredeyken
+   * kümede hücre yokluğu "yetki yok" demektir (fail-closed); değilken (eski oturum/yükleniyor) fallback.
+   */
+  isModelActive: boolean;
 }
 
 export function decidePagePermission(
@@ -83,23 +88,26 @@ export function decidePagePermission(
   const pages = pagesForProject(me, projectId);
   const grants = pageKeys.map((key) => pages[key]).filter((grant): grant is PageGrant => grant !== undefined);
   const hasGrant = pageKeys.length === 0 ? Object.keys(pages).length > 0 : grants.length > 0;
+  const isModelActive = Object.keys(me?.pages ?? {}).length > 0;
   return {
     canView: isSystemAdmin || grants.some((grant) => grant.level !== "none"),
     canEdit: isSystemAdmin || grants.some((grant) => grant.level === "edit"),
     canApprove: isSystemAdmin || grants.some((grant) => grant.approve === true),
     isSystemAdmin,
     hasGrant,
+    isModelActive,
   };
 }
 
 /**
- * Tek düğme kararı. Sistem yöneticisi her zaman geçer; grant yoksa (`hasGrant === false`)
- * `fallback` (bugünkü modül-izni kararı) kullanılır; aksi halde yeni sayfa-izni kararı.
+ * Tek düğme kararı. Sistem yöneticisi her zaman geçer. Grant yoksa (`hasGrant === false`): sayfa modeli
+ * devredeyse KAPALI (IZN-F5c, fail-closed — hücresiz rol modül iznine düşüp UI'da açık görünmesin),
+ * değilse `fallback` (bugünkü modül-izni kararı; eski oturum/yükleniyor). Aksi halde yeni sayfa-izni kararı.
  * `need: "sa"` yalnız sistem yöneticisini geçirir (grant varken).
  */
 export function decideGate(permission: PagePermission, need: GateNeed, fallback: boolean): boolean {
   if (permission.isSystemAdmin) return true;
-  if (!permission.hasGrant) return fallback;
+  if (!permission.hasGrant) return permission.isModelActive ? false : fallback;
   switch (need) {
     case "view":
       return permission.canView;
