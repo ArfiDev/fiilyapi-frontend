@@ -130,7 +130,7 @@ describe("TYPE-F1 · üretim kodu components[schemas]/EvSchema nesne-şemaların
     const schemaSource = readFileSync(SCHEMA_FILE, "utf8");
     const objectNames = objectSchemaNames(schemaSource);
     expect(objectNames.size).toBeGreaterThan(100);
-    expect(objectNames.has("Scope")).toBe(false);
+    expect(objectNames.has("PageLevel")).toBe(false);
   });
 
   it("src/** üretim dosyalarında sarılmamış nesne-şema referansı YOKTUR", () => {

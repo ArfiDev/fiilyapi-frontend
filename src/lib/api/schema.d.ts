@@ -311,48 +311,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/approvals/roles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Approval Role Assignments Endpoint
-         * @deprecated
-         * @description KALDIRILDI (IZN-B3b): her çağrı 410 döner. Onay rolü = proje rolü (K1).
-         */
-        get: operations["list_approval_role_assignments_endpoint_approvals_roles_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/approvals/roles/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Set Approval Roles Endpoint
-         * @deprecated
-         * @description KALDIRILDI (IZN-B3b): her çağrı 410 döner, hiçbir şey yazılmaz.
-         */
-        put: operations["set_approval_roles_endpoint_approvals_roles__user_id__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/approvals/settings": {
         parameters: {
             query?: never;
@@ -471,9 +429,8 @@ export interface paths {
         };
         /**
          * Me
-         * @description `permissions` (IZN-B2): SAYFA HÜCRELERİNDEN türetilmiş salt-okur modül düzeyi
-         *     (`roles.repository.derived_role_matrix`; `/roles/{id}/permissions` ucuyla ayni kaynak).
-         *     Frontend B6/F5'e kadar onu okur; kapılar `pages` hücrelerinden karar verir.
+         * @description Oturum sahibi: kimlik + sayfa hücreleri (`pages`) + gizli alanlar + proje ekibi.
+         *     Kapılar `pages` hücrelerinden karar verir (IZN-B6b: eski `permissions` haritası kalktı).
          */
         get: operations["me_auth_me_get"];
         put?: never;
@@ -3285,23 +3242,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/modules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Modules Endpoint */
-        get: operations["list_modules_endpoint_modules_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/offers": {
         parameters: {
             query?: never;
@@ -5935,50 +5875,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/roles/{role_id}/permissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Role Permissions Endpoint
-         * @description KALDIRILACAK (B6): modül düzeyi SAYFA HÜCRELERİNDEN türetilmiş salt-okur görünümdür.
-         */
-        get: operations["get_role_permissions_endpoint_roles__role_id__permissions_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/roles/{role_id}/permissions/{module_key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Update Permission Endpoint
-         * @deprecated
-         * @description KALDIRILDI (IZN-B2): her çağrı 410 döner, hiçbir şey yazılmaz.
-         *
-         *     Eski modül hücreleri DONDURULDU; kapılar sayfa hücrelerinden karar verir. Gövde şeması
-         *     yalnız istemci tiplerinin kırılmaması için durur (B6'da uç ve şema birlikte sökülür).
-         */
-        put: operations["update_permission_endpoint_roles__role_id__permissions__module_key__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/sales/documents/{link_id}": {
         parameters: {
             query?: never;
@@ -8500,32 +8396,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/{user_id}/disciplines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get User Disciplines Endpoint
-         * @deprecated
-         * @description KALDIRILDI (IZN-B3): her çağrı 410 döner.
-         */
-        get: operations["get_user_disciplines_endpoint_users__user_id__disciplines_get"];
-        /**
-         * Set User Disciplines Endpoint
-         * @deprecated
-         * @description KALDIRILDI (IZN-B3): her çağrı 410 döner, hiçbir şey yazılmaz.
-         */
-        put: operations["set_user_disciplines_endpoint_users__user_id__disciplines_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/users/{user_id}/password": {
         parameters: {
             query?: never;
@@ -8671,14 +8541,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /**
-         * AccessLevel
-         * @description Erişim seviyesi. Sıralıdır: none < view < draft < request < approve < full < admin.
-         *
-         *     full silmeyi KAPSAMAZ — silme yalnızca admin seviyesindedir (spec §5.0).
-         * @enum {string}
-         */
-        AccessLevel: "none" | "view" | "draft" | "request" | "approve" | "full" | "admin";
         /**
          * AccountingPeriodListItem
          * @description DKAP-B — liste satırı, `AccountingPeriodResponse`e ÜÇ türetilmiş alan
@@ -15762,10 +15624,6 @@ export interface components {
             pages: {
                 [key: string]: components["schemas"]["PageGrant"];
             };
-            /** Permissions */
-            permissions: {
-                [key: string]: components["schemas"]["AccessLevel"];
-            };
             /** Projects */
             projects: components["schemas"]["MeProject"][];
             /** Role Key */
@@ -15825,26 +15683,6 @@ export interface components {
             pending_module?: string | null;
             /** Value */
             value?: string | null;
-        };
-        /**
-         * ModuleGroup
-         * @enum {string}
-         */
-        ModuleGroup: "GENEL" | "SAHA" | "STOK_SATINALMA" | "MALI" | "SISTEM";
-        /** ModuleResponse */
-        ModuleResponse: {
-            group: components["schemas"]["ModuleGroup"];
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Key */
-            key: string;
-            /** Name */
-            name: string;
-            /** Sort Order */
-            sort_order: number;
         };
         /**
          * MonthlyCashPoint
@@ -17604,18 +17442,6 @@ export interface components {
             items?: string[];
             /** Pending Module */
             pending_module: string;
-        };
-        /** PermissionCell */
-        PermissionCell: {
-            access_level: components["schemas"]["AccessLevel"];
-            /** Module Key */
-            module_key: string;
-            scope: components["schemas"]["Scope"];
-        };
-        /** PermissionUpdate */
-        PermissionUpdate: {
-            access_level: components["schemas"]["AccessLevel"];
-            scope: components["schemas"]["Scope"];
         };
         /** PersonnelCreate */
         PersonnelCreate: {
@@ -20715,12 +20541,6 @@ export interface components {
             /** Weekly Off Days */
             weekly_off_days: number[];
         };
-        /**
-         * Scope
-         * @description Veri kapsamı — aktörün modül içinde hangi kayıtları görebildiği.
-         * @enum {string}
-         */
-        Scope: "all" | "own" | "project" | "finance" | "stock" | "limited";
         /**
          * SectionCreate
          * @description `Form - Bolum Ekle`in tam govdesi (P6 §5, T3).
@@ -27591,85 +27411,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_approval_role_assignments_endpoint_approvals_roles_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Yetkisiz işlem */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Kayıt bulunamadı */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Uç kaldırıldı: onay rolü artık proje rolü (`PUT /users/{id}/access`) */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    set_approval_roles_endpoint_approvals_roles__user_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Yetkisiz işlem */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Kayıt bulunamadı */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Uç kaldırıldı: onay rolü artık proje rolü (`PUT /users/{id}/access`) */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
             };
             /** @description Validation Error */
             422: {
@@ -35098,40 +34839,6 @@ export interface operations {
             };
         };
     };
-    list_modules_endpoint_modules_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ModuleResponse"][];
-                };
-            };
-            /** @description Yetkisiz işlem */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Kayıt bulunamadı */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     list_offers_endpoint_offers_get: {
         parameters: {
             query?: {
@@ -41660,101 +41367,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_role_permissions_endpoint_roles__role_id__permissions_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                role_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PermissionCell"][];
-                };
-            };
-            /** @description Yetkisiz işlem */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Kayıt bulunamadı */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_permission_endpoint_roles__role_id__permissions__module_key__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                role_id: string;
-                module_key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PermissionUpdate"];
-            };
-        };
-        responses: {
-            /** @description Yetkisiz işlem */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Kayıt bulunamadı */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Uç kaldırıldı: izinler artık sayfa bazlı (PUT /roles/{id}/pages) */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
             };
             /** @description Validation Error */
             422: {
@@ -48601,96 +48213,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    get_user_disciplines_endpoint_users__user_id__disciplines_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Yetkisiz işlem */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Kayıt bulunamadı */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Uç kaldırıldı: disiplin artık proje ekibinde (`/users/{id}/access`) */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    set_user_disciplines_endpoint_users__user_id__disciplines_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Yetkisiz işlem */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Kayıt bulunamadı */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Uç kaldırıldı: disiplin artık proje ekibinde (`/users/{id}/access`) */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };

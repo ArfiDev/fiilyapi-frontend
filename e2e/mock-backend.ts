@@ -548,7 +548,6 @@ const ME = {
   title: "Patron",
   role_key: "patron",
   status: "active",
-  permissions: { earned_value: "admin" },
   // IZN-F6d: tam sayfa matrisi (hepsi edit, onay eylemi olanda approve; SA DEĞİL) = bugünkü modül-izni sonucu.
   is_system_admin: false,
   pages: mockFullAccessPages(),
