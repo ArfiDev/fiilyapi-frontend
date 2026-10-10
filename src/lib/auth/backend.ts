@@ -1,3 +1,4 @@
+import { forwardedIpHeaders } from "./client-ip";
 import type { TokenPair } from "./types";
 
 export interface ProxyResult {
@@ -19,6 +20,8 @@ export interface ProxyOptions {
    */
   rawBody?: { data: ArrayBuffer; contentType: string };
   query?: Record<string, string>;
+  /** İstemcinin gerçek IP'si (`clientIpOf`); backend'e `X-Forwarded-For` olarak gider. */
+  clientIp?: string;
 }
 
 export function backendUrl(): string {
@@ -43,8 +46,8 @@ function buildUrl(path: string, query: Record<string, string> | undefined): stri
 
 // Backend'e Bearer ile tek istek — method/body/query destekli.
 function request(path: string, accessToken: string | undefined, options: ProxyOptions): Promise<Response> {
-  const { method = "GET", body, rawBody, query } = options;
-  const headers: Record<string, string> = {};
+  const { method = "GET", body, rawBody, query, clientIp } = options;
+  const headers: Record<string, string> = { ...forwardedIpHeaders(clientIp) };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const init: RequestInit = { method, headers };
   if (rawBody !== undefined) {
@@ -56,6 +59,15 @@ function request(path: string, accessToken: string | undefined, options: ProxyOp
     init.body = JSON.stringify(body);
   }
   return fetch(buildUrl(path, query), init);
+}
+
+// Backend `/auth/refresh` cagrisi — hiz siniri IP'ye gore oldugu icin istemci IP'si burada da gider.
+export function refreshRequest(refreshToken: string, clientIp: string | undefined): Promise<Response> {
+  return fetch(backendUrl() + "/auth/refresh", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...forwardedIpHeaders(clientIp) },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
 }
 
 /**
@@ -97,11 +109,7 @@ export async function proxyAuthenticatedRaw(
   if (first.status !== 401) return rawResult(first);
   if (!refreshToken) return rawResult(first);
 
-  const refreshed = await fetch(backendUrl() + "/auth/refresh", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
+  const refreshed = await refreshRequest(refreshToken, options.clientIp);
   if (!refreshed.ok) return rawResult(first);
 
   const pair = (await parseBody(refreshed)) as TokenPair | null;
@@ -126,11 +134,7 @@ export async function proxyAuthenticated(
   if (!refreshToken) {
     return { status: 401, body: await parseBody(first) };
   }
-  const refreshed = await fetch(backendUrl() + "/auth/refresh", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
+  const refreshed = await refreshRequest(refreshToken, options.clientIp);
   if (!refreshed.ok) {
     // 🔴 Refresh basarisizsa `first`in govdesi (backend'in Turkce 401 hata
     // metni) DUSURULMEZ — `proxyAuthenticatedRaw`in AYNI dalindaki

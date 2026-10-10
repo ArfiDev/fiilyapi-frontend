@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertSameOrigin } from "@/lib/auth/csrf";
 import { backendUrl } from "@/lib/auth/backend";
+import { clientIpOf, forwardedIpHeaders } from "@/lib/auth/client-ip";
 import { applyAuthCookies, buildAuthCookies } from "@/lib/auth/cookies";
 import type { TokenPair } from "@/lib/auth/types";
 
@@ -42,7 +43,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     backendRes = await fetch(base + "/auth/login", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      // Backend'in giris hiz siniri IP basinadir: istemci IP'si iletilmezse tum sirket tek kovadir.
+      headers: { "content-type": "application/json", ...forwardedIpHeaders(clientIpOf(request)) },
       body: JSON.stringify({ email: parsed.email, password: parsed.password }),
     });
   } catch {

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { proxyAuthenticated } from "@/lib/auth/backend";
+import { clientIpOf } from "@/lib/auth/client-ip";
 import { applyAuthCookies, buildAccessCookie, clearedAuthCookies } from "@/lib/auth/cookies";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/constants";
 
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let result;
   try {
-    result = await proxyAuthenticated(access, refresh, "/auth/me");
+    result = await proxyAuthenticated(access, refresh, "/auth/me", { clientIp: clientIpOf(request) });
   } catch {
     return NextResponse.json({ ok: false, code: "unavailable" }, { status: 502 });
   }

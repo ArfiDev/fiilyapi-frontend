@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { proxyAuthenticated, proxyAuthenticatedRaw } from "@/lib/auth/backend";
+import { clientIpOf } from "@/lib/auth/client-ip";
 import { applyAuthCookies, buildAccessCookie, clearedAuthCookies } from "@/lib/auth/cookies";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/constants";
 import { assertSameOrigin } from "@/lib/auth/csrf";
@@ -397,10 +398,11 @@ async function handleGet(
   query: Record<string, string>,
   access: string | undefined,
   refresh: string | undefined,
+  clientIp: string | undefined,
 ): Promise<NextResponse> {
   let result;
   try {
-    result = await proxyAuthenticatedRaw(access, refresh, backendPath, { method: "GET", query });
+    result = await proxyAuthenticatedRaw(access, refresh, backendPath, { method: "GET", query, clientIp });
   } catch {
     return NextResponse.json({ ok: false, code: "unavailable" }, { status: 502 });
   }
@@ -469,9 +471,10 @@ async function handle(request: NextRequest, method: string, routeCtx: RouteCtx):
 
   const access = request.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
+  const clientIp = clientIpOf(request);
 
   if (method === "GET") {
-    return handleGet(path, backendPath, query, access, refresh);
+    return handleGet(path, backendPath, query, access, refresh, clientIp);
   }
 
   // 🔴 ÇAPRAZ KAYNAK (CSRF) KAPISI — buradan aşağısı DURUM DEĞİŞTİREN daldır.
@@ -539,6 +542,7 @@ async function handle(request: NextRequest, method: string, routeCtx: RouteCtx):
       body,
       rawBody,
       query,
+      clientIp,
     });
   } catch {
     return NextResponse.json({ ok: false, code: "unavailable" }, { status: 502 });
