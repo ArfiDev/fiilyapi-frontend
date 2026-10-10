@@ -10,6 +10,7 @@
 /* Başlık şeridi — mockup'ta breadcrumb (19-21) + sağdaki iki düğme (23-26). */
 .satis__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
@@ -23,8 +24,23 @@
 }
 .satis__actions {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap; /* dar ekranda grup alt satıra sarar */
+  justify-content: flex-end;
+  align-items: stretch; /* düğmeler ve proje seçici aynı yükseklik */
   gap: var(--space-2); /* 23 */
+}
+/* Düğme içi kırılma YOK — "+" metinle aynı satırda kalır. */
+.satis__actions > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* Select primitive'i varsayılan %100 genişliktir; şeritte içeriği kadar yer
+   kaplar ve düğme yüksekliğine uzar. */
+.satis__actions > .select-wrap {
+  width: auto;
+}
+.satis__actions .select {
+  height: 100%;
 }
 
 /* Devre dışı düğmenin görünür gerekçesi — sessiz düşüş YOK. */
