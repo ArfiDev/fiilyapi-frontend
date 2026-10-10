@@ -231,3 +231,52 @@ describe("proxyAuthenticatedBinary — olu kod kapisi", () => {
     expect("proxyAuthenticatedBinary" in backendModule).toBe(false);
   });
 });
+
+describe("istemci IP'sinin iletilmesi (clientIp)", () => {
+  beforeEach(() => {
+    process.env.BACKEND_URL = "http://backend:8000";
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.BACKEND_URL;
+  });
+
+  function headersOf(call: unknown[]): Record<string, string> {
+    return (call[1] as RequestInit).headers as Record<string, string>;
+  }
+
+  it("clientIp verilince ilk istek, refresh ve retry x-forwarded-for tasir", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401, {}))
+      .mockResolvedValueOnce(jsonResponse(200, { access_token: "new-acc", refresh_token: "ref2" }))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await proxyAuthenticated("acc", "ref", "/auth/me", { clientIp: "203.0.113.7" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    for (const call of fetchMock.mock.calls) {
+      expect(headersOf(call)["x-forwarded-for"]).toBe("203.0.113.7");
+    }
+  });
+
+  it("proxyAuthenticatedRaw da ilk istek, refresh ve retry'da iletir", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401, {}))
+      .mockResolvedValueOnce(jsonResponse(200, { access_token: "new-acc", refresh_token: "ref2" }))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await proxyAuthenticatedRaw("acc", "ref", "/x", { clientIp: "2001:db8::1" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    for (const call of fetchMock.mock.calls) {
+      expect(headersOf(call)["x-forwarded-for"]).toBe("2001:db8::1");
+    }
+  });
+
+  it("clientIp yoksa x-forwarded-for basligi HIC eklenmez", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}));
+    vi.stubGlobal("fetch", fetchMock);
+    await proxyAuthenticated("acc", "ref", "/auth/me");
+    expect("x-forwarded-for" in headersOf(fetchMock.mock.calls[0])).toBe(false);
+  });
+});

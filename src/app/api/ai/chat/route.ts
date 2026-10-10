@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/constants";
 import { applyAuthCookies, buildAccessCookie, clearedAuthCookies } from "@/lib/auth/cookies";
-import { backendUrl } from "@/lib/auth/backend";
+import { backendUrl, refreshRequest } from "@/lib/auth/backend";
+import { clientIpOf, forwardedIpHeaders } from "@/lib/auth/client-ip";
 import { assertSameOrigin } from "@/lib/auth/csrf";
 import type { TokenPair } from "@/lib/auth/types";
 
@@ -75,8 +76,12 @@ interface AiChatYuku {
   siteId: string | null;
 }
 
-function upstreamRequest(yuk: AiChatYuku, accessToken: string | undefined): Promise<Response> {
-  const headers: Record<string, string> = { "content-type": "application/json" };
+function upstreamRequest(
+  yuk: AiChatYuku,
+  accessToken: string | undefined,
+  clientIp: string | undefined,
+): Promise<Response> {
+  const headers: Record<string, string> = { "content-type": "application/json", ...forwardedIpHeaders(clientIp) };
   if (accessToken) headers.authorization = `Bearer ${accessToken}`;
   return fetch(backendUrl() + UPSTREAM_PATH, {
     method: "POST",
@@ -176,27 +181,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const access = request.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
+  const clientIp = clientIpOf(request);
 
   let upstream: Response;
   let refreshedAccessToken: string | undefined;
   try {
-    upstream = await upstreamRequest(yuk, access);
+    upstream = await upstreamRequest(yuk, access, clientIp);
 
     // 🔴 401 → refresh AKIŞ BAŞLAMADAN çözülür. Akış açıldıktan sonra
     // yeniden kimliklenmek imkânsızdır: başlıklar gitmiş, gövde akmaya
     // başlamıştır ve kullanıcı yarım bir cevabın ardından sessizce susan bir
     // panel görürdü.
     if (upstream.status === 401 && refresh) {
-      const refreshed = await fetch(backendUrl() + "/auth/refresh", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ refresh_token: refresh }),
-      });
+      const refreshed = await refreshRequest(refresh, clientIp);
       if (refreshed.ok) {
         const pair = (await refreshed.json().catch(() => null)) as TokenPair | null;
         if (pair?.access_token) {
           refreshedAccessToken = pair.access_token;
-          upstream = await upstreamRequest(yuk, pair.access_token);
+          upstream = await upstreamRequest(yuk, pair.access_token, clientIp);
         }
       }
     }

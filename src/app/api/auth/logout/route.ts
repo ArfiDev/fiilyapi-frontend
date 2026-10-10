@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertSameOrigin } from "@/lib/auth/csrf";
 import { proxyAuthenticated } from "@/lib/auth/backend";
+import { clientIpOf } from "@/lib/auth/client-ip";
 import { applyAuthCookies, clearedAuthCookies } from "@/lib/auth/cookies";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/constants";
 
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // 401'de proxyAuthenticated once /auth/refresh dener: yeni token'lar AYNI token_version'i
     // tasir, ardindan gelen logout onlari da iptal eder. Sira bu yuzden dogrudur.
-    await proxyAuthenticated(access, refresh, "/auth/logout", { method: "POST" });
+    await proxyAuthenticated(access, refresh, "/auth/logout", { method: "POST", clientIp: clientIpOf(request) });
   } catch {
     // BACKEND_URL tanimsiz ya da ag hatasi — yerel cikis engellenmez.
   }
